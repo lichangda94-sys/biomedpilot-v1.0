@@ -4,6 +4,11 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
+from app.bioinformatics.acquisition_adapters.legacy_contract import LEGACY_ADAPTER_MANIFEST_DIR
+from app.bioinformatics.acquisition_adapters.materialization import LEGACY_MATERIALIZATION_MANIFEST_PATH
+from app.bioinformatics.acquisition_adapters.repository_merge import LEGACY_REPOSITORY_MERGE_MANIFEST
+from app.bioinformatics.acquisition_adapters.selection_gate import LEGACY_ASSET_SELECTION_PATH
+from app.bioinformatics.acquisition_adapters.standardized_bridge import LEGACY_ASSET_CANDIDATE_PATH
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
 from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
@@ -59,6 +64,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     gsea_plot_gate = build_gsea_plot_gate(root)
     gsea_gates = build_gsea_gate_state(project_root=root)
     survival_clinical_state = build_survival_clinical_gate_state(project_root=root)
+    legacy_pipeline = build_legacy_asset_pipeline_state(root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
         packages=packages,
@@ -92,6 +98,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_result_schema_gate=gsea_gates["result_schema_gate"],
         gsea_dependency=gsea_gates["dependency_snapshot"],
         survival_clinical_state=survival_clinical_state,
+        legacy_asset_pipeline=legacy_pipeline,
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate, ora_report_gate=ora_report_gate)
@@ -127,6 +134,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "formal_deg_gate_rows": deg_gates["gate_rows"],
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
+        "legacy_asset_pipeline": legacy_pipeline,
         "result_rows": result_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
@@ -146,10 +154,179 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "gsea_report_ready_gate": gsea_report_gate,
             "gsea_gate_state": gsea_gates,
             "survival_clinical_state": survival_clinical_state,
+            "legacy_asset_pipeline": legacy_pipeline,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,
         },
+    }
+
+
+def build_legacy_asset_pipeline_state(project_root: str | Path) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    adapter_manifest_paths = sorted((root / LEGACY_ADAPTER_MANIFEST_DIR).glob("*.json"))
+    candidate_bundle = _read_json(root / LEGACY_ASSET_CANDIDATE_PATH)
+    materialized_manifest = _read_json(root / LEGACY_MATERIALIZATION_MANIFEST_PATH)
+    merge_manifest = _read_json(root / LEGACY_REPOSITORY_MERGE_MANIFEST)
+    selection_manifest = _read_json(root / LEGACY_ASSET_SELECTION_PATH)
+    rows = [
+        _legacy_pipeline_row(
+            "legacy_adapter_manifests",
+            "Legacy acquisition adapter manifests",
+            root / LEGACY_ADAPTER_MANIFEST_DIR,
+            exists=bool(adapter_manifest_paths),
+            count=len(adapter_manifest_paths),
+            status="candidate_input_available" if adapter_manifest_paths else "not_started",
+            blockers=[],
+            warnings=[],
+            next_action="Build standardized asset candidates from audited legacy adapter manifests.",
+        ),
+        _legacy_pipeline_payload_row(
+            "legacy_asset_candidates",
+            "Standardized asset candidates",
+            root / LEGACY_ASSET_CANDIDATE_PATH,
+            candidate_bundle,
+            count_field="candidate_count",
+            default_present_status="candidate_only",
+            next_action="Select candidates for materialization; candidates are not repository assets yet.",
+        ),
+        _legacy_pipeline_payload_row(
+            "legacy_materialized_assets",
+            "Materialized candidate assets",
+            root / LEGACY_MATERIALIZATION_MANIFEST_PATH,
+            materialized_manifest,
+            count_field="materialized_asset_count",
+            default_present_status="materialized_candidates_only",
+            next_action="Merge materialized assets into the standardized repository manifest.",
+        ),
+        _legacy_pipeline_payload_row(
+            "legacy_repository_merge",
+            "Repository manifest merge",
+            root / LEGACY_REPOSITORY_MERGE_MANIFEST,
+            merge_manifest,
+            count_field="merged_asset_count",
+            default_present_status="merged_repository_manifest_only",
+            next_action="Run B16.4 user asset selection and then B8 resolver/DEG-ready gates.",
+        ),
+        _legacy_selection_row(root / LEGACY_ASSET_SELECTION_PATH, selection_manifest),
+    ]
+    present_rows = [row for row in rows if row["artifact_present"]]
+    blockers = _dedupe([item for row in rows for item in row["raw_blockers"]])
+    warnings = _dedupe([item for row in rows for item in row["raw_warnings"]])
+    operations = _legacy_pipeline_operations(rows)
+    return {
+        "schema_version": "biomedpilot.analysis_ui_legacy_asset_pipeline_state.v1",
+        "status": "available_for_review" if present_rows and not blockers else ("blocked" if blockers else "not_started"),
+        "project_root": str(root),
+        "row_count": len(rows),
+        "artifact_count": len(present_rows),
+        "rows": rows,
+        "operations": operations,
+        "blockers": blockers,
+        "warnings": warnings,
+        "formal_analysis_enabled": False,
+        "writes_analysis_input_repository": False,
+        "writes_result_index": False,
+        "report_ready_eligible": False,
+        "boundary_message": "Legacy assets are acquisition/standardization inputs only; formal analysis still requires B8 resolver and downstream task gates.",
+    }
+
+
+def _legacy_pipeline_operations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_id = {str(row.get("row_id") or ""): row for row in rows}
+    adapter_ready = bool(by_id.get("legacy_adapter_manifests", {}).get("artifact_present"))
+    candidates_ready = bool(by_id.get("legacy_asset_candidates", {}).get("artifact_present"))
+    materialized_ready = bool(by_id.get("legacy_materialized_assets", {}).get("artifact_present"))
+    merge_ready = bool(by_id.get("legacy_repository_merge", {}).get("artifact_present"))
+    return [
+        _legacy_operation("legacy_build_candidates", "Build legacy asset candidates", adapter_ready, "legacy_adapter_manifests_missing", "Writes candidate-only standardized asset bundle."),
+        _legacy_operation("legacy_materialize_candidates", "Materialize legacy candidates", candidates_ready, "legacy_asset_candidates_missing", "Writes isolated repository files and materialization manifest only."),
+        _legacy_operation("legacy_merge_repository_manifest", "Merge legacy assets into repository manifest", materialized_ready, "legacy_materialized_assets_missing", "Writes standardized repository manifest/validation/lineage only."),
+        _legacy_operation("legacy_confirm_asset_selection", "Confirm legacy asset selection", merge_ready, "legacy_repository_merge_missing", "Writes user-confirmed default asset selection only; downstream gates still decide readiness."),
+    ]
+
+
+def _legacy_operation(operation_id: str, label: str, enabled: bool, blocker: str, next_action: str) -> dict[str, Any]:
+    return {
+        "operation_id": operation_id,
+        "label": label,
+        "enabled": enabled,
+        "state": "available" if enabled else "blocked",
+        "disabled_reason": "" if enabled else blocker,
+        "button_behavior": "controlled_standardization_artifact_write_no_formal_execution",
+        "next_action": next_action,
+    }
+
+
+def _legacy_pipeline_payload_row(
+    row_id: str,
+    label: str,
+    artifact_path: Path,
+    payload: dict[str, Any],
+    *,
+    count_field: str,
+    default_present_status: str,
+    next_action: str,
+) -> dict[str, Any]:
+    exists = bool(payload)
+    status = str(payload.get("status") or default_present_status) if exists else "not_started"
+    return _legacy_pipeline_row(
+        row_id,
+        label,
+        artifact_path,
+        exists=exists,
+        count=int(payload.get(count_field) or len(payload.get("assets", []) or []) if exists else 0),
+        status=status,
+        blockers=_list(payload.get("blockers")),
+        warnings=_list(payload.get("warnings")),
+        next_action=next_action,
+    )
+
+
+def _legacy_selection_row(artifact_path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    validation = payload.get("validation") if isinstance(payload.get("validation"), dict) else {}
+    selected = payload.get("selected_assets") if isinstance(payload.get("selected_assets"), dict) else {}
+    selected_count = sum(1 for item in selected.values() if isinstance(item, dict) and item.get("asset_id"))
+    blockers = _list(validation.get("selection_blockers")) + _list(validation.get("downstream_blockers"))
+    warnings = _list(validation.get("warnings")) + _list(payload.get("warnings"))
+    return _legacy_pipeline_row(
+        "legacy_asset_selection",
+        "User-confirmed asset selection",
+        artifact_path,
+        exists=bool(payload),
+        count=selected_count,
+        status=str(payload.get("status") or "not_started") if payload else "not_started",
+        blockers=blockers,
+        warnings=warnings,
+        next_action="Use selection only as standardized repository default selection; resolver and downstream gates decide analysis eligibility.",
+    )
+
+
+def _legacy_pipeline_row(
+    row_id: str,
+    label: str,
+    artifact_path: Path,
+    *,
+    exists: bool,
+    count: int,
+    status: str,
+    blockers: list[str],
+    warnings: list[str],
+    next_action: str,
+) -> dict[str, Any]:
+    return {
+        "row_id": row_id,
+        "label": label,
+        "status": status,
+        "artifact_present": exists,
+        "artifact_path": str(artifact_path),
+        "count_summary": str(count) if exists else "0",
+        "blockers": compact_list(blockers),
+        "warnings": compact_list(warnings),
+        "disabled_reason": "Legacy pipeline is review/materialization/standardization only; it cannot run formal DEG/GSEA/survival/report-ready.",
+        "next_action": next_action,
+        "raw_blockers": blockers,
+        "raw_warnings": warnings,
     }
 
 

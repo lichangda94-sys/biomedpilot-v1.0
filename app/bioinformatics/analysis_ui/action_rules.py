@@ -41,6 +41,7 @@ def build_action_rows(
     gsea_result_schema_gate: dict[str, Any] | None = None,
     gsea_dependency: dict[str, Any] | None = None,
     survival_clinical_state: dict[str, Any] | None = None,
+    legacy_asset_pipeline: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -73,6 +74,7 @@ def build_action_rows(
     gsea_result_schema_gate = gsea_result_schema_gate or {}
     gsea_dependency = gsea_dependency or {}
     survival_clinical_state = survival_clinical_state or {}
+    legacy_asset_pipeline = legacy_asset_pipeline or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -80,6 +82,8 @@ def build_action_rows(
     survival_package = package_by_type.get("tcga_clinical_survival_preflight")
 
     rows: list[dict[str, Any]] = []
+    rows.append(_legacy_asset_pipeline_action(legacy_asset_pipeline))
+    rows.extend(_legacy_asset_pipeline_operation_actions(legacy_asset_pipeline))
     rows.append(_deg_preflight_action(deg_package))
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate))
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
@@ -122,6 +126,48 @@ def build_action_rows(
             "next_action": "Use only from developer diagnostics; output remains testing_level.",
         }
     )
+    return rows
+
+
+def _legacy_asset_pipeline_action(pipeline: dict[str, Any]) -> dict[str, Any]:
+    if not pipeline or not pipeline.get("artifact_count"):
+        return _disabled(
+            "legacy_asset_pipeline_review",
+            "Review legacy asset pipeline",
+            "not_started",
+            "no legacy adapter/candidate/materialization/selection artifacts",
+            "Run legacy adapter/candidate gates only when importing audited legacy assets.",
+        )
+    return {
+        "action_id": "legacy_asset_pipeline_review",
+        "label": "Review legacy asset pipeline",
+        "state": str(pipeline.get("status") or "available_for_review"),
+        "button_behavior": "enabled_review_only_no_formal_execution",
+        "enabled": True,
+        "normal_user_visible": True,
+        "disabled_reason": "",
+        "next_action": str(pipeline.get("boundary_message") or "Review legacy asset artifacts; downstream formal gates still apply."),
+    }
+
+
+def _legacy_asset_pipeline_operation_actions(pipeline: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for operation in pipeline.get("operations", []) or []:
+        if not isinstance(operation, dict):
+            continue
+        enabled = bool(operation.get("enabled"))
+        rows.append(
+            {
+                "action_id": str(operation.get("operation_id") or ""),
+                "label": str(operation.get("label") or ""),
+                "state": str(operation.get("state") or ("available" if enabled else "blocked")),
+                "button_behavior": str(operation.get("button_behavior") or "controlled_standardization_artifact_write_no_formal_execution"),
+                "enabled": enabled,
+                "normal_user_visible": True,
+                "disabled_reason": "" if enabled else str(operation.get("disabled_reason") or "legacy_pipeline_operation_blocked"),
+                "next_action": str(operation.get("next_action") or "Run B16 legacy standardization gate; no formal analysis execution."),
+            }
+        )
     return rows
 
 
