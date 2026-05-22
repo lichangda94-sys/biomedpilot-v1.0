@@ -256,6 +256,7 @@ def evaluate_full_integrated_report_gate(
     section_rows: list[dict[str, Any]] = []
     checks = {
         "result_index_exists": bool(entries),
+        "all_required_section_ids_requested": set(section_ids) == set(REQUIRED_SECTION_IDS),
         "required_sections_present": True,
         "all_sections_formal_computed": True,
         "all_sections_have_result_index_v2_fields": True,
@@ -271,6 +272,8 @@ def evaluate_full_integrated_report_gate(
     }
     if not checks["result_index_exists"]:
         blockers.append("result_index_missing_or_empty")
+    if not checks["all_required_section_ids_requested"]:
+        blockers.append("full_integrated_required_sections_not_complete")
     for section_id in section_ids:
         row = _section_row(root, entries, section_id, explicit.get(section_id, ""))
         section_rows.append(row)
@@ -294,7 +297,10 @@ def evaluate_full_integrated_report_gate(
             if not passed:
                 blockers.append(check_name)
     blockers.extend(row_blocker for row in prerequisite_rows for row_blocker in row.get("blockers", []) or [])
-    blockers.append("full_integrated_report_export_not_enabled_in_b23_1")
+    export_activation_blocker = ""
+    if prerequisite_summary["blocked_count"] != 0:
+        export_activation_blocker = "full_integrated_report_export_waiting_for_section_prerequisites"
+        blockers.append(export_activation_blocker)
     status = "blocked" if blockers else "eligible_for_full_integrated_report"
     return {
         "schema_version": FULL_INTEGRATED_REPORT_READY_SCHEMA_VERSION,
@@ -310,7 +316,10 @@ def evaluate_full_integrated_report_gate(
         "prerequisite_summary": prerequisite_summary,
         "survival_clinical_report_ready_required": True,
         "survival_clinical_section_package_policy": "KM/Cox section-only packages may satisfy section prerequisites only after package integrity validation passes; they do not enable full integrated export by themselves.",
-        "export_activation_status": "blocked_until_full_integrated_export_activation_after_content_gate_and_renderer_gate_pass",
+        "export_activation_status": "eligible_for_markdown_export" if status == "eligible_for_full_integrated_report" else "blocked_until_full_integrated_section_prerequisites_pass",
+        "export_activation_blocker": export_activation_blocker,
+        "enabled_export_formats": ["markdown"] if status == "eligible_for_full_integrated_report" else [],
+        "disabled_export_formats": ["pdf", "docx"],
         "checks": checks,
         "package_layout": [
             "integrated_report.md",

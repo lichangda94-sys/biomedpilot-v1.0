@@ -4683,7 +4683,8 @@ def test_results_browser_survival_clinical_section_report_package_gate(qt_app, p
     assert full_status is not None
     assert "Full integrated report disabled" in full_status.text()
     assert "full_integrated_prerequisite_forbids_section_package_as_full_report" not in full_status.text()
-    assert "full_integrated_report_export_not_enabled_in_b23_1" in full_status.text()
+    assert "full_integrated_report_export_waiting_for_section_prerequisites" in full_status.text()
+    assert "section_result_missing:formal_deg" in full_status.text()
 
 
 def _register_survival_clinical_section_results(root: Path) -> None:

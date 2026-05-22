@@ -14,7 +14,7 @@ def test_full_integrated_gate_blocks_until_survival_clinical_section_packages_pa
     assert gate["status"] == "blocked"
     assert gate["section_scope"] == "full_integrated_report"
     assert "survival_clinical_report_ready_not_implemented" not in gate["blockers"]
-    assert "full_integrated_report_export_not_enabled_in_b23_1" in gate["blockers"]
+    assert "full_integrated_report_export_waiting_for_section_prerequisites" in gate["blockers"]
     sections = {row["section_id"]: row for row in gate["section_rows"]}
     assert sections["formal_deg"]["result_id"] == "deg-formal"
     assert sections["survival_km_logrank"]["plot_artifact_status"] == "real_artifact_registered"
