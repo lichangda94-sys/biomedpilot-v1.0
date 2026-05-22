@@ -23,6 +23,7 @@ from app.bioinformatics.reports.gsea import evaluate_gsea_report_ready_gate
 from app.bioinformatics.reports.integrated import evaluate_full_integrated_report_gate
 from app.bioinformatics.reports.ora import evaluate_ora_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
+from app.bioinformatics.reports.renderer_capability import build_report_renderer_capability_snapshot
 from app.bioinformatics.reports.survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
@@ -446,7 +447,12 @@ def build_package_rows(packages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survival_dependency: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def build_dependency_rows(
+    *,
+    deg_dependency: dict[str, Any] | None = None,
+    survival_dependency: dict[str, Any] | None = None,
+    renderer_snapshot: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     deg_dependency = deg_dependency or check_deg_backend_dependencies()
     survival_dependency = survival_dependency or check_survival_backend_dependencies()
     rows: list[dict[str, Any]] = []
@@ -506,6 +512,11 @@ def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survi
                 "raw_warnings": ["survival_r_backend_not_configured"],
             }
         )
+    renderer_snapshot = renderer_snapshot or build_report_renderer_capability_snapshot()
+    renderer_capabilities = renderer_snapshot.get("capabilities") if isinstance(renderer_snapshot.get("capabilities"), dict) else {}
+    for name, label in (("pandoc", "Pandoc report renderer"), ("xelatex", "XeLaTeX PDF backend"), ("wkhtmltopdf", "wkhtmltopdf PDF backend"), ("quarto", "Quarto report renderer")):
+        capability = renderer_capabilities.get(name) if isinstance(renderer_capabilities.get(name), dict) else {}
+        rows.append(_renderer_dependency_row(name, label, capability))
     return rows
 
 
@@ -1270,6 +1281,23 @@ def _dependency_row(dependency_id: str, label: str, status: dict[str, Any], *, r
         "packaging_impact": str(status.get("packaging_impact") or ("required_in_packaged_app_for_formal_deg" if required else "optional")),
         "raw_blockers": [blocker] if blocker else [],
         "raw_warnings": ["detect_first_no_install"],
+    }
+
+
+def _renderer_dependency_row(name: str, label: str, status: dict[str, Any]) -> dict[str, Any]:
+    available = status.get("available") is True
+    blocker = "" if available else f"renderer_dependency_missing:{name}"
+    return {
+        "dependency_id": f"renderer:{name}",
+        "label": label,
+        "status": "installed" if available else "optional_missing",
+        "version": str(status.get("version") or ""),
+        "blockers": blocker or "None",
+        "warnings": "Detect-first only; no auto-install; PDF/DOCX export remains disabled until renderer activation gate passes.",
+        "action": "Detect only; no install action; PDF/DOCX export remains disabled.",
+        "packaging_impact": str(status.get("packaging_impact") or "external_renderer_binary_not_bundled"),
+        "raw_blockers": [blocker] if blocker else [],
+        "raw_warnings": ["report_renderer_detect_first_only"],
     }
 
 

@@ -5042,6 +5042,8 @@ def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) ->
     assert "scipy" in dep_text
     assert "statsmodels" in dep_text
     assert "lifelines" in dep_text
+    assert "Pandoc report renderer" in dep_text
+    assert "PDF/DOCX export remains disabled" in dep_text
     assert "Detect only" in dep_text
     assert "required_in_packaged_app_for_formal_deg" in dep_text
     assert "安装" not in dep_text

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -13,6 +12,7 @@ from app.bioinformatics.results.registry import RESULT_INDEX, load_registry
 from .formal_deg import evaluate_formal_deg_report_ready_gate
 from .gsea import evaluate_gsea_report_ready_gate
 from .ora import evaluate_ora_report_ready_gate
+from .renderer_capability import build_report_renderer_capability_snapshot
 from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
 
 
@@ -178,6 +178,8 @@ def build_full_integrated_report_package_plan(
 
 def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown") -> dict[str, Any]:
     canonical = _canonical_export_format(export_format)
+    capability_snapshot = build_report_renderer_capability_snapshot(commands=("pandoc", "xelatex", "wkhtmltopdf"))
+    capabilities = capability_snapshot.get("capabilities", {}) if isinstance(capability_snapshot.get("capabilities"), dict) else {}
     blockers: list[str] = []
     warnings: list[str] = []
     required_dependencies: list[str] = []
@@ -192,15 +194,15 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
     elif canonical == "docx":
         renderer_id = "pandoc_docx"
         required_dependencies = ["pandoc"]
-        detected_dependencies = {name: _detect_renderer_dependency(name) for name in required_dependencies}
+        detected_dependencies = {name: dict(capabilities.get(name, {})) for name in required_dependencies}
         if not detected_dependencies["pandoc"]["available"]:
             blockers.append("renderer_dependency_missing:pandoc")
         blockers.append("full_integrated_docx_renderer_not_enabled_in_b23_4")
     elif canonical == "pdf":
         renderer_id = "pandoc_pdf"
-        pandoc = _detect_renderer_dependency("pandoc")
-        latex = _detect_renderer_dependency("xelatex")
-        wkhtmltopdf = _detect_renderer_dependency("wkhtmltopdf")
+        pandoc = dict(capabilities.get("pandoc", {}))
+        latex = dict(capabilities.get("xelatex", {}))
+        wkhtmltopdf = dict(capabilities.get("wkhtmltopdf", {}))
         required_dependencies = ["pandoc", "xelatex_or_wkhtmltopdf"]
         detected_dependencies = {"pandoc": pandoc, "xelatex": latex, "wkhtmltopdf": wkhtmltopdf}
         if not pandoc["available"]:
@@ -226,6 +228,7 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
         "renderer_scope": "full_integrated_report_export_format",
         "required_dependencies": required_dependencies,
         "detected_dependencies": detected_dependencies,
+        "renderer_capability_snapshot": capability_snapshot,
         "checks": {
             "format_supported": canonical in SUPPORTED_EXPORT_FORMATS,
             "dependencies_detected": dependency_checks_passed,
@@ -846,35 +849,6 @@ def _package_plan_disabled_reasons(gate: dict[str, Any], renderer_gate: dict[str
     if renderer_gate.get("status") != "passed":
         reasons.extend(str(item) for item in renderer_gate.get("blockers", []) or [])
     return list(dict.fromkeys(reasons))
-
-
-def _detect_renderer_dependency(command: str) -> dict[str, Any]:
-    executable = shutil.which(command)
-    payload = {
-        "command": command,
-        "available": bool(executable),
-        "path": executable or "",
-        "version": "",
-        "missing_reason": "" if executable else f"{command}_not_found_on_path",
-    }
-    if executable:
-        payload["version"] = _renderer_dependency_version(executable)
-    return payload
-
-
-def _renderer_dependency_version(executable: str) -> str:
-    try:
-        completed = subprocess.run(
-            [executable, "--version"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=2,
-        )
-    except Exception:
-        return "version_unavailable"
-    text = (completed.stdout or completed.stderr or "").splitlines()
-    return text[0].strip() if text else "version_unavailable"
 
 
 def _read_json(path: Path) -> dict[str, Any]:

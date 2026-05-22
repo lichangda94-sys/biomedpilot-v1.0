@@ -131,12 +131,23 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
             "r_backend": {"packages": {"R": "not_checked", "limma": "not_checked", "DESeq2": "not_checked", "edgeR": "not_checked"}},
         },
         survival_dependency={"status": "preflight_only", "python_lifelines": {"available": False, "version": ""}, "blockers": ["lifelines_missing_formal_survival_disabled"]},
+        renderer_snapshot={
+            "capabilities": {
+                "pandoc": {"available": False, "version": "", "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled"},
+                "xelatex": {"available": False, "version": "", "packaging_impact": "external_binary_required_for_pandoc_pdf_backend_not_bundled"},
+                "wkhtmltopdf": {"available": False, "version": "", "packaging_impact": "external_binary_alternative_pdf_backend_not_bundled"},
+                "quarto": {"available": False, "version": "", "packaging_impact": "future_renderer_detect_only_not_enabled"},
+            }
+        },
     )
 
     text = "\n".join(str(row) for row in rows)
     assert "missing_python_package:scipy" in text
     assert "missing_python_package:statsmodels" in text
     assert "lifelines_missing_formal_survival_disabled" in text
+    assert "Pandoc report renderer" in text
+    assert "renderer_dependency_missing:pandoc" in text
+    assert "PDF/DOCX export remains disabled" in text
     assert "no install action" in text
     assert "required_in_packaged_app_for_formal_deg" in text
 

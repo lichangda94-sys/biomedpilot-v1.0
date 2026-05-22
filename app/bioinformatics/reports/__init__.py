@@ -9,6 +9,7 @@ from .integrated import (
     evaluate_full_integrated_report_renderer_gate,
 )
 from .ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
+from .renderer_capability import build_report_renderer_capability_snapshot, detect_renderer_dependency
 from .survival_clinical import (
     create_cox_report_ready_package,
     create_km_logrank_report_ready_package,
@@ -31,4 +32,6 @@ __all__ = [
     "evaluate_cox_report_ready_gate",
     "evaluate_km_logrank_report_ready_gate",
     "evaluate_ora_report_ready_gate",
+    "build_report_renderer_capability_snapshot",
+    "detect_renderer_dependency",
 ]

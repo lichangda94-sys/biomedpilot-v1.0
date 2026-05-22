@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from app.bioinformatics.reports import integrated
+from app.bioinformatics.reports import renderer_capability
 from app.bioinformatics.reports.integrated import evaluate_full_integrated_report_renderer_gate
 
 
@@ -18,7 +19,7 @@ def test_markdown_renderer_gate_uses_builtin_renderer_without_external_dependenc
 
 
 def test_pdf_renderer_gate_is_detect_first_and_blocked_when_dependencies_are_missing(monkeypatch) -> None:
-    monkeypatch.setattr(integrated.shutil, "which", lambda _command: None)
+    monkeypatch.setattr(renderer_capability.shutil, "which", lambda _command: None)
 
     gate = evaluate_full_integrated_report_renderer_gate("pdf")
 
@@ -28,11 +29,12 @@ def test_pdf_renderer_gate_is_detect_first_and_blocked_when_dependencies_are_mis
     assert "renderer_dependency_missing:xelatex_or_wkhtmltopdf" in gate["blockers"]
     assert "full_integrated_pdf_renderer_not_enabled_in_b23_4" in gate["blockers"]
     assert gate["checks"]["detect_first_no_install_action"] is True
+    assert gate["renderer_capability_snapshot"]["checks"]["no_report_export_enabled"] is True
 
 
 def test_docx_renderer_gate_remains_disabled_even_when_pandoc_is_detected(monkeypatch) -> None:
-    monkeypatch.setattr(integrated.shutil, "which", lambda command: f"/usr/local/bin/{command}")
-    monkeypatch.setattr(integrated.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout="pandoc 3.1\n", stderr=""))
+    monkeypatch.setattr(renderer_capability.shutil, "which", lambda command: f"/usr/local/bin/{command}")
+    monkeypatch.setattr(renderer_capability.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout="pandoc 3.1\n", stderr=""))
 
     gate = evaluate_full_integrated_report_renderer_gate("docx")
 
