@@ -6714,9 +6714,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         if result.get("status") == "full_integrated_report_package_created":
             self.refresh_results()
             self._status_label.setText(
-                "已生成 full integrated report package；"
+                "已生成 markdown full integrated report package；"
                 f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
-                "不包含临床诊断、预后或治疗建议。"
+                "仅包含已通过 gate 的统计研究 sections；PDF/DOCX 仍禁用；不包含临床诊断、预后、risk score 或治疗建议。"
             )
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "Full integrated report gate 未通过"
@@ -7041,7 +7041,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._gate_preview.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
         integrated_card, integrated_layout = _card("Full integrated report preview")
-        integrated_layout.addWidget(_muted("Full integrated report 需要 DEG、ORA、GSEA、KM 和 Cox section 全部通过 gate；section-only package 不等于完整综合报告。"))
+        integrated_layout.addWidget(_muted("Full integrated report 需要 DEG、ORA、GSEA、KM 和 Cox section 全部通过 gate；当前只支持 markdown package，PDF/DOCX 保持 renderer-disabled。"))
         integrated_controls = QHBoxLayout()
         self._full_integrated_format = QComboBox()
         self._full_integrated_format.setObjectName("fullIntegratedReportFormat")
@@ -7052,7 +7052,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._full_integrated_button = _button("生成 full integrated report package", "secondaryButton", self.generate_full_integrated_report_package)
         self._full_integrated_button.setObjectName("fullIntegratedReportButton")
         integrated_controls.addWidget(self._full_integrated_button)
-        self._full_integrated_status = _muted("Full integrated report gate 尚未通过；当前仅显示 gate/package plan，不生成 package。")
+        self._full_integrated_status = _muted("Full integrated report gate 尚未通过；当前显示 gate/package plan、renderer disabled reason 和 section provenance。")
         self._full_integrated_status.setObjectName("fullIntegratedReportStatus")
         integrated_controls.addWidget(self._full_integrated_status)
         integrated_controls.addStretch(1)
@@ -7062,11 +7062,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         integrated_layout.addWidget(self._full_integrated_plan)
         _set_table_widths(self._full_integrated_plan, [260, 660])
         self._full_integrated_plan.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self._full_integrated_sections = _table(["Section", "Result", "Semantics", "Validation", "Report gate", "Plot", "Prerequisite", "Blockers"])
+        self._full_integrated_sections = _table(["Section", "Result", "Semantics", "Validation", "Report gate", "Plot", "Package", "Prerequisite", "Blockers"])
         self._full_integrated_sections.setObjectName("fullIntegratedReportSectionTable")
         integrated_layout.addWidget(self._full_integrated_sections)
-        _set_table_widths(self._full_integrated_sections, [150, 160, 170, 110, 150, 150, 140, 340])
-        self._full_integrated_sections.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
+        _set_table_widths(self._full_integrated_sections, [150, 160, 170, 110, 150, 150, 150, 140, 340])
+        self._full_integrated_sections.horizontalHeader().setSectionResizeMode(8, QHeaderView.Stretch)
         root.addWidget(integrated_card)
 
         developer_card, developer_layout = _card("开发者诊断")
@@ -7329,7 +7329,10 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._full_integrated_button.setEnabled(gate.get("status") == "eligible_for_full_integrated_report" and can_create)
         if self._full_integrated_button.isEnabled():
             renderer_id = str(plan.get("renderer_id") or "builtin_markdown")
-            self._full_integrated_status.setText(f"Full integrated report gate passed；renderer={renderer_id}；package can be created；no clinical diagnosis/prognosis/treatment advice.")
+            self._full_integrated_status.setText(
+                f"Full integrated report gate passed；renderer={renderer_id}；markdown-only package can be created；"
+                "PDF/DOCX disabled；no clinical diagnosis/prognosis/risk score/treatment advice."
+            )
         else:
             reason = "；".join(disabled_reasons or blockers) or str(plan.get("blocked_reason") or "full integrated report gate 未通过")
             if warnings:
@@ -7341,6 +7344,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["section_scope", plan.get("section_scope", gate.get("section_scope", "full_integrated_report"))],
                 ["export_format", plan.get("export_format", self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown")],
                 ["can_create_package", plan.get("can_create_package", False)],
+                ["export_activation_status", gate.get("export_activation_status", "")],
+                ["enabled_export_formats", ", ".join(str(item) for item in gate.get("enabled_export_formats", []) or [])],
+                ["disabled_export_formats", ", ".join(str(item) for item in gate.get("disabled_export_formats", []) or [])],
                 ["prerequisite_summary", gate.get("prerequisite_summary", {})],
                 ["renderer_status", plan.get("renderer_status", "")],
                 ["renderer_id", plan.get("renderer_id", "")],
@@ -7349,6 +7355,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["package_root_policy", plan.get("package_root_policy", "")],
                 ["required_directories", ", ".join(str(item) for item in plan.get("required_directories", []) or [])],
                 ["required_files", ", ".join(str(item) for item in plan.get("required_files", []) or [])],
+                ["limitations", "; ".join(str(item) for item in gate.get("limitations_required", []) or [])],
                 ["blocked_reason", plan.get("blocked_reason", "；".join(blockers))],
             ],
         )
@@ -7368,6 +7375,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                     row.get("validation_status", ""),
                     row.get("section_report_ready_status", ""),
                     row.get("plot_artifact_status", ""),
+                    (prerequisite_rows.get(str(row.get("section_id") or "")) or {}).get("section_package_validation_status", ""),
                     (prerequisite_rows.get(str(row.get("section_id") or "")) or {}).get("status", ""),
                     "; ".join(str(item) for item in row.get("blockers", []) or []),
                 ]

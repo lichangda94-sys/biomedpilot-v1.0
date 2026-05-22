@@ -4687,6 +4687,132 @@ def test_results_browser_survival_clinical_section_report_package_gate(qt_app, p
     assert "section_result_missing:formal_deg" in full_status.text()
 
 
+def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, project_summary, monkeypatch) -> None:
+    package_path = project_summary.project_root / "report_package" / "integrated" / "ui_ready"
+    gate = _full_integrated_ui_gate()
+
+    def _fake_plan(_root, *, gate, export_format="markdown", renderer_gate=None):
+        return {
+            "schema_version": "biomedpilot.full_integrated_report_package_plan.v1",
+            "section_scope": "full_integrated_report",
+            "export_format": export_format,
+            "can_create_package": export_format == "markdown",
+            "disabled_reasons": [] if export_format == "markdown" else [f"full_integrated_{export_format}_renderer_not_enabled_in_b23_4"],
+            "renderer_status": "passed" if export_format == "markdown" else "blocked",
+            "renderer_id": "builtin_markdown" if export_format == "markdown" else f"pandoc_{export_format}",
+            "renderer_dependencies": [] if export_format == "markdown" else ["pandoc"],
+            "renderer_disabled_reason": "" if export_format == "markdown" else f"full_integrated_{export_format}_renderer_not_enabled_in_b23_4",
+            "package_root_policy": "report_package/integrated/<timestamp>_<project_name>",
+            "required_directories": ["sections", "tables", "plots", "manifests", "logs", "provenance"],
+            "required_files": ["integrated_report.md", "README_limitations.md"],
+            "blocked_reason": "",
+        }
+
+    def _fake_package(_root, *, export_format="markdown"):
+        package_path.mkdir(parents=True, exist_ok=True)
+        (package_path / "integrated_report.md").write_text("# Integrated\n", encoding="utf-8")
+        return {
+            "schema_version": "biomedpilot.full_integrated_report_package.v1",
+            "status": "full_integrated_report_package_created",
+            "export_format": export_format,
+            "package_path": str(package_path),
+            "user_visible_package_path": str(package_path),
+            "gate": gate,
+            "renderer_gate": {"status": "passed", "renderer_id": "builtin_markdown"},
+            "package_plan": _fake_plan(project_summary.project_root, gate=gate, export_format=export_format),
+        }
+
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_gate", lambda _root: gate)
+    monkeypatch.setattr(workflow_pages, "build_full_integrated_report_package_plan", _fake_plan)
+    monkeypatch.setattr(workflow_pages, "create_full_integrated_report_package", _fake_package)
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    status = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert status is not None
+    assert "markdown-only package can be created" in status.text()
+    assert "PDF/DOCX disabled" in status.text()
+    button = widget.findChild(QPushButton, "fullIntegratedReportButton")
+    assert button is not None and button.isEnabled()
+    plan_table = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
+    assert plan_table is not None
+    plan_text = _table_text(plan_table)
+    assert "eligible_for_markdown_export" in plan_text
+    assert "enabled_export_formats" in plan_text
+    assert "markdown" in plan_text
+    assert "disabled_export_formats" in plan_text
+    assert "pdf, docx" in plan_text
+    assert "No clinical diagnosis" in plan_text
+    section_table = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
+    assert section_table is not None
+    headers = "\n".join(section_table.horizontalHeaderItem(column).text() for column in range(section_table.columnCount()))
+    assert "Package" in headers
+    section_text = _table_text(section_table)
+    assert "survival_km_logrank" in section_text
+    assert "passed" in section_text
+
+    result = widget.generate_full_integrated_report_package()
+
+    assert result is not None
+    assert result["status"] == "full_integrated_report_package_created"
+    assert Path(str(result["package_path"])).is_dir()
+    assert "输出位置：" in widget.status_message()
+    assert "PDF/DOCX 仍禁用" in widget.status_message()
+    assert "risk score" in widget.status_message()
+
+
+def _full_integrated_ui_gate() -> dict[str, object]:
+    rows = [
+        _full_integrated_ui_section("formal_deg", "deg-ui", "deg", package_status="not_required"),
+        _full_integrated_ui_section("ora_enrichment", "ora-ui", "ora_enrichment", package_status="not_required"),
+        _full_integrated_ui_section("gsea_preranked", "gsea-ui", "gsea_preranked", package_status="not_required"),
+        _full_integrated_ui_section("survival_km_logrank", "km-ui", "survival_km_logrank", package_status="passed"),
+        _full_integrated_ui_section("cox", "cox-ui", "cox_univariate", package_status="passed"),
+    ]
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_gate.v1",
+        "status": "eligible_for_full_integrated_report",
+        "section_scope": "full_integrated_report",
+        "export_activation_status": "eligible_for_markdown_export",
+        "enabled_export_formats": ["markdown"],
+        "disabled_export_formats": ["pdf", "docx"],
+        "section_rows": rows,
+        "prerequisite_rows": [
+            {
+                "section_id": row["section_id"],
+                "status": "passed",
+                "section_package_validation_status": row["section_package_validation_status"],
+                "blockers": [],
+            }
+            for row in rows
+        ],
+        "prerequisite_summary": {"status": "passed", "blocked_count": 0, "passed_count": 5},
+        "limitations_required": [
+            "Statistical research report only.",
+            "No clinical diagnosis, prognosis, or treatment recommendation.",
+            "Warnings, blockers, dependencies, and provenance must remain attached.",
+        ],
+        "blockers": [],
+        "warnings": [],
+    }
+
+
+def _full_integrated_ui_section(section_id: str, result_id: str, task_type: str, *, package_status: str) -> dict[str, object]:
+    return {
+        "section_id": section_id,
+        "result_id": result_id,
+        "task_type": task_type,
+        "result_semantics": "formal_computed_result",
+        "validation_status": "passed",
+        "section_report_ready_status": "passed",
+        "plot_artifact_status": "real_artifact_registered",
+        "section_package_validation_status": package_status,
+        "blockers": [],
+        "warnings": [],
+    }
+
+
 def _register_survival_clinical_section_results(root: Path) -> None:
     tables_dir = root / "results" / "tables"
     tables_dir.mkdir(parents=True, exist_ok=True)
