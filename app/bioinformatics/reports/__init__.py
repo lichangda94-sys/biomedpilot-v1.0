@@ -4,6 +4,7 @@ from .formal_deg import create_formal_deg_report_ready_package, evaluate_formal_
 from .gsea import create_gsea_report_ready_package, evaluate_gsea_report_ready_gate
 from .integrated import (
     build_full_integrated_report_package_plan,
+    create_full_integrated_docx_rendered_export,
     create_full_integrated_report_package,
     create_full_integrated_docx_rendered_export_skeleton,
     evaluate_full_integrated_docx_preflight_gate,
@@ -22,6 +23,7 @@ from .survival_clinical import (
 
 __all__ = [
     "create_formal_deg_report_ready_package",
+    "create_full_integrated_docx_rendered_export",
     "create_full_integrated_docx_rendered_export_skeleton",
     "create_full_integrated_report_package",
     "create_gsea_report_ready_package",

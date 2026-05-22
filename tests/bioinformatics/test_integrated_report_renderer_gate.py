@@ -47,6 +47,19 @@ def test_docx_renderer_gate_remains_disabled_even_when_pandoc_is_detected(monkey
     assert gate["blockers"] == ["full_integrated_docx_renderer_not_enabled_in_b23_4"]
 
 
+def test_docx_renderer_gate_can_pass_only_when_activation_is_explicit_and_pandoc_detected(monkeypatch) -> None:
+    monkeypatch.setattr(renderer_capability.shutil, "which", lambda command, path=None: f"/usr/local/bin/{command}")
+    monkeypatch.setattr(renderer_capability.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout="pandoc 3.1\n", stderr="", returncode=0))
+
+    gate = evaluate_full_integrated_report_renderer_gate("docx", allow_docx_activation=True)
+
+    assert gate["status"] == "passed"
+    assert gate["detected_dependencies"]["pandoc"]["available"] is True
+    assert gate["checks"]["implementation_enabled"] is True
+    assert gate["checks"]["docx_activation_requested"] is True
+    assert gate["blockers"] == []
+
+
 def test_unsupported_renderer_format_is_blocked_without_traceback() -> None:
     gate = evaluate_full_integrated_report_renderer_gate("xlsx")
 

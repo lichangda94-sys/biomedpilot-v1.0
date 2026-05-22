@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from app.bioinformatics.reports import integrated
 from app.bioinformatics.reports.integrated import (
     build_full_integrated_report_package_plan,
+    create_full_integrated_docx_rendered_export,
     create_full_integrated_docx_rendered_export_skeleton,
     create_full_integrated_report_package,
     evaluate_full_integrated_docx_preflight_gate,
@@ -251,6 +253,86 @@ def test_docx_rendered_export_skeleton_keeps_existing_successful_exports(tmp_pat
     assert rendered["latest_attempt_status"] == "blocked"
 
 
+def test_docx_rendered_export_blocks_when_pandoc_missing_without_docx(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    result = create_full_integrated_docx_rendered_export(
+        package["package_path"],
+        command_finder=lambda _command: None,
+        runner=_runner_should_not_convert,
+    )
+
+    package_path = Path(package["package_path"])
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "blocked"
+    assert "renderer_dependency_missing:pandoc" in result["blockers"]
+    assert result["output_path"] == ""
+    assert rendered["exports"] == []
+    assert rendered["attempts"][0]["validation_status"] == "blocked"
+    assert log_payload["conversion_invoked"] is False
+    assert not list((package_path / "exports").glob("*.docx"))
+
+
+def test_docx_rendered_export_creates_docx_and_registers_package_export_when_pandoc_available(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    result = create_full_integrated_docx_rendered_export(
+        package["package_path"],
+        command_finder=lambda command: f"/usr/local/bin/{command}",
+        runner=_pandoc_runner_writes_docx,
+    )
+
+    package_path = Path(package["package_path"])
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
+    output = Path(result["output_path"])
+
+    assert result["status"] == "full_integrated_docx_rendered_export_created"
+    assert output.is_file()
+    assert output.read_bytes()
+    assert rendered["exports"][0]["artifact_type"] == "full_integrated_report_rendered_export"
+    assert rendered["exports"][0]["validation_status"] == "passed"
+    assert rendered["attempts"][0]["validation_status"] == "passed"
+    assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
+    assert log_payload["conversion_invoked"] is True
+    assert log_payload["exit_code"] == 0
+    assert package_manifest["rendered_exports_summary"]["exports_count"] == 1
+    assert package_manifest["rendered_exports_summary"]["docx_conversion_enabled"] is True
+
+
+def test_docx_rendered_export_failure_rolls_back_temp_and_preserves_markdown(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+    package_path = Path(package["package_path"])
+
+    result = create_full_integrated_docx_rendered_export(
+        package_path,
+        command_finder=lambda command: f"/usr/local/bin/{command}",
+        runner=_pandoc_runner_fails,
+    )
+
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "failed"
+    assert "docx_pandoc_conversion_failed" in result["blockers"]
+    assert rendered["exports"] == []
+    assert rendered["attempts"][0]["validation_status"] == "failed"
+    assert log_payload["conversion_invoked"] is True
+    assert log_payload["exit_code"] == 2
+    assert (package_path / "integrated_report.md").is_file()
+    assert not list((package_path / "exports" / ".tmp").glob("*.docx"))
+    assert not list((package_path / "exports").glob("*.docx"))
+
+
 def _write_entries(root: Path) -> None:
     entries = []
     for result_id, task_type, artifact_type in (
@@ -357,6 +439,25 @@ def _docx_renderer_gate_without_activation_blocker() -> dict:
         "blockers": [],
         "warnings": [],
     }
+
+
+def _runner_should_not_convert(*args, **kwargs):
+    return subprocess.CompletedProcess(args[0], 99, stdout="", stderr="unexpected conversion")
+
+
+def _pandoc_runner_writes_docx(args, **kwargs):
+    if "--version" in args or "-version" in args:
+        return subprocess.CompletedProcess(args, 0, stdout="pandoc 3.2\n", stderr="")
+    output = Path(args[args.index("-o") + 1])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(b"docx fixture")
+    return subprocess.CompletedProcess(args, 0, stdout="pandoc ok\n", stderr="")
+
+
+def _pandoc_runner_fails(args, **kwargs):
+    if "--version" in args or "-version" in args:
+        return subprocess.CompletedProcess(args, 0, stdout="pandoc 3.2\n", stderr="")
+    return subprocess.CompletedProcess(args, 2, stdout="", stderr="pandoc failed\n")
 
 
 def _passed_gate() -> dict:
