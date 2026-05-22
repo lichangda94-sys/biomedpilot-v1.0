@@ -3,6 +3,7 @@ from __future__ import annotations
 from .dependency_check import check_deg_backend_dependencies
 from .confirmation import load_deg_parameter_confirmation, save_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from .parameter_gate import build_deg_parameter_manifest, validate_deg_parameter_manifest
+from .multifactor_gate import build_multifactor_deg_preflight_manifest, validate_multifactor_deg_preflight_manifest
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
 from .result_schema import build_formal_deg_result_schema_gate, validate_deg_result_bundle, validate_deg_result_entry, validate_formal_deg_result_index_entry
@@ -10,6 +11,7 @@ from .result_schema import build_formal_deg_result_schema_gate, validate_deg_res
 __all__ = [
     "build_deg_parameter_manifest",
     "build_formal_deg_result_schema_gate",
+    "build_multifactor_deg_preflight_manifest",
     "check_deg_backend_dependencies",
     "load_deg_parameter_confirmation",
     "run_formal_controlled_deg",
@@ -20,4 +22,5 @@ __all__ = [
     "validate_deg_parameter_manifest",
     "validate_deg_parameter_confirmation",
     "validate_formal_deg_result_index_entry",
+    "validate_multifactor_deg_preflight_manifest",
 ]

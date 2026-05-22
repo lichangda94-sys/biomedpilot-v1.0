@@ -10,7 +10,7 @@ from app.bioinformatics.acquisition_adapters.repository_merge import LEGACY_REPO
 from app.bioinformatics.acquisition_adapters.selection_gate import LEGACY_ASSET_SELECTION_PATH
 from app.bioinformatics.acquisition_adapters.standardized_bridge import LEGACY_ASSET_CANDIDATE_PATH
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
-from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate
+from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate, build_multifactor_deg_preflight_manifest
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
@@ -60,6 +60,20 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
+    multi_factor_deg_gate = build_multifactor_deg_preflight_manifest(
+        deg_gates.get("deg_ready_package") if isinstance(deg_gates.get("deg_ready_package"), dict) else {},
+        dependency_snapshot=deg_dependency,
+    )
+    deg_gates["multi_factor_deg_gate"] = multi_factor_deg_gate
+    deg_gates["gate_rows"].append(
+        _formal_deg_gate_row(
+            "Multi-factor DEG preflight",
+            multi_factor_deg_gate.get("status"),
+            multi_factor_deg_gate.get("blockers", []),
+            multi_factor_deg_gate.get("warnings", []),
+            basis=f"{multi_factor_deg_gate.get('method_family') or 'missing'} / {multi_factor_deg_gate.get('value_type_policy') or 'missing'}",
+        )
+    )
     ora_gates = build_ora_gate_state(project_root=root)
     ora_plot_gate = build_ora_plot_gate(root)
     gsea_plot_gate = build_gsea_plot_gate(root)
@@ -112,11 +126,13 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_gate_rows=gsea_gates["gate_rows"],
         survival_clinical_rows=survival_rows,
         dependency_rows=dependency_rows,
+        multi_factor_deg_gate=multi_factor_deg_gate,
     )
     blockers = _dedupe(
         [*resolver.get("blockers", [])]
         + [item for row in package_rows for item in row["raw_blockers"]]
         + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
+        + [item for item in multi_factor_deg_gate.get("blockers", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
     )
@@ -124,6 +140,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         [*resolver.get("warnings", [])]
         + [item for row in package_rows for item in row["raw_warnings"]]
         + [item for row in dependency_rows for item in row["raw_warnings"]]
+        + [item for item in multi_factor_deg_gate.get("warnings", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("warnings", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("warnings", []) or []]
     )
@@ -141,6 +158,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "action_rows": action_rows,
         "dependency_rows": dependency_rows,
         "formal_deg_gate_rows": deg_gates["gate_rows"],
+        "multi_factor_deg_gate": multi_factor_deg_gate,
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
         "legacy_asset_pipeline": legacy_pipeline,
@@ -157,6 +175,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "analysis_input_resolver": resolver,
             "deg_dependency_snapshot": deg_dependency,
             "formal_deg_gate_state": deg_gates,
+            "multi_factor_deg_gate": multi_factor_deg_gate,
             "ora_gate_state": ora_gates,
             "ora_plot_gate": ora_plot_gate,
             "ora_report_ready_gate": ora_report_gate,
@@ -416,6 +435,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
     deg_package = next((item for item in packages if item.get("package_type") == "deg_recompute"), None)
     confirmation = load_deg_parameter_confirmation(project_root) if project_root is not None else {}
     confirmed_parameters = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
+    deg_ready_package: dict[str, Any] = {}
     if not deg_package:
         deg_ready_gate = {"status": "blocked", "blockers": ["missing_deg_recompute_input_package"], "warnings": []}
         parameter_gate = {"status": "blocked", "blockers": ["missing_deg_ready_package"], "warnings": []}
@@ -423,6 +443,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
     else:
         deg_ready = build_deg_ready_package(deg_package).to_dict()
+        deg_ready_package = deg_ready
         deg_ready_gate = {
             "schema_version": deg_ready.get("schema_version", ""),
             "status": "passed" if not deg_ready.get("blockers") else "blocked",
@@ -457,6 +478,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         "confirmation_gate": confirmation_gate,
         "parameter_confirmation": confirmation,
         "result_schema_gate": result_schema_gate,
+        "deg_ready_package": deg_ready_package,
         "gate_rows": gate_rows,
     }
 

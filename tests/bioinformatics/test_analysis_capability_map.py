@@ -16,6 +16,7 @@ def test_b17_capability_map_keeps_unimplemented_methods_blocked() -> None:
             {"row_id": "cox_multivariate_design", "status": "design_only"},
             {"row_id": "risk_score", "status": "disabled"},
         ],
+        multi_factor_deg_gate={"status": "blocked", "blockers": ["multi_factor_design_config_missing"], "result_semantics": "preflight_only"},
     )
     rows = {row["capability_id"]: row for row in capability_map["rows"]}
 
@@ -27,6 +28,9 @@ def test_b17_capability_map_keeps_unimplemented_methods_blocked() -> None:
         assert row["disabled_reason"]
 
     assert rows["deg_limma"]["ui_state"] == "blocked_by_dependency"
+    assert rows["deg_multifactor"]["implementation_status"] == "contract_preflight_available"
+    assert rows["deg_multifactor"]["ui_state"] == "blocked_preflight"
+    assert "preflight" in rows["deg_multifactor"]["result_semantics_policy"]
     assert "package.r.limma.available" in rows["deg_limma"]["dependency_capability_keys"]
     assert "runtime.r.available" in rows["deg_deseq2"]["dependency_capability_keys"]
     assert "package.r.edger.available" in rows["deg_edger"]["dependency_capability_keys"]

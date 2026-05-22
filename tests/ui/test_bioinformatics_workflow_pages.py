@@ -3047,6 +3047,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "design_audit_only" in capability_text
     assert "Risk score / nomogram" in capability_text
     assert "Full integrated report" in capability_text
+    assert "Multi-factor DEG design" in capability_text
+    assert "multi_factor_design_config_missing" in capability_text
+    assert "preflight" in capability_text
     assert "formal_computed_result" not in capability_text or "Never formal_computed_result" in capability_text
 
     dependency_table = widget.findChild(QTableWidget, "analysisDependencyTable")

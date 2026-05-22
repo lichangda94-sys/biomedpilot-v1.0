@@ -5718,7 +5718,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._action_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
         capability_card, capability_layout = _card("Deep analysis capability map")
-        capability_layout.addWidget(_muted("B17 capability map：区分 available、blocked、planned、disabled、spec-only、design-audit；dependency available 不等于功能已完成。"))
+        capability_layout.addWidget(_muted("B18 capability map：区分 available、blocked、planned、disabled、spec-only、design-audit；dependency available 或 design-ready 不等于功能已完成。"))
         self._capability_table = _table(["能力", "类别", "实现状态", "UI 状态", "Formal", "Capability keys", "原因 / 边界"])
         self._capability_table.setObjectName("analysisCapabilityMapTable")
         capability_layout.addWidget(self._capability_table)
