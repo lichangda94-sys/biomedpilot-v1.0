@@ -40,6 +40,7 @@ from app.bioinformatics.survival_clinical import (
 from app.bioinformatics.survival_clinical._io import read_table
 
 from .action_rules import build_action_rows
+from .capability_map import build_analysis_capability_map
 from .labels import compact_list, label_package_type, label_semantics, label_status, repair_guidance
 
 
@@ -104,6 +105,14 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate, ora_report_gate=ora_report_gate)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
     survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency, survival_clinical_state=survival_clinical_state)
+    capability_map = build_analysis_capability_map(
+        action_rows=action_rows,
+        formal_deg_gate_rows=deg_gates["gate_rows"],
+        ora_gate_rows=ora_gates["gate_rows"],
+        gsea_gate_rows=gsea_gates["gate_rows"],
+        survival_clinical_rows=survival_rows,
+        dependency_rows=dependency_rows,
+    )
     blockers = _dedupe(
         [*resolver.get("blockers", [])]
         + [item for row in package_rows for item in row["raw_blockers"]]
@@ -135,6 +144,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
         "legacy_asset_pipeline": legacy_pipeline,
+        "analysis_capability_map": capability_map,
         "result_rows": result_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
@@ -155,6 +165,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "gsea_gate_state": gsea_gates,
             "survival_clinical_state": survival_clinical_state,
             "legacy_asset_pipeline": legacy_pipeline,
+            "analysis_capability_map": capability_map,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,

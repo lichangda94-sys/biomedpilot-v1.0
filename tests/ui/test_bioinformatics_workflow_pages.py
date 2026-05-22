@@ -3034,6 +3034,21 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Export report-ready package" in action_text
     assert "blocked_report_ready_gate" in action_text
 
+    capability_table = widget.findChild(QTableWidget, "analysisCapabilityMapTable")
+    assert capability_table is not None
+    capability_text = _table_text(capability_table)
+    assert "DEG two-group controlled MVP" in capability_text
+    assert "limma" in capability_text
+    assert "DESeq2" in capability_text
+    assert "edgeR" in capability_text
+    assert "package.r.deseq2.available" in capability_text
+    assert "blocked_by_dependency" in capability_text
+    assert "Cox multivariate" in capability_text
+    assert "design_audit_only" in capability_text
+    assert "Risk score / nomogram" in capability_text
+    assert "Full integrated report" in capability_text
+    assert "formal_computed_result" not in capability_text or "Never formal_computed_result" in capability_text
+
     dependency_table = widget.findChild(QTableWidget, "analysisDependencyTable")
     assert dependency_table is not None
     dependency_text = _table_text(dependency_table)

@@ -31,6 +31,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["gate_rows"]
     assert state["ora_gate_rows"]
     assert state["survival_clinical_rows"]
+    assert state["analysis_capability_map"]["schema_version"] == "biomedpilot.deep_analysis_capability_map.v1"
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
@@ -51,6 +52,12 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["legacy_asset_pipeline"]["formal_analysis_enabled"] is False
     assert state["legacy_asset_pipeline"]["writes_result_index"] is False
     assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False
+    capabilities = {row["capability_id"]: row for row in state["analysis_capability_map"]["rows"]}
+    for capability_id in ("deg_limma", "deg_deseq2", "deg_edger", "cox_multivariate", "risk_score", "full_integrated_report"):
+        assert capabilities[capability_id]["formal_execution_enabled"] is False
+        assert capabilities[capability_id]["can_display_as_completed"] is False
+        assert capabilities[capability_id]["disabled_reason"]
+    assert "package.r.deseq2.available" in capabilities["deg_deseq2"]["dependency_capability_keys"]
 
 
 def test_analysis_center_state_shows_package_repair_guidance_for_deg_blockers(tmp_path: Path) -> None:

@@ -1,0 +1,265 @@
+from __future__ import annotations
+
+from typing import Any
+
+
+R_RUNTIME_KEY = "runtime.r.available"
+BIOCONDUCTOR_KEY = "runtime.bioconductor.available"
+LIMMA_KEY = "package.r.limma.available"
+DESEQ2_KEY = "package.r.deseq2.available"
+EDGER_KEY = "package.r.edger.available"
+SURVIVAL_KEY = "package.r.survival.available"
+GLMNET_KEY = "package.r.glmnet.available"
+MATPLOTLIB_KEY = "package.python.matplotlib.available"
+PANDOC_KEY = "renderer.pandoc.available"
+QUARTO_KEY = "renderer.quarto.available"
+LATEX_KEY = "renderer.latex.available"
+
+
+def build_analysis_capability_map(
+    *,
+    action_rows: list[dict[str, Any]] | None = None,
+    formal_deg_gate_rows: list[dict[str, Any]] | None = None,
+    ora_gate_rows: list[dict[str, Any]] | None = None,
+    gsea_gate_rows: list[dict[str, Any]] | None = None,
+    survival_clinical_rows: list[dict[str, Any]] | None = None,
+    dependency_rows: list[dict[str, Any]] | None = None,
+    external_capabilities: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    action_by_id = {str(row.get("action_id") or ""): row for row in action_rows or [] if isinstance(row, dict)}
+    dependency_by_id = {str(row.get("dependency_id") or ""): row for row in dependency_rows or [] if isinstance(row, dict)}
+    external_capabilities = external_capabilities or {}
+
+    rows = [
+        _row_from_action(
+            "deg_two_group_controlled_mvp",
+            "DEG two-group controlled MVP",
+            "DEG",
+            "formal_available",
+            action_by_id.get("formal_deg"),
+            required_contracts=["B8 resolver", "B9 DEG parameter/confirmation/result schema", "result_index_v2"],
+            result_semantics="formal_computed_result when all gates pass",
+        ),
+        _r_method_row("deg_limma", "limma", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, LIMMA_KEY], external_capabilities, method_policy="normalized/log expression or limma-voom contract planned"),
+        _r_method_row("deg_deseq2", "DESeq2", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, DESEQ2_KEY], external_capabilities, method_policy="raw integer count model only; TPM/FPKM blocked"),
+        _r_method_row("deg_edger", "edgeR", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, EDGER_KEY], external_capabilities, method_policy="raw integer count model only; TPM/FPKM blocked"),
+        _static_row(
+            "deg_multifactor",
+            "Multi-factor DEG design",
+            "DEG",
+            "contract_planned",
+            "planned",
+            "B18 will add design matrix, contrast, covariate and batch gates; no formal execution is available in B17.",
+            capability_keys=[R_RUNTIME_KEY, BIOCONDUCTOR_KEY, LIMMA_KEY, DESEQ2_KEY, EDGER_KEY],
+        ),
+        _row_from_action(
+            "ora_controlled_mvp",
+            "ORA controlled enrichment",
+            "Enrichment",
+            "controlled_mvp_available",
+            action_by_id.get("run_ora_enrichment"),
+            required_contracts=["B10 ORA input/resource/parameter/result gates"],
+            result_semantics="formal_computed_result only from eligible source result; imported-derived ORA remains imported_external_result",
+        ),
+        _row_from_action(
+            "gsea_preranked_controlled_mvp",
+            "Preranked GSEA controlled MVP",
+            "Enrichment",
+            "controlled_mvp_available",
+            action_by_id.get("formal_gsea"),
+            required_contracts=["B11 GSEA input/rank/gene-set/parameter/result gates"],
+            result_semantics="formal_computed_result only from eligible source result; imported-derived GSEA remains imported_external_result",
+        ),
+        _row_from_action(
+            "km_logrank_controlled_mvp",
+            "KM/log-rank controlled MVP",
+            "Survival",
+            "controlled_mvp_available",
+            action_by_id.get("km_cox_logrank"),
+            required_contracts=["B12/B13 survival input/outcome/parameter/confirmation gates"],
+            result_semantics="formal_computed_result when all KM/log-rank gates pass; report_ready_eligible remains false",
+        ),
+        _row_from_action(
+            "cox_univariate_controlled_mvp",
+            "Cox univariate controlled MVP",
+            "Survival",
+            "controlled_mvp_available",
+            action_by_id.get("cox_univariate"),
+            required_contracts=["B12/B14 Cox input/outcome/covariate/parameter/confirmation gates"],
+            result_semantics="formal_computed_result when all Cox univariate gates pass; report_ready_eligible remains false",
+        ),
+        _static_row(
+            "cox_multivariate",
+            "Cox multivariate",
+            "Survival",
+            "design_audit_only",
+            _status_from_survival_row(survival_clinical_rows, "cox_multivariate_design") or "disabled",
+            "Multivariate Cox remains design-audit/disabled in B17; B20 must add EPV, covariate, missingness, collinearity and model-formula gates before execution.",
+            capability_keys=[SURVIVAL_KEY],
+        ),
+        _static_row(
+            "risk_score",
+            "Risk score / nomogram",
+            "Survival",
+            "disabled_design_only",
+            _status_from_survival_row(survival_clinical_rows, "risk_score") or "disabled",
+            "Risk score, nomogram and clinical risk grouping are disabled; B21 is design audit only and must not create formal results.",
+            capability_keys=[GLMNET_KEY],
+        ),
+        _static_row(
+            "km_cox_real_plot",
+            "KM/Cox real plot artifact",
+            "Plot",
+            "spec_only_planned",
+            "spec-only",
+            "Current KM/Cox plot artifacts are spec-only; B22 must add a real renderer and dependency snapshot before PNG/SVG/PDF can be claimed.",
+            capability_keys=[MATPLOTLIB_KEY, "package.r.ggplot2.available", "package.r.survminer.available"],
+        ),
+        _static_row(
+            "full_integrated_report",
+            "Full integrated report",
+            "Report",
+            "planned",
+            "planned",
+            "Only section-specific DEG/ORA/GSEA packages exist; B23 must add a full integrated report gate and source-result coverage checks.",
+            capability_keys=[PANDOC_KEY, QUARTO_KEY, LATEX_KEY, "renderer.wkhtmltopdf.available"],
+        ),
+        _static_row(
+            "legacy_formal_execution",
+            "Legacy formal execution",
+            "Legacy",
+            "disabled",
+            "disabled",
+            "Legacy GEO/TCGA/GTEx pipeline outputs are acquisition/standardization inputs only and cannot bypass B8 resolver or result semantics gates.",
+            capability_keys=[],
+        ),
+    ]
+    return {
+        "schema_version": "biomedpilot.deep_analysis_capability_map.v1",
+        "source_policy": "B17 UI status map only; no formal execution, no dependency installation, no legacy execution upgrade.",
+        "rows": rows,
+        "summary": _summary(rows),
+        "external_engine_handoff": {
+            "required_capability_keys": sorted({key for row in rows for key in row.get("dependency_capability_keys", [])}),
+            "query_policy": "Bioinformatics reads capability status/snapshots from external engine handoff only; it does not install or maintain R/Bioconductor/Python plotting tools.",
+        },
+    }
+
+
+def _row_from_action(
+    capability_id: str,
+    label: str,
+    category: str,
+    implementation_status: str,
+    action: dict[str, Any] | None,
+    *,
+    required_contracts: list[str],
+    result_semantics: str,
+) -> dict[str, Any]:
+    action = action or {}
+    enabled = bool(action.get("enabled"))
+    state = str(action.get("state") or ("available" if enabled else "blocked"))
+    reason = str(action.get("disabled_reason") or action.get("next_action") or "No action state is available.")
+    return {
+        "capability_id": capability_id,
+        "label": label,
+        "category": category,
+        "implementation_status": implementation_status,
+        "ui_state": "available" if enabled else state,
+        "formal_execution_enabled": enabled,
+        "can_display_as_completed": False,
+        "reason": reason,
+        "disabled_reason": "" if enabled else reason,
+        "dependency_capability_keys": [],
+        "required_contracts": required_contracts,
+        "result_semantics_policy": result_semantics,
+        "boundary": "Dependency/input availability does not equal completed analysis; a completed badge requires a validated result entry.",
+    }
+
+
+def _r_method_row(capability_id: str, label: str, keys: list[str], external_capabilities: dict[str, Any], *, method_policy: str) -> dict[str, Any]:
+    missing = [key for key in keys if _capability_available(external_capabilities.get(key)) is not True]
+    state = "blocked_by_dependency" if missing else "planned_adapter_contract"
+    reason = (
+        f"{label} formal execution is not enabled in B17. Missing or unverified external engine capabilities: {', '.join(missing)}."
+        if missing
+        else f"{label} external dependencies appear available, but B19 adapter/input/output/result schema gates are still required before formal execution."
+    )
+    return {
+        "capability_id": capability_id,
+        "label": label,
+        "category": "DEG",
+        "implementation_status": state,
+        "ui_state": state,
+        "formal_execution_enabled": False,
+        "can_display_as_completed": False,
+        "reason": reason,
+        "disabled_reason": reason,
+        "dependency_capability_keys": keys,
+        "required_contracts": ["B18 multi-factor/preflight policy", "B19 R adapter contract", "external engine dependency snapshot"],
+        "method_policy": method_policy,
+        "result_semantics_policy": "Never formal_computed_result until B19 adapter execution, output schema validation and result_index registration pass.",
+        "boundary": "External dependency availability is not a completed analysis capability.",
+    }
+
+
+def _static_row(
+    capability_id: str,
+    label: str,
+    category: str,
+    implementation_status: str,
+    ui_state: str,
+    reason: str,
+    *,
+    capability_keys: list[str],
+) -> dict[str, Any]:
+    return {
+        "capability_id": capability_id,
+        "label": label,
+        "category": category,
+        "implementation_status": implementation_status,
+        "ui_state": ui_state,
+        "formal_execution_enabled": False,
+        "can_display_as_completed": False,
+        "reason": reason,
+        "disabled_reason": reason,
+        "dependency_capability_keys": capability_keys,
+        "required_contracts": [],
+        "result_semantics_policy": "Must not write formal_computed_result in B17.",
+        "boundary": "Planned/design/spec-only capability is not a completed formal result.",
+    }
+
+
+def _status_from_survival_row(rows: list[dict[str, Any]] | None, row_id: str) -> str:
+    for row in rows or []:
+        if isinstance(row, dict) and str(row.get("row_id") or "") == row_id:
+            return str(row.get("status") or "")
+    return ""
+
+
+def _capability_available(value: Any) -> bool | None:
+    if isinstance(value, dict):
+        if "available" in value:
+            return bool(value.get("available"))
+        status = str(value.get("status") or "").lower()
+        if status in {"available", "passed", "ok", "true"}:
+            return True
+        if status in {"missing", "blocked", "failed", "not_configured", "false"}:
+            return False
+    if isinstance(value, bool):
+        return value
+    return None
+
+
+def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    by_state: dict[str, int] = {}
+    for row in rows:
+        state = str(row.get("ui_state") or "unknown")
+        by_state[state] = by_state.get(state, 0) + 1
+    completed_claims = [row["capability_id"] for row in rows if row.get("can_display_as_completed") is True]
+    return {
+        "row_count": len(rows),
+        "by_ui_state": by_state,
+        "completed_claim_count": len(completed_claims),
+        "completed_claim_capabilities": completed_claims,
+    }

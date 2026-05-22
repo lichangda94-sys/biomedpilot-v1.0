@@ -5717,6 +5717,15 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _set_table_widths(self._action_table, [190, 150, 180, 360, 300])
         self._action_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
+        capability_card, capability_layout = _card("Deep analysis capability map")
+        capability_layout.addWidget(_muted("B17 capability map：区分 available、blocked、planned、disabled、spec-only、design-audit；dependency available 不等于功能已完成。"))
+        self._capability_table = _table(["能力", "类别", "实现状态", "UI 状态", "Formal", "Capability keys", "原因 / 边界"])
+        self._capability_table.setObjectName("analysisCapabilityMapTable")
+        capability_layout.addWidget(self._capability_table)
+        root.addWidget(capability_card)
+        _set_table_widths(self._capability_table, [220, 120, 190, 150, 90, 300, 420])
+        self._capability_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+
         dependency_card, dependency_layout = _card("Dependency status")
         dependency_layout.addWidget(_muted("Detect-first only：显示缺失依赖并阻断 formal action，不自动安装。"))
         self._dependency_table = _table(["依赖", "状态", "版本", "Blockers", "打包影响", "操作"])
@@ -5818,6 +5827,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _fill_table(self._legacy_pipeline_table, _analysis_ui_legacy_pipeline_rows(analysis_state.get("legacy_asset_pipeline", {})))
         self._sync_legacy_pipeline_buttons(analysis_state)
         _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
+        _fill_table(self._capability_table, _analysis_ui_capability_rows(analysis_state.get("analysis_capability_map", {})))
         formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
         confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
         ora_action = _analysis_ui_action(analysis_state.get("action_rows", []), "run_ora_enrichment")
@@ -11389,6 +11399,25 @@ def _analysis_ui_gate_rows(rows: object) -> list[list[object]]:
             row.get("basis", ""),
             row.get("blockers", ""),
             row.get("warnings", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_capability_rows(capability_map: object) -> list[list[object]]:
+    if not isinstance(capability_map, dict):
+        return []
+    rows = capability_map.get("rows", [])
+    return [
+        [
+            row.get("label", ""),
+            row.get("category", ""),
+            row.get("implementation_status", ""),
+            row.get("ui_state", ""),
+            "enabled" if row.get("formal_execution_enabled") else "disabled",
+            "; ".join(str(item) for item in row.get("dependency_capability_keys", []) or []),
+            row.get("reason", "") or row.get("boundary", ""),
         ]
         for row in rows
         if isinstance(row, dict)
