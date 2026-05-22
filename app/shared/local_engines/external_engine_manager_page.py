@@ -12,10 +12,16 @@ from app.shared.local_engines import (
     ENGINE_STATUS_AVAILABLE,
     ENGINE_STATUS_FAILED,
     ENGINE_STATUS_NOT_CONFIGURED,
+    PYTHON_STATISTICAL_ENGINE_FAMILY,
+    REPORT_RENDERER_ENGINE_FAMILY,
+    R_BIOCONDUCTOR_ENGINE_FAMILY,
+    ExternalEngineRegistry,
     IMAGEJ_FIJI_ENGINE_ID,
     ImageJFijiBridge,
     OllamaLLMPreflightResult,
     default_ollama_llm_runtime_manifest_path,
+    detect_all_external_dependencies,
+    load_external_engine_registry,
     load_ollama_llm_runtime_manifest,
     ollama_model_role_registry,
     run_ollama_llm_preflight,
@@ -36,6 +42,13 @@ class ExternalEngineCardState:
 
 
 PreflightRunner = Callable[..., OllamaLLMPreflightResult]
+DependencyDetector = Callable[..., ExternalEngineRegistry]
+
+_DEPENDENCY_ENGINE_FAMILIES = (
+    R_BIOCONDUCTOR_ENGINE_FAMILY,
+    PYTHON_STATISTICAL_ENGINE_FAMILY,
+    REPORT_RENDERER_ENGINE_FAMILY,
+)
 
 
 class ExternalEngineManagerPage(QWidget):
@@ -46,6 +59,8 @@ class ExternalEngineManagerPage(QWidget):
         ai_gateway_config_path: str | Path | None = None,
         preflight_runner: PreflightRunner = run_ollama_llm_preflight,
         imagej_bridge: ImageJFijiBridge | None = None,
+        dependency_storage_root: str | Path | None = None,
+        dependency_detector: DependencyDetector = detect_all_external_dependencies,
     ) -> None:
         super().__init__()
         self.setObjectName("externalEngineManagerPage")
@@ -53,15 +68,21 @@ class ExternalEngineManagerPage(QWidget):
         self._ai_gateway_config_path = Path(ai_gateway_config_path) if ai_gateway_config_path is not None else None
         self._preflight_runner = preflight_runner
         self._imagej_bridge = imagej_bridge or ImageJFijiBridge()
+        self._dependency_storage_root = Path(dependency_storage_root) if dependency_storage_root is not None else None
+        self._dependency_detector = dependency_detector
         self._latest_manifest: OllamaLLMRuntimeManifest | None = None
+        self._latest_dependency_registry: ExternalEngineRegistry | None = None
         self._build_ui()
         self.refresh()
 
     def refresh(self) -> None:
         manifest = self._load_manifest_or_none()
+        registry = self._load_dependency_registry()
         self._latest_manifest = manifest
-        self._render_engine_cards(manifest)
+        self._latest_dependency_registry = registry
+        self._render_engine_cards(manifest, registry)
         self._render_ollama_detail(manifest)
+        self._render_dependency_detail(registry)
 
     def run_ollama_check(self) -> None:
         try:
@@ -72,14 +93,33 @@ class ExternalEngineManagerPage(QWidget):
             )
         except Exception as exc:
             manifest = self._load_manifest_or_none()
+            registry = self._latest_dependency_registry or self._load_dependency_registry()
             self._latest_manifest = manifest
-            self._render_engine_cards(manifest)
+            self._render_engine_cards(manifest, registry)
             self._detail_text.setPlainText(f"local_llm_ollama 检查失败：{exc.__class__.__name__}")
             self._manifest_text.setPlainText("检查失败；未写入 AI Gateway 配置，也不会自动安装或 pull 模型。")
             return
         self._latest_manifest = result.manifest
-        self._render_engine_cards(result.manifest)
+        registry = self._latest_dependency_registry or self._load_dependency_registry()
+        self._render_engine_cards(result.manifest, registry)
         self._render_ollama_detail(result.manifest)
+
+    def run_dependency_detection(self) -> None:
+        try:
+            registry = self._dependency_detector(storage_root=self._dependency_storage_root, write_snapshots=True)
+        except Exception as exc:
+            registry = self._latest_dependency_registry or self._load_dependency_registry()
+            self._dependency_detail_text.setPlainText(f"外部依赖检测失败：{exc.__class__.__name__}")
+            self._dependency_registry_text.setPlainText("检测失败；未声明任何 DEG / Cox / report 业务能力完成。")
+            self._render_engine_cards(self._latest_manifest, registry)
+            return
+        self._latest_dependency_registry = registry
+        self._render_engine_cards(self._latest_manifest, registry)
+        self._render_dependency_detail(registry)
+
+    def show_dependency_registry_summary(self) -> None:
+        registry = self._latest_dependency_registry or self._load_dependency_registry()
+        self._dependency_registry_text.setPlainText(json.dumps(registry.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
 
     def show_manifest_summary(self) -> None:
         manifest = self._latest_manifest or self._load_manifest_or_none()
@@ -112,9 +152,11 @@ class ExternalEngineManagerPage(QWidget):
 
     def card_states(self) -> tuple[ExternalEngineCardState, ...]:
         manifest = self._latest_manifest or self._load_manifest_or_none()
+        registry = self._latest_dependency_registry or self._load_dependency_registry()
         return (
             _ollama_card_state(manifest),
             self._imagej_card_state(),
+            *_dependency_card_states(registry),
         )
 
     def _build_ui(self) -> None:
@@ -176,10 +218,45 @@ class ExternalEngineManagerPage(QWidget):
         detail_layout.addWidget(self._manifest_text)
         root.addWidget(detail)
 
-    def _render_engine_cards(self, manifest: OllamaLLMRuntimeManifest | None) -> None:
+        dependency_detail = QFrame()
+        dependency_detail.setObjectName("externalEngineDetailCard")
+        dependency_layout = QVBoxLayout(dependency_detail)
+        dependency_layout.setContentsMargins(SPACING["md"], SPACING["md"], SPACING["md"], SPACING["md"])
+        dependency_layout.setSpacing(SPACING["sm"])
+        dependency_title = QLabel("R / Python / 报告渲染依赖")
+        dependency_title.setObjectName("externalEngineCardTitle")
+        dependency_layout.addWidget(dependency_title)
+        self._dependency_detail_text = QPlainTextEdit()
+        self._dependency_detail_text.setObjectName("externalDependencyDetailText")
+        self._dependency_detail_text.setReadOnly(True)
+        self._dependency_detail_text.setMinimumHeight(190)
+        dependency_layout.addWidget(self._dependency_detail_text)
+
+        dependency_actions = QHBoxLayout()
+        self._run_dependency_check_button = QPushButton("重新检测依赖")
+        self._run_dependency_check_button.setObjectName("runExternalDependencyDetectionButton")
+        self._run_dependency_check_button.clicked.connect(self.run_dependency_detection)
+        self._dependency_registry_button = QPushButton("查看 capability registry")
+        self._dependency_registry_button.setObjectName("showExternalDependencyRegistryButton")
+        self._dependency_registry_button.clicked.connect(self.show_dependency_registry_summary)
+        for button in (self._run_dependency_check_button, self._dependency_registry_button):
+            dependency_actions.addWidget(button)
+        dependency_actions.addStretch(1)
+        dependency_layout.addLayout(dependency_actions)
+
+        self._dependency_registry_text = QPlainTextEdit()
+        self._dependency_registry_text.setObjectName("externalDependencyRegistryText")
+        self._dependency_registry_text.setReadOnly(True)
+        self._dependency_registry_text.setMinimumHeight(150)
+        dependency_layout.addWidget(self._dependency_registry_text)
+        root.addWidget(dependency_detail)
+
+    def _render_engine_cards(self, manifest: OllamaLLMRuntimeManifest | None, registry: ExternalEngineRegistry | None = None) -> None:
         _clear_layout(self._card_grid)
-        for column, state in enumerate((_ollama_card_state(manifest), self._imagej_card_state())):
-            self._card_grid.addWidget(_engine_card(state, action_text="运行检查" if state.engine_family == OLLAMA_LLM_ENGINE_ID else "只读状态"), 0, column)
+        states = (_ollama_card_state(manifest), self._imagej_card_state(), *_dependency_card_states(registry))
+        for index, state in enumerate(states):
+            action_text = "运行检查" if state.engine_family == OLLAMA_LLM_ENGINE_ID else ("重新检测依赖" if state.engine_family in _DEPENDENCY_ENGINE_FAMILIES else "只读状态")
+            self._card_grid.addWidget(_engine_card(state, action_text=action_text), index // 3, index % 3)
 
     def _render_ollama_detail(self, manifest: OllamaLLMRuntimeManifest | None) -> None:
         self._gateway_status_label.setText(self._ai_gateway_status_text())
@@ -223,11 +300,43 @@ class ExternalEngineManagerPage(QWidget):
         self._detail_text.setPlainText("\n".join(lines))
         self._manifest_text.setPlainText("点击“查看 manifest 摘要”显示简化 JSON。")
 
+    def _render_dependency_detail(self, registry: ExternalEngineRegistry | None) -> None:
+        registry = registry or self._load_dependency_registry()
+        capabilities = registry.capabilities
+        if not capabilities:
+            self._dependency_detail_text.setPlainText(
+                "\n".join(
+                    (
+                        "状态：尚未检测。",
+                        "点击“重新检测依赖”生成 R / Python / renderer dependency snapshot。",
+                        "本页只显示依赖可用性，不显示 limma、DESeq2、edgeR、Cox 或报告业务已完成。",
+                    )
+                )
+            )
+            self._dependency_registry_text.setPlainText("尚未生成 capability registry snapshot。")
+            return
+        lines = ["dependency snapshots："]
+        for family in _DEPENDENCY_ENGINE_FAMILIES:
+            snapshot = registry.query_engine_family(family) or {}
+            lines.append(f"- {family}: {snapshot.get('status', 'unknown')} | checked_at={snapshot.get('checked_at', '')} | snapshot={snapshot.get('snapshot_path', '')}")
+        lines.extend(("", "capability status："))
+        for key in sorted(capabilities):
+            row = capabilities[key]
+            blockers = row.get("blockers") if isinstance(row.get("blockers"), list) else []
+            blocker_codes = ",".join(str(item.get("code")) for item in blockers if isinstance(item, dict)) or "none"
+            lines.append(f"- {key}: {row.get('status', 'unknown')} | version={row.get('version', '') or '-'} | blockers={blocker_codes}")
+        lines.extend(("", "boundary：dependency detection only；no formal DEG / Cox / report execution is declared here."))
+        self._dependency_detail_text.setPlainText("\n".join(lines))
+        self._dependency_registry_text.setPlainText("点击“查看 capability registry”显示统一 JSON。")
+
     def _load_manifest_or_none(self) -> OllamaLLMRuntimeManifest | None:
         try:
             return load_ollama_llm_runtime_manifest(self._manifest_path)
         except ValueError:
             return None
+
+    def _load_dependency_registry(self) -> ExternalEngineRegistry:
+        return load_external_engine_registry(self._dependency_storage_root)
 
     def _imagej_card_state(self) -> ExternalEngineCardState:
         try:
@@ -288,7 +397,7 @@ class ExternalEngineManagerPage(QWidget):
         QLabel#externalEngineCardSummary, QLabel#aiGatewayProviderStatusLabel {{
             color: {COLORS["muted"]};
         }}
-        QPlainTextEdit#ollamaLLMDetailText, QPlainTextEdit#ollamaManifestSummaryText {{
+        QPlainTextEdit#ollamaLLMDetailText, QPlainTextEdit#ollamaManifestSummaryText, QPlainTextEdit#externalDependencyDetailText, QPlainTextEdit#externalDependencyRegistryText {{
             background: {COLORS["background"]};
             border: 1px solid {COLORS["border"]};
             border-radius: {RADIUS["sm"]}px;
@@ -345,6 +454,35 @@ def _manifest_summary(manifest: OllamaLLMRuntimeManifest) -> dict[str, object]:
         "privacy_mode": manifest.privacy_mode,
         "warnings": list(manifest.warnings),
     }
+
+
+def _dependency_card_states(registry: ExternalEngineRegistry | None) -> tuple[ExternalEngineCardState, ...]:
+    if registry is None:
+        registry = ExternalEngineRegistry(())
+    display_names = {
+        R_BIOCONDUCTOR_ENGINE_FAMILY: "R / Bioconductor 依赖",
+        PYTHON_STATISTICAL_ENGINE_FAMILY: "Python 统计依赖",
+        REPORT_RENDERER_ENGINE_FAMILY: "报告渲染工具链",
+    }
+    states: list[ExternalEngineCardState] = []
+    for family in _DEPENDENCY_ENGINE_FAMILIES:
+        snapshot = registry.query_engine_family(family)
+        if not snapshot:
+            states.append(ExternalEngineCardState(family, display_names[family], "not_configured", "", "尚未检测；点击重新检测生成 dependency snapshot。"))
+            continue
+        blockers = snapshot.get("blockers") if isinstance(snapshot.get("blockers"), list) else []
+        available_count = sum(1 for package in snapshot.get("packages", []) if isinstance(package, dict) and package.get("status") == "available")
+        total_count = sum(1 for package in snapshot.get("packages", []) if isinstance(package, dict))
+        states.append(
+            ExternalEngineCardState(
+                family,
+                display_names[family],
+                str(snapshot.get("status") or "unknown"),
+                str(snapshot.get("checked_at") or ""),
+                f"available={available_count}/{total_count}；blockers={len(blockers)}；只表示依赖状态。",
+            )
+        )
+    return tuple(states)
 
 
 def _engine_card(state: ExternalEngineCardState, *, action_text: str) -> QFrame:
