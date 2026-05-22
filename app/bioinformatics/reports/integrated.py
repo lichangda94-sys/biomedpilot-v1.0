@@ -13,6 +13,7 @@ from app.bioinformatics.results.registry import RESULT_INDEX, load_registry
 from .formal_deg import evaluate_formal_deg_report_ready_gate
 from .gsea import evaluate_gsea_report_ready_gate
 from .ora import evaluate_ora_report_ready_gate
+from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
 
 
 FULL_INTEGRATED_REPORT_READY_SCHEMA_VERSION = "biomedpilot.full_integrated_report_gate.v1"
@@ -411,6 +412,10 @@ def _section_report_gate(root: Path, section_id: str, result_id: str) -> dict[st
         return evaluate_ora_report_ready_gate(root, result_id=result_id, allow_imported_derived_report=False)
     if section_id == "gsea_preranked":
         return evaluate_gsea_report_ready_gate(root, result_id=result_id, allow_imported_derived_report=False)
+    if section_id == "survival_km_logrank":
+        return evaluate_km_logrank_report_ready_gate(root, result_id=result_id)
+    if section_id == "cox":
+        return evaluate_cox_report_ready_gate(root, result_id=result_id)
     return {
         "schema_version": "biomedpilot.survival_clinical_report_ready_gate.placeholder.v1",
         "status": "blocked",
@@ -425,6 +430,8 @@ def _section_report_status(section_id: str, gate: dict[str, Any]) -> str:
         "formal_deg": "eligible_for_formal_deg_report_ready",
         "ora_enrichment": "eligible_for_ora_report_ready",
         "gsea_preranked": "eligible_for_gsea_report_ready",
+        "survival_km_logrank": "eligible_for_km_logrank_report_ready",
+        "cox": "eligible_for_cox_report_ready",
     }
     return "passed" if gate.get("status") == passing.get(section_id) else "blocked"
 
