@@ -3960,6 +3960,785 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     assert "result_index" in diagnostics_text
     assert "schema_version" in diagnostics_text
     assert str(imported_path) in diagnostics_text
+    assert "analysis_center_state" in diagnostics_text
+
+    gate = widget.findChild(QTableWidget, "resultsGatePreviewTable")
+    assert gate is not None
+    gate_text = _table_text(gate)
+    assert "Report-ready export" in gate_text
+    assert "blocked_report_ready_gate" in gate_text
+    assert "Testing/imported/exploratory entries keep their semantics" in gate_text
+
+    formal_review = widget.findChild(QTableWidget, "formalDegReviewTable")
+    assert formal_review is not None
+    assert formal_review.rowCount() == 0
+    guard = widget.findChild(QLabel, "formalDegReviewGuard")
+    assert guard is not None
+    assert "not a clinical conclusion" in guard.text()
+
+
+def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, project_summary) -> None:
+    table_path = project_summary.project_root / "results" / "tables" / "formal_deg.tsv"
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    table_path.write_text(
+        "feature_id\tgene_symbol\tbase_mean_or_mean_expression\tcase_mean\tcontrol_mean\tlog2_fold_change\tstatistic\tp_value\tadjusted_p_value\tsignificance_label\twarnings\n"
+        "g1\tTP53\t10\t12\t4\t1.5\t3.0\t0.001\t0.003\tup\t\n"
+        "g2\tEGFR\t10\t3\t9\t-1.4\t-2.9\t0.002\t0.004\tdown\t\n",
+        encoding="utf-8",
+    )
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(
+            result_id="formal-ui",
+            task_run_id="task-formal-ui",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            input_package_id="pkg-ui",
+            source_dataset_id="dataset-ui",
+            source_repository_manifest="standardized_data/repositories/repository_manifest.json",
+            parameters_manifest={
+                "method": "welch_t_test",
+                "log2fc_threshold": 1.0,
+                "p_value_threshold": 0.05,
+                "fdr_threshold": 0.05,
+                "case_samples": ["case1", "case2"],
+                "control_samples": ["ctrl1", "ctrl2"],
+            },
+            engine_name="python_scipy_statsmodels_deg_mvp",
+            engine_version="0.1",
+            dependency_snapshot={
+                "packages": {
+                    "numpy": {"version": "2.4.6"},
+                    "pandas": {"version": "3.0.3"},
+                    "scipy": {"version": "1.17.1"},
+                    "statsmodels": {"version": "0.14.6"},
+                }
+            },
+            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            plot_artifacts=(),
+            report_artifacts=(),
+            validation_status="passed",
+            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-ui_run_log.json"},),
+            report_ready_eligible=False,
+        ),
+    )
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(result_id="testing-ui", task_run_id="task-testing-ui", task_type="deg", result_semantics="testing_level", validation_status="passed"),
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.findChild(QLabel, "formalDegReviewSummary")
+    assert summary is not None
+    assert "genes=2" in summary.text()
+    assert "up=1" in summary.text()
+    assert "down=1" in summary.text()
+    assert "scipy=1.17.1" in summary.text()
+    review_table = widget.findChild(QTableWidget, "formalDegReviewTable")
+    assert review_table is not None
+    review_text = _table_text(review_table)
+    assert "TP53" in review_text
+    assert "EGFR" in review_text
+    provenance = widget.findChild(QTableWidget, "formalDegReviewProvenanceTable")
+    assert provenance is not None
+    provenance_text = _table_text(provenance)
+    assert "pkg-ui" in provenance_text
+    assert "manifests/formal_deg_parameter_confirmation.json" in provenance_text
+    assert "results/summaries/result_index.json" in provenance_text
+    assert "False" in provenance_text
+    downstream = widget.findChild(QLabel, "formalDegReviewDownstream")
+    assert downstream is not None
+    assert "B9.6 plot artifact" in downstream.text()
+    assert "B9.7 report-ready gate" in downstream.text()
+    plot_status = widget.findChild(QLabel, "formalDegPlotStatus")
+    assert plot_status is not None
+    assert "Formal DEG plot gate passed" in plot_status.text()
+    plot_button = widget.findChild(QPushButton, "formalDegPlotButton")
+    assert plot_button is not None
+    assert plot_button.isEnabled()
+
+    exported = widget.export_formal_deg_review_csv()
+
+    assert exported is not None
+    assert exported["status"] == "passed"
+    assert exported["report_ready_eligible"] is False
+    assert Path(str(exported["export_path"])).is_file()
+    assert "未生成 report-ready" in widget.status_message()
+    plot_result = widget.generate_formal_deg_plot_artifact()
+    assert plot_result is not None
+    assert plot_result["status"] == "passed"
+    assert plot_result["report_ready_eligible"] is False
+    assert plot_result["plot_artifact"]["source_result_semantics"] == "formal_computed_result"
+    assert "未生成 report-ready" in widget.status_message()
+
+
+def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_summary) -> None:
+    table_path = project_summary.project_root / "results" / "tables" / "ora_ui.tsv"
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    table_path.write_text(
+        "term_id\tterm_name\tgene_set_size\toverlap_count\toverlap_genes\tbackground_size\tselected_gene_count\tp_value\tadjusted_p_value\tenrichment_ratio\tsource_gene_list\twarnings\n"
+        "TERM_A\tApoptosis\t2\t2\tTP53;BRCA1\t100\t10\t0.001\t0.003\t10\tselected\t\n",
+        encoding="utf-8",
+    )
+    gene_set_path = project_summary.project_root / "user_data" / "bioinformatics" / "gene_sets" / "custom" / "sets-ui.gmt"
+    gene_set_path.parent.mkdir(parents=True, exist_ok=True)
+    gene_set_path.write_text("TERM_A\tApoptosis\tTP53\tBRCA1\n", encoding="utf-8")
+    gene_set_registry = project_summary.project_root / "user_data" / "bioinformatics" / "gene_sets" / "gene_set_registry.json"
+    gene_set_registry.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.gene_set_registry.v1",
+                "resources": [
+                    {
+                        "resource_id": "sets-ui",
+                        "name": "sets-ui",
+                        "collection_type": "Custom",
+                        "species": "unknown",
+                        "gene_id_type": "symbol",
+                        "status": "available",
+                        "local_path": str(gene_set_path.relative_to(project_summary.project_root)),
+                        "source": "user_import",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    task_log = project_summary.project_root / "analysis_runs" / "ora" / "ora-run-ui" / "task_run.json"
+    task_log.parent.mkdir(parents=True, exist_ok=True)
+    task_log.write_text(json.dumps({"task_run_id": "ora-run-ui", "status": "completed"}), encoding="utf-8")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(result_id="formal-ui", task_run_id="formal-ui-run", task_type="deg", result_semantics="formal_computed_result", validation_status="passed"),
+    )
+    register_result(
+        project_summary.project_root,
+        {
+            "result_id": "ora-ui",
+            "task_run_id": "ora-run-ui",
+            "task_type": "ora_enrichment",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "ora-input-ui",
+            "ora_input_id": "ora-input-ui",
+            "source_dataset_id": "dataset-ui",
+            "source_repository_manifest": "standardized_data/repositories/repository_manifest.json",
+            "source_deg_result_id": "formal-ui",
+            "source_result_semantics": "formal_computed_result",
+            "gene_set_resource_id": "sets-ui",
+            "parameters_manifest": {"ora_parameter_id": "ora-ui-params", "test_method": "hypergeometric", "fdr_threshold": 0.05, "selected_gene_rule": "adjusted_p_value_and_abs_log2fc", "background_universe_rule": "source_deg_detected_genes"},
+            "engine_name": "python_scipy_statsmodels_ora_mvp",
+            "engine_version": "0.1",
+            "dependency_snapshot": {"status": "passed", "packages": {"scipy": {"version": "1.17.1"}, "statsmodels": {"version": "0.14.6"}}},
+            "output_artifacts": [{"artifact_type": "ora_result_table", "path": str(table_path.relative_to(project_summary.project_root))}],
+            "plot_artifacts": [],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "controlled_ora_task_run_log", "path": "analysis_runs/ora/ora-run-ui/task_run.json"}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+        },
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.findChild(QLabel, "oraReviewSummary")
+    assert summary is not None
+    assert "terms=1" in summary.text()
+    assert "source=formal-ui" in summary.text()
+    assert "scipy=1.17.1" in summary.text()
+    table = widget.findChild(QTableWidget, "oraReviewTable")
+    assert table is not None
+    assert "Apoptosis" in _table_text(table)
+    downstream = widget.findChild(QLabel, "oraReviewDownstream")
+    assert downstream is not None
+    assert "GSEA remains disabled" in downstream.text()
+    plot_status = widget.findChild(QLabel, "oraPlotStatus")
+    assert plot_status is not None
+    assert "ORA plot gate passed" in plot_status.text()
+    plot_button = widget.findChild(QPushButton, "oraPlotButton")
+    assert plot_button is not None
+    assert plot_button.isEnabled()
+
+    exported = widget.export_ora_review_csv()
+
+    assert exported is not None
+    assert exported["status"] == "passed"
+    assert exported["report_ready_eligible"] is False
+    assert Path(str(exported["export_path"])).is_file()
+    assert "未生成 report-ready" in widget.status_message()
+    plot_result = widget.generate_ora_plot_artifact()
+    assert plot_result is not None
+    assert plot_result["status"] == "passed"
+    assert plot_result["report_ready_eligible"] is False
+    assert plot_result["plot_artifact"]["image_artifacts"] == []
+    assert plot_result["plot_artifact"]["plot_spec_artifact"]["rendering"] == "spec_only_no_image_dependency"
+    assert "未生成 PNG/SVG/PDF" in widget.status_message()
+    report_status = widget.findChild(QLabel, "oraReportReadyStatus")
+    assert report_status is not None
+    assert "ORA report-ready gate passed" in report_status.text()
+    report_button = widget.findChild(QPushButton, "oraReportReadyButton")
+    assert report_button is not None
+    assert report_button.isEnabled()
+    report_package = widget.generate_ora_report_ready_package()
+    assert report_package is not None
+    assert report_package["status"] == "ora_report_ready_package_created"
+    assert Path(str(report_package["package_path"])).is_dir()
+    assert "未生成 GSEA、survival、完整综合报告或临床结论" in widget.status_message()
+
+
+def test_results_browser_gsea_plot_and_report_package_gate(qt_app, project_summary) -> None:
+    root = project_summary.project_root
+    deg_table = root / "results" / "tables" / "deg_for_gsea_ui.tsv"
+    gsea_table = root / "results" / "tables" / "gsea_ui.tsv"
+    deg_table.parent.mkdir(parents=True, exist_ok=True)
+    deg_table.write_text(
+        "feature_id\tgene_symbol\tlog2_fold_change\tp_value\tadjusted_p_value\n"
+        + "\n".join(f"GENE{i}\tGENE{i}\t{2.0 if i <= 6 else -1.5}\t0.01\t0.02" for i in range(1, 13))
+        + "\n",
+        encoding="utf-8",
+    )
+    gsea_table.write_text(
+        "term_id\tterm_name\tset_size\toverlap_size\tenrichment_score\tnormalized_enrichment_score\tp_value\tadjusted_p_value\tleading_edge_genes\trank_metric\twarnings\n"
+        "TERM_POS\tPositive\t10\t4\t0.8\t1.6\t0.01\t0.02\tGENE1;GENE2\tsigned_log10_fdr_by_log2fc\t\n",
+        encoding="utf-8",
+    )
+    gene_set_path = root / "user_data" / "bioinformatics" / "gene_sets" / "custom" / "sets-gsea-ui.gmt"
+    gene_set_path.parent.mkdir(parents=True, exist_ok=True)
+    gene_set_path.write_text("TERM_POS\tPositive\tGENE1\tGENE2\tGENE3\tGENE4\n", encoding="utf-8")
+    gene_set_registry = root / "user_data" / "bioinformatics" / "gene_sets" / "gene_set_registry.json"
+    gene_set_registry.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.gene_set_registry.v1",
+                "resources": [
+                    {
+                        "resource_id": "sets-gsea-ui",
+                        "name": "sets-gsea-ui",
+                        "collection_type": "Custom",
+                        "species": "unknown",
+                        "gene_id_type": "symbol",
+                        "status": "available",
+                        "local_path": str(gene_set_path.relative_to(root)),
+                        "source": "user_import",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    task_log = root / "analysis_runs" / "gsea" / "gsea-run-ui" / "task_run.json"
+    task_log.parent.mkdir(parents=True, exist_ok=True)
+    task_log.write_text(json.dumps({"task_run_id": "gsea-run-ui", "status": "completed"}), encoding="utf-8")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    register_result(
+        root,
+        ResultIndexEntry(
+            result_id="deg-gsea-ui",
+            task_run_id="deg-gsea-run-ui",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            parameters_manifest={"gene_id_type": "symbol"},
+            output_artifacts=({"artifact_type": "deg_result_table", "path": str(deg_table.relative_to(root))},),
+            validation_status="passed",
+        ),
+    )
+    register_result(
+        root,
+        {
+            "result_id": "gsea-ui",
+            "task_run_id": "gsea-run-ui",
+            "task_type": "gsea_preranked",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "gsea-input-ui",
+            "gsea_input_id": "gsea-input-ui",
+            "source_dataset_id": "dataset-ui",
+            "source_repository_manifest": "standardized_data/repositories/repository_manifest.json",
+            "source_deg_result_id": "deg-gsea-ui",
+            "source_result_semantics": "formal_computed_result",
+            "gene_set_resource_id": "sets-gsea-ui",
+            "parameters_manifest": {"gsea_parameter_id": "gsea-ui-params", "gene_set_resource_id": "sets-gsea-ui", "rank_metric": "signed_log10_fdr_by_log2fc", "permutation_type": "gene_set", "permutation_count": 100, "random_seed": 1, "fdr_threshold": 0.25},
+            "engine_name": "python_preranked_gsea_mvp",
+            "engine_version": "0.1.0",
+            "dependency_snapshot": {"status": "passed", "packages": {"numpy": {"version": "2"}, "pandas": {"version": "3"}, "scipy": {"version": "1"}, "statsmodels": {"version": "0.14"}}},
+            "output_artifacts": [{"artifact_type": "gsea_result_table", "path": str(gsea_table.relative_to(root))}],
+            "plot_artifacts": [],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "controlled_gsea_task_run_log", "path": "analysis_runs/gsea/gsea-run-ui/task_run.json"}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+        },
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.findChild(QLabel, "gseaReviewSummary")
+    assert summary is not None
+    assert "terms=1" in summary.text()
+    assert "source=deg-gsea-ui" in summary.text()
+    table = widget.findChild(QTableWidget, "gseaReviewTable")
+    assert table is not None
+    assert "Positive" in _table_text(table)
+    plot_status = widget.findChild(QLabel, "gseaPlotStatus")
+    assert plot_status is not None
+    assert "GSEA plot gate passed" in plot_status.text()
+    plot_button = widget.findChild(QPushButton, "gseaPlotButton")
+    assert plot_button is not None
+    assert plot_button.isEnabled()
+
+    plot_result = widget.generate_gsea_plot_artifact()
+    assert plot_result is not None
+    assert plot_result["status"] == "passed"
+    assert plot_result["plot_artifact"]["image_artifacts"] == []
+    assert "未生成 PNG/SVG/PDF" in widget.status_message()
+    report_status = widget.findChild(QLabel, "gseaReportReadyStatus")
+    assert report_status is not None
+    assert "GSEA report-ready gate passed" in report_status.text()
+    report_button = widget.findChild(QPushButton, "gseaReportReadyButton")
+    assert report_button is not None
+    assert report_button.isEnabled()
+    report_package = widget.generate_gsea_report_ready_package()
+    assert report_package is not None
+    assert report_package["status"] == "gsea_report_ready_package_created"
+    assert Path(str(report_package["package_path"])).is_dir()
+    assert "仅包含 GSEA section" in widget.status_message()
+
+
+def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_summary) -> None:
+    table_path = project_summary.project_root / "results" / "tables" / "formal_deg_report.tsv"
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    table_path.write_text(
+        "feature_id\tgene_symbol\tbase_mean_or_mean_expression\tcase_mean\tcontrol_mean\tlog2_fold_change\tstatistic\tp_value\tadjusted_p_value\tsignificance_label\twarnings\n"
+        "g1\tTP53\t10\t12\t4\t1.5\t3.0\t0.001\t0.003\tup\t\n",
+        encoding="utf-8",
+    )
+    parameters = {
+        "status": "passed",
+        "method": "welch_t_test",
+        "log2fc_threshold": 1.0,
+        "p_value_threshold": 0.05,
+        "fdr_threshold": 0.05,
+        "case_samples": ["case1", "case2"],
+        "control_samples": ["ctrl1", "ctrl2"],
+    }
+    dependency = {
+        "status": "passed",
+        "packages": {
+            "numpy": {"version": "2.4.6"},
+            "pandas": {"version": "3.0.3"},
+            "scipy": {"version": "1.17.1"},
+            "statsmodels": {"version": "0.14.6"},
+        },
+    }
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(
+            result_id="formal-ui-report",
+            task_run_id="task-formal-ui-report",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            input_package_id="pkg-ui-report",
+            source_dataset_id="dataset-ui",
+            source_repository_manifest="standardized_data/repositories/repository_manifest.json",
+            parameters_manifest=parameters,
+            engine_name="python_scipy_statsmodels_deg_mvp",
+            engine_version="0.1.0",
+            dependency_snapshot=dependency,
+            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            plot_artifacts=(),
+            report_artifacts=(),
+            validation_status="passed",
+            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-ui-report_run_log.json"},),
+            report_ready_eligible=False,
+        ),
+    )
+    confirmation_path = project_summary.project_root / CONFIRMATION_PATH
+    confirmation_path.parent.mkdir(parents=True, exist_ok=True)
+    confirmation_path.write_text(
+        json.dumps(
+            {
+                "schema_version": CONFIRMATION_SCHEMA_VERSION,
+                "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                "status": "confirmed",
+                "confirmed_by_user": True,
+                "parameter_manifest": parameters,
+                "dependency_snapshot": dependency,
+                "output_plan": {
+                    "task_run_id": "task-formal-ui-report",
+                    "result_id": "formal-ui-report",
+                    "result_table_path": "results/tables/formal-ui-report.tsv",
+                    "task_run_log_path": "analysis/formal_deg/formal-ui-report_run_log.json",
+                    "result_index_registry_path": "results/summaries/result_index.json",
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    plot = create_formal_deg_plot_artifact(project_summary.project_root, result_id="formal-ui-report")
+    assert plot["status"] == "passed"
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    status = widget.findChild(QLabel, "formalDegReportReadyStatus")
+    assert status is not None
+    assert "Formal DEG report-ready gate passed" in status.text()
+    full_status = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert full_status is not None
+    assert "Full integrated report disabled" in full_status.text()
+    assert "survival_clinical_section_package_not_passed" in full_status.text() or "section_result_missing:survival_km_logrank" in full_status.text()
+    full_button = widget.findChild(QPushButton, "fullIntegratedReportButton")
+    assert full_button is not None
+    assert not full_button.isEnabled()
+    full_plan = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
+    assert full_plan is not None
+    full_plan_text = _table_text(full_plan)
+    assert "report_package/integrated" in full_plan_text
+    assert "integrated_report.md" in full_plan_text
+    assert "prerequisite_summary" in full_plan_text
+    assert "renderer_status" in full_plan_text
+    assert "builtin_markdown" in full_plan_text
+    full_format = widget.findChild(QComboBox, "fullIntegratedReportFormat")
+    assert full_format is not None
+    full_format.setCurrentText("pdf")
+    widget.refresh_results()
+    full_status_after_pdf = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert full_status_after_pdf is not None
+    assert "full_integrated_pdf_renderer_not_enabled_in_b23_4" in full_status_after_pdf.text()
+    full_plan_pdf_text = _table_text(full_plan)
+    assert "pandoc_pdf" in full_plan_pdf_text
+    assert "renderer_disabled_reason" in full_plan_pdf_text
+    assert "renderer_preflight_policy" in full_plan_pdf_text
+    full_sections = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
+    assert full_sections is not None
+    full_sections_text = _table_text(full_sections)
+    assert "formal_deg" in full_sections_text
+    assert "gsea_preranked" in full_sections_text
+    assert "Prerequisite" in "\n".join(full_sections.horizontalHeaderItem(column).text() for column in range(full_sections.columnCount()))
+    assert "blocked" in full_sections_text
+    blocked_full = widget.generate_full_integrated_report_package()
+    assert blocked_full is not None
+    assert blocked_full["status"] == "blocked"
+    assert "full_integrated_prerequisite_survival_clinical_section_package_not_passed:survival_km_logrank" in blocked_full["blockers"] or "section_result_missing:survival_km_logrank" in blocked_full["blockers"]
+    assert not (project_summary.project_root / "report_package" / "integrated").exists()
+    button = widget.findChild(QPushButton, "formalDegReportReadyButton")
+    assert button is not None
+    assert button.isEnabled()
+    manifest = widget.generate_formal_deg_report_ready_package()
+
+    assert manifest is not None
+    assert manifest["status"] == "formal_deg_report_ready_package_created"
+    assert manifest["section_scope"] == "formal_deg_only"
+    assert manifest["gsea_enabled"] is False
+    assert manifest["survival_enabled"] is False
+    assert "user_visible_package_path" in manifest
+    assert Path(str(manifest["user_visible_package_path"])).is_dir()
+    assert "输出位置：" in widget.status_message()
+    assert "仅包含 formal DEG section" in widget.status_message()
+
+
+def test_results_browser_survival_clinical_section_report_package_gate(qt_app, project_summary) -> None:
+    _register_survival_clinical_section_results(project_summary.project_root)
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    gate_table = widget.findChild(QTableWidget, "survivalClinicalReportGateTable")
+    assert gate_table is not None
+    gate_text = _table_text(gate_table)
+    assert "KM/log-rank section report-ready" in gate_text
+    assert "Cox section report-ready" in gate_text
+    assert "eligible_for_km_logrank_report_ready" in gate_text
+    assert "eligible_for_cox_report_ready" in gate_text
+
+    km_status = widget.findChild(QLabel, "kmReportReadyStatus")
+    cox_status = widget.findChild(QLabel, "coxReportReadyStatus")
+    assert km_status is not None
+    assert cox_status is not None
+    assert "section-only package" in km_status.text()
+    assert "section-only package" in cox_status.text()
+    km_button = widget.findChild(QPushButton, "kmReportReadyButton")
+    cox_button = widget.findChild(QPushButton, "coxReportReadyButton")
+    assert km_button is not None and km_button.isEnabled()
+    assert cox_button is not None and cox_button.isEnabled()
+
+    km_package = widget.generate_km_logrank_report_ready_package()
+    assert km_package is not None
+    assert km_package["status"] == "survival_km_logrank_only_report_ready_package_created"
+    assert Path(str(km_package["package_path"])).is_dir()
+    assert "未生成 full integrated report" in widget.status_message()
+    cox_package = widget.generate_cox_report_ready_package()
+    assert cox_package is not None
+    assert cox_package["status"] == "cox_univariate_only_report_ready_package_created"
+    assert Path(str(cox_package["package_path"])).is_dir()
+    assert "仅包含 Cox section" in widget.status_message()
+
+    full_status = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert full_status is not None
+    assert "Full integrated report disabled" in full_status.text()
+    assert "full_integrated_prerequisite_forbids_section_package_as_full_report" not in full_status.text()
+    assert "full_integrated_report_export_waiting_for_section_prerequisites" in full_status.text()
+    assert "section_result_missing:formal_deg" in full_status.text()
+
+
+def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, project_summary, monkeypatch) -> None:
+    package_path = project_summary.project_root / "report_package" / "integrated" / "ui_ready"
+    gate = _full_integrated_ui_gate()
+
+    def _fake_plan(_root, *, gate, export_format="markdown", renderer_gate=None):
+        return {
+            "schema_version": "biomedpilot.full_integrated_report_package_plan.v1",
+            "section_scope": "full_integrated_report",
+            "export_format": export_format,
+            "can_create_package": export_format == "markdown",
+            "disabled_reasons": [] if export_format == "markdown" else [f"full_integrated_{export_format}_renderer_not_enabled_in_b23_4"],
+            "renderer_status": "passed" if export_format == "markdown" else "blocked",
+            "renderer_id": "builtin_markdown" if export_format == "markdown" else f"pandoc_{export_format}",
+            "renderer_dependencies": [] if export_format == "markdown" else ["pandoc"],
+            "renderer_disabled_reason": "" if export_format == "markdown" else f"full_integrated_{export_format}_renderer_not_enabled_in_b23_4",
+            "package_root_policy": "report_package/integrated/<timestamp>_<project_name>",
+            "required_directories": ["sections", "tables", "plots", "manifests", "logs", "provenance"],
+            "required_files": ["integrated_report.md", "README_limitations.md"],
+            "blocked_reason": "",
+        }
+
+    def _fake_package(_root, *, export_format="markdown"):
+        package_path.mkdir(parents=True, exist_ok=True)
+        (package_path / "integrated_report.md").write_text("# Integrated\n", encoding="utf-8")
+        return {
+            "schema_version": "biomedpilot.full_integrated_report_package.v1",
+            "status": "full_integrated_report_package_created",
+            "export_format": export_format,
+            "package_path": str(package_path),
+            "user_visible_package_path": str(package_path),
+            "gate": gate,
+            "renderer_gate": {"status": "passed", "renderer_id": "builtin_markdown"},
+            "package_plan": _fake_plan(project_summary.project_root, gate=gate, export_format=export_format),
+        }
+
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_gate", lambda _root: gate)
+    monkeypatch.setattr(workflow_pages, "build_full_integrated_report_package_plan", _fake_plan)
+    monkeypatch.setattr(workflow_pages, "create_full_integrated_report_package", _fake_package)
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    status = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert status is not None
+    assert "markdown-only package can be created" in status.text()
+    assert "PDF/DOCX disabled" in status.text()
+    button = widget.findChild(QPushButton, "fullIntegratedReportButton")
+    assert button is not None and button.isEnabled()
+    plan_table = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
+    assert plan_table is not None
+    plan_text = _table_text(plan_table)
+    assert "eligible_for_markdown_export" in plan_text
+    assert "enabled_export_formats" in plan_text
+    assert "markdown" in plan_text
+    assert "disabled_export_formats" in plan_text
+    assert "pdf, docx" in plan_text
+    assert "No clinical diagnosis" in plan_text
+    section_table = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
+    assert section_table is not None
+    headers = "\n".join(section_table.horizontalHeaderItem(column).text() for column in range(section_table.columnCount()))
+    assert "Package" in headers
+    section_text = _table_text(section_table)
+    assert "survival_km_logrank" in section_text
+    assert "passed" in section_text
+
+    result = widget.generate_full_integrated_report_package()
+
+    assert result is not None
+    assert result["status"] == "full_integrated_report_package_created"
+    assert Path(str(result["package_path"])).is_dir()
+    assert "输出位置：" in widget.status_message()
+    assert "PDF/DOCX 仍禁用" in widget.status_message()
+    assert "risk score" in widget.status_message()
+
+
+def _full_integrated_ui_gate() -> dict[str, object]:
+    rows = [
+        _full_integrated_ui_section("formal_deg", "deg-ui", "deg", package_status="not_required"),
+        _full_integrated_ui_section("ora_enrichment", "ora-ui", "ora_enrichment", package_status="not_required"),
+        _full_integrated_ui_section("gsea_preranked", "gsea-ui", "gsea_preranked", package_status="not_required"),
+        _full_integrated_ui_section("survival_km_logrank", "km-ui", "survival_km_logrank", package_status="passed"),
+        _full_integrated_ui_section("cox", "cox-ui", "cox_univariate", package_status="passed"),
+    ]
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_gate.v1",
+        "status": "eligible_for_full_integrated_report",
+        "section_scope": "full_integrated_report",
+        "export_activation_status": "eligible_for_markdown_export",
+        "enabled_export_formats": ["markdown"],
+        "disabled_export_formats": ["pdf", "docx"],
+        "section_rows": rows,
+        "prerequisite_rows": [
+            {
+                "section_id": row["section_id"],
+                "status": "passed",
+                "section_package_validation_status": row["section_package_validation_status"],
+                "blockers": [],
+            }
+            for row in rows
+        ],
+        "prerequisite_summary": {"status": "passed", "blocked_count": 0, "passed_count": 5},
+        "limitations_required": [
+            "Statistical research report only.",
+            "No clinical diagnosis, prognosis, or treatment recommendation.",
+            "Warnings, blockers, dependencies, and provenance must remain attached.",
+        ],
+        "blockers": [],
+        "warnings": [],
+    }
+
+
+def _full_integrated_ui_section(section_id: str, result_id: str, task_type: str, *, package_status: str) -> dict[str, object]:
+    return {
+        "section_id": section_id,
+        "result_id": result_id,
+        "task_type": task_type,
+        "result_semantics": "formal_computed_result",
+        "validation_status": "passed",
+        "section_report_ready_status": "passed",
+        "plot_artifact_status": "real_artifact_registered",
+        "section_package_validation_status": package_status,
+        "blockers": [],
+        "warnings": [],
+    }
+
+
+def _register_survival_clinical_section_results(root: Path) -> None:
+    tables_dir = root / "results" / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
+    km_table = tables_dir / "km_ui.tsv"
+    logrank_table = tables_dir / "logrank_ui.tsv"
+    cox_table = tables_dir / "cox_ui.tsv"
+    km_table.write_text(
+        "time\tsurvival_probability\tgroup\tat_risk\tevents\tcensored\ttime_unit\twarnings\n"
+        "1\t0.8\tA\t5\t1\t0\tmonth\t\n"
+        "1\t0.7\tB\t5\t1\t0\tmonth\t\n",
+        encoding="utf-8",
+    )
+    logrank_table.write_text(
+        "group_a\tgroup_b\ttest_statistic\tp_value\tmethod\tevent_count_group_a\tevent_count_group_b\tsample_count_group_a\tsample_count_group_b\twarnings\n"
+        "A\tB\t1.2\t0.27\tlogrank\t1\t1\t5\t5\t\n",
+        encoding="utf-8",
+    )
+    cox_table.write_text(
+        "covariate\tcovariate_label\tcovariate_type\thazard_ratio\tci_lower\tci_upper\tp_value\tz_statistic\tsample_count\tevent_count\tnon_missing_count\tmissing_count\tmethod\twarnings\n"
+        "arm\tArm\tbinary_variable\t1.4\t0.8\t2.1\t0.2\t1.1\t10\t4\t10\t0\tcox\tstatistical_only\n",
+        encoding="utf-8",
+    )
+    km_log = root / "analysis" / "km_ui_log.json"
+    cox_log = root / "analysis" / "cox_ui_log.json"
+    km_log.parent.mkdir(parents=True, exist_ok=True)
+    km_log.write_text("{}", encoding="utf-8")
+    cox_log.write_text("{}", encoding="utf-8")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    dependency = {"status": "passed", "python_lifelines": {"available": True, "version": "0.30.0"}}
+    register_result(
+        root,
+        {
+            "result_id": "km-ui-ready",
+            "task_run_id": "run-km-ui",
+            "task_type": "survival_km_logrank",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "surv-input-ui",
+            "source_dataset_id": "surv-input-ui",
+            "source_repository_manifest": "B12 survival input package",
+            "parameters_manifest": {
+                "survival_clinical_input_id": "surv-input-ui",
+                "survival_outcome_gate_id": "outcome-ui",
+                "time_field": "OS_time",
+                "event_field": "OS_event",
+                "grouping_variable": "arm",
+                "group_a": "A",
+                "group_b": "B",
+                "censoring_policy": "right_censored",
+                "missingness_policy": "drop_missing",
+            },
+            "engine_name": "python_lifelines_km_logrank_mvp",
+            "engine_version": "0.1.0",
+            "dependency_snapshot": dependency,
+            "output_artifacts": [
+                {"artifact_type": "km_curve_table", "path": str(km_table.relative_to(root))},
+                {"artifact_type": "logrank_result_table", "path": str(logrank_table.relative_to(root))},
+            ],
+            "plot_artifacts": [{"plot_id": "km-plot-ui", "plot_type": "km_curve", "source_result_id": "km-ui-ready", "plot_semantics": "formal_computed_result", "source_result_semantics": "formal_computed_result", "blockers": []}],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "task_run_log", "path": str(km_log.relative_to(root))}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+            "survival_clinical_input_id": "surv-input-ui",
+            "survival_outcome_gate_id": "outcome-ui",
+        },
+    )
+    register_result(
+        root,
+        {
+            "result_id": "cox-ui-ready",
+            "task_run_id": "run-cox-ui",
+            "task_type": "cox_univariate",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "surv-input-ui",
+            "source_dataset_id": "surv-input-ui",
+            "source_repository_manifest": "B12 survival input package",
+            "parameters_manifest": {
+                "survival_clinical_input_id": "surv-input-ui",
+                "survival_outcome_gate_id": "outcome-ui",
+                "time_field": "OS_time",
+                "event_field": "OS_event",
+                "covariate": "arm",
+                "covariate_type": "binary_variable",
+                "missing_value_policy": "drop_missing",
+                "minimum_event_count": 3,
+            },
+            "engine_name": "python_lifelines_cox_univariate_mvp",
+            "engine_version": "0.1.0",
+            "dependency_snapshot": dependency,
+            "output_artifacts": [{"artifact_type": "cox_result_table", "path": str(cox_table.relative_to(root))}],
+            "plot_artifacts": [{"plot_id": "cox-plot-ui", "plot_type": "cox_forest_plot", "source_result_id": "cox-ui-ready", "plot_semantics": "formal_computed_result", "source_result_semantics": "formal_computed_result", "blockers": []}],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "task_run_log", "path": str(cox_log.relative_to(root))}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+            "survival_clinical_input_id": "surv-input-ui",
+            "survival_outcome_gate_id": "outcome-ui",
+        },
+    )
 
 
 def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_summary) -> None:

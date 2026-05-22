@@ -6245,7 +6245,483 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._results,
             _results_user_rows(self._project_root, entries, records),
         )
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings}))
+        review = build_formal_deg_result_review(
+            self._project_root,
+            sort_by=self._formal_deg_sort_input.currentText(),
+            significance_filter=self._formal_deg_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._formal_deg_review = review
+        self._render_formal_deg_review(review)
+        ora_review = build_ora_result_review(
+            self._project_root,
+            sort_by=self._ora_sort_input.currentText(),
+            significance_filter=self._ora_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._ora_review = ora_review
+        self._render_ora_review(ora_review)
+        gsea_review = build_gsea_result_review(
+            self._project_root,
+            sort_by=self._gsea_sort_input.currentText(),
+            significance_filter=self._gsea_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._gsea_review = gsea_review
+        self._render_gsea_review(gsea_review)
+        gsea_plot_gate = build_gsea_plot_gate(
+            self._project_root,
+            result_id=str(gsea_review.get("selected_result_id") or "") or None,
+            plot_type=self._gsea_plot_type.currentText(),
+        ) if self._project_root else {}
+        self._render_gsea_plot_gate(gsea_plot_gate)
+        gsea_report_gate = evaluate_gsea_report_ready_gate(
+            self._project_root,
+            result_id=str(gsea_review.get("selected_result_id") or "") or None,
+            allow_table_only_report=bool(self._gsea_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._render_gsea_report_gate(gsea_report_gate)
+        ora_plot_gate = build_ora_plot_gate(
+            self._project_root,
+            result_id=str(ora_review.get("selected_result_id") or "") or None,
+            plot_type=self._ora_plot_type.currentText(),
+        ) if self._project_root else {}
+        self._render_ora_plot_gate(ora_plot_gate)
+        ora_report_gate = evaluate_ora_report_ready_gate(
+            self._project_root,
+            result_id=str(ora_review.get("selected_result_id") or "") or None,
+            allow_table_only_report=bool(self._ora_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._render_ora_report_gate(ora_report_gate)
+        plot_gate = build_formal_deg_plot_gate(
+            self._project_root,
+            result_id=str(review.get("selected_result_id") or "") or None,
+            plot_type=self._formal_deg_plot_type.currentText(),
+        ) if self._project_root else {}
+        self._render_formal_deg_plot_gate(plot_gate)
+        report_gate = evaluate_formal_deg_report_ready_gate(
+            self._project_root,
+            result_id=str(review.get("selected_result_id") or "") or None,
+            allow_table_only_report=bool(self._formal_deg_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._render_formal_deg_report_gate(report_gate)
+        km_report_gate = evaluate_km_logrank_report_ready_gate(
+            self._project_root,
+            allow_table_only_report=bool(self._km_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        cox_report_gate = evaluate_cox_report_ready_gate(
+            self._project_root,
+            allow_table_only_report=bool(self._cox_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._km_report_gate = km_report_gate
+        self._cox_report_gate = cox_report_gate
+        self._render_survival_clinical_report_gates(km_report_gate, cox_report_gate)
+        integrated_gate = evaluate_full_integrated_report_gate(self._project_root) if self._project_root else {}
+        integrated_plan = build_full_integrated_report_package_plan(
+            self._project_root,
+            gate=integrated_gate,
+            export_format=self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown",
+        ) if self._project_root else {}
+        self._render_full_integrated_report_preview(integrated_gate, integrated_plan)
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
+        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("survival_clinical_report_gate_rows", []) or [])]))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan}))
+
+    def _render_formal_deg_review(self, review: dict[str, object]) -> None:
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._formal_deg_summary_label.setText("Formal DEG summary：暂无 formal_computed_result DEG；imported/testing/exploratory/preflight 不会混入此审阅区。")
+            _fill_table(self._formal_deg_table, [])
+            _fill_table(self._formal_deg_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        thresholds = summary.get("thresholds") if isinstance(summary.get("thresholds"), dict) else {}
+        sample_counts = summary.get("sample_counts") if isinstance(summary.get("sample_counts"), dict) else {}
+        deps = summary.get("dependency_versions") if isinstance(summary.get("dependency_versions"), dict) else {}
+        self._formal_deg_summary_label.setText(
+            "Formal DEG summary："
+            f"genes={summary.get('total_gene_count', 0)}；up={summary.get('significant_up_count', 0)}；down={summary.get('significant_down_count', 0)}；"
+            f"method={summary.get('method', '')}；threshold log2FC={thresholds.get('log2fc_threshold', '')}, p={thresholds.get('p_value_threshold', '')}, FDR={thresholds.get('fdr_threshold', '')}；"
+            f"samples case={sample_counts.get('case', 0)}, control={sample_counts.get('control', 0)}；"
+            f"deps numpy={deps.get('numpy', '')}, pandas={deps.get('pandas', '')}, scipy={deps.get('scipy', '')}, statsmodels={deps.get('statsmodels', '')}."
+        )
+        self._formal_deg_downstream_label.setText(
+            "；".join(str(value) for value in downstream.values())
+            if downstream
+            else "等待 B9.6 plot artifact / B9.7 report-ready gate。"
+        )
+        _fill_table(
+            self._formal_deg_table,
+            [
+                [
+                    row.get("feature_id", ""),
+                    row.get("gene_symbol", ""),
+                    row.get("log2_fold_change", ""),
+                    row.get("p_value", ""),
+                    row.get("adjusted_p_value", ""),
+                    row.get("significance_label", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._formal_deg_provenance,
+            [
+                ["input_package_id", provenance.get("input_package_id", "")],
+                ["parameter_confirmation", provenance.get("parameter_confirmation", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
+
+    def _render_formal_deg_plot_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_formal_deg_plot_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "passed":
+            existing = gate.get("existing_plot_artifacts", []) if isinstance(gate.get("existing_plot_artifacts"), list) else []
+            self._formal_deg_plot_button.setEnabled(True)
+            self._formal_deg_plot_status.setText(
+                f"Formal DEG plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
+                "inherits formal_computed_result semantics；report-ready remains disabled."
+            )
+        else:
+            self._formal_deg_plot_button.setEnabled(False)
+            reason = "；".join(blockers) or "formal DEG plot gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._formal_deg_plot_status.setText(f"Formal DEG plot disabled：{reason}")
+
+    def _render_formal_deg_report_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_formal_deg_report_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "eligible_for_formal_deg_report_ready":
+            self._formal_deg_report_button.setEnabled(True)
+            self._formal_deg_report_status.setText(
+                f"Formal DEG report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                f"confirmation={gate.get('confirmation_created_at', '')}；deps={gate.get('dependency_versions', {})}；"
+                "package scope=formal DEG only；GSEA/survival/clinical conclusions disabled."
+            )
+        else:
+            self._formal_deg_report_button.setEnabled(False)
+            reason = "；".join(blockers) or "formal DEG report-ready gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._formal_deg_report_status.setText(f"Formal DEG report-ready disabled：{reason}")
+
+    def _render_survival_clinical_report_gates(self, km_gate: dict[str, object], cox_gate: dict[str, object]) -> None:
+        if not hasattr(self, "_survival_clinical_report_gate"):
+            return
+        self._render_single_survival_clinical_report_gate(
+            km_gate,
+            button=self._km_report_button,
+            label=self._km_report_status,
+            eligible_status="eligible_for_km_logrank_report_ready",
+            display_name="KM/log-rank section",
+        )
+        self._render_single_survival_clinical_report_gate(
+            cox_gate,
+            button=self._cox_report_button,
+            label=self._cox_report_status,
+            eligible_status="eligible_for_cox_report_ready",
+            display_name="Cox section",
+        )
+        _fill_table(
+            self._survival_clinical_report_gate,
+            [
+                _survival_clinical_report_gate_row("KM/log-rank section report-ready", km_gate),
+                _survival_clinical_report_gate_row("Cox section report-ready", cox_gate),
+            ],
+        )
+
+    def _render_single_survival_clinical_report_gate(
+        self,
+        gate: dict[str, object],
+        *,
+        button: QPushButton,
+        label: QLabel,
+        eligible_status: str,
+        display_name: str,
+    ) -> None:
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == eligible_status:
+            button.setEnabled(True)
+            label.setText(
+                f"{display_name} gate passed；source={gate.get('selected_result_id', '')}；"
+                f"table-only={gate.get('allow_table_only_report', False)}；"
+                "section-only package；full integrated report / risk score / clinical conclusion remain disabled."
+            )
+        else:
+            button.setEnabled(False)
+            reason = "；".join(blockers) or f"{display_name} gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            label.setText(f"{display_name} disabled：{reason}")
+
+    def _render_full_integrated_report_preview(self, gate: dict[str, object], plan: dict[str, object]) -> None:
+        if not hasattr(self, "_full_integrated_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        disabled_reasons = [str(item) for item in plan.get("disabled_reasons", []) or []]
+        can_create = bool(plan.get("can_create_package"))
+        self._full_integrated_button.setEnabled(gate.get("status") == "eligible_for_full_integrated_report" and can_create)
+        if self._full_integrated_button.isEnabled():
+            renderer_id = str(plan.get("renderer_id") or "builtin_markdown")
+            self._full_integrated_status.setText(
+                f"Full integrated report gate passed；renderer={renderer_id}；markdown-only package can be created；"
+                "PDF/DOCX disabled；no clinical diagnosis/prognosis/risk score/treatment advice."
+            )
+        else:
+            reason = "；".join(disabled_reasons or blockers) or str(plan.get("blocked_reason") or "full integrated report gate 未通过")
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._full_integrated_status.setText(f"Full integrated report disabled：{reason}")
+        _fill_table(
+            self._full_integrated_plan,
+            [
+                ["section_scope", plan.get("section_scope", gate.get("section_scope", "full_integrated_report"))],
+                ["export_format", plan.get("export_format", self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown")],
+                ["can_create_package", plan.get("can_create_package", False)],
+                ["export_activation_status", gate.get("export_activation_status", "")],
+                ["enabled_export_formats", ", ".join(str(item) for item in gate.get("enabled_export_formats", []) or [])],
+                ["disabled_export_formats", ", ".join(str(item) for item in gate.get("disabled_export_formats", []) or [])],
+                ["prerequisite_summary", gate.get("prerequisite_summary", {})],
+                ["renderer_status", plan.get("renderer_status", "")],
+                ["renderer_id", plan.get("renderer_id", "")],
+                ["renderer_dependencies", ", ".join(str(item) for item in plan.get("renderer_dependencies", []) or [])],
+                ["renderer_disabled_reason", plan.get("renderer_disabled_reason", "")],
+                ["renderer_preflight_policy", plan.get("renderer_preflight_policy", {})],
+                ["package_root_policy", plan.get("package_root_policy", "")],
+                ["required_directories", ", ".join(str(item) for item in plan.get("required_directories", []) or [])],
+                ["required_files", ", ".join(str(item) for item in plan.get("required_files", []) or [])],
+                ["limitations", "; ".join(str(item) for item in gate.get("limitations_required", []) or [])],
+                ["blocked_reason", plan.get("blocked_reason", "；".join(blockers))],
+            ],
+        )
+        rows = gate.get("section_rows", []) if isinstance(gate.get("section_rows"), list) else []
+        prerequisite_rows = {
+            str(row.get("section_id") or ""): row
+            for row in gate.get("prerequisite_rows", []) or []
+            if isinstance(row, dict)
+        }
+        _fill_table(
+            self._full_integrated_sections,
+            [
+                [
+                    row.get("section_id", ""),
+                    row.get("result_id", ""),
+                    row.get("result_semantics", ""),
+                    row.get("validation_status", ""),
+                    row.get("section_report_ready_status", ""),
+                    row.get("plot_artifact_status", ""),
+                    (prerequisite_rows.get(str(row.get("section_id") or "")) or {}).get("section_package_validation_status", ""),
+                    (prerequisite_rows.get(str(row.get("section_id") or "")) or {}).get("status", ""),
+                    "; ".join(str(item) for item in row.get("blockers", []) or []),
+                ]
+                for row in rows
+                if isinstance(row, dict)
+            ],
+        )
+
+    def _render_ora_review(self, review: dict[str, object]) -> None:
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._ora_summary_label.setText("ORA summary：暂无 controlled ORA result；raw/preflight/testing/exploratory 不会混入此审阅区。")
+            _fill_table(self._ora_table, [])
+            _fill_table(self._ora_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        deps = summary.get("dependency_versions") if isinstance(summary.get("dependency_versions"), dict) else {}
+        self._ora_summary_label.setText(
+            "ORA summary："
+            f"terms={summary.get('term_total', 0)}；significant={summary.get('significant_term_count', 0)}；top={summary.get('top_term_by_fdr', '')}；"
+            f"source={summary.get('source_deg_result_id', '')} / {summary.get('source_result_semantics', '')}；"
+            f"gene_set={summary.get('gene_set_resource', '')}；method={summary.get('method', '')}；"
+            f"selected genes={summary.get('selected_gene_count', 0)}；background={summary.get('background_size', 0)}；"
+            f"deps scipy={deps.get('scipy', '')}, statsmodels={deps.get('statsmodels', '')}."
+        )
+        self._ora_downstream_label.setText("；".join(str(value) for value in downstream.values()) if downstream else "ORA plot/report-ready/GSEA/survival disabled.")
+        _fill_table(
+            self._ora_table,
+            [
+                [
+                    row.get("term_id", ""),
+                    row.get("term_name", ""),
+                    row.get("overlap_count", ""),
+                    row.get("gene_set_size", ""),
+                    row.get("selected_gene_count", ""),
+                    row.get("enrichment_ratio", ""),
+                    row.get("p_value", ""),
+                    row.get("adjusted_p_value", ""),
+                    row.get("overlap_genes", ""),
+                    row.get("significance_label", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._ora_provenance,
+            [
+                ["ora_input_id", provenance.get("ora_input_id", "")],
+                ["source_deg_result_id", provenance.get("source_deg_result_id", "")],
+                ["source_result_semantics", provenance.get("source_result_semantics", "")],
+                ["gene_set_resource_id", provenance.get("gene_set_resource_id", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
+
+    def _render_gsea_review(self, review: dict[str, object]) -> None:
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._gsea_summary_label.setText("GSEA summary：暂无 controlled preranked GSEA result；raw/preflight/testing/exploratory 不会混入此审阅区。")
+            self._gsea_downstream_label.setText("GSEA plot/report-ready disabled：等待 B11.3 plot artifact / 后续 report gate。")
+            _fill_table(self._gsea_table, [])
+            _fill_table(self._gsea_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        deps = summary.get("dependency_versions") if isinstance(summary.get("dependency_versions"), dict) else {}
+        self._gsea_summary_label.setText(
+            "GSEA summary："
+            f"terms={summary.get('term_total', 0)}；significant={summary.get('significant_term_count', 0)}；"
+            f"top+NES={summary.get('top_positive_nes_term', '')}；top-NES={summary.get('top_negative_nes_term', '')}；"
+            f"source={summary.get('source_deg_result_id', '')} / {summary.get('source_result_semantics', '')}；"
+            f"rank={summary.get('rank_metric', '')}；gene_set={summary.get('gene_set_resource', '')}；"
+            f"permutations={summary.get('permutation_count', 0)}；seed={summary.get('random_seed', '')}；"
+            f"deps numpy={deps.get('numpy', '')}, pandas={deps.get('pandas', '')}, scipy={deps.get('scipy', '')}, statsmodels={deps.get('statsmodels', '')}."
+        )
+        self._gsea_downstream_label.setText("；".join(str(value) for value in downstream.values()) if downstream else "GSEA plot/report-ready/survival/clinical disabled.")
+        _fill_table(
+            self._gsea_table,
+            [
+                [
+                    row.get("term_id", ""),
+                    row.get("term_name", ""),
+                    row.get("set_size", ""),
+                    row.get("overlap_size", ""),
+                    row.get("enrichment_score", ""),
+                    row.get("normalized_enrichment_score", ""),
+                    row.get("p_value", ""),
+                    row.get("adjusted_p_value", ""),
+                    row.get("leading_edge_genes", ""),
+                    row.get("rank_metric", ""),
+                    row.get("significance_label", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._gsea_provenance,
+            [
+                ["gsea_input_id", provenance.get("gsea_input_id", "")],
+                ["source_deg_result_id", provenance.get("source_deg_result_id", "")],
+                ["source_result_semantics", provenance.get("source_result_semantics", "")],
+                ["gene_set_resource_id", provenance.get("gene_set_resource_id", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
+
+    def _render_gsea_plot_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_gsea_plot_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "passed":
+            existing = gate.get("existing_plot_artifacts", []) if isinstance(gate.get("existing_plot_artifacts"), list) else []
+            self._gsea_plot_button.setEnabled(True)
+            self._gsea_plot_status.setText(
+                f"GSEA plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
+                "spec_only_no_image_dependency；does not render PNG/SVG/PDF；full report remains disabled."
+            )
+        else:
+            self._gsea_plot_button.setEnabled(False)
+            reason = "；".join(blockers) or "GSEA plot gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._gsea_plot_status.setText(f"GSEA plot disabled：{reason}")
+
+    def _render_gsea_report_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_gsea_report_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") in {"eligible_for_gsea_report_ready", "eligible_for_imported_derived_gsea_report_package"}:
+            self._gsea_report_button.setEnabled(True)
+            imported_note = "；imported-derived source will stay labeled" if gate.get("status") == "eligible_for_imported_derived_gsea_report_package" else ""
+            self._gsea_report_status.setText(
+                f"GSEA report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                f"deps={gate.get('dependency_versions', {})}；table-only={gate.get('allow_table_only_report', False)}{imported_note}；"
+                "package scope=GSEA only；survival/full report/clinical conclusions disabled."
+            )
+        else:
+            self._gsea_report_button.setEnabled(False)
+            reason = "；".join(blockers) or "GSEA report-ready gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._gsea_report_status.setText(f"GSEA report-ready disabled：{reason}")
+
+    def _render_ora_plot_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_ora_plot_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "passed":
+            existing = gate.get("existing_plot_artifacts", []) if isinstance(gate.get("existing_plot_artifacts"), list) else []
+            self._ora_plot_button.setEnabled(True)
+            self._ora_plot_status.setText(
+                f"ORA plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
+                "spec_only_no_image_dependency；does not render PNG/SVG/PDF；report-ready remains disabled."
+            )
+        else:
+            self._ora_plot_button.setEnabled(False)
+            reason = "；".join(blockers) or "ORA plot gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._ora_plot_status.setText(f"ORA plot disabled：{reason}")
+
+    def _render_ora_report_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_ora_report_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") in {"eligible_for_ora_report_ready", "eligible_for_imported_derived_ora_report_package"}:
+            self._ora_report_button.setEnabled(True)
+            imported_note = "；imported-derived source will stay labeled" if gate.get("status") == "eligible_for_imported_derived_ora_report_package" else ""
+            self._ora_report_status.setText(
+                f"ORA report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                f"deps={gate.get('dependency_versions', {})}；table-only={gate.get('allow_table_only_report', False)}{imported_note}；"
+                "package scope=ORA only；GSEA/survival/full report/clinical conclusions disabled."
+            )
+        else:
+            self._ora_report_button.setEnabled(False)
+            reason = "；".join(blockers) or "ORA report-ready gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._ora_report_status.setText(f"ORA report-ready disabled：{reason}")
 
 
 class BioinformaticsReportViewerWidget(QWidget):
