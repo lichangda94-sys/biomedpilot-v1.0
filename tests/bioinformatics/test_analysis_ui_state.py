@@ -35,6 +35,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["multi_factor_deg_gate"]["result_semantics"] == "preflight_only"
     assert state["multi_factor_deg_gate"]["formal_execution_enabled"] is False
     assert state["r_deg_adapter_gates"]["status"] == "blocked"
+    assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_design"]["result_semantics"] == "design_audit_only"
+    assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_design"]["writes_result_index"] is False
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")

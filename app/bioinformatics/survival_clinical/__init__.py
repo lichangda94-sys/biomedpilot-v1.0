@@ -35,6 +35,7 @@ from .km_parameter_gate import build_km_logrank_parameter_manifest
 from .km_result_schema import validate_km_result_index_entry, validate_km_result_tables
 from .km_review import build_km_result_review, export_km_review_table
 from .outcome_gate import build_survival_outcome_gate
+from .risk_score_design import audit_risk_score_design
 
 __all__ = [
     "COX_CONFIRMATION_PATH",
@@ -43,6 +44,7 @@ __all__ = [
     "audit_clinical_variables",
     "audit_cox_multivariate_design",
     "audit_cox_univariate_e2e_acceptance",
+    "audit_risk_score_design",
     "audit_survival_km_e2e_acceptance",
     "build_cox_result_review",
     "build_cox_multivariate_parameter_manifest",

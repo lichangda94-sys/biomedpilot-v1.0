@@ -97,7 +97,7 @@ def build_analysis_capability_map(
             "Survival",
             "disabled_design_only",
             _status_from_survival_row(survival_clinical_rows, "risk_score") or "disabled",
-            "Risk score, nomogram and clinical risk grouping are disabled; B21 is design audit only and must not create formal results.",
+            "B21 risk score is design-audit only: training/validation, coefficient source, cutoff, overfitting protection and provenance can be reviewed, but no score, nomogram, risk group or clinical conclusion is generated.",
             capability_keys=[GLMNET_KEY],
         ),
         _static_row(

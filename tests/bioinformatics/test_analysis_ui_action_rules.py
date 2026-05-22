@@ -83,6 +83,22 @@ def test_cox_multivariate_action_is_enabled_only_after_b20_gates_pass() -> None:
     assert "lifelines_missing_formal_survival_disabled" in _row(blocked, "cox_multivariate")["disabled_reason"]
 
 
+def test_risk_score_action_remains_design_audit_only() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_design={"status": "design_audit_ready", "blockers": [], "warnings": ["risk_score_design_audit_only"]},
+        report_gate={"status": "blocked"},
+    )
+
+    risk = _row(rows, "risk_score")
+    assert risk["enabled"] is False
+    assert risk["state"] == "design_audit_only"
+    assert "no risk score result" in risk["disabled_reason"]
+    assert "training/validation" in risk["next_action"]
+
+
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(
         packages=[],

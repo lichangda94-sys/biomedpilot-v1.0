@@ -28,6 +28,7 @@ from app.bioinformatics.plots import build_gsea_plot_gate, build_ora_plot_gate
 from app.bioinformatics.survival_clinical import (
     audit_clinical_variables,
     audit_cox_multivariate_design,
+    audit_risk_score_design,
     build_cox_multivariate_parameter_manifest,
     build_cox_univariate_parameter_manifest,
     build_km_logrank_parameter_manifest,
@@ -113,6 +114,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         cox_confirmation_gate=survival_clinical_state["cox_confirmation_gate"],
         cox_multivariate_parameter_gate=survival_clinical_state["cox_multivariate_parameter_gate"],
         cox_multivariate_confirmation_gate=survival_clinical_state["cox_multivariate_confirmation_gate"],
+        risk_score_design=survival_clinical_state["risk_score_design"],
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         ora_input_gate=ora_gates["input_gate"],
@@ -679,6 +681,7 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
     )
     cox_multivariate_confirmation = load_cox_multivariate_confirmation(project_root)
     cox_multivariate_confirmation_gate = validate_cox_multivariate_confirmation(cox_multivariate_confirmation, cox_multivariate_parameter_gate)
+    risk_score_design = audit_risk_score_design(runtime_package, runtime_variable_audit)
     gate_rows = [
         _formal_deg_gate_row(
             "Survival/clinical input resolver",
@@ -739,6 +742,13 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
             cox_multivariate_confirmation_gate.get("warnings", []),
         ),
         _formal_deg_gate_row(
+            "B21 Risk score design audit",
+            risk_score_design.get("status"),
+            risk_score_design.get("blockers", []),
+            risk_score_design.get("warnings", []),
+            basis="design audit only; no risk score, nomogram or clinical risk grouping",
+        ),
+        _formal_deg_gate_row(
             "Survival dependency",
             dependency.get("status"),
             dependency.get("blockers", []),
@@ -762,6 +772,7 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
         "cox_multivariate_parameter_gate": cox_multivariate_parameter_gate,
         "cox_multivariate_confirmation_gate": cox_multivariate_confirmation_gate,
         "cox_multivariate_parameter_confirmation": cox_multivariate_confirmation,
+        "risk_score_design": risk_score_design,
         "gate_rows": gate_rows,
     }
 
@@ -997,6 +1008,7 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
     cox_multivariate_design = survival_clinical_state.get("cox_multivariate_design") if isinstance(survival_clinical_state.get("cox_multivariate_design"), dict) else {}
     cox_multivariate_parameter_gate = survival_clinical_state.get("cox_multivariate_parameter_gate") if isinstance(survival_clinical_state.get("cox_multivariate_parameter_gate"), dict) else {}
     cox_multivariate_confirmation_gate = survival_clinical_state.get("cox_multivariate_confirmation_gate") if isinstance(survival_clinical_state.get("cox_multivariate_confirmation_gate"), dict) else {}
+    risk_score_design = survival_clinical_state.get("risk_score_design") if isinstance(survival_clinical_state.get("risk_score_design"), dict) else {}
     blockers = _list(package.get("blockers")) if package else ["missing_survival_preflight_package"]
     warnings = _list(package.get("warnings")) if package else []
     dep_blockers = _list(survival_dependency.get("blockers"))
@@ -1096,11 +1108,11 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
         {
             "row_id": "risk_score",
             "label": "Risk score / nomogram",
-            "status": "disabled",
-            "asset_status": package_status,
-            "backend_status": "not enabled",
-            "disabled_reason": "Risk score, nomogram and clinical risk grouping are not implemented in B14.",
-            "warnings": "No prognosis or treatment recommendation.",
+            "status": str(risk_score_design.get("status") or "blocked_design_audit"),
+            "asset_status": f"variables={len(risk_score_design.get('variables', []) or [])}; result_semantics={risk_score_design.get('result_semantics', 'design_audit_only')}",
+            "backend_status": "design audit only",
+            "disabled_reason": compact_list(_list(risk_score_design.get("blockers")) or ["risk_score_execution_disabled_design_audit_only"]),
+            "warnings": compact_list(_list(risk_score_design.get("warnings")) or ["No prognosis or treatment recommendation."]),
         },
         {
             "row_id": "clinical_association",
