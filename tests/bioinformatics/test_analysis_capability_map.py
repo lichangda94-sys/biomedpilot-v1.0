@@ -34,7 +34,7 @@ def test_b17_capability_map_keeps_unimplemented_methods_blocked() -> None:
     assert "package.r.limma.available" in rows["deg_limma"]["dependency_capability_keys"]
     assert "runtime.r.available" in rows["deg_deseq2"]["dependency_capability_keys"]
     assert "package.r.edger.available" in rows["deg_edger"]["dependency_capability_keys"]
-    assert rows["cox_multivariate"]["implementation_status"] == "design_audit_only"
+    assert rows["cox_multivariate"]["implementation_status"] == "b20_gated_execution_contract"
     assert rows["risk_score"]["ui_state"] == "disabled"
     assert rows["full_integrated_report"]["implementation_status"] == "planned"
     assert rows["legacy_formal_execution"]["implementation_status"] == "disabled"

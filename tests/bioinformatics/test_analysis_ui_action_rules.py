@@ -55,6 +55,34 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     assert _row(rows, "ora_report_ready")["enabled"] is False
 
 
+def test_cox_multivariate_action_is_enabled_only_after_b20_gates_pass() -> None:
+    rows = build_action_rows(
+        packages=[{"package_type": "tcga_clinical_survival_preflight", "blockers": []}],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed", "blockers": []},
+        cox_multivariate_parameter_gate={"status": "passed", "blockers": []},
+        cox_multivariate_confirmation_gate={"status": "passed", "blockers": []},
+        report_gate={"status": "blocked"},
+    )
+
+    run = _row(rows, "cox_multivariate")
+    assert run["enabled"] is True
+    assert run["button_behavior"] == "enabled_multivariate_cox_mvp"
+    assert "no risk score" in run["next_action"]
+
+    blocked = build_action_rows(
+        packages=[{"package_type": "tcga_clinical_survival_preflight", "blockers": []}],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only", "blockers": ["lifelines_missing_formal_survival_disabled"]},
+        cox_multivariate_parameter_gate={"status": "passed", "blockers": []},
+        cox_multivariate_confirmation_gate={"status": "blocked", "blockers": ["cox_multivariate_parameter_confirmation_missing"]},
+        report_gate={"status": "blocked"},
+    )
+    assert _row(blocked, "cox_multivariate")["enabled"] is False
+    assert "cox_multivariate_parameter_confirmation_missing" in _row(blocked, "cox_multivariate")["disabled_reason"]
+    assert "lifelines_missing_formal_survival_disabled" in _row(blocked, "cox_multivariate")["disabled_reason"]
+
+
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(
         packages=[],

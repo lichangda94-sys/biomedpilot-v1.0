@@ -23,6 +23,8 @@ def build_action_rows(
     km_confirmation_gate: dict[str, Any] | None = None,
     cox_parameter_gate: dict[str, Any] | None = None,
     cox_confirmation_gate: dict[str, Any] | None = None,
+    cox_multivariate_parameter_gate: dict[str, Any] | None = None,
+    cox_multivariate_confirmation_gate: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
     formal_deg_report_gate: dict[str, Any] | None = None,
     ora_input_gate: dict[str, Any] | None = None,
@@ -56,6 +58,8 @@ def build_action_rows(
     km_confirmation_gate = km_confirmation_gate or {}
     cox_parameter_gate = cox_parameter_gate or {}
     cox_confirmation_gate = cox_confirmation_gate or {}
+    cox_multivariate_parameter_gate = cox_multivariate_parameter_gate or {}
+    cox_multivariate_confirmation_gate = cox_multivariate_confirmation_gate or {}
     report_gate = report_gate or {}
     formal_deg_report_gate = formal_deg_report_gate or {}
     ora_input_gate = ora_input_gate or {}
@@ -105,7 +109,7 @@ def build_action_rows(
     rows.append(_km_logrank_action(survival_package, survival_dependency, km_parameter_gate, km_confirmation_gate))
     rows.append(_cox_parameter_confirmation_action(survival_package, cox_parameter_gate, cox_confirmation_gate))
     rows.append(_cox_univariate_action(survival_package, survival_dependency, cox_parameter_gate, cox_confirmation_gate))
-    rows.append(_constant_disabled_action("cox_multivariate", "Run multivariate Cox", "hidden_until_ready", "Multivariate Cox, adjusted HR and variable selection are disabled in B14."))
+    rows.append(_cox_multivariate_action(survival_package, survival_dependency, cox_multivariate_parameter_gate, cox_multivariate_confirmation_gate))
     rows.append(_constant_disabled_action("risk_score", "Generate risk score", "hidden_until_ready", "Risk score, nomogram and clinical risk grouping are disabled in B14."))
     rows.append(_constant_disabled_action("generate_km_plot", "Generate KM plot", "disabled_b14_spec_only", "KM plot artifact is spec-only in B14; no PNG/SVG/PDF is generated."))
     rows.append(_constant_disabled_action("survival_report_ready", "Export survival report-ready package", "disabled_b12_contract", "Survival report-ready is disabled; no full integrated report in B12."))
@@ -769,6 +773,39 @@ def _cox_univariate_action(package: dict[str, Any] | None, dependency: dict[str,
             "next_action": "Run B14 controlled Cox univariate only; no multivariate Cox, risk score or clinical conclusion.",
         }
     return _disabled("cox_univariate", "Run single-variable Cox", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, Cox parameter, confirmation and lifelines dependency gates.")
+
+
+def _cox_multivariate_action(package: dict[str, Any] | None, dependency: dict[str, Any], parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any]) -> dict[str, Any]:
+    blockers: list[str] = []
+    state = "hidden_until_ready"
+    if not package:
+        blockers.append("missing_survival_preflight_package")
+        state = "blocked_missing_input_package"
+    else:
+        blockers.extend(_list(package.get("blockers")))
+    if parameter_gate.get("status") != "passed":
+        blockers.extend(_list(parameter_gate.get("blockers")) or ["cox_multivariate_parameter_gate_not_passed"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_parameters"
+    if confirmation_gate.get("status") != "passed":
+        blockers.extend(_list(confirmation_gate.get("blockers")) or ["cox_multivariate_parameter_confirmation_missing"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_user_confirmation"
+    if dependency.get("status") != "passed":
+        blockers.extend(_list(dependency.get("blockers")) or ["blocked_missing_backend"])
+        state = "blocked_missing_backend"
+    if not blockers:
+        return {
+            "action_id": "cox_multivariate",
+            "label": "Run multivariate Cox",
+            "state": "enabled_controlled_cox_multivariate",
+            "button_behavior": "enabled_multivariate_cox_mvp",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run B20 controlled multivariate Cox with selected covariates only; no risk score, prognosis label, treatment advice or survival report-ready.",
+        }
+    return _disabled("cox_multivariate", "Run multivariate Cox", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, outcome, Cox multivariate parameter, confirmation and lifelines dependency gates.")
 
 
 def _plot_action(results: list[dict[str, Any]]) -> dict[str, Any]:

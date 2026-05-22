@@ -3044,7 +3044,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "package.r.deseq2.available" in capability_text
     assert "blocked_by_dependency" in capability_text
     assert "Cox multivariate" in capability_text
-    assert "design_audit_only" in capability_text
+    assert "b20_gated_execution_contract" in capability_text
     assert "Risk score / nomogram" in capability_text
     assert "Full integrated report" in capability_text
     assert "Multi-factor DEG design" in capability_text
@@ -3098,7 +3098,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Two-group KM/log-rank" in survival_text
     assert "Single-variable Cox" in survival_text
     assert "Cox forest plot artifact/spec" in survival_text
-    assert "Multivariate Cox design audit" in survival_text
+    assert "Multivariate Cox gated execution" in survival_text
     assert "Risk score / nomogram" in survival_text
     assert "disabled" in survival_text
 

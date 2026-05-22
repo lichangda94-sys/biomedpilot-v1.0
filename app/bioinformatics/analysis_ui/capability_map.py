@@ -86,9 +86,9 @@ def build_analysis_capability_map(
             "cox_multivariate",
             "Cox multivariate",
             "Survival",
-            "design_audit_only",
+            "b20_gated_execution_contract",
             _status_from_survival_row(survival_clinical_rows, "cox_multivariate_design") or "disabled",
-            "Multivariate Cox remains design-audit/disabled in B17; B20 must add EPV, covariate, missingness, collinearity and model-formula gates before execution.",
+            "B20 adds gated multivariate Cox execution with EPV, covariate, missingness, collinearity, model-formula, dependency and confirmation gates; risk score and clinical conclusions remain disabled.",
             capability_keys=[SURVIVAL_KEY],
         ),
         _static_row(

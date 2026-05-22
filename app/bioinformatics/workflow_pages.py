@@ -5782,7 +5782,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._gate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
         survival_card, survival_layout = _card("Survival / clinical")
-        survival_layout.addWidget(_muted("B14 允许 two-group KM/log-rank 和 single-variable Cox controlled MVP；多因素 Cox、风险评分、临床结论和 survival report-ready 仍禁用。"))
+        survival_layout.addWidget(_muted("B20 允许 gated multivariate Cox MVP；KM/log-rank、single-variable Cox 与 multivariate Cox 均需各自 gate/confirmation/dependency 通过。风险评分、临床结论和 survival report-ready 仍禁用。"))
         self._survival_table = _table(["项目", "状态", "资产/字段", "Backend", "禁用原因", "Warnings"])
         self._survival_table.setObjectName("analysisSurvivalClinicalTable")
         survival_layout.addWidget(self._survival_table)
