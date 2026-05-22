@@ -14,7 +14,7 @@ Inputs:
 - `docs/ui/UI_C1c2_labtools_visual_style_acceptance_checklist_20260522.md`
 - `docs/ui/UI_C1c1_labtools_p0_wireframe_spec_20260522.md`
 
-No images were generated in this stage. The prompts below are ready for Figma / Canva / image-generation / Codex UI design usage. If images are generated later, place non-runtime mockup outputs under `docs/ui/mockups/labtools/c1c3_supplemental/` and do not place them in active assets.
+Images were generated after this prompt pack and reviewed by the user. The accepted/superseded image state is recorded in `docs/ui/UI_C1c3c_labtools_supplemental_mockup_user_review_20260522.md` and `docs/ui/UI_C1c3c_labtools_supplemental_mockup_manifest_20260522.csv`. Non-runtime mockup outputs belong under `docs/ui/mockups/labtools/c1c3_supplemental/` and must not be placed in active assets.
 
 ## 2. Shared Supplemental Prompt Rules
 
