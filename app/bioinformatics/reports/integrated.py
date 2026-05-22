@@ -14,6 +14,7 @@ from .formal_deg import evaluate_formal_deg_report_ready_gate
 from .gsea import evaluate_gsea_report_ready_gate
 from .ora import evaluate_ora_report_ready_gate
 from .renderer_capability import build_report_renderer_capability_snapshot
+from .renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
 from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
 
 
@@ -166,6 +167,7 @@ def build_full_integrated_report_package_plan(
         "renderer_disabled_reason": renderer_gate.get("disabled_reason", ""),
         "renderer_dependencies": list(renderer_gate.get("required_dependencies", []) or []),
         "renderer_preflight_policy": _renderer_preflight_policy(str(renderer_gate.get("export_format") or export_format)),
+        "renderer_runtime_packaging_policy": build_full_integrated_renderer_runtime_packaging_policy(),
         "artifact_policy": {
             "tables": "copy only registered source result output_artifacts",
             "plots": "copy only registered plot artifacts and image_artifacts",
@@ -255,6 +257,7 @@ def evaluate_full_integrated_docx_preflight_gate(
         "export_format": "docx",
         "renderer_id": "pandoc_docx",
         "renderer_gate": renderer_gate,
+        "runtime_packaging_policy": build_full_integrated_renderer_runtime_packaging_policy(),
         "planned_output_path": str(planned_output_path),
         "conversion_log_path": str(conversion_log_path),
         "overwrite_policy": "create_or_validate_inside_existing_timestamped_package_without_overwriting_markdown_source",
@@ -278,6 +281,7 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
     canonical = _canonical_export_format(export_format)
     capability_snapshot = build_report_renderer_capability_snapshot(commands=("pandoc", "xelatex", "wkhtmltopdf"))
     capabilities = capability_snapshot.get("capabilities", {}) if isinstance(capability_snapshot.get("capabilities"), dict) else {}
+    runtime_policy = build_full_integrated_renderer_runtime_packaging_policy()
     blockers: list[str] = []
     warnings: list[str] = []
     required_dependencies: list[str] = []
@@ -301,16 +305,18 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
         pandoc = dict(capabilities.get("pandoc", {}))
         latex = dict(capabilities.get("xelatex", {}))
         wkhtmltopdf = dict(capabilities.get("wkhtmltopdf", {}))
-        required_dependencies = ["pandoc", "xelatex_or_wkhtmltopdf"]
+        required_dependencies = ["pandoc", "xelatex"]
         detected_dependencies = {"pandoc": pandoc, "xelatex": latex, "wkhtmltopdf": wkhtmltopdf}
         if not pandoc["available"]:
             blockers.append("renderer_dependency_missing:pandoc")
-        if not latex["available"] and not wkhtmltopdf["available"]:
-            blockers.append("renderer_dependency_missing:xelatex_or_wkhtmltopdf")
+        if not latex["available"]:
+            blockers.append("renderer_dependency_missing:xelatex")
+        if wkhtmltopdf.get("available"):
+            warnings.append("wkhtmltopdf_detected_but_not_selected_for_formal_full_integrated_pdf")
         blockers.append("full_integrated_pdf_renderer_not_enabled_in_b23_4")
     dependency_checks_passed = all(item.get("available") for item in detected_dependencies.values()) if canonical == "docx" else (
         bool(detected_dependencies.get("pandoc", {}).get("available"))
-        and (bool(detected_dependencies.get("xelatex", {}).get("available")) or bool(detected_dependencies.get("wkhtmltopdf", {}).get("available")))
+        and bool(detected_dependencies.get("xelatex", {}).get("available"))
         if canonical == "pdf"
         else canonical == "markdown"
     )
@@ -327,11 +333,13 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
         "required_dependencies": required_dependencies,
         "detected_dependencies": detected_dependencies,
         "renderer_capability_snapshot": capability_snapshot,
+        "runtime_packaging_policy": runtime_policy,
         "checks": {
             "format_supported": canonical in SUPPORTED_EXPORT_FORMATS,
             "dependencies_detected": dependency_checks_passed,
             "implementation_enabled": implementation_enabled,
             "detect_first_no_install_action": True,
+            "external_renderers_bundled": False,
         },
         "disabled_reason": disabled_reason,
         "blockers": list(dict.fromkeys(blockers)),
@@ -957,6 +965,8 @@ def _renderer_preflight_policy(export_format: str) -> dict[str, Any]:
             "source_package_required": "full_integrated markdown package",
             "required_renderer": "pandoc_docx",
             "activation_status": "disabled_until_docx_renderer_activation_stage",
+            "runtime_packaging_policy_id": build_full_integrated_renderer_runtime_packaging_policy()["policy_id"],
+            "runtime_provider": "user_system_pandoc_on_search_path",
             "planned_output": "exports/integrated_report.docx",
             "conversion_log": "logs/docx_renderer_preflight.log",
             "checks": [
@@ -974,9 +984,11 @@ def _renderer_preflight_policy(export_format: str) -> dict[str, Any]:
             "source_package_required": "full_integrated markdown package",
             "required_renderer": "pandoc_pdf",
             "activation_status": "disabled_until_pdf_renderer_activation_stage",
+            "runtime_packaging_policy_id": build_full_integrated_renderer_runtime_packaging_policy()["policy_id"],
+            "runtime_provider": "disabled_detect_only_pandoc_xelatex_future_backend",
             "planned_output": "exports/integrated_report.pdf",
             "conversion_log": "logs/pdf_renderer_preflight.log",
-            "checks": ["pandoc detected", "xelatex or wkhtmltopdf detected", "assets/fonts resolve", "rendered artifact manifest registration planned"],
+            "checks": ["pandoc detected", "xelatex detected", "wkhtmltopdf detect-only not selected", "assets/fonts resolve", "rendered artifact manifest registration planned"],
         }
     return {
         "schema_version": "biomedpilot.full_integrated_markdown_renderer_policy.v1",

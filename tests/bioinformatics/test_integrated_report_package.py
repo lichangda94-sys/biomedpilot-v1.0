@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from app.bioinformatics.reports import integrated
@@ -9,9 +10,10 @@ from app.bioinformatics.reports.integrated import (
     evaluate_full_integrated_docx_preflight_gate,
     evaluate_full_integrated_report_renderer_gate,
 )
+from app.bioinformatics.reports.renderer_capability import build_report_renderer_capability_snapshot
+from app.bioinformatics.reports.renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
 from app.bioinformatics.reports.survival_clinical import create_cox_report_ready_package, create_km_logrank_report_ready_package
 from app.bioinformatics.results.registry import save_registry
-from tests.bioinformatics.test_survival_clinical_report_ready_gate import _cox_entry, _km_entry
 
 
 def test_integrated_report_package_is_blocked_while_gate_blocked(tmp_path: Path) -> None:
@@ -67,6 +69,37 @@ def test_integrated_report_package_plan_surfaces_renderer_gate_for_docx(tmp_path
     assert "non-empty integrated_report.md" in plan["renderer_preflight_policy"]["checks"]
     assert "full_integrated_docx_renderer_not_enabled_in_b23_4" in plan["disabled_reasons"]
     assert plan["can_create_package"] is False
+
+
+def test_renderer_runtime_packaging_policy_keeps_releasebuild_external_only(tmp_path: Path) -> None:
+    policy = build_full_integrated_renderer_runtime_packaging_policy()
+    docx_gate = evaluate_full_integrated_report_renderer_gate("docx")
+    pdf_gate = evaluate_full_integrated_report_renderer_gate("pdf")
+
+    assert policy["releasebuild_policy"]["bundles_external_renderers"] is False
+    assert policy["releasebuild_policy"]["network_downloads"] is False
+    assert policy["docx"]["runtime_provider"] == "user_system_pandoc_on_search_path"
+    assert policy["pdf"]["selected_engine"] == "pandoc_xelatex_when_pdf_activation_is_explicitly_approved"
+    assert policy["pdf"]["wkhtmltopdf_policy"] == "detect_only_not_formal_full_integrated_report_backend"
+    assert "renderer_runtime_packaging_policy" in build_full_integrated_report_package_plan(tmp_path)
+    assert docx_gate["runtime_packaging_policy"]["policy_id"] == policy["policy_id"]
+    assert docx_gate["checks"]["external_renderers_bundled"] is False
+    assert pdf_gate["required_dependencies"] == ["pandoc", "xelatex"]
+    assert "xelatex" in pdf_gate["detected_dependencies"]
+    assert "wkhtmltopdf" in pdf_gate["detected_dependencies"]
+
+
+def test_renderer_capability_detection_uses_packaged_search_paths() -> None:
+    snapshot = build_report_renderer_capability_snapshot(
+        commands=("pandoc", "xelatex"),
+        command_finder=lambda command: f"/opt/homebrew/bin/{command}" if command == "pandoc" else None,
+        runner=_renderer_version_runner,
+    )
+
+    assert snapshot["capabilities"]["pandoc"]["available"] is True
+    assert snapshot["capabilities"]["pandoc"]["path"] == "/opt/homebrew/bin/pandoc"
+    assert snapshot["capabilities"]["xelatex"]["available"] is False
+    assert snapshot["runtime_packaging_policy"]["policy_id"] == "b24_3_system_path_no_bundled_renderers"
 
 
 def test_integrated_report_package_skeleton_writes_timestamped_auditable_layout_when_gate_passes(tmp_path: Path, monkeypatch) -> None:
@@ -253,6 +286,14 @@ def _section_entry(root: Path, result_id: str, task_type: str, artifact_type: st
     }
 
 
+def _km_entry(root: Path) -> dict:
+    return _section_entry(root, "km-ready", "survival_km_logrank", "km_curve_table")
+
+
+def _cox_entry(root: Path) -> dict:
+    return _section_entry(root, "cox-ready", "cox_univariate", "cox_result_table")
+
+
 def _eligible_section_gate(status: str, result_id: str) -> dict:
     return {
         "schema_version": "biomedpilot.test_section_report_gate.v1",
@@ -284,6 +325,10 @@ def _docx_renderer_gate_without_activation_blocker() -> dict:
         "blockers": [],
         "warnings": [],
     }
+
+
+def _renderer_version_runner(command, **_kwargs):
+    return subprocess.CompletedProcess(command, 0, stdout=f"{Path(command[0]).name} 3.2\n", stderr="")
 
 
 def _passed_gate() -> dict:

@@ -18,6 +18,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO_FILENAME
+from app.bioinformatics.reports.renderer_runtime_policy import (
+    DEFAULT_RENDERER_SEARCH_PATHS,
+    FULL_INTEGRATED_RENDERER_RUNTIME_POLICY_ID,
+    build_full_integrated_renderer_runtime_packaging_policy,
+)
 
 DEFAULT_APP_NAME = "BioMedPilot"
 INTEGRATION_PREVIEW_APP_NAME = "BioMedPilot Integration Preview"
@@ -275,6 +280,7 @@ def _write_build_info(
         "source_root": str(repo_root),
         "git_head": git_head,
         "built_at": datetime.now(UTC).isoformat(),
+        "renderer_runtime_packaging_policy": build_full_integrated_renderer_runtime_packaging_policy(),
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -316,13 +322,18 @@ def _bundle_identifier(app_name: str) -> str:
 
 
 def _write_launcher(path: Path, *, app_name: str, python_executable: str) -> None:
+    renderer_search_paths = ":".join(DEFAULT_RENDERER_SEARCH_PATHS)
     script = f"""#!/bin/sh
 set -eu
 APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
+RENDERER_SEARCH_PATHS="${{BIOMEDPILOT_RENDERER_SEARCH_PATHS:-{renderer_search_paths}}}"
 export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
+export BIOMEDPILOT_EXTERNAL_RENDERER_POLICY="{FULL_INTEGRATED_RENDERER_RUNTIME_POLICY_ID}"
+export BIOMEDPILOT_RENDERER_SEARCH_PATHS="$RENDERER_SEARCH_PATHS"
 export PYTHONDONTWRITEBYTECODE="1"
+export PATH="$RENDERER_SEARCH_PATHS${{PATH:+:$PATH}}"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
