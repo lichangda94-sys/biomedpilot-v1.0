@@ -4590,6 +4590,28 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     status = widget.findChild(QLabel, "formalDegReportReadyStatus")
     assert status is not None
     assert "Formal DEG report-ready gate passed" in status.text()
+    full_status = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert full_status is not None
+    assert "Full integrated report disabled" in full_status.text()
+    assert "survival_clinical_report_ready_not_implemented" in full_status.text()
+    full_button = widget.findChild(QPushButton, "fullIntegratedReportButton")
+    assert full_button is not None
+    assert not full_button.isEnabled()
+    full_plan = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
+    assert full_plan is not None
+    full_plan_text = _table_text(full_plan)
+    assert "report_package/integrated" in full_plan_text
+    assert "integrated_report.md" in full_plan_text
+    full_sections = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
+    assert full_sections is not None
+    full_sections_text = _table_text(full_sections)
+    assert "formal_deg" in full_sections_text
+    assert "gsea_preranked" in full_sections_text
+    blocked_full = widget.generate_full_integrated_report_package()
+    assert blocked_full is not None
+    assert blocked_full["status"] == "blocked"
+    assert "survival_clinical_report_ready_not_implemented" in blocked_full["blockers"]
+    assert not (project_summary.project_root / "report_package" / "integrated").exists()
     button = widget.findChild(QPushButton, "formalDegReportReadyButton")
     assert button is not None
     assert button.isEnabled()

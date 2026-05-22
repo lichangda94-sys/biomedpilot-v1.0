@@ -67,6 +67,7 @@ from app.bioinformatics.gsea import build_gsea_result_review, export_gsea_review
 from app.bioinformatics.plots import build_formal_deg_plot_gate, build_gsea_plot_gate, build_ora_plot_gate, create_formal_deg_plot_artifact, create_gsea_plot_artifact, create_ora_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.gsea import create_gsea_report_ready_package, evaluate_gsea_report_ready_gate
+from app.bioinformatics.reports.integrated import build_full_integrated_report_package_plan, create_full_integrated_report_package, evaluate_full_integrated_report_gate
 from app.bioinformatics.reports.ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
@@ -6656,6 +6657,27 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._render_formal_deg_report_gate(result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
         return result
 
+    def generate_full_integrated_report_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        export_format = self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown"
+        result = create_full_integrated_report_package(self._project_root, export_format=export_format)
+        if result.get("status") == "full_integrated_report_package_created":
+            self.refresh_results()
+            self._status_label.setText(
+                "已生成 full integrated report package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
+                "不包含临床诊断、预后或治疗建议。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "Full integrated report gate 未通过"
+            self._status_label.setText(f"Full integrated report package 未生成：{blockers}")
+            gate = result.get("gate", {}) if isinstance(result.get("gate"), dict) else {}
+            plan = result.get("package_plan", {}) if isinstance(result.get("package_plan"), dict) else {}
+            self._render_full_integrated_report_preview(gate, plan)
+        return result
+
     def _export_formal_deg_review(self, file_format: str) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -6935,6 +6957,35 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         _set_table_widths(self._gate_preview, [170, 170, 230, 320, 300])
         self._gate_preview.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
+        integrated_card, integrated_layout = _card("Full integrated report preview")
+        integrated_layout.addWidget(_muted("Full integrated report 需要 DEG、ORA、GSEA、KM 和 Cox section 全部通过 gate；section-only package 不等于完整综合报告。"))
+        integrated_controls = QHBoxLayout()
+        self._full_integrated_format = QComboBox()
+        self._full_integrated_format.setObjectName("fullIntegratedReportFormat")
+        self._full_integrated_format.addItems(["markdown", "pdf", "docx"])
+        self._full_integrated_format.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        integrated_controls.addWidget(QLabel("Format"))
+        integrated_controls.addWidget(self._full_integrated_format)
+        self._full_integrated_button = _button("生成 full integrated report package", "secondaryButton", self.generate_full_integrated_report_package)
+        self._full_integrated_button.setObjectName("fullIntegratedReportButton")
+        integrated_controls.addWidget(self._full_integrated_button)
+        self._full_integrated_status = _muted("Full integrated report gate 尚未通过；当前仅显示 gate/package plan，不生成 package。")
+        self._full_integrated_status.setObjectName("fullIntegratedReportStatus")
+        integrated_controls.addWidget(self._full_integrated_status)
+        integrated_controls.addStretch(1)
+        integrated_layout.addLayout(integrated_controls)
+        self._full_integrated_plan = _table(["Plan", "Value"])
+        self._full_integrated_plan.setObjectName("fullIntegratedReportPlanTable")
+        integrated_layout.addWidget(self._full_integrated_plan)
+        _set_table_widths(self._full_integrated_plan, [260, 660])
+        self._full_integrated_plan.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self._full_integrated_sections = _table(["Section", "Result", "Semantics", "Validation", "Report gate", "Plot", "Blockers"])
+        self._full_integrated_sections.setObjectName("fullIntegratedReportSectionTable")
+        integrated_layout.addWidget(self._full_integrated_sections)
+        _set_table_widths(self._full_integrated_sections, [150, 160, 170, 110, 150, 150, 340])
+        self._full_integrated_sections.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+        root.addWidget(integrated_card)
+
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._details)))
@@ -7021,9 +7072,16 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             allow_table_only_report=bool(self._formal_deg_table_only_report.isChecked()),
         ) if self._project_root else {}
         self._render_formal_deg_report_gate(report_gate)
+        integrated_gate = evaluate_full_integrated_report_gate(self._project_root) if self._project_root else {}
+        integrated_plan = build_full_integrated_report_package_plan(
+            self._project_root,
+            gate=integrated_gate,
+            export_format=self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown",
+        ) if self._project_root else {}
+        self._render_full_integrated_report_preview(integrated_gate, integrated_plan)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or [])]))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate}))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -7116,6 +7174,50 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._formal_deg_report_status.setText(f"Formal DEG report-ready disabled：{reason}")
+
+    def _render_full_integrated_report_preview(self, gate: dict[str, object], plan: dict[str, object]) -> None:
+        if not hasattr(self, "_full_integrated_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        can_create = bool(plan.get("can_create_package"))
+        self._full_integrated_button.setEnabled(gate.get("status") == "eligible_for_full_integrated_report" and can_create)
+        if self._full_integrated_button.isEnabled():
+            self._full_integrated_status.setText("Full integrated report gate passed；Markdown package can be created；no clinical diagnosis/prognosis/treatment advice.")
+        else:
+            reason = "；".join(blockers) or str(plan.get("blocked_reason") or "full integrated report gate 未通过")
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._full_integrated_status.setText(f"Full integrated report disabled：{reason}")
+        _fill_table(
+            self._full_integrated_plan,
+            [
+                ["section_scope", plan.get("section_scope", gate.get("section_scope", "full_integrated_report"))],
+                ["export_format", plan.get("export_format", self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown")],
+                ["can_create_package", plan.get("can_create_package", False)],
+                ["package_root_policy", plan.get("package_root_policy", "")],
+                ["required_directories", ", ".join(str(item) for item in plan.get("required_directories", []) or [])],
+                ["required_files", ", ".join(str(item) for item in plan.get("required_files", []) or [])],
+                ["blocked_reason", plan.get("blocked_reason", "；".join(blockers))],
+            ],
+        )
+        rows = gate.get("section_rows", []) if isinstance(gate.get("section_rows"), list) else []
+        _fill_table(
+            self._full_integrated_sections,
+            [
+                [
+                    row.get("section_id", ""),
+                    row.get("result_id", ""),
+                    row.get("result_semantics", ""),
+                    row.get("validation_status", ""),
+                    row.get("section_report_ready_status", ""),
+                    row.get("plot_artifact_status", ""),
+                    "; ".join(str(item) for item in row.get("blockers", []) or []),
+                ]
+                for row in rows
+                if isinstance(row, dict)
+            ],
+        )
 
     def _render_ora_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
