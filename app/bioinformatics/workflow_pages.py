@@ -4854,22 +4854,52 @@ class BioinformaticsResultsBrowserWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("结果浏览", "Developer Preview / 本地测试版", back_text="返回分析任务中心", back_signal=self.back_requested))
-        self._status_label = _status_label("暂无结果，请先在分析任务中心创建并运行分析任务。")
+        root.addWidget(
+            _header(
+                "Result & Report / 结果与报告",
+                "只读 gate preview：preflight log、empty result、report draft boundary。",
+                back_text="返回分析任务中心",
+                back_signal=self.back_requested,
+            )
+        )
+        self._status_label = _status_label("暂无结果 / 暂无 formal result；当前仅显示 preflight/testing/imported 状态边界。")
         root.addWidget(self._status_label)
         actions = QHBoxLayout()
         actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results))
         actions.addWidget(_button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None)))
         actions.addWidget(_button("打开参数 JSON", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None)))
-        self._add_to_report_button = _button("加入报告 - disabled", "secondaryButton", lambda: self._status_label.setText("加入报告：UI-C2b 禁用。"))
+        self._add_to_report_button = _button("加入报告 - disabled", "secondaryButton", lambda: self._status_label.setText("加入报告：UI-C2f 禁用。"))
         self._add_to_report_button.setObjectName("bioinformaticsAddToReportDisabledButton")
         self._add_to_report_button.setProperty("formalActionEnabled", False)
         self._add_to_report_button.setProperty("reportStatusKey", "report.status.draft")
-        self._add_to_report_button.setToolTip("UI-C2b 只显示 result/report gate preview，不生成或追加正式报告内容。")
+        self._add_to_report_button.setToolTip("UI-C2f 只显示 result/report gate preview，不生成或追加正式报告内容。")
         self._add_to_report_button.setEnabled(False)
         actions.addWidget(self._add_to_report_button)
+        self._generate_report_button = _button("生成报告 - disabled", "secondaryButton", lambda: self._status_label.setText("生成报告：formal result missing，report-ready gate 未满足。"))
+        self._generate_report_button.setObjectName("bioinformaticsResultReportGenerateReportDisabledButton")
+        self._generate_report_button.setProperty("formalActionEnabled", False)
+        self._generate_report_button.setProperty("reportReadyPackageAllowed", False)
+        self._generate_report_button.setProperty("reportStatusKey", "report.status.draft")
+        self._generate_report_button.setProperty("exportGate", "disabled_missing_report_ready")
+        self._generate_report_button.setToolTip("UI-C2f 只显示 report draft boundary，不生成 report-ready package。")
+        self._generate_report_button.setEnabled(False)
+        actions.addWidget(self._generate_report_button)
         actions.addStretch(1)
         root.addLayout(actions)
+        self._result_report_gate_table = _table(["Gate", "Current State", "Reason", "Allowed Action"])
+        self._result_report_gate_table.setObjectName("bioinformaticsResultReportGateTable")
+        self._result_report_gate_table.setProperty("resultSemanticKey", "result.semantic.testing_summary_only")
+        self._result_report_gate_table.setProperty("reportStatusKey", "report.status.draft")
+        self._result_report_gate_table.setProperty("exportGate", "disabled_missing_report_ready")
+        self._result_report_gate_table.setProperty("formalActionEnabled", False)
+        root.addWidget(self._result_report_gate_table)
+        self._preflight_log_preview = _read_only_report_view(110)
+        self._preflight_log_preview.setObjectName("bioinformaticsPreflightLogPreview")
+        self._preflight_log_preview.setProperty("resultSemanticKey", "preflight_only")
+        self._preflight_log_preview.setProperty("reportStatusKey", "report.status.draft")
+        self._preflight_log_preview.setProperty("exportGate", "disabled_missing_report_ready")
+        self._preflight_log_preview.setProperty("formalActionEnabled", False)
+        root.addWidget(self._preflight_log_preview)
         self._result_gate_preview = _read_only_report_view(96)
         self._result_gate_preview.setObjectName("bioinformaticsResultGatePreview")
         root.addWidget(self._result_gate_preview)
@@ -4898,9 +4928,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         entries = [item for item in payload.get("entries", []) or [] if isinstance(item, dict)]
         warnings = [str(item) for item in payload.get("warnings", []) or []]
         if not entries:
-            self._status_label.setText("暂无结果，请先在分析任务中心创建并运行分析任务。")
+            self._status_label.setText("暂无结果 / 暂无 formal result；Result & Report 仅显示 preflight log、empty result 与 report draft gate。")
         else:
-            self._status_label.setText(f"已读取结果索引：{len(entries)} 个结果，{len(warnings)} 条 warning。")
+            self._status_label.setText(f"已读取结果索引：{len(entries)} 个 testing/imported 结果，{len(warnings)} 条 warning；未升级为 formal_computed_result。")
         _fill_table(
             self._results,
             [
@@ -4923,6 +4953,40 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         result_gate = state.get("result_gate", {}) if isinstance(state.get("result_gate"), dict) else {}
         report_gate = state.get("report_gate", {}) if isinstance(state.get("report_gate"), dict) else {}
         export_gate = state.get("export_gate", {}) if isinstance(state.get("export_gate"), dict) else {}
+        result_semantic = result_gate.get("result_semantic_key", "result.semantic.testing_summary_only")
+        report_status = report_gate.get("report_status_key", "report.status.draft")
+        export_gate_key = export_gate.get("export_gate", "disabled_missing_report_ready")
+        _fill_table(
+            self._result_report_gate_table,
+            [
+                ["result gate", result_semantic, "formal result missing; preflight/testing/imported outputs stay non-formal", "browse gate preview only"],
+                ["report draft gate", report_status, "report-ready package is blocked until formal result exists", "draft boundary only"],
+                ["preflight log", "preflight_only", "task readiness summary does not create a result artifact", "read-only preview"],
+                ["add to report", "disabled", "formal result missing and reportStatusKey is draft", "disabled"],
+                ["generate report", "disabled", "report-ready gate not satisfied", "disabled"],
+            ],
+        )
+        self._result_report_gate_table.setProperty("resultSemanticKey", result_semantic)
+        self._result_report_gate_table.setProperty("reportStatusKey", report_status)
+        self._result_report_gate_table.setProperty("exportGate", export_gate_key)
+        self._preflight_log_preview.setPlainText(
+            _json(
+                {
+                    "preflight_log": "read_only_task_readiness_summary",
+                    "result_semantic_key": result_semantic,
+                    "report_status_key": report_status,
+                    "export_gate": export_gate_key,
+                    "formal_computed_result": False,
+                    "fake_deg_table_allowed": False,
+                    "fake_plot_allowed": False,
+                    "report_ready_package_allowed": False,
+                    "boundary": "preflight/testing/imported outputs must not become formal_computed_result",
+                }
+            )
+        )
+        self._preflight_log_preview.setProperty("resultSemanticKey", "preflight_only")
+        self._preflight_log_preview.setProperty("reportStatusKey", report_status)
+        self._preflight_log_preview.setProperty("exportGate", export_gate_key)
         self._result_gate_preview.setPlainText(
             _json(
                 {
@@ -4933,9 +4997,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 }
             )
         )
-        self._result_gate_preview.setProperty("resultSemanticKey", result_gate.get("result_semantic_key", "result.semantic.testing_summary_only"))
-        self._result_gate_preview.setProperty("reportStatusKey", report_gate.get("report_status_key", "report.status.draft"))
-        self._result_gate_preview.setProperty("exportGate", export_gate.get("export_gate", "disabled_missing_report_ready"))
+        self._result_gate_preview.setProperty("resultSemanticKey", result_semantic)
+        self._result_gate_preview.setProperty("reportStatusKey", report_status)
+        self._result_gate_preview.setProperty("exportGate", export_gate_key)
         self._result_gate_preview.setProperty("formalActionEnabled", False)
 
     def _render_imported_deg_selector(self) -> None:
@@ -5028,20 +5092,27 @@ class BioinformaticsReportViewerWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("项目报告", "Developer Preview / 本地测试版", back_text="返回结果浏览", back_signal=self.back_requested))
+        root.addWidget(
+            _header(
+                "Report Export / 报告导出",
+                "独立 export gate：formal result missing、report not ready、export adapter not connected。",
+                back_text="返回 Result & Report",
+                back_signal=self.back_requested,
+            )
+        )
         actions = QHBoxLayout()
         self._generate_report_button = _button("生成 / 刷新项目报告 - disabled", "secondaryButton", self.generate_report)
         self._generate_report_button.setObjectName("bioinformaticsGenerateReportDisabledButton")
         self._generate_report_button.setProperty("formalActionEnabled", False)
         self._generate_report_button.setProperty("reportReadyPackageAllowed", False)
         self._generate_report_button.setProperty("gateState", "disabled_missing_report_ready")
-        self._generate_report_button.setToolTip("UI-C2b 只显示报告草稿边界，不生成正式报告或 report-ready package。")
+        self._generate_report_button.setToolTip("UI-C2f 只显示报告草稿边界，不生成正式报告或 report-ready package。")
         self._generate_report_button.setEnabled(False)
         actions.addWidget(self._generate_report_button)
         actions.addWidget(_button("打开报告文件", "secondaryButton", lambda: _open_path(self._project_root / "reports/project_analysis_report.md" if self._project_root else None)))
         actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
-        self._docx_export_button = _button("导出 DOCX - disabled", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：UI-C2b 禁用。"))
-        self._html_export_button = _button("导出 HTML - disabled", "secondaryButton", lambda: self._status_label.setText("HTML 导出：UI-C2b 禁用。"))
+        self._docx_export_button = _button("导出 DOCX - disabled", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：UI-C2f 禁用。"))
+        self._html_export_button = _button("导出 HTML - disabled", "secondaryButton", lambda: self._status_label.setText("HTML 导出：UI-C2f 禁用。"))
         for button, fmt in ((self._docx_export_button, "export.format.docx"), (self._html_export_button, "export.format.html")):
             button.setObjectName("bioinformaticsReportExportDisabledButton")
             button.setProperty("exportFormatKey", fmt)
@@ -5049,16 +5120,45 @@ class BioinformaticsReportViewerWidget(QWidget):
             button.setProperty("reportStatusKey", "report.status.draft")
             button.setProperty("formalActionEnabled", False)
             button.setProperty("reportReadyPackageAllowed", False)
-            button.setToolTip("Export requires report-ready gate and file picker; disabled in UI-C2b.")
+            button.setToolTip("Export requires report-ready gate and file picker; disabled in UI-C2f.")
             button.setEnabled(False)
             actions.addWidget(button)
         actions.addStretch(1)
         root.addLayout(actions)
-        self._status_label = _status_label("报告草稿与导出 gate preview；正式报告生成和导出在 UI-C2b 禁用。")
+        self._status_label = _status_label("Report Export gate disabled：formal result missing，report not ready，export adapter not connected。")
         root.addWidget(self._status_label)
         self._export_gate_preview = _read_only_report_view(110)
         self._export_gate_preview.setObjectName("bioinformaticsReportExportGatePreview")
         root.addWidget(self._export_gate_preview)
+        self._export_format_gate_table = _table(["Format", "Gate", "Reason", "Action"])
+        self._export_format_gate_table.setObjectName("bioinformaticsReportExportFormatGateTable")
+        self._export_format_gate_table.setProperty("exportGate", "disabled_missing_report_ready")
+        self._export_format_gate_table.setProperty("reportStatusKey", "report.status.draft")
+        self._export_format_gate_table.setProperty("formalActionEnabled", False)
+        self._export_format_gate_table.setProperty("reportReadyPackageAllowed", False)
+        root.addWidget(self._export_format_gate_table)
+        self._format_export_buttons: list[QPushButton] = []
+        format_actions = QHBoxLayout()
+        for label, fmt, reason in (
+            ("DOCX disabled", "export.format.docx", "report not ready"),
+            ("HTML disabled", "export.format.html", "report not ready"),
+            ("PDF disabled / future", "export.format.pdf", "future format; report not ready"),
+            ("CSV disabled", "export.format.csv", "formal result missing"),
+            ("XLSX disabled", "export.format.xlsx", "formal result missing"),
+        ):
+            button = _button(label, "secondaryButton", lambda reason=reason: self._status_label.setText(f"导出禁用：{reason}。"))
+            button.setObjectName("bioinformaticsReportExportFormatDisabledButton")
+            button.setProperty("exportFormatKey", fmt)
+            button.setProperty("exportGate", "disabled_missing_report_ready")
+            button.setProperty("reportStatusKey", "report.status.draft")
+            button.setProperty("formalActionEnabled", False)
+            button.setProperty("reportReadyPackageAllowed", False)
+            button.setToolTip("UI-C2f export gate: disabled until formal result, report-ready package, and export adapter exist.")
+            button.setEnabled(False)
+            self._format_export_buttons.append(button)
+            format_actions.addWidget(button)
+        format_actions.addStretch(1)
+        root.addLayout(format_actions)
         root.addWidget(_muted("可纳入报告的内容"))
         self._reportable_content = _read_only_report_view(100)
         self._reportable_content.setObjectName("reportableContentSummary")
@@ -5075,28 +5175,50 @@ class BioinformaticsReportViewerWidget(QWidget):
         if self._project_root is not None:
             self._reportable_content.setPlainText(_reportable_content_summary(load_result_index(self._project_root)))
         if not markdown:
-            self._status_label.setText("尚未生成项目报告。PDF 当前未正式支持。")
+            self._status_label.setText("尚未生成正式报告；PDF 当前未正式支持；Report Export gate 保持 disabled。")
             self._markdown.setPlainText("")
         else:
-            self._status_label.setText("已读取项目级 Markdown 报告。PDF 当前只能显示 placeholder，未正式支持。")
+            self._status_label.setText("已读取项目级 Markdown 草稿；PDF 当前只能显示 placeholder，未正式支持；不代表 report-ready package，导出仍 disabled。")
             self._markdown.setPlainText(markdown)
         self._manifest.setPlainText(_json(manifest or {"PDF": "未正式支持", "DOCX": "testing placeholder"}))
 
     def _render_export_gate_preview(self, state: dict[str, object]) -> None:
         export_gate = state.get("export_gate", {}) if isinstance(state.get("export_gate"), dict) else {}
         report_gate = state.get("report_gate", {}) if isinstance(state.get("report_gate"), dict) else {}
+        export_gate_key = export_gate.get("export_gate", "disabled_missing_report_ready")
+        report_status = export_gate.get("report_status_key", report_gate.get("report_status_key", "report.status.draft"))
+        _fill_table(
+            self._export_format_gate_table,
+            [
+                ["DOCX", "disabled", "report not ready; export adapter not connected", "disabled"],
+                ["HTML", "disabled", "report not ready; export adapter not connected", "disabled"],
+                ["PDF", "disabled / future", "future format; no report-ready package", "disabled"],
+                ["CSV", "disabled", "formal result missing", "disabled"],
+                ["XLSX", "disabled", "formal result missing", "disabled"],
+            ],
+        )
+        self._export_format_gate_table.setProperty("exportGate", export_gate_key)
+        self._export_format_gate_table.setProperty("reportStatusKey", report_status)
         self._export_gate_preview.setPlainText(
             _json(
                 {
                     "report_gate": report_gate,
                     "export_gate": export_gate,
-                    "disabled_actions": ["report_ready_package", "export_package", "export_pdf", "export_docx", "export_html"],
-                    "boundary": "draft_preview_only_no_report_ready_package_no_export",
+                    "format_readiness": {
+                        "docx": "disabled",
+                        "html": "disabled",
+                        "pdf": "disabled_future",
+                        "csv": "disabled_formal_result_missing",
+                        "xlsx": "disabled_formal_result_missing",
+                    },
+                    "disabled_actions": ["report_ready_package", "export_package", "export_pdf", "export_docx", "export_html", "export_csv", "export_xlsx"],
+                    "blocker_reasons": ["formal result missing", "report not ready", "export adapter not connected"],
+                    "boundary": "split_report_export_page_no_report_generation_no_file_export",
                 }
             )
         )
-        self._export_gate_preview.setProperty("exportGate", export_gate.get("export_gate", "disabled_missing_report_ready"))
-        self._export_gate_preview.setProperty("reportStatusKey", export_gate.get("report_status_key", "report.status.draft"))
+        self._export_gate_preview.setProperty("exportGate", export_gate_key)
+        self._export_gate_preview.setProperty("reportStatusKey", report_status)
         self._export_gate_preview.setProperty("formalActionEnabled", False)
         self._export_gate_preview.setProperty("reportReadyPackageAllowed", False)
 
