@@ -107,6 +107,7 @@ def build_action_rows(
     rows.append(_deg_preflight_action(deg_package))
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate))
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
+    rows.append(_limma_design_config_action(limma_rscript_gate))
     rows.append(_limma_rscript_confirmation_action(limma_rscript_gate))
     rows.append(_limma_rscript_action(limma_rscript_gate))
     rows.append(_gsea_readiness_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate, gsea_dependency))
@@ -348,6 +349,37 @@ def _limma_rscript_confirmation_action(gate: dict[str, Any]) -> dict[str, Any]:
         "normal_user_visible": True,
         "disabled_reason": "",
         "next_action": "Review limma comparison, samples, thresholds, Rscript/limma versions and output plan before execution.",
+    }
+
+
+def _limma_design_config_action(gate: dict[str, Any]) -> dict[str, Any]:
+    deg_ready = gate.get("deg_ready_package") if isinstance(gate.get("deg_ready_package"), dict) else {}
+    if deg_ready.get("blockers"):
+        return _disabled(
+            "r_limma_design_config",
+            "Prepare limma design config",
+            "blocked_deg_ready_gate",
+            "; ".join(dict.fromkeys(_list(deg_ready.get("blockers")))),
+            "Resolve DEG-ready blockers before generating limma design config.",
+        )
+    if not deg_ready:
+        return _disabled(
+            "r_limma_design_config",
+            "Prepare limma design config",
+            "blocked_missing_deg_ready_package",
+            "missing_deg_ready_package",
+            "Resolve resolver and DEG-ready package first.",
+        )
+    state = "confirmed" if gate.get("design_config_status") not in {"", "missing"} else "ready_to_generate"
+    return {
+        "action_id": "r_limma_design_config",
+        "label": "Prepare limma design config",
+        "state": state,
+        "button_behavior": "enabled_write_limma_design_config_no_execution",
+        "enabled": True,
+        "normal_user_visible": True,
+        "disabled_reason": "",
+        "next_action": "Generate or refresh manifests/r_limma_design_config.json from DEG-ready sample/group assignments; this does not run limma.",
     }
 
 

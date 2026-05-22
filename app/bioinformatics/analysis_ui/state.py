@@ -685,6 +685,7 @@ def build_limma_rscript_ui_gate_state(
         "dependency_snapshot": dependency_snapshot,
         "deg_ready_package": deg_ready_package,
         "design_config": design_config,
+        "design_config_status": "missing" if not design_config else str(design_config.get("status") or "available"),
         "multi_factor_preflight": multi_factor_preflight,
         "runtime_gate": runtime_gate,
         "parameter_manifest": parameter_manifest,

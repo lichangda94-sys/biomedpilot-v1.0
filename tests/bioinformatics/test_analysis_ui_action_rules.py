@@ -258,6 +258,7 @@ def test_limma_rscript_action_requires_all_gates_and_confirmation() -> None:
         },
     )
 
+    assert _row(blocked, "r_limma_design_config")["enabled"] is False
     assert _row(blocked, "r_limma_parameter_confirmation")["enabled"] is False
     assert "multi_factor_design_config_missing" in _row(blocked, "r_limma_parameter_confirmation")["disabled_reason"]
     assert _row(blocked, "formal_deg_limma_rscript")["enabled"] is False
@@ -280,6 +281,7 @@ def test_limma_rscript_action_requires_all_gates_and_confirmation() -> None:
         },
     )
 
+    assert _row(enabled, "r_limma_design_config")["enabled"] is False
     assert _row(enabled, "r_limma_parameter_confirmation")["state"] == "confirmed"
     limma = _row(enabled, "formal_deg_limma_rscript")
     assert limma["enabled"] is True

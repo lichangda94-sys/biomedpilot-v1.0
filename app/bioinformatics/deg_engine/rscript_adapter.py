@@ -515,10 +515,10 @@ if (!requireNamespace("limma", quietly=TRUE)) {
 expr <- utils::read.delim(expression_path, check.names=FALSE, stringsAsFactors=FALSE)
 design_df <- utils::read.delim(design_path, check.names=FALSE, stringsAsFactors=FALSE)
 if (!("feature_id" %in% colnames(expr))) {
-  stop("expression table missing feature_id")
+  colnames(expr)[[1]] <- "feature_id"
 }
 feature_id <- as.character(expr$feature_id)
-gene_symbol <- if ("gene_symbol" %in% colnames(expr)) as.character(expr$gene_symbol) else rep("", length(feature_id))
+gene_symbol <- if ("gene_symbol" %in% colnames(expr)) as.character(expr$gene_symbol) else feature_id
 sample_columns <- setdiff(colnames(expr), c("feature_id", "gene_symbol"))
 if (length(sample_columns) < 2) {
   stop("limma requires at least two sample columns")

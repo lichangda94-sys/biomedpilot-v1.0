@@ -3021,6 +3021,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "controlled_standardization_artifact_write_no_formal_execution" in action_text
     assert "Confirm formal DEG parameters" in action_text
     assert "Run controlled two-group DEG" in action_text
+    assert "Prepare limma design config" in action_text
     assert "Confirm limma Rscript parameters" in action_text
     assert "Run limma Rscript DEG" in action_text
     assert "blocked_limma_rscript_gate" in action_text
@@ -3080,6 +3081,8 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     limma_confirm_button = widget.findChild(QPushButton, "confirmRLimmaParametersButton")
     assert limma_confirm_button is not None
     assert limma_confirm_button.isEnabled() is False
+    limma_design_button = widget.findChild(QPushButton, "prepareRLimmaDesignConfigButton")
+    assert limma_design_button is not None
     limma_run_button = widget.findChild(QPushButton, "runRLimmaRscriptDegButton")
     assert limma_run_button is not None
     assert limma_run_button.isEnabled() is False
