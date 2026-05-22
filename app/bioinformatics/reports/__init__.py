@@ -9,12 +9,19 @@ from .integrated import (
     evaluate_full_integrated_report_renderer_gate,
 )
 from .ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
-from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
+from .survival_clinical import (
+    create_cox_report_ready_package,
+    create_km_logrank_report_ready_package,
+    evaluate_cox_report_ready_gate,
+    evaluate_km_logrank_report_ready_gate,
+)
 
 __all__ = [
     "create_formal_deg_report_ready_package",
     "create_full_integrated_report_package",
     "create_gsea_report_ready_package",
+    "create_cox_report_ready_package",
+    "create_km_logrank_report_ready_package",
     "create_ora_report_ready_package",
     "build_full_integrated_report_package_plan",
     "evaluate_formal_deg_report_ready_gate",

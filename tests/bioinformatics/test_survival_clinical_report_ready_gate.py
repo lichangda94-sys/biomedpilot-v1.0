@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.bioinformatics.reports.integrated import evaluate_full_integrated_report_gate
-from app.bioinformatics.reports.survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
+from app.bioinformatics.reports.survival_clinical import create_cox_report_ready_package, create_km_logrank_report_ready_package, evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
 from app.bioinformatics.results.models import ResultIndexEntry
-from app.bioinformatics.results.registry import save_registry
+from app.bioinformatics.results.registry import load_registry, save_registry
 
 
 def test_km_report_ready_gate_passes_formal_result_with_plot_and_provenance(tmp_path: Path) -> None:
@@ -15,7 +15,7 @@ def test_km_report_ready_gate_passes_formal_result_with_plot_and_provenance(tmp_
     gate = evaluate_km_logrank_report_ready_gate(tmp_path, result_id="km-ready")
 
     assert gate["status"] == "eligible_for_km_logrank_report_ready"
-    assert gate["package_creation_enabled"] is False
+    assert gate["package_creation_enabled"] is True
     assert gate["report_ready_eligible"] is False
     assert gate["diagnostics"]["km_curve_row_count"] == 2
     assert gate["diagnostics"]["logrank_row_count"] == 1
@@ -50,7 +50,7 @@ def test_cox_report_ready_gate_passes_formal_univariate_result_with_plot(tmp_pat
     gate = evaluate_cox_report_ready_gate(tmp_path, result_id="cox-ready")
 
     assert gate["status"] == "eligible_for_cox_report_ready"
-    assert gate["package_creation_enabled"] is False
+    assert gate["package_creation_enabled"] is True
     assert gate["report_ready_eligible"] is False
     assert gate["diagnostics"]["cox_row_count"] == 1
 
@@ -82,6 +82,60 @@ def test_full_integrated_gate_consumes_km_and_cox_report_ready_gates_but_stays_b
     assert gate["status"] == "blocked"
     assert "survival_clinical_report_ready_not_implemented" in gate["blockers"]
     assert "full_integrated_report_export_not_enabled_in_b23_1" in gate["blockers"]
+
+
+def test_km_report_ready_package_writes_section_only_layout_and_updates_source_result(tmp_path: Path) -> None:
+    save_registry(tmp_path, [_km_entry(tmp_path)])
+
+    package = create_km_logrank_report_ready_package(tmp_path, result_id="km-ready")
+
+    assert package["status"] == "survival_km_logrank_only_report_ready_package_created"
+    assert package["section_scope"] == "survival_km_logrank_only"
+    package_path = Path(package["package_path"])
+    assert (package_path / "km_logrank_report.md").is_file()
+    assert (package_path / "README_limitations.md").is_file()
+    assert (package_path / "tables" / "km_curve.tsv").is_file()
+    assert (package_path / "tables" / "logrank.tsv").is_file()
+    assert (package_path / "manifests" / "gate_snapshot.json").is_file()
+    assert (package_path / "provenance" / "provenance.json").is_file()
+    assert package["clinical_conclusion_enabled"] is False
+    assert package["full_integrated_report_enabled"] is False
+    entry = load_registry(tmp_path)["results"][0]
+    assert entry["report_ready_eligible"] is True
+    assert entry["report_artifacts"][0]["section_scope"] == "survival_km_logrank_only"
+    assert "clinical advice" in (package_path / "km_logrank_report.md").read_text(encoding="utf-8")
+    full = evaluate_full_integrated_report_gate(tmp_path, section_result_ids={"survival_km_logrank": "km-ready"})
+    assert full["status"] == "blocked"
+    assert "full_integrated_prerequisite_forbids_section_package_as_full_report:survival_km_logrank" in full["blockers"]
+
+
+def test_cox_report_ready_package_writes_section_only_layout_and_updates_source_result(tmp_path: Path) -> None:
+    save_registry(tmp_path, [_cox_entry(tmp_path)])
+
+    package = create_cox_report_ready_package(tmp_path, result_id="cox-ready")
+
+    assert package["status"] == "cox_univariate_only_report_ready_package_created"
+    assert package["section_scope"] == "cox_univariate_only"
+    package_path = Path(package["package_path"])
+    assert (package_path / "cox_univariate_report.md").is_file()
+    assert (package_path / "tables" / "cox.tsv").is_file()
+    assert (package_path / "manifests" / "dependency_snapshot.json").is_file()
+    assert (package_path / "manifests" / "package_inventory.json").is_file()
+    assert package["clinical_conclusion_enabled"] is False
+    assert package["full_integrated_report_enabled"] is False
+    entry = load_registry(tmp_path)["results"][0]
+    assert entry["report_ready_eligible"] is True
+    assert entry["report_artifacts"][0]["section_scope"] == "cox_univariate_only"
+
+
+def test_survival_clinical_report_ready_package_blocks_without_gate_pass_and_writes_nothing(tmp_path: Path) -> None:
+    save_registry(tmp_path, [_km_entry(tmp_path, result_semantics="preflight_only", plot=False)])
+
+    package = create_km_logrank_report_ready_package(tmp_path, result_id="km-ready")
+
+    assert package["status"] == "blocked"
+    assert "km_report_ready_requires_formal_computed_result" in package["blockers"]
+    assert not (tmp_path / "survival_clinical_report_package").exists()
 
 
 def _km_entry(root: Path, *, result_semantics: str = "formal_computed_result", plot: bool = True) -> dict:
