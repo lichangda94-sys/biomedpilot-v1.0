@@ -15,6 +15,10 @@ from .r_backend_handoff import (
     build_r_deg_external_handoff_plan,
     register_r_limma_external_handoff_result,
 )
+from .rscript_adapter import (
+    detect_r_limma_runtime_capabilities,
+    run_r_limma_rscript_execution,
+)
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
 from .result_schema import build_formal_deg_result_schema_gate, validate_deg_result_bundle, validate_deg_result_entry, validate_formal_deg_result_index_entry
@@ -28,11 +32,13 @@ __all__ = [
     "build_r_deg_runtime_gate",
     "build_r_deg_runtime_gate_matrix",
     "check_deg_backend_dependencies",
+    "detect_r_limma_runtime_capabilities",
     "load_deg_parameter_confirmation",
     "run_formal_controlled_deg",
     "run_controlled_deg",
     "save_deg_parameter_confirmation",
     "register_r_limma_external_handoff_result",
+    "run_r_limma_rscript_execution",
     "validate_deg_result_bundle",
     "validate_deg_result_entry",
     "validate_deg_parameter_manifest",

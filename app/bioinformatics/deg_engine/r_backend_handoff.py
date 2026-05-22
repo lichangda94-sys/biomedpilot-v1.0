@@ -93,6 +93,10 @@ def register_r_limma_external_handoff_result(
     input_package_id: str = "",
     source_dataset_id: str = "",
     source_repository_manifest: str = "",
+    engine_name: str = R_LIMMA_EXTERNAL_ENGINE_NAME,
+    engine_version: str = R_LIMMA_EXTERNAL_ENGINE_VERSION,
+    additional_log_artifacts: Sequence[Mapping[str, Any]] | None = None,
+    execution_provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Register a formal DEG result from audited external limma output."""
 
@@ -182,8 +186,8 @@ def register_r_limma_external_handoff_result(
             "schema_version": "biomedpilot.deg_result_bundle.v1",
             "result_id": resolved_result_id,
             "result_semantics": "formal_computed_result",
-            "engine_name": R_LIMMA_EXTERNAL_ENGINE_NAME,
-            "engine_version": R_LIMMA_EXTERNAL_ENGINE_VERSION,
+            "engine_name": engine_name,
+            "engine_version": engine_version,
             "input_package_id": resolved_input_package_id,
             "deg_ready_package_id": deg_ready_package_id,
             "parameters_manifest": params,
@@ -216,6 +220,7 @@ def register_r_limma_external_handoff_result(
         "method": "limma",
         "method_family": "r_linear_model",
         "external_runtime_handoff": True,
+        "execution_provenance": dict(execution_provenance or {}),
         "result_id": resolved_result_id,
         "task_run_id": resolved_task_run_id,
     }
@@ -229,8 +234,8 @@ def register_r_limma_external_handoff_result(
         source_dataset_id=source_dataset_id,
         source_repository_manifest=source_repository_manifest,
         parameters_manifest=effective_parameters,
-        engine_name=R_LIMMA_EXTERNAL_ENGINE_NAME,
-        engine_version=R_LIMMA_EXTERNAL_ENGINE_VERSION,
+        engine_name=engine_name,
+        engine_version=engine_version,
         dependency_snapshot=effective_dependency_snapshot,
         output_artifacts=(
             {
@@ -256,7 +261,10 @@ def register_r_limma_external_handoff_result(
             "r_limma_external_handoff_no_report_ready_activation",
         ),
         blockers=(),
-        log_artifacts=({"artifact_type": "r_limma_external_handoff_log", "path": str(log_path)},),
+        log_artifacts=(
+            {"artifact_type": "r_limma_external_handoff_log", "path": str(log_path)},
+            *tuple(dict(item) for item in (additional_log_artifacts or ())),
+        ),
         failure_reason="",
         created_at=created_at,
         updated_at=created_at,
@@ -311,6 +319,7 @@ def register_r_limma_external_handoff_result(
             "result_bundle_gate": bundle_gate,
             "registration_gate": registration_gate,
             "result_index_gate": result_index_gate,
+            "execution_provenance": dict(execution_provenance or {}),
             "created_at": created_at,
             "warnings": list(entry.warnings),
             "blockers": [],

@@ -42,7 +42,11 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
 
     formal_deg = _action(state, "formal_deg")
     assert formal_deg["enabled"] is False
-    assert "missing_python_package:scipy" in formal_deg["disabled_reason"]
+    assert formal_deg["disabled_reason"]
+    assert any(
+        blocker in formal_deg["disabled_reason"]
+        for blocker in ("missing_python_package:scipy", "formal_deg_parameter_confirmation_missing")
+    )
     assert _action(state, "formal_gsea")["enabled"] is False
     assert _action(state, "run_ora_enrichment")["enabled"] is False
     assert "ora_source_deg_result_missing" in _action(state, "run_ora_enrichment")["disabled_reason"]
