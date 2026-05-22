@@ -39,6 +39,7 @@ def build_action_rows(
     ora_report_gate: dict[str, Any] | None = None,
     gsea_plot_gate: dict[str, Any] | None = None,
     gsea_report_gate: dict[str, Any] | None = None,
+    full_integrated_report_gate: dict[str, Any] | None = None,
     gsea_input_gate: dict[str, Any] | None = None,
     gsea_rank_metric_gate: dict[str, Any] | None = None,
     gsea_gene_set_gate: dict[str, Any] | None = None,
@@ -77,6 +78,7 @@ def build_action_rows(
     ora_report_gate = ora_report_gate or {}
     gsea_plot_gate = gsea_plot_gate or {}
     gsea_report_gate = gsea_report_gate or {}
+    full_integrated_report_gate = full_integrated_report_gate or {}
     gsea_input_gate = gsea_input_gate or {}
     gsea_rank_metric_gate = gsea_rank_metric_gate or {}
     gsea_gene_set_gate = gsea_gene_set_gate or {}
@@ -106,6 +108,7 @@ def build_action_rows(
     rows.append(_ora_report_ready_action(ora_report_gate))
     rows.append(_gsea_plot_action(gsea_plot_gate))
     rows.append(_gsea_report_ready_action(gsea_report_gate))
+    rows.append(_full_integrated_report_action(full_integrated_report_gate))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_clinical_input_readiness_action(survival_clinical_state))
     rows.append(_survival_outcome_preflight_action(survival_clinical_state))
@@ -554,6 +557,28 @@ def _gsea_report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
         }
     blockers = _list(gate.get("blockers")) or ["gsea_report_ready_gate_not_passed"]
     return _disabled("gsea_report_ready", "Export GSEA report-ready package", "blocked_gsea_report_ready_gate", "; ".join(blockers), "Resolve GSEA result index, table, gene set, dependency, task log, plot/table-only and provenance gates.")
+
+
+def _full_integrated_report_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "eligible_for_full_integrated_report":
+        return {
+            "action_id": "full_integrated_report_export",
+            "label": "Export full integrated report",
+            "state": "available",
+            "button_behavior": "enabled_full_integrated_report_gate_passed",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Export a full integrated report package with DEG, ORA, GSEA, KM and Cox sections; no clinical diagnosis or treatment recommendation.",
+        }
+    blockers = _list(gate.get("blockers")) or ["full_integrated_report_gate_not_passed"]
+    return _disabled(
+        "full_integrated_report_export",
+        "Export full integrated report",
+        "blocked_full_integrated_report_gate",
+        "; ".join(dict.fromkeys(blockers)),
+        "Resolve all section report-ready gates, including survival/clinical report-ready, before exporting a full integrated report.",
+    )
 
 
 def _immune_action(package: dict[str, Any] | None, tasks: list[dict[str, Any]]) -> dict[str, Any]:

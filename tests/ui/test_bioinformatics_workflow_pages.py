@@ -3032,6 +3032,8 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Resolve B12 input, KM parameter, confirmation and lifelines dependency gates" in action_text
     assert "Resolve B12 input, Cox parameter, confirmation and lifelines dependency gates" in action_text
     assert "Export report-ready package" in action_text
+    assert "Export full integrated report" in action_text
+    assert "survival_clinical_report_ready_not_implemented" in action_text
     assert "blocked_report_ready_gate" in action_text
 
     capability_table = widget.findChild(QTableWidget, "analysisCapabilityMapTable")
@@ -3083,6 +3085,8 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert gate_table is not None
     gate_text = _table_text(gate_table)
     assert "Report-ready export" in gate_text
+    assert "Full integrated report" in gate_text
+    assert "survival_clinical_report_ready_not_implemented" in gate_text
     assert "GSEA source DEG result" in gate_text
     assert "GSEA rank metric" in gate_text
     assert "B11.2 controlled GSEA execution" in gate_text

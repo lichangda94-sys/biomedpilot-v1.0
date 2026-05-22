@@ -20,6 +20,7 @@ from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATE
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.gsea import evaluate_gsea_report_ready_gate
+from app.bioinformatics.reports.integrated import evaluate_full_integrated_report_gate
 from app.bioinformatics.reports.ora import evaluate_ora_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
@@ -61,6 +62,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     formal_deg_report_gate = evaluate_formal_deg_report_ready_gate(root)
     ora_report_gate = evaluate_ora_report_ready_gate(root)
     gsea_report_gate = evaluate_gsea_report_ready_gate(root)
+    full_integrated_report_gate = evaluate_full_integrated_report_gate(root)
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
@@ -128,6 +130,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         ora_report_gate=ora_report_gate,
         gsea_plot_gate=gsea_plot_gate,
         gsea_report_gate=gsea_report_gate,
+        full_integrated_report_gate=full_integrated_report_gate,
         gsea_input_gate=gsea_gates["input_gate"],
         gsea_rank_metric_gate=gsea_gates["rank_metric_gate"],
         gsea_gene_set_gate=gsea_gates["gene_set_gate"],
@@ -140,7 +143,13 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         legacy_asset_pipeline=legacy_pipeline,
     )
     result_rows = build_result_gate_rows(result_entries)
-    gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate, ora_report_gate=ora_report_gate)
+    gate_rows = build_gate_preview_rows(
+        result_entries=result_entries,
+        report_gate=report_gate,
+        formal_deg_report_gate=formal_deg_report_gate,
+        ora_report_gate=ora_report_gate,
+        full_integrated_report_gate=full_integrated_report_gate,
+    )
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
     survival_rows = build_survival_clinical_rows(
         packages=packages,
@@ -215,6 +224,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "ora_report_ready_gate": ora_report_gate,
             "gsea_plot_gate": gsea_plot_gate,
             "gsea_report_ready_gate": gsea_report_gate,
+            "full_integrated_report_gate": full_integrated_report_gate,
             "gsea_gate_state": gsea_gates,
             "survival_clinical_state": survival_clinical_state,
             "km_real_plot_gate": km_real_plot_gate,
@@ -974,6 +984,7 @@ def build_gate_preview_rows(
     report_gate: dict[str, Any],
     formal_deg_report_gate: dict[str, Any] | None = None,
     ora_report_gate: dict[str, Any] | None = None,
+    full_integrated_report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     result_blockers = []
     if not result_entries:
@@ -1014,6 +1025,13 @@ def build_gate_preview_rows(
             "basis": str((ora_report_gate or {}).get("status") or "blocked"),
             "blockers": compact_list((ora_report_gate or {}).get("blockers", []) or []),
             "warnings": compact_list((ora_report_gate or {}).get("warnings", []) or []),
+        },
+        {
+            "gate": "Full integrated report",
+            "status": "available" if (full_integrated_report_gate or {}).get("status") == "eligible_for_full_integrated_report" else "blocked_full_integrated_report_gate",
+            "basis": str((full_integrated_report_gate or {}).get("status") or "blocked"),
+            "blockers": compact_list((full_integrated_report_gate or {}).get("blockers", []) or []),
+            "warnings": compact_list((full_integrated_report_gate or {}).get("warnings", []) or []),
         },
         {
             "gate": "Report-ready export",

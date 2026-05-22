@@ -113,9 +113,9 @@ def build_analysis_capability_map(
             "full_integrated_report",
             "Full integrated report",
             "Report",
-            "planned",
-            "planned",
-            "Only section-specific DEG/ORA/GSEA packages exist; B23 must add a full integrated report gate and source-result coverage checks.",
+            "b23_gate_blocked",
+            str((action_by_id.get("full_integrated_report_export") or {}).get("state") or "blocked_full_integrated_report_gate"),
+            str((action_by_id.get("full_integrated_report_export") or {}).get("disabled_reason") or "B23 full integrated report gate is blocked until all section report-ready gates pass, including survival/clinical."),
             capability_keys=[PANDOC_KEY, QUARTO_KEY, LATEX_KEY, "renderer.wkhtmltopdf.available"],
         ),
         _static_row(

@@ -2,6 +2,7 @@
 
 from .formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from .gsea import create_gsea_report_ready_package, evaluate_gsea_report_ready_gate
+from .integrated import evaluate_full_integrated_report_gate
 from .ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
 
 __all__ = [
@@ -9,6 +10,7 @@ __all__ = [
     "create_gsea_report_ready_package",
     "create_ora_report_ready_package",
     "evaluate_formal_deg_report_ready_gate",
+    "evaluate_full_integrated_report_gate",
     "evaluate_gsea_report_ready_gate",
     "evaluate_ora_report_ready_gate",
 ]
