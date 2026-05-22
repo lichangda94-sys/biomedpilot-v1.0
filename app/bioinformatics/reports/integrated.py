@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -13,7 +15,20 @@ from .ora import evaluate_ora_report_ready_gate
 
 
 FULL_INTEGRATED_REPORT_READY_SCHEMA_VERSION = "biomedpilot.full_integrated_report_gate.v1"
+FULL_INTEGRATED_REPORT_PACKAGE_SCHEMA_VERSION = "biomedpilot.full_integrated_report_package.v1"
 REQUIRED_SECTION_IDS = ("formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox")
+PACKAGE_DIRECTORIES = ("sections", "tables", "plots", "manifests", "logs", "provenance")
+PACKAGE_REQUIRED_FILES = (
+    "integrated_report.md",
+    "README_limitations.md",
+    "integrated_report_package_manifest.json",
+    "manifests/full_integrated_gate_snapshot.json",
+    "manifests/result_index_snapshot.json",
+    "manifests/section_manifest.json",
+    "manifests/dependency_snapshot.json",
+    "manifests/warnings_limitations.json",
+    "manifests/package_inventory.json",
+)
 SECTION_TASK_TYPES = {
     "formal_deg": ("deg",),
     "ora_enrichment": ("ora_enrichment",),
@@ -21,6 +36,87 @@ SECTION_TASK_TYPES = {
     "survival_km_logrank": ("survival_km_logrank",),
     "cox": ("cox_univariate", "cox_multivariate"),
 }
+
+
+def create_full_integrated_report_package(
+    project_root: str | Path,
+    *,
+    section_result_ids: dict[str, str] | None = None,
+    include_sections: list[str] | None = None,
+    export_format: str = "markdown",
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    gate = evaluate_full_integrated_report_gate(root, section_result_ids=section_result_ids, include_sections=include_sections)
+    package_plan = build_full_integrated_report_package_plan(root, gate=gate, export_format=export_format)
+    format_blockers = [] if _canonical_export_format(export_format) == "markdown" else [f"full_integrated_export_format_not_enabled:{export_format}"]
+    if gate.get("status") != "eligible_for_full_integrated_report" or format_blockers:
+        return {
+            "schema_version": FULL_INTEGRATED_REPORT_PACKAGE_SCHEMA_VERSION,
+            "status": "blocked",
+            "package_path": "",
+            "user_visible_package_path": "",
+            "overwrite_policy": "create_new_timestamped_package_directory_when_gate_passes",
+            "gate": gate,
+            "package_plan": package_plan,
+            "blockers": list(dict.fromkeys([*list(gate.get("blockers", []) or []), *format_blockers])),
+            "warnings": list(gate.get("warnings", []) or []),
+        }
+    package_dir = _next_package_dir(root)
+    _create_package_directories(package_dir)
+    registry = load_registry(root)
+    entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
+    selected_entries = _selected_entries(entries, gate.get("section_rows", []) or [])
+    section_manifest = _section_manifest(gate.get("section_rows", []) or [], selected_entries)
+    _write_json(package_dir / "manifests" / "full_integrated_gate_snapshot.json", gate)
+    _write_json(package_dir / "manifests" / "result_index_snapshot.json", registry)
+    _write_json(package_dir / "manifests" / "section_manifest.json", section_manifest)
+    _write_json(package_dir / "manifests" / "dependency_snapshot.json", _dependency_snapshot(selected_entries))
+    _write_json(package_dir / "manifests" / "warnings_limitations.json", _warnings_limitations(gate, selected_entries))
+    _write_section_markdown(package_dir / "sections", selected_entries)
+    _copy_registered_artifacts(root, selected_entries, package_dir=package_dir)
+    (package_dir / "integrated_report.md").write_text(_integrated_report_markdown(gate, selected_entries), encoding="utf-8")
+    (package_dir / "README_limitations.md").write_text(_limitations_markdown(), encoding="utf-8")
+    manifest = {
+        "schema_version": FULL_INTEGRATED_REPORT_PACKAGE_SCHEMA_VERSION,
+        "created_at": _now(),
+        "status": "full_integrated_report_package_created",
+        "section_scope": "full_integrated_report",
+        "package_path": str(package_dir),
+        "user_visible_package_path": str(package_dir),
+        "overwrite_policy": "create_new_timestamped_package_directory",
+        "export_format": export_format,
+        "gate": gate,
+        "package_plan": package_plan,
+        "package_inventory": {},
+    }
+    _write_json(package_dir / "integrated_report_package_manifest.json", manifest)
+    inventory = _package_inventory(package_dir)
+    _write_json(package_dir / "manifests" / "package_inventory.json", inventory)
+    manifest["package_inventory"] = inventory
+    _write_json(package_dir / "integrated_report_package_manifest.json", manifest)
+    return manifest
+
+
+def build_full_integrated_report_package_plan(project_root: str | Path, *, gate: dict[str, Any] | None = None, export_format: str = "markdown") -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    gate = gate or evaluate_full_integrated_report_gate(root)
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_package_plan.v1",
+        "section_scope": "full_integrated_report",
+        "export_format": export_format,
+        "package_root_policy": "report_package/integrated/<timestamp>_<project_name>",
+        "required_directories": list(PACKAGE_DIRECTORIES),
+        "required_files": list(PACKAGE_REQUIRED_FILES),
+        "artifact_policy": {
+            "tables": "copy only registered source result output_artifacts",
+            "plots": "copy only registered plot artifacts and image_artifacts",
+            "logs": "copy only registered task-run log_artifacts",
+            "manifests": "write gate, result index, section, dependency, warnings and inventory snapshots",
+            "forbidden_sources": ["preflight_only", "testing_level", "exploratory", "imported_external_result", "legacy_only"],
+        },
+        "can_create_package": gate.get("status") == "eligible_for_full_integrated_report" and _canonical_export_format(export_format) == "markdown",
+        "blocked_reason": _package_plan_blocked_reason(gate, export_format),
+    }
 
 
 def evaluate_full_integrated_report_gate(
@@ -251,6 +347,183 @@ def _plot_status(entry: dict[str, Any]) -> str:
 def _artifact_path(root: Path, artifact: dict[str, Any]) -> Path:
     path = Path(str(artifact.get("path") or artifact.get("file_path") or "")).expanduser()
     return path if path.is_absolute() else root / path
+
+
+def _next_package_dir(root: Path) -> Path:
+    base = root / "report_package" / "integrated"
+    project_name = _safe_name(root.name or "project")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    candidate = base / f"{stamp}_{project_name}"
+    counter = 1
+    while candidate.exists():
+        candidate = base / f"{stamp}_{project_name}_{counter}"
+        counter += 1
+    return candidate
+
+
+def _create_package_directories(package_dir: Path) -> None:
+    for directory in PACKAGE_DIRECTORIES:
+        (package_dir / directory).mkdir(parents=True, exist_ok=True)
+
+
+def _selected_entries(entries: list[dict[str, Any]], section_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result_ids = [str(row.get("result_id") or "") for row in section_rows if isinstance(row, dict)]
+    return [entry for result_id in result_ids for entry in entries if str(entry.get("result_id") or "") == result_id]
+
+
+def _section_manifest(section_rows: list[dict[str, Any]], entries: list[dict[str, Any]]) -> dict[str, Any]:
+    by_id = {str(entry.get("result_id") or ""): entry for entry in entries}
+    sections = []
+    for row in section_rows:
+        if not isinstance(row, dict):
+            continue
+        entry = by_id.get(str(row.get("result_id") or ""), {})
+        sections.append(
+            {
+                "section_id": str(row.get("section_id") or ""),
+                "result_id": str(row.get("result_id") or ""),
+                "task_type": str(row.get("task_type") or ""),
+                "result_semantics": str(row.get("result_semantics") or ""),
+                "validation_status": str(row.get("validation_status") or ""),
+                "input_package_id": str(entry.get("input_package_id") or ""),
+                "source_dataset_id": str(entry.get("source_dataset_id") or ""),
+                "engine_name": str(entry.get("engine_name") or ""),
+                "engine_version": str(entry.get("engine_version") or ""),
+                "plot_artifact_status": str(row.get("plot_artifact_status") or ""),
+                "section_report_ready_status": str(row.get("section_report_ready_status") or ""),
+            }
+        )
+    return {"schema_version": "biomedpilot.full_integrated_section_manifest.v1", "sections": sections}
+
+
+def _dependency_snapshot(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        str(entry.get("result_id") or ""): entry.get("dependency_snapshot")
+        for entry in entries
+        if isinstance(entry.get("dependency_snapshot"), dict)
+    }
+
+
+def _warnings_limitations(gate: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
+    result_warnings = {
+        str(entry.get("result_id") or ""): list(entry.get("warnings", []) or [])
+        for entry in entries
+    }
+    return {
+        "schema_version": "biomedpilot.full_integrated_warnings_limitations.v1",
+        "gate_warnings": list(gate.get("warnings", []) or []),
+        "result_warnings": result_warnings,
+        "limitations": list(gate.get("limitations_required", []) or []),
+        "clinical_boundary": "No clinical diagnosis, prognosis, treatment recommendation, or validated risk score interpretation.",
+    }
+
+
+def _write_section_markdown(target: Path, entries: list[dict[str, Any]]) -> None:
+    for entry in entries:
+        section = _section_id_from_task(str(entry.get("task_type") or "section"))
+        path = target / f"{section}.md"
+        path.write_text(
+            f"# {section}\n\n"
+            f"- result_id: `{entry.get('result_id', '')}`\n"
+            f"- task_type: `{entry.get('task_type', '')}`\n"
+            f"- result_semantics: `{entry.get('result_semantics', '')}`\n"
+            f"- validation_status: `{entry.get('validation_status', '')}`\n\n"
+            "This section is a statistical research summary only and is not a clinical conclusion.\n",
+            encoding="utf-8",
+        )
+
+
+def _copy_registered_artifacts(root: Path, entries: list[dict[str, Any]], *, package_dir: Path) -> None:
+    for entry in entries:
+        _copy_artifact_group(root, entry.get("output_artifacts", []) or [], package_dir / "tables")
+        _copy_artifact_group(root, entry.get("log_artifacts", []) or [], package_dir / "logs")
+        for plot in entry.get("plot_artifacts", []) or []:
+            if not isinstance(plot, dict):
+                continue
+            _write_json(package_dir / "plots" / f"{_safe_name(str(plot.get('plot_id') or 'plot'))}.json", plot)
+            _copy_artifact_group(root, plot.get("image_artifacts", []) or [], package_dir / "plots")
+
+
+def _copy_artifact_group(root: Path, artifacts: object, target: Path) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    for artifact in artifacts if isinstance(artifacts, list | tuple) else []:
+        if not isinstance(artifact, dict):
+            continue
+        path = _artifact_path(root, artifact)
+        if path.is_file():
+            shutil.copy2(path, target / path.name)
+
+
+def _integrated_report_markdown(gate: dict[str, Any], entries: list[dict[str, Any]]) -> str:
+    lines = [
+        "# Bioinformatics Full Integrated Report",
+        "",
+        "This is a statistical research report package. It is not clinical advice, diagnosis, prognosis, or treatment recommendation.",
+        "",
+        "## Included Sections",
+        "",
+    ]
+    for entry in entries:
+        lines.append(f"- `{entry.get('result_id', '')}`: {entry.get('task_type', '')} / {entry.get('result_semantics', '')}")
+    lines.extend(["", "## Gate Summary", "", f"- gate_status: `{gate.get('status', '')}`", ""])
+    return "\n".join(lines)
+
+
+def _limitations_markdown() -> str:
+    return (
+        "# Limitations\n\n"
+        "- This package is a statistical research report only.\n"
+        "- This package does not provide clinical diagnosis, prognosis, treatment recommendation, or validated risk score interpretation.\n"
+        "- Section-only report packages are not equivalent to this full integrated report package.\n"
+        "- All result semantics, dependency snapshots, warnings, blockers, and provenance must remain attached.\n"
+    )
+
+
+def _package_inventory(package_dir: Path) -> dict[str, Any]:
+    files = sorted(str(path.relative_to(package_dir)) for path in package_dir.rglob("*") if path.is_file())
+    return {
+        "schema_version": "biomedpilot.full_integrated_package_inventory.v1",
+        "package_root": str(package_dir),
+        "files": files,
+        "required_directories": {name: (package_dir / name).is_dir() for name in PACKAGE_DIRECTORIES},
+        "required_files": {name: (package_dir / name).is_file() for name in PACKAGE_REQUIRED_FILES},
+    }
+
+
+def _section_id_from_task(task_type: str) -> str:
+    if task_type == "deg":
+        return "formal_deg"
+    if task_type == "ora_enrichment":
+        return "ora"
+    if task_type == "gsea_preranked":
+        return "gsea"
+    if task_type == "survival_km_logrank":
+        return "survival_km"
+    if task_type in {"cox_univariate", "cox_multivariate"}:
+        return "cox"
+    return _safe_name(task_type or "section")
+
+
+def _safe_name(value: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in value.strip())
+    return safe.strip("_") or "item"
+
+
+def _canonical_export_format(value: str) -> str:
+    text = str(value or "").strip().lower()
+    return "markdown" if text in {"markdown", "md"} else text
+
+
+def _package_plan_blocked_reason(gate: dict[str, Any], export_format: str) -> str:
+    blockers = list(gate.get("blockers", []) or []) if gate.get("status") != "eligible_for_full_integrated_report" else []
+    if _canonical_export_format(export_format) != "markdown":
+        blockers.append(f"full_integrated_export_format_not_enabled:{export_format}")
+    return "; ".join(str(item) for item in blockers)
+
+
+def _write_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _now() -> str:
