@@ -585,6 +585,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("先添加数据，下一步进入数据识别。")
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
+        self._render_gated_source_tables(selected_source="")
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -732,20 +733,26 @@ class BioinformaticsDataSourceWidget(QWidget):
         root = _scroll_root(self, max_width=1040)
         root.addWidget(
             _header(
-                "数据导入与检索",
-                "先添加数据，下一步进入数据识别。",
+                "Data Source / 数据来源",
+                "选择或配置数据来源；本页只做 gated preview，不下载、不导入、不执行分析。",
                 back_text="返回项目首页",
                 back_signal=self.back_requested,
             )
         )
         self._project_label = _status_label("请先创建或打开生信分析项目。")
         root.addWidget(self._project_label)
-        self._status_label = _status_label("先添加数据，下一步进入数据识别。")
+        self._status_label = _status_label("请选择数据来源类型；导入后必须进入 Data Check & Preparation。")
         root.addWidget(self._status_label)
+        root.addWidget(self._gated_source_overview())
 
-        root.addWidget(self._local_import_card())
-        root.addWidget(self._gse_card())
-        root.addWidget(self._research_card())
+        self._legacy_local_import_card = self._local_import_card()
+        self._legacy_gse_card = self._gse_card()
+        self._legacy_research_card = self._research_card()
+        for legacy_card in (self._legacy_local_import_card, self._legacy_gse_card, self._legacy_research_card):
+            legacy_card.setProperty("developerDiagnostic", True)
+            legacy_card.setProperty("normalUserVisible", False)
+            legacy_card.setVisible(False)
+            root.addWidget(legacy_card)
 
         self._dataset_list_panel = GeoDownloadListPanel(title="待处理数据集")
         self._dataset_list_panel.view_requested.connect(self._show_dataset_detail)
@@ -784,9 +791,93 @@ class BioinformaticsDataSourceWidget(QWidget):
         actions.addWidget(self._next_button)
         root.addWidget(actions_frame)
 
+    def _gated_source_overview(self) -> QFrame:
+        card, layout = _card("Source Status Overview / 数据来源状态总览")
+        card.setObjectName("bioinformaticsDataSourceGatedOverview")
+        card.setProperty("formalActionEnabled", False)
+        layout.addWidget(_muted("主数据源入口仅用于选择和配置。GEO、TCGA、GTEx 不在本页下载；Local File 不在本页真实导入。"))
+        source_grid = QGridLayout()
+        source_grid.setHorizontalSpacing(SPACING["sm"])
+        source_grid.setVerticalSpacing(SPACING["sm"])
+        sources = (
+            ("geo", "GEO", "GEO accession / dataset search", "配置 GEO 数据集编号或候选来源；下载和识别进入后续 gated 流程。"),
+            ("tcga", "TCGA", "TCGA project source", "选择 TCGA 项目来源；TCGA+GTEx 不自动合并。"),
+            ("gtex", "GTEx", "GTEx tissue source", "选择 GTEx 组织来源；不与 TCGA 默认合并。"),
+            ("local_file", "Local File", "本地文件", "选择本地文件类型预览；真实导入需后续文件适配器和 Data Check。"),
+        )
+        for index, (key, title, subtitle, body) in enumerate(sources):
+            source_grid.addWidget(self._gated_source_card(key, title, subtitle, body), index // 2, index % 2)
+        layout.addLayout(source_grid)
+        self._source_status_table = _table(["source", "status", "allowed action", "blocked action", "next gate"])
+        self._source_status_table.setObjectName("bioinformaticsSourceStatusOverviewTable")
+        layout.addWidget(self._source_status_table)
+        self._recent_imports_table = _table(["source", "name", "state", "gate note"])
+        self._recent_imports_table.setObjectName("bioinformaticsRecentImportsPreviewTable")
+        layout.addWidget(_muted("Recent Imports / 最近导入状态：仅显示当前项目状态或安全空状态，不代表 formal input readiness。"))
+        layout.addWidget(self._recent_imports_table)
+        gate_note = _muted("选择或登记来源后仍必须进入 Data Check & Preparation；不得直接进入正式分析。Report / Export 当前 not ready。")
+        gate_note.setObjectName("bioinformaticsDataSourceGateNotice")
+        gate_note.setProperty("formalActionEnabled", False)
+        gate_note.setProperty("exportGate", "disabled_missing_report_ready")
+        layout.addWidget(gate_note)
+        self._render_gated_source_tables(selected_source="")
+        return card
+
+    def _gated_source_card(self, source_key: str, title: str, subtitle: str, body: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("bioinformaticsDataSourceMainCard")
+        frame.setProperty("sourceKey", source_key)
+        frame.setProperty("formalActionEnabled", False)
+        frame.setProperty("downloadEnabled", False)
+        frame.setProperty("importEnabled", False)
+        frame.setProperty("analysisEnabled", False)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(SPACING["md"], SPACING["md"], SPACING["md"], SPACING["md"])
+        layout.setSpacing(SPACING["xs"])
+        title_label = QLabel(title)
+        title_label.setObjectName("bioinformaticsDataSourceMainCardTitle")
+        subtitle_label = _muted(subtitle)
+        body_label = QLabel(body)
+        body_label.setObjectName("bioinformaticsDataSourceMainCardBody")
+        body_label.setWordWrap(True)
+        button = _button("选择 / 配置预览", "secondaryButton", lambda checked=False, key=source_key: self._select_gated_source_preview(key))
+        button.setObjectName("bioinformaticsDataSourceSelectPreviewButton")
+        button.setProperty("sourceKey", source_key)
+        button.setProperty("buttonBehavior", "enabled_select_preview_only")
+        button.setProperty("formalActionEnabled", False)
+        button.setToolTip("只更新页面状态预览，不下载、不导入、不写入 acquisition record。")
+        layout.addWidget(title_label)
+        layout.addWidget(subtitle_label)
+        layout.addWidget(body_label)
+        layout.addWidget(button, alignment=Qt.AlignLeft)
+        return frame
+
+    def _select_gated_source_preview(self, source_key: str) -> None:
+        label = {"geo": "GEO", "tcga": "TCGA", "gtex": "GTEx", "local_file": "Local File"}.get(source_key, source_key)
+        self._set_status(f"已选择 {label} 配置预览；未下载、未导入、未生成结果。")
+        self._render_gated_source_tables(selected_source=source_key)
+
+    def _render_gated_source_tables(self, *, selected_source: str) -> None:
+        selected = selected_source or "none"
+        _fill_table(
+            self._source_status_table,
+            [
+                ["GEO", "configure/select preview" if selected == "geo" else "not selected", "选择 / 配置预览", "download / analysis", "Data Check & Preparation"],
+                ["TCGA", "configure/select preview" if selected == "tcga" else "not selected", "选择 / 配置预览", "TCGA+GTEx auto merge", "Data Check & Preparation"],
+                ["GTEx", "configure/select preview" if selected == "gtex" else "not selected", "选择 / 配置预览", "TCGA+GTEx auto merge", "Data Check & Preparation"],
+                ["Local File", "configure/select preview" if selected == "local_file" else "not selected", "选择 / 配置预览", "real file import", "Data Check & Preparation"],
+            ],
+        )
+        entries = _current_project_dataset_entries(self._project_root)
+        rows = [[entry.source, entry.name, entry.status, "current project state preview; not formal input readiness"] for entry in entries[:6]]
+        if not rows:
+            rows = [["-", "暂无最近导入", "empty-safe", "No fake expression matrix; no fake result."]]
+        _fill_table(self._recent_imports_table, rows)
+
     def _local_import_card(self) -> QFrame:
         card, layout = _card("本地数据导入")
         card.setObjectName("localImportEntryCard")
+        card.setProperty("normalUserVisible", False)
         layout.addWidget(_muted("导入本地表达矩阵、GEO Series Matrix、样本信息、临床表或注释文件。"))
         self._local_strategy_combo = QComboBox()
         self._local_strategy_combo.setObjectName("localImportStrategyCombo")
@@ -802,6 +893,11 @@ class BioinformaticsDataSourceWidget(QWidget):
         select_button.setMinimumHeight(44)
         folder_button = _button("选择本地文件夹", "secondaryButton", self._choose_local_folder)
         folder_button.setMinimumHeight(44)
+        for button in (select_button, folder_button):
+            button.setEnabled(False)
+            button.setProperty("buttonBehavior", "disabled_import_gated_in_ui_c2c")
+            button.setProperty("formalActionEnabled", False)
+            button.setToolTip("UI-C2c 不触发真实本地导入；请使用上方 Local File 配置预览。")
         actions = QHBoxLayout()
         actions.addWidget(select_button)
         actions.addWidget(folder_button)
@@ -821,6 +917,7 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _gse_card(self) -> QFrame:
         card, layout = _card("GSE 编号检索")
         card.setObjectName("gseSearchEntryCard")
+        card.setProperty("normalUserVisible", False)
         layout.addWidget(_muted("已知 GEO 数据集编号时使用，例如 GSE33630。"))
         self._gse_input = QLineEdit()
         self._gse_input.setPlaceholderText("请输入 GSE 编号，例如 GSE33630")
@@ -829,6 +926,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         gse_actions = QHBoxLayout()
         search_button = _button("检索数据集", "primaryButton", self.search_gse_dataset)
         search_button.setMinimumHeight(44)
+        search_button.setEnabled(False)
+        search_button.setProperty("buttonBehavior", "disabled_geo_download_gated_in_ui_c2c")
+        search_button.setProperty("formalActionEnabled", False)
+        search_button.setToolTip("UI-C2c 不触发 GEO 检索或下载；请使用上方 GEO 配置预览。")
         self._register_gse_button = _button("添加到项目", "secondaryButton", self.register_gse_dataset)
         self._register_gse_button.setEnabled(False)
         self._register_gse_button.setVisible(False)
@@ -864,6 +965,7 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _research_card(self) -> QFrame:
         card, layout = _card("中文研究问题检索")
         card.setObjectName("chineseResearchSearchEntryCard")
+        card.setProperty("normalUserVisible", False)
         layout.addWidget(_muted("输入中文研究方向，生成英文检索词并推荐 GEO、TCGA、GTEx 候选数据集。"))
         self._chinese_query_input = QLineEdit()
         self._chinese_query_input.setObjectName("chineseResearchTopicEntry")
@@ -874,6 +976,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(self._chinese_search_status_label)
         button = _button("进入检索界面", "primaryButton", self.open_chinese_search)
         button.setMinimumHeight(44)
+        button.setEnabled(False)
+        button.setProperty("buttonBehavior", "disabled_source_search_gated_in_ui_c2c")
+        button.setProperty("formalActionEnabled", False)
+        button.setToolTip("UI-C2c 数据来源页只展示四类主数据源；中文检索保留为后续/诊断入口。")
         layout.addWidget(button, alignment=Qt.AlignLeft)
         return card
 
@@ -1220,6 +1326,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._registered_count_label.setText(f"已选择的数据：{count} 个；可进入识别：{ready_count} 个")
         self._next_button.setEnabled(ready_count > 0 and self._project_root is not None)
         self._chinese_search_status_label.setText(_chinese_search_entry_status(rows))
+        self._render_gated_source_tables(selected_source="")
 
     def _refresh_geo_download_list(self) -> None:
         entries = _current_project_dataset_entries(self._project_root)
@@ -1357,7 +1464,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             _toggle_details(detail)
 
     def _set_status(self, text: str, *, error: bool = False) -> None:
-        self._status_label.setText(text if error else "先添加数据，下一步进入数据识别。")
+        self._status_label.setText(text)
         self._status_label.setProperty("status", "error" if error else "ok")
         _refresh_style(self._status_label)
 

@@ -31,13 +31,13 @@ from app.app_identity import load_ui03_project_home_icon, load_ui03_project_home
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
 WORKFLOW_STEPS = (
-    ("project_created", "创建项目"),
-    ("ready_for_data_source_selection", "选择数据来源"),
-    ("data_recognition", "数据识别"),
-    ("data_standardization", "数据标准化"),
-    ("analysis_tasks", "分析任务"),
-    ("results_browser", "结果浏览"),
-    ("project_report", "项目报告"),
+    ("project_created", "Project Home / 项目首页"),
+    ("ready_for_data_source_selection", "Data Source / 数据来源"),
+    ("data_recognition", "Data Check & Preparation / 数据检查与准备"),
+    ("data_standardization", "Group & Design / 分组与设计"),
+    ("analysis_tasks", "Analysis Tasks / 分析任务"),
+    ("results_browser", "Result & Report / 结果与报告"),
+    ("project_report", "Report Export / 报告导出"),
 )
 
 
@@ -141,7 +141,7 @@ class BioinformaticsProjectHomeWidget(QWidget):
         title.setObjectName("bioProjectTitle")
         subtitle = QLabel("Bioinformatics Analyze Module")
         subtitle.setObjectName("bioProjectSubtitle")
-        status = QLabel("当前状态：Developer Preview / 本地测试版")
+        status = QLabel("当前状态：Project Open / Developer Preview / 本地测试版")
         status.setObjectName("bioProjectPreviewBadge")
         title_col.addWidget(title)
         title_col.addWidget(subtitle)
@@ -343,6 +343,21 @@ class BioinformaticsProjectHomeWidget(QWidget):
             self._status_blocks[key] = (title, value)
             status_grid.addWidget(block, 0, index)
         content_layout.addLayout(status_grid)
+        readiness_row = QHBoxLayout()
+        readiness_row.setSpacing(SPACING["sm"])
+        data_readiness_card, self._data_readiness_label = self._summary_gate_card(
+            "Data Readiness", "尚未进入数据检查。", "bioProjectDataReadinessCard"
+        )
+        analysis_readiness_card, self._analysis_readiness_label = self._summary_gate_card(
+            "Analysis Readiness", "正式分析未启用。", "bioProjectAnalysisReadinessCard"
+        )
+        gate_status_card, self._gate_status_label = self._summary_gate_card(
+            "Gate Summary", "formal actions disabled。", "bioProjectGateSummaryCard"
+        )
+        readiness_row.addWidget(data_readiness_card)
+        readiness_row.addWidget(analysis_readiness_card)
+        readiness_row.addWidget(gate_status_card)
+        content_layout.addLayout(readiness_row)
         self._gate_summary_label = QLabel("")
         self._gate_summary_label.setObjectName("bioinformaticsGatePreviewSummary")
         self._gate_summary_label.setWordWrap(True)
@@ -402,6 +417,12 @@ class BioinformaticsProjectHomeWidget(QWidget):
         gate_state = build_analysis_center_state(summary.project_root)
         result_gate = gate_state.get("result_gate", {})
         export_gate = gate_state.get("export_gate", {})
+        self._data_readiness_label.setText("Registered / Imported 后仍需进入 Data Check & Preparation；当前仅为 preflight 前状态。")
+        self._analysis_readiness_label.setText("Analysis actions disabled；DEG / ORA / GSEA / KM / Cox 均未启用。")
+        self._gate_status_label.setText(f"Result entries {result_gate.get('entry_count', 0)}；report/export not ready。")
+        for label in (self._data_readiness_label, self._analysis_readiness_label, self._gate_status_label):
+            label.setProperty("formalActionEnabled", False)
+            label.setProperty("exportGate", export_gate.get("export_gate", "disabled_missing_report_ready"))
         self._gate_summary_label.setText(
             "Gate preview："
             f"formal actions disabled；结果条目 {result_gate.get('entry_count', 0)}；"
@@ -500,6 +521,22 @@ class BioinformaticsProjectHomeWidget(QWidget):
         row.addWidget(label)
         row.addStretch(1)
         return row
+
+    def _summary_gate_card(self, title: str, body: str, object_name: str) -> tuple[QFrame, QLabel]:
+        card = QFrame()
+        card.setObjectName(object_name)
+        card.setProperty("formalActionEnabled", False)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
+        title_label = QLabel(title)
+        title_label.setObjectName("bioProjectGateCardTitle")
+        value = QLabel(body)
+        value.setObjectName("bioProjectGateCardValue")
+        value.setWordWrap(True)
+        value.setProperty("formalActionEnabled", False)
+        layout.addWidget(title_label)
+        layout.addWidget(value)
+        return card, value
 
     def _icon_text_row(self, label: QLabel, icon_key: str) -> QHBoxLayout:
         row = QHBoxLayout()
