@@ -63,12 +63,12 @@ def _click_secondary(window, page_key: str) -> None:
 def test_primary_entries_route_to_safe_secondary_shells(labtools_window) -> None:
     _click_primary(labtools_window, PageKey.LABTOOLS_GENERAL_CALCULATORS.value)
     content = _content(labtools_window)
-    secondary_titles = [label.text() for label in content.findChildren(QLabel, "labtoolsSecondaryEntryTitle")]
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
+    mode_buttons = content.findChildren(QPushButton, "labtoolsGeneralModeButton")
 
     assert content.property("pageKey") == "general_calculators"
     assert content.property("semanticKey") == PageKey.LABTOOLS_GENERAL_CALCULATORS.value
-    assert secondary_titles == ["Quick Calculator", "Dynamic Formula Solver"]
+    assert [button.property("modeKey") for button in mode_buttons] == ["quick_calculator", "formula_solver"]
     assert "Western Blot" not in labels
     assert "BCA" not in labels
     assert "ELISA" not in labels

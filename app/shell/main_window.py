@@ -2,15 +2,20 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QButtonGroup,
+    QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
     QInputDialog,
+    QPlainTextEdit,
     QPushButton,
+    QRadioButton,
     QScrollArea,
     QStackedWidget,
     QToolButton,
@@ -18,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app import labtools_runtime
 from app.app_identity import (
     APP_NAME,
     LABTOOLS_ICON_PATHS,
@@ -424,57 +430,423 @@ class MainWindow(QMainWindow):
         self._set_labtools_content(self._build_labtools_home_content())
 
     def _show_labtools_general_calculator_shell(self) -> None:
-        content = self._build_labtools_section_content(
+        status = labtools_runtime.runtime_status()
+        self._labtools_result_widgets: dict[str, dict[str, object]] = {}
+        content = self._build_labtools_base_content(
             page_key="general_calculators",
             semantic_key=PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
             title="通用计算器 / General Calculator",
-            subtitle="仅建立 Quick Calculator 与 Dynamic Formula Solver 的安全占位路由；本阶段不执行真实计算。",
-            status_label="后端可用 / 需 UI 适配",
-            status_key="testing",
-            cards=[
-                {
-                    "title": "Quick Calculator",
-                    "page_key": "quick_calculator",
-                    "semantic_key": "labtools.page.quick_calculator",
-                    "status_label": "backend_ready / ui_adapter_needed",
-                    "status_key": "testing",
-                    "rows": ["稀释、单位换算、细胞铺板辅助仅作为计算入口占位。", "保存历史与导出保持禁用。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Quick Calculator / 快速计算",
-                        page_key="quick_calculator",
-                        semantic_key="labtools.page.quick_calculator",
-                        status_label="backend_ready / ui_adapter_needed",
-                        status_key="testing",
-                        body_rows=[
-                            "本阶段只展示计算器占位页面和状态边界，不调用 LabTools calculator execution。",
-                            "细胞铺板只作为计算辅助，不是细胞实验记录保存。",
-                        ],
-                        disabled_actions=("保存到历史 - 需存储适配", "导出结果 - 暂未开放"),
-                    ),
-                },
-                {
-                    "title": "Dynamic Formula Solver",
-                    "page_key": "formula_solver",
-                    "semantic_key": "labtools.page.formula_solver",
-                    "status_label": "backend_ready / ui_adapter_needed",
-                    "status_key": "testing",
-                    "rows": ["公式选择、求解目标与单位输入将在后续 adapter 层接入。", "本阶段不生成计算结果。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Dynamic Formula Solver / 动态公式求解",
-                        page_key="formula_solver",
-                        semantic_key="labtools.page.formula_solver",
-                        status_label="backend_ready / ui_adapter_needed",
-                        status_key="testing",
-                        body_rows=[
-                            "保留公式求解页面壳层、结果区空状态和复核提示。",
-                            "无效输入不会生成假结果；真实求解等待 UI adapter。",
-                        ],
-                        disabled_actions=("保存公式运行 - 需存储适配", "导出结果 - 暂未开放"),
-                    ),
-                },
-            ],
+            subtitle="Quick Calculator 与 Dynamic Formula Solver 已接入后端计算/公式求解；保存历史与文件导出仍保持禁用。",
         )
+        root = content.layout()
+        nav = QHBoxLayout()
+        back = make_button("返回 LabTools 首页", role="secondary")
+        back.setObjectName("labtoolsBackButton")
+        back.clicked.connect(self._show_labtools_home)
+        nav.addWidget(back)
+        nav.addWidget(make_status_chip("backend_ready / ui_adapter_needed" if status.available else "backend unavailable", status_key="testing" if status.available else "blocked"))
+        nav.addStretch(1)
+        root.addLayout(nav)
+        if not status.available:
+            root.addWidget(self._labtools_notice_card(status.message, object_name="labtoolsAdapterNotice", semantic_key=PageKey.LABTOOLS_GENERAL_CALCULATORS.value))
+            root.addStretch(1)
+            self._set_labtools_content(content)
+            return
+
+        mode_row = QHBoxLayout()
+        quick_button = make_button("快速计算", role="primary")
+        quick_button.setObjectName("labtoolsGeneralModeButton")
+        quick_button.setProperty("modeKey", "quick_calculator")
+        formula_button = make_button("动态公式求解", role="secondary")
+        formula_button.setObjectName("labtoolsGeneralModeButton")
+        formula_button.setProperty("modeKey", "formula_solver")
+        mode_row.addWidget(quick_button)
+        mode_row.addWidget(formula_button)
+        mode_row.addStretch(1)
+        root.addLayout(mode_row)
+
+        self._labtools_general_stack = QStackedWidget()
+        self._labtools_general_stack.setObjectName("labtoolsGeneralCalculatorStack")
+        quick_page = self._build_labtools_quick_calculator_page()
+        formula_page = self._build_labtools_formula_solver_page()
+        self._labtools_general_stack.addWidget(quick_page)
+        self._labtools_general_stack.addWidget(formula_page)
+        quick_button.clicked.connect(lambda: self._labtools_general_stack.setCurrentWidget(quick_page))
+        formula_button.clicked.connect(lambda: self._labtools_general_stack.setCurrentWidget(formula_page))
+        root.addWidget(self._labtools_general_stack)
+        root.addStretch(1)
         self._set_labtools_content(content)
+
+    def _build_labtools_quick_calculator_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("labtoolsQuickCalculatorPage")
+        page.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        page.setProperty("pageKey", "quick_calculator")
+        page.setProperty("semanticKey", "labtools.page.quick_calculator")
+        layout = QHBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(14)
+
+        selector_card = QFrame()
+        selector_card.setObjectName("labtoolsCalculatorSelectorCard")
+        selector_card.setStyleSheet("QFrame#labtoolsCalculatorSelectorCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        selector_layout = QVBoxLayout(selector_card)
+        selector_layout.setContentsMargins(16, 14, 16, 14)
+        selector_layout.addWidget(QLabel("Quick Calculator 任务"))
+        self._labtools_quick_task_combo = QComboBox()
+        self._labtools_quick_task_combo.setObjectName("labtoolsQuickTaskCombo")
+        self._labtools_quick_task_combo.setProperty("pageKey", "quick_calculator")
+        for task in labtools_runtime.list_quick_tasks():
+            label = f"{task.title} · {task.category}"
+            self._labtools_quick_task_combo.addItem(label, task.task_id)
+        selector_layout.addWidget(self._labtools_quick_task_combo)
+        description = QLabel()
+        description.setObjectName("labtoolsQuickTaskDescription")
+        description.setWordWrap(True)
+        selector_layout.addWidget(description)
+        selector_layout.addWidget(make_status_chip("backend_ready / ui_adapter_needed", status_key="testing"))
+        selector_layout.addStretch(1)
+        layout.addWidget(selector_card, 1)
+
+        form_card = QFrame()
+        form_card.setObjectName("labtoolsCalculatorFormCard")
+        form_card.setStyleSheet("QFrame#labtoolsCalculatorFormCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        form_layout = QVBoxLayout(form_card)
+        form_layout.setContentsMargins(16, 14, 16, 14)
+        form_layout.setSpacing(10)
+        self._labtools_quick_form_layout = form_layout
+        layout.addWidget(form_card, 2)
+
+        result_card = self._labtools_result_panel(page_key="quick_calculator", semantic_key="labtools.page.quick_calculator")
+        layout.addWidget(result_card, 2)
+
+        self._labtools_quick_task_combo.currentIndexChanged.connect(lambda _index: self._populate_labtools_quick_form(description))
+        self._populate_labtools_quick_form(description)
+        return page
+
+    def _build_labtools_formula_solver_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("labtoolsFormulaSolverPage")
+        page.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        page.setProperty("pageKey", "formula_solver")
+        page.setProperty("semanticKey", "labtools.page.formula_solver")
+        layout = QHBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(14)
+
+        selector_card = QFrame()
+        selector_card.setObjectName("labtoolsFormulaSelectorCard")
+        selector_card.setStyleSheet("QFrame#labtoolsFormulaSelectorCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        selector_layout = QVBoxLayout(selector_card)
+        selector_layout.setContentsMargins(16, 14, 16, 14)
+        selector_layout.addWidget(QLabel("Dynamic Formula Solver"))
+        self._labtools_formula_combo = QComboBox()
+        self._labtools_formula_combo.setObjectName("labtoolsFormulaSpecCombo")
+        for spec in labtools_runtime.list_formula_specs():
+            self._labtools_formula_combo.addItem(spec.short_title, spec.spec_id)
+        selector_layout.addWidget(self._labtools_formula_combo)
+        self._labtools_formula_description = QLabel()
+        self._labtools_formula_description.setObjectName("labtoolsFormulaDescription")
+        self._labtools_formula_description.setWordWrap(True)
+        selector_layout.addWidget(self._labtools_formula_description)
+        self._labtools_formula_expression = QLabel()
+        self._labtools_formula_expression.setObjectName("labtoolsFormulaExpression")
+        self._labtools_formula_expression.setWordWrap(True)
+        selector_layout.addWidget(self._labtools_formula_expression)
+        selector_layout.addStretch(1)
+        layout.addWidget(selector_card, 1)
+
+        form_card = QFrame()
+        form_card.setObjectName("labtoolsFormulaFormCard")
+        form_card.setStyleSheet("QFrame#labtoolsFormulaFormCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        form_layout = QVBoxLayout(form_card)
+        form_layout.setContentsMargins(16, 14, 16, 14)
+        form_layout.setSpacing(10)
+        self._labtools_formula_form_layout = form_layout
+        layout.addWidget(form_card, 2)
+
+        result_card = self._labtools_result_panel(page_key="formula_solver", semantic_key="labtools.page.formula_solver")
+        layout.addWidget(result_card, 2)
+
+        self._labtools_formula_combo.currentIndexChanged.connect(lambda _index: self._populate_labtools_formula_form())
+        self._populate_labtools_formula_form()
+        return page
+
+    def _populate_labtools_quick_form(self, description_label: QLabel) -> None:
+        task_id = self._labtools_quick_task_combo.currentData()
+        task = labtools_runtime.get_quick_task(task_id)
+        description_label.setText(task.description + (" 细胞铺板仅计算辅助，不进入细胞记录保存。" if task.task_id == "quick_cell_seeding" else ""))
+        self._clear_layout(self._labtools_quick_form_layout)
+        self._labtools_quick_inputs: dict[str, QLineEdit] = {}
+        self._labtools_quick_units: dict[str, QComboBox] = {}
+        header = QLabel(task.title)
+        header.setObjectName("labtoolsQuickFormTitle")
+        header.setStyleSheet("font-weight: 700;")
+        self._labtools_quick_form_layout.addWidget(header)
+        for field_id in task.input_field_ids:
+            self._labtools_quick_form_layout.addLayout(
+                self._labtools_input_row(
+                    field_id=field_id,
+                    label=labtools_runtime.quick_field_label(field_id),
+                    default_value=labtools_runtime.quick_field_default(field_id),
+                    units=labtools_runtime.quick_field_units(field_id),
+                    input_store=self._labtools_quick_inputs,
+                    unit_store=self._labtools_quick_units,
+                    object_prefix="labtoolsQuick",
+                    disabled=field_id == "mass" and task.calculator_name == "solve_solution_preparation_formula",
+                )
+            )
+        if task.task_id == "quick_cell_seeding":
+            self._labtools_quick_form_layout.addWidget(self._labtools_notice_card("细胞铺板仅计算辅助；不保存细胞实验记录。", object_name="labtoolsAdapterNotice", semantic_key="labtools.page.quick_calculator"))
+        calculate = make_button("计算", role="primary")
+        calculate.setObjectName("labtoolsQuickCalculateButton")
+        calculate.clicked.connect(self._run_labtools_quick_calculation)
+        self._labtools_quick_form_layout.addWidget(calculate)
+        self._labtools_quick_form_layout.addStretch(1)
+        self._set_labtools_result_empty("请选择任务并输入参数。", page_key="quick_calculator")
+
+    def _populate_labtools_formula_form(self) -> None:
+        spec_id = self._labtools_formula_combo.currentData()
+        spec = labtools_runtime.get_formula_spec(spec_id)
+        self._labtools_formula_description.setText(spec.description)
+        self._labtools_formula_expression.setText(f"公式：{spec.equation}")
+        self._clear_layout(self._labtools_formula_form_layout)
+        self._labtools_formula_inputs: dict[str, QLineEdit] = {}
+        self._labtools_formula_units: dict[str, QComboBox] = {}
+        self._labtools_formula_target_group = QButtonGroup(self)
+        self._labtools_formula_target_group.setObjectName("labtoolsFormulaSolveTargetGroup")
+        target_label = QLabel("求解目标")
+        target_label.setStyleSheet("font-weight: 700;")
+        self._labtools_formula_form_layout.addWidget(target_label)
+        target_row = QHBoxLayout()
+        for target in spec.solve_targets:
+            button = QRadioButton(target.label)
+            button.setObjectName("labtoolsFormulaSolveTarget")
+            button.setProperty("targetId", target.target_id)
+            button.setProperty("semanticKey", "labtools.page.formula_solver")
+            self._labtools_formula_target_group.addButton(button)
+            target_row.addWidget(button)
+            if target.target_id == spec.default_solve_target:
+                button.setChecked(True)
+        target_row.addStretch(1)
+        self._labtools_formula_form_layout.addLayout(target_row)
+        for button in self._labtools_formula_target_group.buttons():
+            button.toggled.connect(lambda checked, target_button=button: checked and self._sync_formula_target_fields(target_button.property("targetId")))
+        for field in spec.fields:
+            self._labtools_formula_form_layout.addLayout(
+                self._labtools_input_row(
+                    field_id=field.field_id,
+                    label=field.label,
+                    default_value="" if field.field_id == spec.default_solve_target else self._formula_default_value(field.field_id),
+                    units=labtools_runtime.supported_units_for_formula_field(field),
+                    input_store=self._labtools_formula_inputs,
+                    unit_store=self._labtools_formula_units,
+                    object_prefix="labtoolsFormula",
+                    disabled=field.field_id == spec.default_solve_target,
+                    placeholder=field.placeholder,
+                    selected_unit=field.default_unit,
+                )
+            )
+        calculate = make_button("求解", role="primary")
+        calculate.setObjectName("labtoolsFormulaCalculateButton")
+        calculate.clicked.connect(self._run_labtools_formula_solver)
+        self._labtools_formula_form_layout.addWidget(calculate)
+        self._labtools_formula_form_layout.addStretch(1)
+        self._sync_formula_target_fields(spec.default_solve_target)
+        self._set_labtools_result_empty("请选择公式和求解目标。", page_key="formula_solver")
+
+    def _labtools_input_row(
+        self,
+        *,
+        field_id: str,
+        label: str,
+        default_value: str,
+        units: tuple[str, ...],
+        input_store: dict[str, QLineEdit],
+        unit_store: dict[str, QComboBox],
+        object_prefix: str,
+        disabled: bool = False,
+        placeholder: str = "",
+        selected_unit: str = "",
+    ) -> QHBoxLayout:
+        row = QHBoxLayout()
+        label_widget = QLabel(label)
+        label_widget.setObjectName(f"{object_prefix}InputLabel")
+        label_widget.setProperty("fieldId", field_id)
+        row.addWidget(label_widget)
+        field = QLineEdit(default_value)
+        field.setObjectName(f"{object_prefix}Input")
+        field.setProperty("fieldId", field_id)
+        field.setPlaceholderText(placeholder)
+        field.setEnabled(not disabled)
+        input_store[field_id] = field
+        row.addWidget(field, 1)
+        if units:
+            combo = QComboBox()
+            combo.setObjectName(f"{object_prefix}UnitSelector")
+            combo.setProperty("fieldId", field_id)
+            combo.addItems(list(units))
+            if selected_unit:
+                index = combo.findText(selected_unit)
+                if index >= 0:
+                    combo.setCurrentIndex(index)
+            unit_store[field_id] = combo
+            row.addWidget(combo)
+        return row
+
+    def _labtools_result_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsResultPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", page_key)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setStyleSheet("QFrame#labtoolsResultPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        title = QLabel("结果预览")
+        title.setStyleSheet("font-weight: 700;")
+        layout.addWidget(title)
+        result_primary = QLabel("暂无结果")
+        result_primary.setObjectName("labtoolsResultPrimary")
+        result_primary.setProperty("pageKey", page_key)
+        result_primary.setWordWrap(True)
+        layout.addWidget(result_primary)
+        result_text = QPlainTextEdit()
+        result_text.setObjectName("labtoolsResultText")
+        result_text.setProperty("pageKey", page_key)
+        result_text.setReadOnly(True)
+        result_text.setMinimumHeight(180)
+        layout.addWidget(result_text)
+        issue_label = QLabel(labtools_runtime.REVIEW_NOTICE)
+        issue_label.setObjectName("labtoolsIssueRows")
+        issue_label.setProperty("pageKey", page_key)
+        issue_label.setWordWrap(True)
+        layout.addWidget(issue_label)
+        actions = QHBoxLayout()
+        copy_button = make_button("复制结果", role="secondary")
+        copy_button.setObjectName("labtoolsCopyResultButton")
+        copy_button.setProperty("pageKey", page_key)
+        copy_button.clicked.connect(lambda _checked=False, key=page_key: self._copy_labtools_result(key))
+        save_button = make_button("保存到历史 - 需适配", role="secondary")
+        save_button.setObjectName("labtoolsSaveHistoryButton")
+        save_button.setProperty("pageKey", page_key)
+        save_button.setEnabled(False)
+        save_button.setProperty("disabledState", "disabled_missing_storage_adapter")
+        export_button = make_button("导出结果 - 暂未开放", role="secondary")
+        export_button.setObjectName("labtoolsExportResultButton")
+        export_button.setProperty("pageKey", page_key)
+        export_button.setEnabled(False)
+        export_button.setProperty("disabledState", "future")
+        actions.addWidget(copy_button)
+        actions.addWidget(save_button)
+        actions.addWidget(export_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._labtools_result_widgets[page_key] = {
+            "primary": result_primary,
+            "text": result_text,
+            "issue": issue_label,
+            "copy_text": "",
+        }
+        return frame
+
+    def _run_labtools_quick_calculation(self) -> None:
+        task_id = self._labtools_quick_task_combo.currentData()
+        values = {field_id: widget.text().strip() for field_id, widget in self._labtools_quick_inputs.items()}
+        units = {field_id: combo.currentText() for field_id, combo in self._labtools_quick_units.items()}
+        self._render_labtools_result(labtools_runtime.execute_quick_task(task_id, values, units), page_key="quick_calculator")
+
+    def _run_labtools_formula_solver(self) -> None:
+        spec_id = self._labtools_formula_combo.currentData()
+        target = self._selected_formula_target()
+        values = {field_id: widget.text().strip() for field_id, widget in self._labtools_formula_inputs.items()}
+        units = {field_id: combo.currentText() for field_id, combo in self._labtools_formula_units.items()}
+        self._render_labtools_result(labtools_runtime.execute_formula(spec_id, target, values, units), page_key="formula_solver")
+
+    def _render_labtools_result(self, result: labtools_runtime.LabToolsUiResult, *, page_key: str) -> None:
+        widgets = self._labtools_result_widgets[page_key]
+        result_primary = widgets["primary"]
+        result_text = widgets["text"]
+        issue_label = widgets["issue"]
+        assert isinstance(result_primary, QLabel)
+        assert isinstance(result_text, QPlainTextEdit)
+        assert isinstance(issue_label, QLabel)
+        result_primary.setText(result.primary_result)
+        result_text.setPlainText(result.detail_text)
+        issues = list(result.errors) + list(result.warnings)
+        issue_label.setText("\n".join(f"- {issue}" for issue in issues))
+        issue_label.setProperty("hasError", bool(result.errors))
+        widgets["copy_text"] = result.copy_text if result.valid else ""
+
+    def _set_labtools_result_empty(self, message: str, *, page_key: str) -> None:
+        if hasattr(self, "_labtools_result_widgets") and page_key in self._labtools_result_widgets:
+            widgets = self._labtools_result_widgets[page_key]
+            result_primary = widgets["primary"]
+            result_text = widgets["text"]
+            issue_label = widgets["issue"]
+            assert isinstance(result_primary, QLabel)
+            assert isinstance(result_text, QPlainTextEdit)
+            assert isinstance(issue_label, QLabel)
+            result_primary.setText(message)
+            result_text.setPlainText("")
+            issue_label.setText(labtools_runtime.REVIEW_NOTICE)
+            issue_label.setProperty("hasError", False)
+            widgets["copy_text"] = ""
+
+    def _copy_labtools_result(self, page_key: str) -> None:
+        from PySide6.QtWidgets import QApplication
+
+        copy_text = self._labtools_result_widgets.get(page_key, {}).get("copy_text", "")
+        if copy_text:
+            QApplication.clipboard().setText(str(copy_text))
+
+    def _selected_formula_target(self) -> str:
+        for button in self._labtools_formula_target_group.buttons():
+            if button.isChecked():
+                return str(button.property("targetId"))
+        return ""
+
+    def _sync_formula_target_fields(self, target_id: str) -> None:
+        for field_id, widget in self._labtools_formula_inputs.items():
+            is_target = field_id == target_id
+            widget.setEnabled(not is_target)
+            if is_target:
+                widget.setText("")
+            elif not widget.text():
+                widget.setText(self._formula_default_value(field_id))
+
+    def _formula_default_value(self, field_id: str) -> str:
+        return {
+            "mass_concentration": "1",
+            "molar_concentration": "10",
+            "molecular_weight": "180.16",
+            "stock_concentration": "100",
+            "stock_volume": "100",
+            "target_concentration": "10",
+            "final_volume": "1",
+            "mass": "58.44",
+            "concentration": "100",
+            "volume": "10",
+            "percent": "1",
+            "percent_type": "w/v",
+            "solute_amount": "1",
+            "total_amount": "100",
+            "start_concentration": "100",
+            "dilution_factor": "10",
+            "levels": "6",
+            "final_volume_per_level": "100",
+        }.get(field_id, "")
+
+    def _clear_layout(self, layout) -> None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            child_layout = item.layout()
+            if widget is not None:
+                widget.deleteLater()
+            if child_layout is not None:
+                self._clear_layout(child_layout)
 
     def _show_labtools_reagent_preparation_shell(self) -> None:
         content = self._build_labtools_section_content(
