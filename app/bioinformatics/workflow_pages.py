@@ -3310,6 +3310,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         if artifacts.get("readiness_report") is None:
             self._last_artifacts = {}
             self._status_label.setText("暂不能继续：尚未运行数据准备检查。")
+            self._render_data_check_gate(set(), {}, {})
             self._recognized_inputs_label.setText("已识别到的数据：尚未检查")
             self._missing_inputs_label.setText("仍需补充的数据：尚未检查")
             self._next_step_label.setText("下一步建议：点击“重新检查”，让系统读取最新的数据识别结果。")
@@ -3443,7 +3444,15 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("数据准备状态", "检查当前数据能否进入标准化和后续分析。", back_text="返回数据识别", back_signal=self.back_requested))
+        root.addWidget(
+            _header(
+                "Data Check & Preparation / 数据检查与准备",
+                "只读展示数据检查与 preflight eligibility；不生成正式分析结果。",
+                back_text="返回数据来源",
+                back_signal=self.back_requested,
+            )
+        )
+        root.addWidget(self._build_data_check_gate_card())
 
         status_card, status_layout = _card("数据准备概览")
         status_card.setObjectName("readinessStatusCard")
@@ -3518,6 +3527,93 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         bottom_actions.addStretch(1)
         root.addLayout(bottom_actions)
 
+    def _build_data_check_gate_card(self) -> QFrame:
+        card, layout = _card("Readiness Table / 数据检查状态")
+        card.setObjectName("bioinformaticsDataCheckGateCard")
+        card.setProperty("formalActionEnabled", False)
+        top_row = QHBoxLayout()
+        self._data_check_status_chip = _status_label("blocked / 尚未检查")
+        self._data_check_status_chip.setObjectName("bioinformaticsDataCheckStatusChip")
+        self._data_check_status_chip.setProperty("statusSemanticKey", "analysis.status.blocked")
+        self._data_check_status_chip.setProperty("formalActionEnabled", False)
+        top_row.addWidget(self._data_check_status_chip)
+        top_row.addStretch(1)
+        layout.addLayout(top_row)
+        self._data_check_readiness_table = _table(["check", "status", "gate meaning", "next action"])
+        self._data_check_readiness_table.setObjectName("bioinformaticsDataCheckReadinessTable")
+        self._data_check_readiness_table.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._data_check_readiness_table)
+        self._data_check_summary = _read_only_report_view(78)
+        self._data_check_summary.setObjectName("bioinformaticsDataCheckReadinessSummary")
+        self._data_check_summary.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._data_check_summary)
+        actions = QHBoxLayout()
+        copy_button = _button("复制检查摘要", "secondaryButton", self._copy_data_check_summary, role="secondary")
+        save_button = _button("Save Report - file picker required", "secondaryButton", lambda: None, role="secondary")
+        save_button.setObjectName("bioinformaticsDataCheckSaveReportDisabledButton")
+        save_button.setEnabled(False)
+        save_button.setProperty("buttonBehavior", "disabled_file_picker_required")
+        save_button.setProperty("formalActionEnabled", False)
+        actions.addWidget(copy_button)
+        actions.addWidget(save_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        notice = _muted("关键检查通过后进入 Group & Design；ready_for_preflight 只表示可做预检，不是 formal_computed_result。")
+        notice.setObjectName("bioinformaticsDataCheckGateNotice")
+        notice.setProperty("resultSemanticKey", "preflight_only")
+        notice.setProperty("formalActionEnabled", False)
+        layout.addWidget(notice)
+        self._render_data_check_gate(set(), {}, {})
+        return card
+
+    def _copy_data_check_summary(self) -> None:
+        QApplication.clipboard().setText(self._data_check_summary.toPlainText())
+        self._status_label.setText("已复制数据检查摘要；未生成报告文件。")
+
+    def _render_data_check_gate(
+        self,
+        missing: set[str],
+        readiness_payload: dict[str, object],
+        matrix_payload: dict[str, object],
+    ) -> None:
+        available = set(str(item) for item in readiness_payload.get("available_inputs", []) or [])
+        warnings = [str(item) for item in readiness_payload.get("warnings", []) or [] if str(item)]
+        has_expression = "expression_matrix" in available or "expression_matrix" not in missing and bool(readiness_payload)
+        has_sample = "sample_metadata" in available or "sample_metadata" not in missing and bool(readiness_payload)
+        has_clinical = "clinical_metadata" in available
+        has_comparison = "comparison_config" in available or "comparison_config" not in missing and bool(readiness_payload)
+        check_rows = [
+            ("expression matrix integrity", "passed" if has_expression else "missing", "required for preflight", "Add or register expression matrix"),
+            ("sample annotation completeness", "passed" if has_sample else "missing", "required for grouping", "Add sample metadata"),
+            ("clinical data completeness", "passed" if has_clinical else "warning", "optional for survival/clinical association", "Add clinical table if needed"),
+            ("gene annotation mapping", "warning" if warnings else "ready_for_preflight", "resolver-first check only", "Review mapping before analysis"),
+            ("batch/platform consistency", "warning" if warnings else "ready_for_preflight", "preflight eligibility only", "Review platform before formal run"),
+            ("missing rate check", "warning" if warnings else "ready_for_preflight", "preflight eligibility only", "Review missing values"),
+            ("outlier sample detection", "blocked" if not has_sample else "warning", "diagnostic only", "Run after Data Check input exists"),
+        ]
+        _fill_table(self._data_check_readiness_table, [list(row) for row in check_rows])
+        if has_expression and has_sample and has_comparison:
+            chip_text = "ready_for_preflight / 可进入预检"
+            chip_key = "analysis.status.preflight_only"
+        elif missing:
+            chip_text = "missing / 仍需补充"
+            chip_key = "feature.status.blocked"
+        else:
+            chip_text = "blocked / 尚未检查"
+            chip_key = "analysis.status.blocked"
+        self._data_check_status_chip.setText(chip_text)
+        self._data_check_status_chip.setProperty("statusSemanticKey", chip_key)
+        self._data_check_summary.setPlainText(
+            "\n".join(
+                [
+                    "Readiness summary: Data Check only evaluates preflight eligibility.",
+                    f"Available inputs: {', '.join(sorted(available)) if available else 'none'}",
+                    f"Missing inputs: {', '.join(sorted(missing)) if missing else 'none'}",
+                    "Only preflight condition summary is shown. No fake matrix, result, plot, report, or export is generated.",
+                ]
+            )
+        )
+
     def _render(self, artifacts: dict[str, object]) -> None:
         self._last_artifacts = artifacts
         readiness = artifacts.get("readiness_report") or {}
@@ -3526,6 +3622,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         matrix_payload = matrix if isinstance(matrix, dict) else {}
         group_preview = _project_group_preview(self._project_root)
         missing = _missing_readiness_inputs(readiness_payload, matrix_payload)
+        self._render_data_check_gate(missing, readiness_payload, matrix_payload)
         self._status_label.setText(_readiness_overall_summary(readiness_payload, matrix_payload, missing))
         self._recognized_inputs_label.setText(_readiness_recognized_inputs_text(readiness_payload))
         self._missing_inputs_label.setText(_readiness_missing_inputs_text(missing, group_preview))
@@ -3695,7 +3792,11 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         self._generate_assets_button = _button("生成标准化资产", "primaryButton", self.generate_assets, role="primary_action")
         self._continue_tasks_button = _button("继续：分析任务中心", "primaryButton", self.continue_to_workflow, role="primary_next")
         self._refresh_assets_button = _button("刷新状态", "secondaryButton", self.refresh_assets, role="secondary")
-        self._export_report_button = _button("导出标准化报告", "secondaryButton", self.export_standardization_report, role="secondary")
+        self._export_report_button = _button("导出标准化报告 - 需文件选择器", "secondaryButton", self.export_standardization_report, role="secondary")
+        self._export_report_button.setObjectName("bioinformaticsStandardizationExportReportDisabledButton")
+        self._export_report_button.setEnabled(False)
+        self._export_report_button.setProperty("buttonBehavior", "disabled_file_picker_required")
+        self._export_report_button.setProperty("formalActionEnabled", False)
         for button in (self._confirm_group_button, self._generate_assets_button, self._continue_tasks_button, self._refresh_assets_button, self._export_report_button):
             main_actions.addWidget(button)
         main_actions.addStretch(1)
@@ -3741,23 +3842,8 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
-        report_dir = self._project_root / "reports"
-        report_dir.mkdir(parents=True, exist_ok=True)
-        path = report_dir / "standardization_report.md"
-        text = "\n\n".join(
-            [
-                "# 数据准备与标准化报告",
-                "## 当前输入",
-                self._current_input_summary.toPlainText(),
-                "## 分组状态",
-                self._group_status.toPlainText(),
-                "## 流程提示",
-                self._workflow_note.text(),
-            ]
-        )
-        path.write_text(text, encoding="utf-8")
-        self._status_label.setText("标准化报告已导出。")
-        return path
+        self._status_label.setText("报告导出已降级：需要文件选择器与 report/export gate，当前未生成报告文件。")
+        return None
 
     def _toggle_diagnostics(self) -> None:
         self._diagnostic_frame.setVisible(not self._diagnostic_frame.isVisible())
@@ -3859,8 +3945,8 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         self._continue_tasks_button.setEnabled(assets_generated and has_expression)
         _apply_button_semantics(self._continue_tasks_button, "primary_next")
 
-        self._export_report_button.setVisible(assets_generated)
-        self._export_report_button.setEnabled(assets_generated)
+        self._export_report_button.setVisible(True)
+        self._export_report_button.setEnabled(False)
         self._refresh_assets_button.setVisible(True)
 
     def _render_selection_table(self, context: dict[str, object]) -> None:
@@ -3982,15 +4068,21 @@ class BioinformaticsGroupComparisonDesignWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("分组与比较设计", "确认样本组、用户组名、对照组和比较关系。", back_text="返回标准化资产", back_signal=self.back_requested))
+        root.addWidget(_header("Group & Design / 分组与设计", "设计分组、比较和协变量草稿；preflight-ready 不等于正式分析。", back_text="返回数据检查", back_signal=self.back_requested))
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新分组设计", "secondaryButton", self.refresh_design))
-        actions.addWidget(_button("从对照组生成比较", "secondaryButton", self.add_one_vs_control_suggestions))
-        actions.addWidget(_button("保存分组与比较设计", "primaryButton", self.save_design))
+        refresh_button = _button("刷新分组设计", "secondaryButton", self.refresh_design, role="secondary")
+        suggestion_button = _button("从对照组生成比较", "secondaryButton", self.add_one_vs_control_suggestions, role="secondary")
+        save_button = _button("保存分组与比较设计", "primaryButton", self.save_design, role="secondary")
+        save_button.setProperty("formalActionEnabled", False)
+        save_button.setToolTip("保存 design draft / comparison draft；不启动正式分析。")
+        actions.addWidget(refresh_button)
+        actions.addWidget(suggestion_button)
+        actions.addWidget(save_button)
         actions.addStretch(1)
         root.addLayout(actions)
         self._status_label = _status_label("尚未读取分组设计。")
         root.addWidget(self._status_label)
+        root.addWidget(self._build_group_design_gate_card())
         self._summary = _read_only_report_view(145)
         self._summary.setObjectName("groupDesignSummary")
         root.addWidget(self._summary)
@@ -4008,7 +4100,98 @@ class BioinformaticsGroupComparisonDesignWidget(QWidget):
         self._technical.setVisible(False)
         root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._technical)))
         root.addWidget(self._technical)
-        root.addWidget(_button("继续：分析任务中心", "primaryButton", self.continue_to_tasks), alignment=Qt.AlignLeft)
+        continue_button = _button("继续：分析任务中心", "primaryButton", self.continue_to_tasks, role="secondary")
+        continue_button.setProperty("formalActionEnabled", False)
+        continue_button.setToolTip("进入 Analysis Tasks 的 gated 任务矩阵；不启动正式分析。")
+        root.addWidget(continue_button, alignment=Qt.AlignLeft)
+
+    def _build_group_design_gate_card(self) -> QFrame:
+        card, layout = _card("Design Draft / 分组设计草稿")
+        card.setObjectName("bioinformaticsGroupDesignGateCard")
+        card.setProperty("formalActionEnabled", False)
+        self._group_design_status_chip = _status_label("preflight-ready draft / 非正式分析")
+        self._group_design_status_chip.setObjectName("bioinformaticsGroupDesignStatusChip")
+        self._group_design_status_chip.setProperty("statusSemanticKey", "analysis.status.preflight_only")
+        self._group_design_status_chip.setProperty("resultSemanticKey", "preflight_only")
+        self._group_design_status_chip.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._group_design_status_chip)
+        self._gated_group_setup_table = _table(["group", "role", "sample count", "state"])
+        self._gated_group_setup_table.setObjectName("bioinformaticsGroupSetupGatedTable")
+        layout.addWidget(self._gated_group_setup_table)
+        self._gated_comparison_table = _table(["comparison", "case group", "control group", "state"])
+        self._gated_comparison_table.setObjectName("bioinformaticsComparisonSetupGatedTable")
+        layout.addWidget(self._gated_comparison_table)
+        self._covariate_table = _table(["covariate", "include draft", "gate note"])
+        self._covariate_table.setObjectName("bioinformaticsCovariateSettingsTable")
+        layout.addWidget(self._covariate_table)
+        self._design_summary = _read_only_report_view(90)
+        self._design_summary.setObjectName("bioinformaticsDesignSummary")
+        self._design_summary.setProperty("resultSemanticKey", "preflight_only")
+        self._design_summary.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._design_summary)
+        actions = QHBoxLayout()
+        run_preflight = _button("Run Preflight - gated preview", "secondaryButton", lambda: None, role="secondary")
+        run_preflight.setObjectName("bioinformaticsRunPreflightGatedButton")
+        run_preflight.setEnabled(False)
+        run_preflight.setProperty("buttonBehavior", "disabled_gated_preflight_preview")
+        run_preflight.setProperty("formalActionEnabled", False)
+        run_preflight.setToolTip("本阶段仅显示 preflight-ready 边界，不运行模型或正式分析。")
+        actions.addWidget(run_preflight)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._render_group_design_gate({}, [], [])
+        return card
+
+    def _render_group_design_gate(
+        self,
+        context: dict[str, object],
+        groups: list[dict[str, object]],
+        comparisons: list[dict[str, object]],
+    ) -> None:
+        counts = [int(item.get("sample_count") or 0) for item in groups[:2] if isinstance(item, dict)]
+        tumor_count = counts[0] if counts else 0
+        normal_count = counts[1] if len(counts) > 1 else 0
+        _fill_table(
+            self._gated_group_setup_table,
+            [
+                ["Tumor", "case", tumor_count, "design draft"],
+                ["Normal", "control", normal_count, "design draft"],
+                ["Optional unused group", "unused", 0, "optional / ignored unless user includes"],
+            ],
+        )
+        if comparisons:
+            comparison_rows = [
+                [
+                    str(item.get("comparison_name") or "Tumor_vs_Normal"),
+                    str(item.get("case_group") or "Tumor"),
+                    str(item.get("control_group") or "Normal"),
+                    "design draft / not formal analysis",
+                ]
+                for item in comparisons[:4]
+                if isinstance(item, dict)
+            ]
+        else:
+            comparison_rows = [["Tumor_vs_Normal", "Tumor", "Normal", "design draft / not formal analysis"]]
+        _fill_table(self._gated_comparison_table, comparison_rows)
+        _fill_table(
+            self._covariate_table,
+            [
+                ["Age", "draft only", "does not start Cox or clinical model"],
+                ["Gender", "draft only", "does not start Cox or clinical model"],
+                ["Smoking History", "draft only", "does not start Cox or clinical model"],
+                ["Stage", "draft only", "does not start Cox or clinical model"],
+            ],
+        )
+        self._design_summary.setPlainText(
+            "\n".join(
+                [
+                    "Design summary: group and covariate choices are drafts for preflight eligibility.",
+                    f"Confirmed design exists: {bool(context.get('has_confirmed_design'))}",
+                    "ready_for_preflight does not create formal_computed_result.",
+                    "Report / Export gate remains disabled until a future report-ready package exists.",
+                ]
+            )
+        )
 
     def _render(self, context: dict[str, object]) -> None:
         groups = build_default_group_rows(context)
@@ -4018,6 +4201,7 @@ class BioinformaticsGroupComparisonDesignWidget(QWidget):
         self._status_label.setText(
             "状态：已确认分组设计" if context.get("has_confirmed_design") else "状态：尚未确认分组设计"
         )
+        self._render_group_design_gate(context, groups, comparisons)
         self._summary.setPlainText(_group_design_context_summary(context))
         _fill_table(
             self._sample_group_table,
