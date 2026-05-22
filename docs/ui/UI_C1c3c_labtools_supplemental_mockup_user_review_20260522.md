@@ -13,10 +13,10 @@ This stage only archives mockup review state and non-runtime mockup images under
 | Figure | Status | Archived Path |
 | --- | --- | --- |
 | Figure 1 - Reagent side panel detail | Archived generated candidate | `docs/ui/mockups/labtools/c1c3_supplemental/reagent_template_editor_side_panel_detail_candidate_20260522.png` |
-| Figure 2 - WB lane/warning detail | User replacement image is authoritative; original generated image is superseded | `user_inline_replacement_image_pending_local_path` |
+| Figure 2 - WB lane/warning detail | User replacement image is authoritative; original generated image is superseded | `docs/ui/mockups/labtools/c1c3_supplemental/wb_lane_warning_detail_user_replacement_20260522.png` |
 | Figure 3 - ELISA / Immuno-Absorbance Boundary | Archived generated candidate | `docs/ui/mockups/labtools/c1c3_supplemental/elisa_immuno_absorbance_boundary_candidate_20260522.png` |
 
-Note: Figure 2 was provided inline by the user in the conversation. It is recorded as the authoritative replacement image, but no local filesystem path was available in this turn. Do not use the original generated WB image for implementation reference.
+Note: Figure 2 was later provided as a local file at `/Users/changdali/Desktop/UI/界面示意图/labtools/图 2：WB lane : warning detail.png` and archived under `docs/ui/mockups/labtools/c1c3_supplemental/`. Do not use the original generated WB image for implementation reference.
 
 ## 3. Figure 1 Review - Reagent Side Panel Detail
 
@@ -45,12 +45,16 @@ Implementation cautions:
 
 ## 4. Figure 2 Review - WB Lane / Warning Detail
 
-Decision: `user_replacement_accepted_pending_local_path`
+Decision: `user_replacement_accepted`
+
+Archived path:
+
+- `docs/ui/mockups/labtools/c1c3_supplemental/wb_lane_warning_detail_user_replacement_20260522.png`
 
 Purpose:
 
 - The user-provided replacement image should replace the originally generated WB detail image.
-- Use it as the authoritative WB lane/warning detail reference once a local file path is available.
+- Use it as the authoritative WB lane/warning detail reference.
 
 Replacement image characteristics captured from user review:
 
@@ -73,7 +77,7 @@ Original generated image:
 
 Original generated image status:
 
-- `superseded_by_user_inline_image`
+- `superseded_by_user_replacement`
 
 ## 5. Figure 3 Review - ELISA / Immuno-Absorbance Boundary
 
@@ -106,7 +110,7 @@ Updated manifest:
 Key manifest changes:
 
 - Figure 1 has `accepted_image_path` pointing to the archived docs mockup PNG.
-- Figure 2 has `accepted_image_path=user_inline_replacement_image_pending_local_path` and marks the original generated WB image as superseded.
+- Figure 2 has `accepted_image_path` pointing to the archived user replacement PNG and marks the original generated WB image as superseded.
 - Figure 3 has `accepted_image_path` pointing to the archived docs mockup PNG.
 
 ## 7. Verification
@@ -114,6 +118,7 @@ Key manifest changes:
 | Command | Result |
 | --- | --- |
 | `file docs/ui/mockups/labtools/c1c3_supplemental/*.png` | Passed: archived Figure 1 and Figure 3 are PNG files |
-| `python3 - <<'PY' ... supplemental manifest check ... PY` | Passed: 3 rows, 14 columns; decisions and replacement state recorded |
-| `git diff --check` | Passed |
-| `git diff --cached --check` | Passed |
+| `file docs/ui/mockups/labtools/c1c3_supplemental/wb_lane_warning_detail_user_replacement_20260522.png` | Passed: archived Figure 2 is a PNG file |
+| `python3 - <<'PY' ... supplemental manifest check ... PY` | Passed after Figure 2 archival: 3 rows, 14 columns; accepted replacement path exists |
+| `git diff --check` | Passed after Figure 2 archival |
+| `git diff --cached --check` | Passed after Figure 2 archival |
