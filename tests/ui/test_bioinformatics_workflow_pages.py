@@ -4643,6 +4643,163 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     assert "仅包含 formal DEG section" in widget.status_message()
 
 
+def test_results_browser_survival_clinical_section_report_package_gate(qt_app, project_summary) -> None:
+    _register_survival_clinical_section_results(project_summary.project_root)
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    gate_table = widget.findChild(QTableWidget, "survivalClinicalReportGateTable")
+    assert gate_table is not None
+    gate_text = _table_text(gate_table)
+    assert "KM/log-rank section report-ready" in gate_text
+    assert "Cox section report-ready" in gate_text
+    assert "eligible_for_km_logrank_report_ready" in gate_text
+    assert "eligible_for_cox_report_ready" in gate_text
+
+    km_status = widget.findChild(QLabel, "kmReportReadyStatus")
+    cox_status = widget.findChild(QLabel, "coxReportReadyStatus")
+    assert km_status is not None
+    assert cox_status is not None
+    assert "section-only package" in km_status.text()
+    assert "section-only package" in cox_status.text()
+    km_button = widget.findChild(QPushButton, "kmReportReadyButton")
+    cox_button = widget.findChild(QPushButton, "coxReportReadyButton")
+    assert km_button is not None and km_button.isEnabled()
+    assert cox_button is not None and cox_button.isEnabled()
+
+    km_package = widget.generate_km_logrank_report_ready_package()
+    assert km_package is not None
+    assert km_package["status"] == "survival_km_logrank_only_report_ready_package_created"
+    assert Path(str(km_package["package_path"])).is_dir()
+    assert "未生成 full integrated report" in widget.status_message()
+    cox_package = widget.generate_cox_report_ready_package()
+    assert cox_package is not None
+    assert cox_package["status"] == "cox_univariate_only_report_ready_package_created"
+    assert Path(str(cox_package["package_path"])).is_dir()
+    assert "仅包含 Cox section" in widget.status_message()
+
+    full_status = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert full_status is not None
+    assert "Full integrated report disabled" in full_status.text()
+    assert "full_integrated_prerequisite_forbids_section_package_as_full_report" in full_status.text()
+
+
+def _register_survival_clinical_section_results(root: Path) -> None:
+    tables_dir = root / "results" / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
+    km_table = tables_dir / "km_ui.tsv"
+    logrank_table = tables_dir / "logrank_ui.tsv"
+    cox_table = tables_dir / "cox_ui.tsv"
+    km_table.write_text(
+        "time\tsurvival_probability\tgroup\tat_risk\tevents\tcensored\ttime_unit\twarnings\n"
+        "1\t0.8\tA\t5\t1\t0\tmonth\t\n"
+        "1\t0.7\tB\t5\t1\t0\tmonth\t\n",
+        encoding="utf-8",
+    )
+    logrank_table.write_text(
+        "group_a\tgroup_b\ttest_statistic\tp_value\tmethod\tevent_count_group_a\tevent_count_group_b\tsample_count_group_a\tsample_count_group_b\twarnings\n"
+        "A\tB\t1.2\t0.27\tlogrank\t1\t1\t5\t5\t\n",
+        encoding="utf-8",
+    )
+    cox_table.write_text(
+        "covariate\tcovariate_label\tcovariate_type\thazard_ratio\tci_lower\tci_upper\tp_value\tz_statistic\tsample_count\tevent_count\tnon_missing_count\tmissing_count\tmethod\twarnings\n"
+        "arm\tArm\tbinary_variable\t1.4\t0.8\t2.1\t0.2\t1.1\t10\t4\t10\t0\tcox\tstatistical_only\n",
+        encoding="utf-8",
+    )
+    km_log = root / "analysis" / "km_ui_log.json"
+    cox_log = root / "analysis" / "cox_ui_log.json"
+    km_log.parent.mkdir(parents=True, exist_ok=True)
+    km_log.write_text("{}", encoding="utf-8")
+    cox_log.write_text("{}", encoding="utf-8")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    dependency = {"status": "passed", "python_lifelines": {"available": True, "version": "0.30.0"}}
+    register_result(
+        root,
+        {
+            "result_id": "km-ui-ready",
+            "task_run_id": "run-km-ui",
+            "task_type": "survival_km_logrank",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "surv-input-ui",
+            "source_dataset_id": "surv-input-ui",
+            "source_repository_manifest": "B12 survival input package",
+            "parameters_manifest": {
+                "survival_clinical_input_id": "surv-input-ui",
+                "survival_outcome_gate_id": "outcome-ui",
+                "time_field": "OS_time",
+                "event_field": "OS_event",
+                "grouping_variable": "arm",
+                "group_a": "A",
+                "group_b": "B",
+                "censoring_policy": "right_censored",
+                "missingness_policy": "drop_missing",
+            },
+            "engine_name": "python_lifelines_km_logrank_mvp",
+            "engine_version": "0.1.0",
+            "dependency_snapshot": dependency,
+            "output_artifacts": [
+                {"artifact_type": "km_curve_table", "path": str(km_table.relative_to(root))},
+                {"artifact_type": "logrank_result_table", "path": str(logrank_table.relative_to(root))},
+            ],
+            "plot_artifacts": [{"plot_id": "km-plot-ui", "plot_type": "km_curve", "source_result_id": "km-ui-ready", "plot_semantics": "formal_computed_result", "source_result_semantics": "formal_computed_result", "blockers": []}],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "task_run_log", "path": str(km_log.relative_to(root))}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+            "survival_clinical_input_id": "surv-input-ui",
+            "survival_outcome_gate_id": "outcome-ui",
+        },
+    )
+    register_result(
+        root,
+        {
+            "result_id": "cox-ui-ready",
+            "task_run_id": "run-cox-ui",
+            "task_type": "cox_univariate",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "surv-input-ui",
+            "source_dataset_id": "surv-input-ui",
+            "source_repository_manifest": "B12 survival input package",
+            "parameters_manifest": {
+                "survival_clinical_input_id": "surv-input-ui",
+                "survival_outcome_gate_id": "outcome-ui",
+                "time_field": "OS_time",
+                "event_field": "OS_event",
+                "covariate": "arm",
+                "covariate_type": "binary_variable",
+                "missing_value_policy": "drop_missing",
+                "minimum_event_count": 3,
+            },
+            "engine_name": "python_lifelines_cox_univariate_mvp",
+            "engine_version": "0.1.0",
+            "dependency_snapshot": dependency,
+            "output_artifacts": [{"artifact_type": "cox_result_table", "path": str(cox_table.relative_to(root))}],
+            "plot_artifacts": [{"plot_id": "cox-plot-ui", "plot_type": "cox_forest_plot", "source_result_id": "cox-ui-ready", "plot_semantics": "formal_computed_result", "source_result_semantics": "formal_computed_result", "blockers": []}],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "task_run_log", "path": str(cox_log.relative_to(root))}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+            "survival_clinical_input_id": "surv-input-ui",
+            "survival_outcome_gate_id": "outcome-ui",
+        },
+    )
+
+
 def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_summary) -> None:
     imported_path = project_summary.project_root / "results" / "tables" / "imported_deg.csv"
     testing_path = project_summary.project_root / "results" / "tables" / "testing_deg.csv"

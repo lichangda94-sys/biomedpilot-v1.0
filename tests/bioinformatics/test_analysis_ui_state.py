@@ -31,6 +31,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["gate_rows"]
     assert state["ora_gate_rows"]
     assert state["survival_clinical_rows"]
+    assert state["survival_clinical_report_gate_rows"]
     assert state["analysis_capability_map"]["schema_version"] == "biomedpilot.deep_analysis_capability_map.v1"
     assert state["multi_factor_deg_gate"]["result_semantics"] == "preflight_only"
     assert state["multi_factor_deg_gate"]["formal_execution_enabled"] is False
@@ -58,6 +59,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     ora_gate_text = "\n".join(str(row) for row in state["ora_gate_rows"])
     assert "ORA source DEG result" in ora_gate_text
     assert "B10.2 controlled ORA execution" in ora_gate_text
+    survival_gate_text = "\n".join(str(row) for row in state["survival_clinical_report_gate_rows"])
+    assert "KM/log-rank section report-ready" in survival_gate_text
+    assert "missing_km_logrank_result" in survival_gate_text
     assert state["legacy_asset_pipeline"]["formal_analysis_enabled"] is False
     assert state["legacy_asset_pipeline"]["writes_result_index"] is False
     assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False
@@ -160,6 +164,8 @@ def test_analysis_center_state_shows_b12_survival_clinical_input_hardening(tmp_p
     assert "OS_time / OS_event / censoring gate" in row_text
     assert "Clinical variable typing / missingness" in row_text
     assert "mapped cases=2" in row_text
+    assert "KM/log-rank section package" in row_text
+    assert "Cox section package" in row_text
     assert _action(state, "survival_clinical_input_readiness")["enabled"] is True
     assert _action(state, "km_cox_logrank")["enabled"] is False
     assert _action(state, "cox_univariate")["enabled"] is False

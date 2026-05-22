@@ -69,6 +69,12 @@ from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready
 from app.bioinformatics.reports.gsea import create_gsea_report_ready_package, evaluate_gsea_report_ready_gate
 from app.bioinformatics.reports.integrated import build_full_integrated_report_package_plan, create_full_integrated_report_package, evaluate_full_integrated_report_gate
 from app.bioinformatics.reports.ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
+from app.bioinformatics.reports.survival_clinical import (
+    create_cox_report_ready_package,
+    create_km_logrank_report_ready_package,
+    evaluate_cox_report_ready_gate,
+    evaluate_km_logrank_report_ready_gate,
+)
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -6657,6 +6663,48 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._render_formal_deg_report_gate(result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
         return result
 
+    def generate_km_logrank_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        gate = self._km_report_gate if isinstance(getattr(self, "_km_report_gate", {}), dict) else {}
+        result_id = str(gate.get("selected_result_id") or "") or None
+        allow_table_only = bool(self._km_table_only_report.isChecked()) if hasattr(self, "_km_table_only_report") else False
+        result = create_km_logrank_report_ready_package(self._project_root, result_id=result_id, allow_table_only_report=allow_table_only)
+        if result.get("status") == "survival_km_logrank_only_report_ready_package_created":
+            self.refresh_results()
+            self._status_label.setText(
+                "已生成 KM/log-rank section package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
+                "仅包含 survival KM/log-rank section，未生成 full integrated report、risk score、预后或治疗建议。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "KM/log-rank report-ready gate 未通过"
+            self._status_label.setText(f"KM/log-rank section package 未生成：{blockers}")
+            self._render_survival_clinical_report_gates(result.get("gate", {}) if isinstance(result.get("gate"), dict) else result, getattr(self, "_cox_report_gate", {}))
+        return result
+
+    def generate_cox_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        gate = self._cox_report_gate if isinstance(getattr(self, "_cox_report_gate", {}), dict) else {}
+        result_id = str(gate.get("selected_result_id") or "") or None
+        allow_table_only = bool(self._cox_table_only_report.isChecked()) if hasattr(self, "_cox_table_only_report") else False
+        result = create_cox_report_ready_package(self._project_root, result_id=result_id, allow_table_only_report=allow_table_only)
+        if result.get("status") == "cox_univariate_only_report_ready_package_created":
+            self.refresh_results()
+            self._status_label.setText(
+                "已生成 Cox univariate section package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
+                "仅包含 Cox section，未生成 full integrated report、risk score、预后或治疗建议。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "Cox report-ready gate 未通过"
+            self._status_label.setText(f"Cox section package 未生成：{blockers}")
+            self._render_survival_clinical_report_gates(getattr(self, "_km_report_gate", {}), result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
+        return result
+
     def generate_full_integrated_report_package(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -6948,6 +6996,41 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._gsea_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         root.addWidget(gsea_card)
 
+        survival_report_card, survival_report_layout = _card("Survival / clinical section packages")
+        survival_report_layout.addWidget(_muted("KM/log-rank 和 Cox 只允许生成 section-only package；这不是 full integrated report，也不包含临床诊断、预后、risk score 或治疗建议。"))
+        survival_report_controls = QHBoxLayout()
+        self._km_table_only_report = QCheckBox("允许无图 KM table-only section")
+        self._km_table_only_report.setObjectName("kmTableOnlyReportMode")
+        self._km_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
+        self._km_report_button = _button("生成 KM/log-rank section package", "secondaryButton", self.generate_km_logrank_report_ready_package)
+        self._km_report_button.setObjectName("kmReportReadyButton")
+        self._km_report_status = _muted("KM/log-rank section gate 需要 formal KM result、passed validation/dependency、task log、结果表和 KM plot artifact；无图 table-only 模式需显式勾选。")
+        self._km_report_status.setObjectName("kmReportReadyStatus")
+        survival_report_controls.addWidget(self._km_table_only_report)
+        survival_report_controls.addWidget(self._km_report_button)
+        survival_report_controls.addWidget(self._km_report_status)
+        survival_report_controls.addStretch(1)
+        survival_report_layout.addLayout(survival_report_controls)
+        cox_report_controls = QHBoxLayout()
+        self._cox_table_only_report = QCheckBox("允许无图 Cox table-only section")
+        self._cox_table_only_report.setObjectName("coxTableOnlyReportMode")
+        self._cox_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
+        self._cox_report_button = _button("生成 Cox section package", "secondaryButton", self.generate_cox_report_ready_package)
+        self._cox_report_button.setObjectName("coxReportReadyButton")
+        self._cox_report_status = _muted("Cox section gate 只接受 formal Cox univariate result；无图 table-only 模式需显式勾选。")
+        self._cox_report_status.setObjectName("coxReportReadyStatus")
+        cox_report_controls.addWidget(self._cox_table_only_report)
+        cox_report_controls.addWidget(self._cox_report_button)
+        cox_report_controls.addWidget(self._cox_report_status)
+        cox_report_controls.addStretch(1)
+        survival_report_layout.addLayout(cox_report_controls)
+        self._survival_clinical_report_gate = _table(["Gate", "状态", "Source", "Package", "Blockers", "Warnings"])
+        self._survival_clinical_report_gate.setObjectName("survivalClinicalReportGateTable")
+        survival_report_layout.addWidget(self._survival_clinical_report_gate)
+        _set_table_widths(self._survival_clinical_report_gate, [190, 160, 150, 170, 340, 260])
+        self._survival_clinical_report_gate.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        root.addWidget(survival_report_card)
+
         gate_card, gate_layout = _card("Result semantics / plot / report gates")
         gate_layout.addWidget(_muted("结果浏览只展示 result index 语义和 eligibility；不会把 testing/imported/preflight 输出升级为 formal result。"))
         self._gate_preview = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
@@ -7072,6 +7155,17 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             allow_table_only_report=bool(self._formal_deg_table_only_report.isChecked()),
         ) if self._project_root else {}
         self._render_formal_deg_report_gate(report_gate)
+        km_report_gate = evaluate_km_logrank_report_ready_gate(
+            self._project_root,
+            allow_table_only_report=bool(self._km_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        cox_report_gate = evaluate_cox_report_ready_gate(
+            self._project_root,
+            allow_table_only_report=bool(self._cox_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._km_report_gate = km_report_gate
+        self._cox_report_gate = cox_report_gate
+        self._render_survival_clinical_report_gates(km_report_gate, cox_report_gate)
         integrated_gate = evaluate_full_integrated_report_gate(self._project_root) if self._project_root else {}
         integrated_plan = build_full_integrated_report_package_plan(
             self._project_root,
@@ -7080,8 +7174,8 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._render_full_integrated_report_preview(integrated_gate, integrated_plan)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
-        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or [])]))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan}))
+        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("survival_clinical_report_gate_rows", []) or [])]))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -7174,6 +7268,56 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._formal_deg_report_status.setText(f"Formal DEG report-ready disabled：{reason}")
+
+    def _render_survival_clinical_report_gates(self, km_gate: dict[str, object], cox_gate: dict[str, object]) -> None:
+        if not hasattr(self, "_survival_clinical_report_gate"):
+            return
+        self._render_single_survival_clinical_report_gate(
+            km_gate,
+            button=self._km_report_button,
+            label=self._km_report_status,
+            eligible_status="eligible_for_km_logrank_report_ready",
+            display_name="KM/log-rank section",
+        )
+        self._render_single_survival_clinical_report_gate(
+            cox_gate,
+            button=self._cox_report_button,
+            label=self._cox_report_status,
+            eligible_status="eligible_for_cox_report_ready",
+            display_name="Cox section",
+        )
+        _fill_table(
+            self._survival_clinical_report_gate,
+            [
+                _survival_clinical_report_gate_row("KM/log-rank section report-ready", km_gate),
+                _survival_clinical_report_gate_row("Cox section report-ready", cox_gate),
+            ],
+        )
+
+    def _render_single_survival_clinical_report_gate(
+        self,
+        gate: dict[str, object],
+        *,
+        button: QPushButton,
+        label: QLabel,
+        eligible_status: str,
+        display_name: str,
+    ) -> None:
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == eligible_status:
+            button.setEnabled(True)
+            label.setText(
+                f"{display_name} gate passed；source={gate.get('selected_result_id', '')}；"
+                f"table-only={gate.get('allow_table_only_report', False)}；"
+                "section-only package；full integrated report / risk score / clinical conclusion remain disabled."
+            )
+        else:
+            button.setEnabled(False)
+            reason = "；".join(blockers) or f"{display_name} gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            label.setText(f"{display_name} disabled：{reason}")
 
     def _render_full_integrated_report_preview(self, gate: dict[str, object], plan: dict[str, object]) -> None:
         if not hasattr(self, "_full_integrated_status"):
@@ -11517,6 +11661,17 @@ def _analysis_ui_gate_rows(rows: object) -> list[list[object]]:
         ]
         for row in rows
         if isinstance(row, dict)
+    ]
+
+
+def _survival_clinical_report_gate_row(gate_label: str, gate: dict[str, object]) -> list[object]:
+    return [
+        gate_label,
+        gate.get("status", "blocked"),
+        gate.get("selected_result_id", ""),
+        gate.get("section_scope", ""),
+        "；".join(str(item) for item in gate.get("blockers", []) or []),
+        "；".join(str(item) for item in gate.get("warnings", []) or []),
     ]
 
 

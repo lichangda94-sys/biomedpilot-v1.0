@@ -55,6 +55,23 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     assert _row(rows, "ora_report_ready")["enabled"] is False
 
 
+def test_survival_report_ready_action_enables_section_only_when_km_or_cox_gate_passes() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        km_report_gate={"status": "eligible_for_km_logrank_report_ready", "warnings": []},
+        cox_report_gate={"status": "blocked", "blockers": ["missing_cox_univariate_result"]},
+        report_gate={"status": "blocked"},
+    )
+
+    report = _row(rows, "survival_report_ready")
+    assert report["enabled"] is True
+    assert report["state"] == "available_section_only"
+    assert "section-only" in report["next_action"]
+    assert "full integrated report" in report["next_action"]
+
+
 def test_cox_multivariate_action_is_enabled_only_after_b20_gates_pass() -> None:
     rows = build_action_rows(
         packages=[{"package_type": "tcga_clinical_survival_preflight", "blockers": []}],
