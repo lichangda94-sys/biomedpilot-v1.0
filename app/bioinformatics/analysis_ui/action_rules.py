@@ -51,6 +51,7 @@ def build_action_rows(
 
     rows: list[dict[str, Any]] = []
     rows.append(_legacy_asset_pipeline_action(legacy_asset_pipeline))
+    rows.extend(_legacy_asset_pipeline_operation_actions(legacy_asset_pipeline))
     rows.append(_deg_preflight_action(deg_package))
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate))
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
@@ -102,6 +103,27 @@ def _legacy_asset_pipeline_action(pipeline: dict[str, Any]) -> dict[str, Any]:
         "disabled_reason": "",
         "next_action": str(pipeline.get("boundary_message") or "Review legacy asset artifacts; downstream formal gates still apply."),
     }
+
+
+def _legacy_asset_pipeline_operation_actions(pipeline: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for operation in pipeline.get("operations", []) or []:
+        if not isinstance(operation, dict):
+            continue
+        enabled = bool(operation.get("enabled"))
+        rows.append(
+            {
+                "action_id": str(operation.get("operation_id") or ""),
+                "label": str(operation.get("label") or ""),
+                "state": str(operation.get("state") or ("available" if enabled else "blocked")),
+                "button_behavior": str(operation.get("button_behavior") or "controlled_standardization_artifact_write_no_formal_execution"),
+                "enabled": enabled,
+                "normal_user_visible": True,
+                "disabled_reason": "" if enabled else str(operation.get("disabled_reason") or "legacy_pipeline_operation_blocked"),
+                "next_action": str(operation.get("next_action") or "Run B16 legacy standardization gate; no formal analysis execution."),
+            }
+        )
+    return rows
 
 
 def _deg_preflight_action(package: dict[str, Any] | None) -> dict[str, Any]:

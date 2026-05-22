@@ -61,6 +61,25 @@ def test_legacy_asset_pipeline_action_is_review_only() -> None:
             "status": "available_for_review",
             "artifact_count": 4,
             "boundary_message": "Legacy assets still require B8 resolver and downstream task gates.",
+            "operations": [
+                {
+                    "operation_id": "legacy_build_candidates",
+                    "label": "Build legacy asset candidates",
+                    "enabled": True,
+                    "state": "available",
+                    "button_behavior": "controlled_standardization_artifact_write_no_formal_execution",
+                    "next_action": "Write candidate-only bundle.",
+                },
+                {
+                    "operation_id": "legacy_materialize_candidates",
+                    "label": "Materialize legacy candidates",
+                    "enabled": False,
+                    "state": "blocked",
+                    "disabled_reason": "legacy_asset_candidates_missing",
+                    "button_behavior": "controlled_standardization_artifact_write_no_formal_execution",
+                    "next_action": "Write materialization manifest.",
+                },
+            ],
         },
     )
 
@@ -68,6 +87,12 @@ def test_legacy_asset_pipeline_action_is_review_only() -> None:
     assert legacy["enabled"] is True
     assert legacy["button_behavior"] == "enabled_review_only_no_formal_execution"
     assert "B8 resolver" in legacy["next_action"]
+    build = _row(rows, "legacy_build_candidates")
+    assert build["enabled"] is True
+    assert build["button_behavior"] == "controlled_standardization_artifact_write_no_formal_execution"
+    materialize = _row(rows, "legacy_materialize_candidates")
+    assert materialize["enabled"] is False
+    assert materialize["disabled_reason"] == "legacy_asset_candidates_missing"
     assert _row(rows, "formal_deg")["enabled"] is False
 
 

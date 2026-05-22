@@ -164,6 +164,7 @@ def build_legacy_asset_pipeline_state(project_root: str | Path) -> dict[str, Any
     present_rows = [row for row in rows if row["artifact_present"]]
     blockers = _dedupe([item for row in rows for item in row["raw_blockers"]])
     warnings = _dedupe([item for row in rows for item in row["raw_warnings"]])
+    operations = _legacy_pipeline_operations(rows)
     return {
         "schema_version": "biomedpilot.analysis_ui_legacy_asset_pipeline_state.v1",
         "status": "available_for_review" if present_rows and not blockers else ("blocked" if blockers else "not_started"),
@@ -171,6 +172,7 @@ def build_legacy_asset_pipeline_state(project_root: str | Path) -> dict[str, Any
         "row_count": len(rows),
         "artifact_count": len(present_rows),
         "rows": rows,
+        "operations": operations,
         "blockers": blockers,
         "warnings": warnings,
         "formal_analysis_enabled": False,
@@ -178,6 +180,32 @@ def build_legacy_asset_pipeline_state(project_root: str | Path) -> dict[str, Any
         "writes_result_index": False,
         "report_ready_eligible": False,
         "boundary_message": "Legacy assets are acquisition/standardization inputs only; formal analysis still requires B8 resolver and downstream task gates.",
+    }
+
+
+def _legacy_pipeline_operations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_id = {str(row.get("row_id") or ""): row for row in rows}
+    adapter_ready = bool(by_id.get("legacy_adapter_manifests", {}).get("artifact_present"))
+    candidates_ready = bool(by_id.get("legacy_asset_candidates", {}).get("artifact_present"))
+    materialized_ready = bool(by_id.get("legacy_materialized_assets", {}).get("artifact_present"))
+    merge_ready = bool(by_id.get("legacy_repository_merge", {}).get("artifact_present"))
+    return [
+        _legacy_operation("legacy_build_candidates", "Build legacy asset candidates", adapter_ready, "legacy_adapter_manifests_missing", "Writes candidate-only standardized asset bundle."),
+        _legacy_operation("legacy_materialize_candidates", "Materialize legacy candidates", candidates_ready, "legacy_asset_candidates_missing", "Writes isolated repository files and materialization manifest only."),
+        _legacy_operation("legacy_merge_repository_manifest", "Merge legacy assets into repository manifest", materialized_ready, "legacy_materialized_assets_missing", "Writes standardized repository manifest/validation/lineage only."),
+        _legacy_operation("legacy_confirm_asset_selection", "Confirm legacy asset selection", merge_ready, "legacy_repository_merge_missing", "Writes user-confirmed default asset selection only; downstream gates still decide readiness."),
+    ]
+
+
+def _legacy_operation(operation_id: str, label: str, enabled: bool, blocker: str, next_action: str) -> dict[str, Any]:
+    return {
+        "operation_id": operation_id,
+        "label": label,
+        "enabled": enabled,
+        "state": "available" if enabled else "blocked",
+        "disabled_reason": "" if enabled else blocker,
+        "button_behavior": "controlled_standardization_artifact_write_no_formal_execution",
+        "next_action": next_action,
     }
 
 

@@ -172,9 +172,15 @@ def test_legacy_asset_pipeline_state_is_review_only_and_does_not_upgrade_inputs(
     assert pipeline["report_ready_eligible"] is False
     assert "missing_group_design_selection" in pipeline["blockers"]
     assert "B8 resolver" in pipeline["boundary_message"]
+    operations = {item["operation_id"]: item for item in pipeline["operations"]}
+    assert operations["legacy_build_candidates"]["enabled"] is True
+    assert operations["legacy_materialize_candidates"]["enabled"] is True
+    assert operations["legacy_merge_repository_manifest"]["enabled"] is False
+    assert operations["legacy_confirm_asset_selection"]["enabled"] is False
     review = _action(state, "legacy_asset_pipeline_review")
     assert review["enabled"] is True
     assert review["button_behavior"] == "enabled_review_only_no_formal_execution"
+    assert _action(state, "legacy_build_candidates")["button_behavior"] == "controlled_standardization_artifact_write_no_formal_execution"
     assert _file_set(tmp_path) == before
 
 
