@@ -635,12 +635,16 @@ def build_limma_rscript_ui_gate_state(
         external_capabilities=external_capabilities,
         dependency_snapshot=dependency_snapshot,
     )
+    confirmation = load_r_limma_parameter_confirmation(root)
+    confirmed_parameters = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
     parameter_manifest = build_r_limma_parameter_manifest(
         deg_ready_package,
         multi_factor_preflight=multi_factor_preflight,
         dependency_snapshot=dependency_snapshot,
+        log2fc_threshold=_confirmed_float(confirmed_parameters, "log2fc_threshold", 1.0),
+        p_value_threshold=_confirmed_float(confirmed_parameters, "p_value_threshold", 0.05),
+        fdr_threshold=_confirmed_float(confirmed_parameters, "fdr_threshold", 0.05),
     )
-    confirmation = load_r_limma_parameter_confirmation(root)
     confirmation_gate = validate_r_limma_parameter_confirmation(
         confirmation,
         parameter_manifest=parameter_manifest,
@@ -1575,6 +1579,13 @@ def _list(value: object) -> list[str]:
 
 def _dedupe(values: list[object]) -> list[str]:
     return list(dict.fromkeys(str(item) for item in values if str(item)))
+
+
+def _confirmed_float(payload: dict[str, Any], field_name: str, default: float) -> float:
+    try:
+        return float(payload.get(field_name, default))
+    except (TypeError, ValueError):
+        return default
 
 
 def _read_json(path: Path) -> dict[str, Any]:
