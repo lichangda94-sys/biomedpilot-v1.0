@@ -112,6 +112,7 @@ def build_action_rows(
     rows.append(_limma_design_config_action(limma_rscript_gate))
     rows.append(_limma_rscript_confirmation_action(limma_rscript_gate))
     rows.append(_limma_rscript_action(limma_rscript_gate))
+    rows.append(_r_deseq2_parameter_confirmation_action(r_count_model_plans))
     rows.append(_r_count_model_action("deseq2", r_count_model_plans))
     rows.append(_r_count_model_action("edger", r_count_model_plans))
     rows.append(_gsea_readiness_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate, gsea_dependency))
@@ -420,6 +421,26 @@ def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str,
         "blocked_count_model_planning_only",
         "; ".join(dict.fromkeys(blockers)),
         "B25.6 only defines count-model activation gates; implement method-specific parameter confirmation, Rscript adapter, output schema handoff and result_index_v2 validation before execution.",
+    )
+
+
+def _r_deseq2_parameter_confirmation_action(plan_matrix: dict[str, Any]) -> dict[str, Any]:
+    plans = plan_matrix.get("plans") if isinstance(plan_matrix.get("plans"), dict) else {}
+    plan = plans.get("deseq2") if isinstance(plans.get("deseq2"), dict) else {}
+    parameter_manifest = plan.get("parameter_manifest") if isinstance(plan.get("parameter_manifest"), dict) else {}
+    confirmation_gate = plan.get("parameter_confirmation_gate") if isinstance(plan.get("parameter_confirmation_gate"), dict) else {}
+    blockers: list[str] = []
+    if parameter_manifest.get("status") != "passed":
+        blockers.extend(_list(parameter_manifest.get("blockers")) or ["r_deseq2_parameter_manifest_not_passed"])
+    blockers.append("b25_7_deseq2_parameter_confirmation_ui_not_enabled")
+    if confirmation_gate.get("status") != "passed":
+        blockers.extend(_list(confirmation_gate.get("blockers")))
+    return _disabled(
+        "r_deseq2_parameter_confirmation",
+        "Confirm DESeq2 parameters",
+        "blocked_deseq2_planning_only",
+        "; ".join(dict.fromkeys(blockers)),
+        "B25.7 defines the DESeq2 parameter confirmation contract, but user-facing confirmation is held until the Rscript adapter and real count fixture validation pass.",
     )
 
 

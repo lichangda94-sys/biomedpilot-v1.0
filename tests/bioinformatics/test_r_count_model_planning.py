@@ -18,10 +18,13 @@ def test_deseq2_count_model_plan_stays_blocked_even_when_gates_look_ready() -> N
     assert plan["writes_result_index"] is False
     assert plan["preflight"]["status"] == "design_ready"
     assert plan["runtime_gate"]["status"] == "ready_for_external_runtime_execution"
-    assert "b25_6_count_model_planning_only:deseq2" in plan["blockers"]
+    assert "b25_7_deseq2_rscript_adapter_planning_only" in plan["blockers"]
     assert "deseq2_rscript_execution_adapter_not_implemented" in plan["blockers"]
-    assert "deseq2_parameter_confirmation_contract_not_implemented" in plan["blockers"]
+    assert "r_deseq2_parameter_confirmation_missing" in plan["blockers"]
     assert "deseq2_result_registration_handoff_not_implemented" in plan["blockers"]
+    assert plan["parameter_manifest"]["status"] == "passed"
+    assert plan["parameter_confirmation_gate"]["status"] == "blocked"
+    assert plan["rscript_adapter_plan"]["formal_execution_enabled"] is False
     assert plan["input_policy"]["accepted_value_types"] == ["count", "raw_count", "raw_counts", "integer_count"]
 
 
@@ -52,8 +55,9 @@ def test_count_model_plan_matrix_contains_deseq2_and_edger_without_execution() -
     assert matrix["status"] == "planned_not_enabled"
     assert matrix["formal_execution_enabled"] is False
     assert set(matrix["plans"]) == {"deseq2", "edger"}
-    assert "b25_6_count_model_planning_only:deseq2" in matrix["blockers"]
+    assert "b25_7_deseq2_rscript_adapter_planning_only" in matrix["blockers"]
     assert "b25_6_count_model_planning_only:edger" in matrix["blockers"]
+    assert matrix["plans"]["deseq2"]["parameter_manifest"]["method"] == "deseq2"
 
 
 def _deg_ready(value_type: str, asset_type: str) -> dict[str, object]:

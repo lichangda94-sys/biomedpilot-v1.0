@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Mapping as MappingABC
 from datetime import UTC, datetime
 from typing import Any, Mapping
 
 from .multifactor_gate import build_multifactor_deg_preflight_manifest
 from .r_adapter_contract import build_r_deg_adapter_contract, build_r_deg_runtime_gate
+from .r_deseq2_planning import (
+    build_r_deseq2_parameter_manifest,
+    build_r_deseq2_rscript_adapter_plan,
+    validate_r_deseq2_parameter_confirmation,
+)
 
 
 R_COUNT_MODEL_ACTIVATION_PLAN_SCHEMA_VERSION = "biomedpilot.r_count_model_activation_plan.v1"
@@ -18,6 +24,7 @@ def build_r_count_model_activation_plan(
     design_config: Mapping[str, Any] | None = None,
     external_capabilities: Mapping[str, Any] | None = None,
     dependency_snapshot: Mapping[str, Any] | None = None,
+    parameter_confirmation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     method_key = _method_key(method)
     if method_key not in COUNT_MODEL_METHODS:
@@ -47,15 +54,19 @@ def build_r_count_model_activation_plan(
         dependency_snapshot=dict(dependency_snapshot or {}),
     )
     contract = build_r_deg_adapter_contract(method_key)
-    activation_blockers = [
-        f"b25_6_count_model_planning_only:{method_key}",
-        f"{method_key}_rscript_execution_adapter_not_implemented",
-        f"{method_key}_parameter_confirmation_contract_not_implemented",
-        f"{method_key}_result_registration_handoff_not_implemented",
-    ]
+    method_specific = _method_specific_plan(
+        method_key,
+        ready=ready,
+        preflight=preflight,
+        runtime_gate=runtime_gate,
+        dependency_snapshot=dict(dependency_snapshot or {}),
+        parameter_confirmation=dict(parameter_confirmation or {}),
+    )
+    activation_blockers = list(method_specific.get("activation_blockers", []) or [])
     blockers = _dedupe(
         [
             *activation_blockers,
+            *[str(item) for item in method_specific.get("blockers", []) or []],
             *[str(item) for item in preflight.get("blockers", []) or []],
             *[str(item) for item in runtime_gate.get("blockers", []) or []],
         ]
@@ -66,7 +77,7 @@ def build_r_count_model_activation_plan(
         "method": method_key,
         "label": "DESeq2" if method_key == "deseq2" else "edgeR",
         "status": "planned_not_enabled",
-        "planning_stage": "B25.6 count-model activation planning",
+        "planning_stage": "B25.7 DESeq2 planning" if method_key == "deseq2" else "B25.6 count-model activation planning",
         "formal_execution_enabled": False,
         "can_register_formal_result": False,
         "writes_result_index": False,
@@ -84,11 +95,15 @@ def build_r_count_model_activation_plan(
         ],
         "preflight": preflight,
         "runtime_gate": runtime_gate,
+        **method_specific.get("public_state", {}),
         "output_schema": contract["output_schema"],
         "blockers": blockers,
         "warnings": _dedupe(
             [
-                "B25.6 records DESeq2/edgeR activation requirements only; it does not execute R or register formal results.",
+                "B25.7 records DESeq2 parameter/adapter requirements only; it does not execute R or register formal results."
+                if method_key == "deseq2"
+                else "B25.6 records DESeq2/edgeR activation requirements only; it does not execute R or register formal results.",
+                *[str(item) for item in method_specific.get("warnings", []) or []],
                 *[str(item) for item in preflight.get("warnings", []) or []],
                 *[str(item) for item in runtime_gate.get("warnings", []) or []],
             ]
@@ -103,7 +118,9 @@ def build_r_count_model_activation_plans(
     design_config: Mapping[str, Any] | None = None,
     external_capabilities: Mapping[str, Any] | None = None,
     dependency_snapshot: Mapping[str, Any] | None = None,
+    parameter_confirmations: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    confirmations = parameter_confirmations if isinstance(parameter_confirmations, MappingABC) else {}
     plans = {
         method: build_r_count_model_activation_plan(
             method,
@@ -111,6 +128,7 @@ def build_r_count_model_activation_plans(
             design_config=design_config,
             external_capabilities=external_capabilities,
             dependency_snapshot=dependency_snapshot,
+            parameter_confirmation=confirmations.get(method) if isinstance(confirmations.get(method), MappingABC) else None,
         )
         for method in COUNT_MODEL_METHODS
     }
@@ -122,6 +140,62 @@ def build_r_count_model_activation_plans(
         "plans": plans,
         "blockers": _dedupe([item for plan in plans.values() for item in plan.get("blockers", []) or []]),
         "warnings": _dedupe([item for plan in plans.values() for item in plan.get("warnings", []) or []]),
+    }
+
+
+def _method_specific_plan(
+    method_key: str,
+    *,
+    ready: Mapping[str, Any],
+    preflight: Mapping[str, Any],
+    runtime_gate: Mapping[str, Any],
+    dependency_snapshot: Mapping[str, Any],
+    parameter_confirmation: Mapping[str, Any],
+) -> dict[str, Any]:
+    if method_key != "deseq2":
+        return {
+            "activation_blockers": [
+                f"b25_6_count_model_planning_only:{method_key}",
+                f"{method_key}_rscript_execution_adapter_not_implemented",
+                f"{method_key}_parameter_confirmation_contract_not_implemented",
+                f"{method_key}_result_registration_handoff_not_implemented",
+            ],
+            "blockers": [],
+            "warnings": [],
+            "public_state": {},
+        }
+    parameter_manifest = build_r_deseq2_parameter_manifest(
+        ready,
+        multi_factor_preflight=preflight,
+        dependency_snapshot=dependency_snapshot,
+    )
+    confirmation_gate = validate_r_deseq2_parameter_confirmation(
+        parameter_confirmation,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency_snapshot,
+    )
+    adapter_plan = build_r_deseq2_rscript_adapter_plan(
+        parameter_manifest=parameter_manifest,
+        runtime_gate=runtime_gate,
+        confirmation_gate=confirmation_gate,
+    )
+    return {
+        "activation_blockers": [
+            "b25_7_deseq2_rscript_adapter_planning_only",
+            "deseq2_rscript_execution_adapter_not_implemented",
+            "deseq2_result_registration_handoff_not_implemented",
+        ],
+        "blockers": [
+            *[str(item) for item in parameter_manifest.get("blockers", []) or []],
+            *[str(item) for item in confirmation_gate.get("blockers", []) or []],
+            *[str(item) for item in adapter_plan.get("blockers", []) or []],
+        ],
+        "warnings": [str(item) for item in adapter_plan.get("warnings", []) or []],
+        "public_state": {
+            "parameter_manifest": parameter_manifest,
+            "parameter_confirmation_gate": confirmation_gate,
+            "rscript_adapter_plan": adapter_plan,
+        },
     }
 
 

@@ -69,7 +69,10 @@ def build_r_deg_external_handoff_plan(method: str) -> dict[str, Any]:
                 "method-specific result-index validation",
             ],
             "warnings": ["limma handoff is accepted first; DESeq2/edgeR still need separate audited adapters."],
-            "blockers": [f"b25_6_count_model_planning_only:{method_key}", f"{method_key}_rscript_execution_adapter_not_implemented"],
+            "blockers": [
+                "b25_7_deseq2_rscript_adapter_planning_only" if method_key == "deseq2" else f"b25_6_count_model_planning_only:{method_key}",
+                f"{method_key}_rscript_execution_adapter_not_implemented",
+            ],
         }
     return {
         "schema_version": R_DEG_EXTERNAL_HANDOFF_SCHEMA_VERSION,

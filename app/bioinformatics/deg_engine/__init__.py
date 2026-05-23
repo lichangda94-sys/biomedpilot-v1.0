@@ -33,6 +33,14 @@ from .r_limma_design import (
     save_r_limma_design_config,
 )
 from .r_count_model_planning import build_r_count_model_activation_plan, build_r_count_model_activation_plans
+from .r_deseq2_planning import (
+    build_r_deseq2_parameter_manifest,
+    build_r_deseq2_rscript_adapter_plan,
+    load_r_deseq2_parameter_confirmation,
+    save_r_deseq2_parameter_confirmation,
+    validate_r_deseq2_parameter_confirmation,
+    validate_r_deseq2_parameter_manifest,
+)
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
 from .result_schema import build_formal_deg_result_schema_gate, validate_deg_result_bundle, validate_deg_result_entry, validate_formal_deg_result_index_entry
@@ -47,6 +55,8 @@ __all__ = [
     "build_r_limma_design_config",
     "build_r_count_model_activation_plan",
     "build_r_count_model_activation_plans",
+    "build_r_deseq2_parameter_manifest",
+    "build_r_deseq2_rscript_adapter_plan",
     "build_r_deg_runtime_gate",
     "build_r_deg_runtime_gate_matrix",
     "check_deg_backend_dependencies",
@@ -54,11 +64,13 @@ __all__ = [
     "load_deg_parameter_confirmation",
     "load_r_limma_design_config",
     "load_r_limma_parameter_confirmation",
+    "load_r_deseq2_parameter_confirmation",
     "run_formal_controlled_deg",
     "run_controlled_deg",
     "save_deg_parameter_confirmation",
     "save_r_limma_design_config",
     "save_r_limma_parameter_confirmation",
+    "save_r_deseq2_parameter_confirmation",
     "register_r_limma_external_handoff_result",
     "resolve_rscript_path",
     "run_r_limma_rscript_execution",
@@ -70,6 +82,8 @@ __all__ = [
     "validate_multifactor_deg_preflight_manifest",
     "validate_r_limma_parameter_confirmation",
     "validate_r_limma_parameter_manifest",
+    "validate_r_deseq2_parameter_confirmation",
+    "validate_r_deseq2_parameter_manifest",
     "validate_r_deg_output_schema",
     "validate_r_deg_result_registration_bundle",
 ]

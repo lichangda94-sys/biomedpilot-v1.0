@@ -18,6 +18,7 @@ from app.bioinformatics.deg_engine import (
     build_r_deg_runtime_gate_matrix,
     build_r_limma_parameter_manifest,
     detect_r_limma_runtime_capabilities,
+    load_r_deseq2_parameter_confirmation,
     load_r_limma_design_config,
     load_r_limma_parameter_confirmation,
     validate_r_limma_parameter_confirmation,
@@ -90,6 +91,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         deg_ready_package=deg_gates.get("deg_ready_package") if isinstance(deg_gates.get("deg_ready_package"), dict) else {},
         design_config=load_r_limma_design_config(root),
         dependency_snapshot={"status": "not_required_for_preflight"},
+        parameter_confirmations={"deseq2": load_r_deseq2_parameter_confirmation(root)},
     )
     deg_gates["multi_factor_deg_gate"] = multi_factor_deg_gate
     deg_gates["r_deg_adapter_gates"] = r_deg_adapter_gates

@@ -296,7 +296,7 @@ def test_count_model_actions_remain_planning_only_disabled() -> None:
         report_gate={"status": "blocked"},
         r_count_model_plans={
             "plans": {
-                "deseq2": {"blockers": ["b25_6_count_model_planning_only:deseq2"]},
+                "deseq2": {"blockers": ["b25_7_deseq2_rscript_adapter_planning_only"]},
                 "edger": {"blockers": ["b25_6_count_model_planning_only:edger"]},
             }
         },
@@ -308,8 +308,10 @@ def test_count_model_actions_remain_planning_only_disabled() -> None:
     assert edger["enabled"] is False
     assert deseq2["state"] == "blocked_count_model_planning_only"
     assert edger["state"] == "blocked_count_model_planning_only"
-    assert "b25_6_count_model_planning_only:deseq2" in deseq2["disabled_reason"]
+    assert "b25_7_deseq2_rscript_adapter_planning_only" in deseq2["disabled_reason"]
     assert "b25_6_count_model_planning_only:edger" in edger["disabled_reason"]
+    assert _row(rows, "r_deseq2_parameter_confirmation")["enabled"] is False
+    assert "b25_7_deseq2_parameter_confirmation_ui_not_enabled" in _row(rows, "r_deseq2_parameter_confirmation")["disabled_reason"]
 
 
 def test_preflight_only_plot_source_is_blocked_and_report_gate_controls_export() -> None:
