@@ -43,6 +43,7 @@ from .r_deseq2_planning import (
     validate_r_deseq2_parameter_confirmation,
     validate_r_deseq2_parameter_manifest,
 )
+from .r_deseq2_runtime import detect_r_deseq2_runtime_capabilities, run_r_deseq2_rscript_execution
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
 from .result_schema import build_formal_deg_result_schema_gate, validate_deg_result_bundle, validate_deg_result_entry, validate_formal_deg_result_index_entry
@@ -64,6 +65,7 @@ __all__ = [
     "build_r_deg_runtime_gate_matrix",
     "check_deg_backend_dependencies",
     "detect_r_limma_runtime_capabilities",
+    "detect_r_deseq2_runtime_capabilities",
     "load_deg_parameter_confirmation",
     "load_r_limma_design_config",
     "load_r_limma_parameter_confirmation",
@@ -77,6 +79,7 @@ __all__ = [
     "register_r_limma_external_handoff_result",
     "resolve_rscript_path",
     "run_r_limma_rscript_execution",
+    "run_r_deseq2_rscript_execution",
     "validate_deg_result_bundle",
     "validate_deg_result_entry",
     "validate_deg_parameter_manifest",
