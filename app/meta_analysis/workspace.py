@@ -439,6 +439,9 @@ if QWidget is not None:
             self._fulltext_extraction_panel = self._build_fulltext_extraction_panel()
             layout.addWidget(self._fulltext_extraction_panel)
 
+            self._risk_of_bias_panel = self._build_risk_of_bias_panel()
+            layout.addWidget(self._risk_of_bias_panel)
+
             self._active_type_section = QFrame()
             self._active_type_section.setObjectName("metaActiveTypeSection")
             self._active_type_section.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
@@ -551,6 +554,9 @@ if QWidget is not None:
 
             self._reference_dedup_panel = self._build_reference_dedup_panel()
             layout.addWidget(self._reference_dedup_panel)
+
+            self._screening_panel = self._build_screening_panel()
+            layout.addWidget(self._screening_panel)
 
             self._sync_target_interaction_state()
             self._sync_type_interaction_state()
@@ -921,6 +927,104 @@ if QWidget is not None:
             layout.addLayout(action_row)
             return frame
 
+        def _build_screening_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaScreeningRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "screening")
+            frame.setProperty("runtimeStatus", "testing")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("screeningState", "draft_decisions_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaScreeningRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Screening / 文献筛选")
+            title.setObjectName("metaScreeningRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            counts = _readonly_table(
+                "metaScreeningDraftCountsTable",
+                ("Bucket", "Count", "State"),
+                (
+                    ("Queue", "4", "draft counts"),
+                    ("Include draft", "1", "not final"),
+                    ("Exclude draft", "1", "not final"),
+                    ("Uncertain", "1", "draft"),
+                    ("Need full text", "1", "draft"),
+                ),
+            )
+            counts.setMinimumHeight(118)
+            layout.addWidget(counts)
+
+            body = QHBoxLayout()
+            queue = _readonly_table(
+                "metaScreeningReferenceQueue",
+                ("ref_id", "title", "screening_status"),
+                (
+                    ("REF-001", "Serum adiponectin and clinicopathological features in thyroid carcinoma", "include_draft"),
+                    ("REF-002", "ADIPOQ expression and survival outcomes in differentiated thyroid cancer", "uncertain"),
+                    ("REF-004", "Circulating adipokines and thyroid cancer risk", "exclude_draft"),
+                ),
+            )
+            queue.setMinimumHeight(138)
+            body.addWidget(queue, 2)
+
+            detail = QFrame()
+            detail.setObjectName("metaScreeningReferenceDetail")
+            detail.setStyleSheet("QFrame#metaScreeningReferenceDetail { border: 1px solid #CBD5E1; border-radius: 8px; background: #F8FAFC; }")
+            detail_layout = QVBoxLayout(detail)
+            detail_layout.setContentsMargins(10, 8, 10, 8)
+            for text in (
+                "Reference detail: REF-001",
+                "Title/abstract review state: draft only",
+                "Reason draft: biomarker association in target population",
+            ):
+                label = QLabel(text)
+                label.setObjectName("metaScreeningReferenceDetailLabel")
+                label.setWordWrap(True)
+                detail_layout.addWidget(label)
+            body.addWidget(detail, 1)
+            layout.addLayout(body)
+
+            decision_row = QHBoxLayout()
+            for decision_id, text in (
+                ("include_draft", "Include draft"),
+                ("exclude_draft", "Exclude draft"),
+                ("uncertain", "Uncertain"),
+                ("need_full_text", "Need full text"),
+            ):
+                button = QPushButton(text)
+                button.setObjectName("metaScreeningDecisionDraftButton")
+                button.setProperty("decisionId", decision_id)
+                button.setProperty("decisionState", "draft_only")
+                button.setProperty("formalActionEnabled", False)
+                button.setMinimumHeight(34)
+                decision_row.addWidget(button)
+            layout.addLayout(decision_row)
+
+            ai_card = QLabel("AI suggestion: likely_include, confidence 0.72. Advisory only; reviewer remains the authority.")
+            ai_card.setObjectName("metaScreeningAISuggestionCard")
+            ai_card.setProperty("aiBoundary", "advisory_only")
+            ai_card.setWordWrap(True)
+            ai_card.setStyleSheet("border: 1px solid #BFD7FF; border-radius: 6px; padding: 8px; background: #EFF6FF;")
+            layout.addWidget(ai_card)
+
+            save_draft = QPushButton("Save Draft Decision")
+            save_draft.setObjectName("metaSaveDraftScreeningDecisionButton")
+            save_draft.setProperty("actionSemantic", "draft_only")
+            save_draft.setProperty("formalActionEnabled", False)
+            save_draft.setMinimumHeight(34)
+            layout.addWidget(save_draft)
+            return frame
+
         def _build_fulltext_extraction_panel(self) -> QFrame:
             frame = QFrame()
             frame.setObjectName("metaFulltextExtractionPanel")
@@ -928,6 +1032,11 @@ if QWidget is not None:
             frame.setProperty("pageKey", "fulltext_extraction")
             frame.setProperty("semanticKey", PageKey.META_FULLTEXT_EXTRACTION.value)
             frame.setProperty("statusKey", "testing")
+            frame.setProperty("extractionState", "draft_extraction")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
             frame.setMinimumHeight(360)
             frame.setStyleSheet("QFrame#metaFulltextExtractionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
             layout = QVBoxLayout(frame)
@@ -973,6 +1082,17 @@ if QWidget is not None:
                 label.setObjectName("metaFulltextManagementStatus")
                 label.setWordWrap(True)
                 management_layout.addWidget(label)
+            fulltext_status = _readonly_table(
+                "metaFulltextStatusPreviewTable",
+                ("ref_id", "full_text_state", "extraction_state"),
+                (
+                    ("REF-001", "file pending", "not_started"),
+                    ("REF-002", "needs retrieval", "not_started"),
+                    ("REF-004", "not requested", "not_started"),
+                ),
+            )
+            fulltext_status.setMinimumHeight(92)
+            management_layout.addWidget(fulltext_status)
             management_layout.addStretch(1)
             layout.addWidget(self._fulltext_management_body)
 
@@ -1018,14 +1138,18 @@ if QWidget is not None:
             fields_layout = QVBoxLayout(fields)
             fields_layout.setContentsMargins(12, 10, 12, 10)
             fields_layout.setSpacing(8)
-            fields_title = QLabel("当前提取表字段（Binary Outcome Meta 专用）")
+            fields_title = QLabel("Draft extraction fields（Biomarker / Prognostic Meta）")
             fields_title.setObjectName("metaExtractionFieldTitle")
             fields_title.setStyleSheet("font-weight: 700;")
             fields_layout.addWidget(fields_title)
+            legacy_contract = QLabel("当前提取表字段（Binary Outcome Meta 专用）")
+            legacy_contract.setObjectName("metaExtractionLegacyContractLabel")
+            legacy_contract.setProperty("legacyCompatibilityOnly", True)
+            fields_layout.addWidget(legacy_contract)
             field_grid = QGridLayout()
             field_grid.setHorizontalSpacing(10)
             field_grid.setVerticalSpacing(6)
-            for column, header in enumerate(("字段名称", "字段含义 / 说明", "必填", "数据类型", "用于分析")):
+            for column, header in enumerate(("field", "example / draft note", "required", "state", "analysis use")):
                 header_label = QLabel(header)
                 header_label.setObjectName("metaExtractionFieldHeader")
                 header_label.setStyleSheet("font-weight: 700; color: #64748B;")
@@ -1033,13 +1157,17 @@ if QWidget is not None:
                 field_grid.addWidget(header_label, 0, column)
             for row, values in enumerate(
                 (
-                    ("研究 ID", "本研究在项目中的唯一编号", "是", "文本", "-"),
-                    ("第一作者", "论文第一作者", "是", "文本", "-"),
-                    ("发表年份", "论文发表年份", "是", "数字", "-"),
-                    ("研究设计", "RCT、队列研究等", "是", "下拉选择", "是"),
-                    ("样本量", "研究纳入的总样本量", "否", "数字", "是"),
-                    ("干预组人数", "干预组总人数", "是", "数字", "是"),
-                    ("对照组人数", "对照组总人数", "是", "数字", "是"),
+                    ("first_author", "Zhang", "yes", "draft extraction", "-"),
+                    ("year", "2020", "yes", "draft extraction", "-"),
+                    ("研究设计", "observational cohort / case-control", "yes", "draft extraction", "yes"),
+                    ("cancer_type", "thyroid carcinoma", "yes", "reviewer confirmed later", "yes"),
+                    ("marker_name", "adiponectin / ADIPOQ", "yes", "draft extraction", "yes"),
+                    ("effect_measure", "HR", "yes", "draft extraction", "yes"),
+                    ("effect_value", "1.48 mockup-only / draft extraction", "yes", "not final", "yes"),
+                    ("ci_lower", "1.05 mockup-only / draft extraction", "yes", "not final", "yes"),
+                    ("ci_upper", "2.10 mockup-only / draft extraction", "yes", "not final", "yes"),
+                    ("adjusted_model", "multivariable", "optional", "draft extraction", "yes"),
+                    ("outcome_name", "overall survival", "yes", "draft extraction", "yes"),
                 ),
                 start=1,
             ):
@@ -1056,27 +1184,82 @@ if QWidget is not None:
             self._extraction_action_bar.setObjectName("metaExtractionActionBar")
             action_row = QHBoxLayout(self._extraction_action_bar)
             action_row.setContentsMargins(0, 0, 0, 0)
-            save = QPushButton("保存提取表设计")
+            save = QPushButton("保存提取表设计 - adapter needed")
             save.setObjectName("metaSaveExtractionDesignButton")
             save.setMinimumHeight(34)
             save.setEnabled(False)
-            confirm = QPushButton("确认本次提取")
-            confirm.setObjectName("metaConfirmExtractionButton")
-            confirm.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
-            confirm.setProperty("pageKey", "fulltext_extraction")
-            confirm.setProperty("actionSemantic", "advance_to_extraction_stage")
-            confirm.setMinimumHeight(34)
-            confirm.setEnabled(False)
+            mark_draft = QPushButton("Mark as Draft Extracted - adapter needed")
+            mark_draft.setObjectName("metaConfirmExtractionButton")
+            mark_draft.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            mark_draft.setProperty("pageKey", "fulltext_extraction")
+            mark_draft.setProperty("actionSemantic", "advance_to_extraction_stage")
+            mark_draft.setProperty("draftActionSemantic", "draft_extraction_adapter_needed")
+            mark_draft.setProperty("formalActionEnabled", False)
+            mark_draft.setMinimumHeight(34)
+            mark_draft.setEnabled(False)
             back = QPushButton("返回全文管理")
             back.setObjectName("metaBackToFulltextButton")
             back.setMinimumHeight(34)
             back.setEnabled(False)
             action_row.addWidget(save)
             action_row.addStretch(1)
-            action_row.addWidget(confirm)
+            action_row.addWidget(mark_draft)
             action_row.addWidget(back)
             layout.addWidget(self._extraction_action_bar)
             self._select_fulltext_extraction_tab("全文管理")
+            return frame
+
+        def _build_risk_of_bias_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaRiskOfBiasRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "quality_assessment")
+            frame.setProperty("runtimeStatus", "planned")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("riskOfBiasState", "preview_in_progress")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaRiskOfBiasRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Risk of Bias / 质量评价预览")
+            title.setObjectName("metaRiskOfBiasRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            rob = _readonly_table(
+                "metaRiskOfBiasDomainTable",
+                ("tool / domain", "draft state", "preview note"),
+                (
+                    ("NOS Selection", "Draft", "preview score requires final confirmation"),
+                    ("NOS Comparability", "In progress", "preview score requires final confirmation"),
+                    ("NOS Outcome", "Draft", "preview score requires final confirmation"),
+                    ("ROBINS-I Confounding", "not_started", "tool suggestion only"),
+                    ("QUADAS-2", "not_applicable_for_current_type", "depends on diagnostic type"),
+                ),
+            )
+            rob.setMinimumHeight(150)
+            layout.addWidget(rob)
+
+            score = QLabel("Preview / draft only: no automatic RoB final judgement and no formal quality score.")
+            score.setObjectName("metaRiskOfBiasPreviewScoreNotice")
+            score.setProperty("riskOfBiasState", "preview_only")
+            score.setWordWrap(True)
+            score.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 8px; background: #FFF7E6;")
+            layout.addWidget(score)
+
+            save = QPushButton("Save RoB Draft - adapter needed")
+            save.setObjectName("metaSaveRiskOfBiasDraftButton")
+            save.setProperty("actionSemantic", "adapter_needed")
+            save.setProperty("formalActionEnabled", False)
+            save.setEnabled(False)
+            save.setMinimumHeight(34)
+            layout.addWidget(save)
             return frame
 
         def _select_fulltext_extraction_tab(self, tab_key: str) -> None:
@@ -1104,6 +1287,8 @@ if QWidget is not None:
                 )
             if hasattr(self, "_fulltext_extraction_panel"):
                 self._fulltext_extraction_panel.setVisible(self._current_target_page_key == "fulltext_extraction")
+            if hasattr(self, "_risk_of_bias_panel"):
+                self._risk_of_bias_panel.setVisible(self._current_target_page_key == "quality_assessment")
             if hasattr(self, "_project_home_panel"):
                 self._project_home_panel.setVisible(self._current_target_page_key == "project_home")
             if hasattr(self, "_active_type_section"):
@@ -1112,6 +1297,8 @@ if QWidget is not None:
                 self._search_strategy_panel.setVisible(self._current_target_page_key == "search_strategy")
             if hasattr(self, "_reference_dedup_panel"):
                 self._reference_dedup_panel.setVisible(self._current_target_page_key == "import_dedup")
+            if hasattr(self, "_screening_panel"):
+                self._screening_panel.setVisible(self._current_target_page_key == "screening")
             if hasattr(self, "_result_export_panel"):
                 self._result_export_panel.setVisible(self._current_target_page_key in {"result_report", "report_export"})
 
