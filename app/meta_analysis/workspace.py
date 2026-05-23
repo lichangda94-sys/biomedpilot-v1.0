@@ -545,6 +545,13 @@ if QWidget is not None:
             next_search.clicked.connect(lambda _checked=False: self.show_target_ia_page("search_strategy"))
             active_type_layout.addWidget(next_search)
             layout.addWidget(self._active_type_section)
+
+            self._search_strategy_panel = self._build_search_strategy_panel()
+            layout.addWidget(self._search_strategy_panel)
+
+            self._reference_dedup_panel = self._build_reference_dedup_panel()
+            layout.addWidget(self._reference_dedup_panel)
+
             self._sync_target_interaction_state()
             self._sync_type_interaction_state()
             return frame
@@ -709,6 +716,209 @@ if QWidget is not None:
                 card_layout.addWidget(state_label)
                 card_grid.addWidget(card, index // 3, index % 3)
             layout.addLayout(card_grid)
+            return frame
+
+        def _build_search_strategy_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaSearchStrategyRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "search_strategy")
+            frame.setProperty("runtimeStatus", "testing")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaSearchStrategyRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Search Strategy / 检索策略")
+            title.setObjectName("metaSearchStrategyRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            status_row = QHBoxLayout()
+            for object_name, text, status_key in (
+                ("metaSearchEnglishFirstChip", "English query draft", "testing"),
+                ("metaSearchLocalDraftChip", "local draft only", "shell_only"),
+                ("metaSearchNoExecutionChip", "search execution disabled", "blocked"),
+            ):
+                chip = make_status_chip(text, status_key=status_key)
+                chip.setObjectName(object_name)
+                status_row.addWidget(chip)
+            status_row.addStretch(1)
+            layout.addLayout(status_row)
+
+            term_table = _readonly_table(
+                "metaSearchTermGroupTable",
+                ("Term group", "English terms", "State"),
+                (
+                    ("Disease", "thyroid cancer OR thyroid carcinoma OR thyroid neoplasm", "draft"),
+                    ("Biomarker", "adiponectin OR ADIPOQ", "draft"),
+                    ("Outcome", "prognosis OR survival OR recurrence OR clinicopathological", "draft"),
+                ),
+            )
+            term_table.setMinimumHeight(118)
+            layout.addWidget(term_table)
+
+            logic = QLabel("Boolean logic preview: Disease AND Biomarker AND Outcome")
+            logic.setObjectName("metaSearchBooleanLogicPreview")
+            logic.setWordWrap(True)
+            layout.addWidget(logic)
+
+            query = QLabel(
+                'PubMed-style query draft: ("thyroid cancer"[Title/Abstract] OR "thyroid carcinoma"[Title/Abstract] OR '
+                '"thyroid neoplasm"[Title/Abstract]) AND ("adiponectin"[Title/Abstract] OR "ADIPOQ"[Title/Abstract]) '
+                'AND ("prognosis"[Title/Abstract] OR "survival"[Title/Abstract] OR "recurrence"[Title/Abstract] OR '
+                '"clinicopathological"[Title/Abstract])'
+            )
+            query.setObjectName("metaSearchPubMedStyleQueryDraft")
+            query.setProperty("queryState", "draft_only")
+            query.setWordWrap(True)
+            query.setStyleSheet("border: 1px solid #BFD7FF; border-radius: 6px; padding: 8px; background: #EFF6FF;")
+            layout.addWidget(query)
+
+            database_scope = QFrame()
+            database_scope.setObjectName("metaDatabaseDraftScope")
+            database_scope.setProperty("selectionState", "draft_scope_only")
+            database_layout = QHBoxLayout(database_scope)
+            database_layout.setContentsMargins(0, 0, 0, 0)
+            database_layout.setSpacing(8)
+            for database in ("PubMed", "Embase", "Web of Science"):
+                item = QPushButton(database)
+                item.setObjectName("metaDatabaseDraftScopeButton")
+                item.setCheckable(True)
+                item.setChecked(True)
+                item.setProperty("databaseName", database)
+                item.setProperty("selectionState", "draft_scope_only")
+                item.setProperty("executedSearch", False)
+                item.setProperty("formalActionEnabled", False)
+                item.setMinimumHeight(32)
+                database_layout.addWidget(item)
+            database_layout.addStretch(1)
+            layout.addWidget(database_scope)
+
+            action_row = QHBoxLayout()
+            copy_query = QPushButton("Copy Query")
+            copy_query.setObjectName("metaCopyQueryButton")
+            copy_query.setProperty("actionSemantic", "copy_only")
+            copy_query.setProperty("formalActionEnabled", False)
+            copy_query.setMinimumHeight(34)
+            save_draft = QPushButton("Save Draft - adapter needed")
+            save_draft.setObjectName("metaSaveSearchDraftButton")
+            save_draft.setProperty("actionSemantic", "adapter_needed")
+            save_draft.setProperty("formalActionEnabled", False)
+            save_draft.setEnabled(False)
+            save_draft.setMinimumHeight(34)
+            action_row.addWidget(copy_query)
+            action_row.addWidget(save_draft)
+            action_row.addStretch(1)
+            layout.addLayout(action_row)
+            return frame
+
+        def _build_reference_dedup_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaReferenceDedupRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "import_dedup")
+            frame.setProperty("runtimeStatus", "testing")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaReferenceDedupRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Import / Reference Management / Deduplication")
+            title.setObjectName("metaReferenceDedupRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            import_row = QHBoxLayout()
+            for source_id, label in (
+                ("ris_bibtex_endnote", "RIS / BibTeX / EndNote XML"),
+                ("csv_excel", "CSV / Excel"),
+                ("pubmed_result_file", "PubMed result file"),
+                ("manual_entry", "Manual entry"),
+            ):
+                card = QFrame()
+                card.setObjectName("metaImportSourceCard")
+                card.setProperty("sourceId", source_id)
+                card.setProperty("importState", "adapter_needed")
+                card.setStyleSheet("QFrame#metaImportSourceCard { border: 1px solid #CBD5E1; border-radius: 8px; background: #F8FAFC; }")
+                card_layout = QVBoxLayout(card)
+                card_layout.setContentsMargins(10, 8, 10, 8)
+                label_widget = QLabel(label)
+                label_widget.setObjectName("metaImportSourceLabel")
+                label_widget.setWordWrap(True)
+                button = QPushButton("Import - adapter needed")
+                button.setObjectName("metaImportSourceButton")
+                button.setProperty("sourceId", source_id)
+                button.setProperty("actionSemantic", "adapter_needed")
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(False)
+                card_layout.addWidget(label_widget)
+                card_layout.addWidget(button)
+                import_row.addWidget(card)
+            layout.addLayout(import_row)
+
+            reference_label = QLabel("Reference table preview (mockup-only / local draft)")
+            reference_label.setObjectName("metaReferenceTablePreviewLabel")
+            reference_label.setStyleSheet("font-weight: 700;")
+            layout.addWidget(reference_label)
+            reference_table = _readonly_table(
+                "metaReferencePreviewTable",
+                ("ref_id", "title", "year", "source", "DOI/PMID", "screening_status", "dedup_status"),
+                (
+                    ("REF-001", "Serum adiponectin and clinicopathological features in thyroid carcinoma", "2018", "PubMed mock", "PMID-MOCK-001", "not_started", "unique"),
+                    ("REF-002", "ADIPOQ expression and survival outcomes in differentiated thyroid cancer", "2020", "RIS mock", "DOI-MOCK-002", "not_started", "possible_duplicate"),
+                    ("REF-003", "Adiponectin signaling in thyroid neoplasm progression", "2021", "CSV mock", "DOI-MOCK-003", "not_started", "possible_duplicate"),
+                    ("REF-004", "Circulating adipokines and thyroid cancer risk", "2017", "PubMed mock", "PMID-MOCK-004", "not_started", "unique"),
+                ),
+            )
+            reference_table.setMinimumHeight(150)
+            layout.addWidget(reference_table)
+
+            dedup_label = QLabel("Deduplication risk preview")
+            dedup_label.setObjectName("metaDedupRiskPreviewTitle")
+            dedup_label.setStyleSheet("font-weight: 700;")
+            layout.addWidget(dedup_label)
+            dedup_table = _readonly_table(
+                "metaDedupRiskGroupTable",
+                ("group_id", "risk", "records", "reviewer compare draft", "boundary"),
+                (
+                    ("DUP-001", "possible duplicate", "REF-002, REF-003", "compare title / DOI / year", "reviewer review required"),
+                ),
+            )
+            dedup_table.setMinimumHeight(86)
+            layout.addWidget(dedup_table)
+
+            chip = make_status_chip("no automatic merge / reviewer review required", status_key="blocked")
+            chip.setObjectName("metaDedupReviewerRequiredChip")
+            layout.addWidget(chip)
+
+            action_row = QHBoxLayout()
+            for object_name, text in (
+                ("metaAutoMergeDisabledButton", "Auto merge disabled"),
+                ("metaAutoDeleteDisabledButton", "Auto delete disabled"),
+                ("metaSendToScreeningDisabledButton", "Send to screening disabled"),
+            ):
+                button = QPushButton(text)
+                button.setObjectName(object_name)
+                button.setProperty("actionSemantic", "disabled_boundary")
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(False)
+                button.setMinimumHeight(34)
+                action_row.addWidget(button)
+            action_row.addStretch(1)
+            layout.addLayout(action_row)
             return frame
 
         def _build_fulltext_extraction_panel(self) -> QFrame:
@@ -898,6 +1108,10 @@ if QWidget is not None:
                 self._project_home_panel.setVisible(self._current_target_page_key == "project_home")
             if hasattr(self, "_active_type_section"):
                 self._active_type_section.setVisible(self._current_target_page_key == "question_meta_type")
+            if hasattr(self, "_search_strategy_panel"):
+                self._search_strategy_panel.setVisible(self._current_target_page_key == "search_strategy")
+            if hasattr(self, "_reference_dedup_panel"):
+                self._reference_dedup_panel.setVisible(self._current_target_page_key == "import_dedup")
             if hasattr(self, "_result_export_panel"):
                 self._result_export_panel.setVisible(self._current_target_page_key in {"result_report", "report_export"})
 
