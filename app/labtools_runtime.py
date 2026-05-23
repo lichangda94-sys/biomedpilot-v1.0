@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from app.labtools_storage_adapter import BioMedPilotLabToolsStorageAdapter, LabToolsStorageAdapterState
+
 
 LABTOOLS_SIBLING_ROOT = Path(__file__).resolve().parents[2] / "LabTools"
 REVIEW_NOTICE = "实验计算结果需由用户复核后使用。"
@@ -133,6 +135,19 @@ def runtime_status() -> LabToolsRuntimeStatus:
         return LabToolsRuntimeStatus(True, "LabTools backend specs available")
     except Exception as exc:  # pragma: no cover - defensive optional dependency fallback.
         return LabToolsRuntimeStatus(False, f"LabTools backend unavailable: {exc}")
+
+
+def get_labtools_storage_adapter_status(project_root: Path | str | None) -> LabToolsStorageAdapterState:
+    if project_root is None:
+        return LabToolsStorageAdapterState(
+            status="missing_project_context",
+            message="BioMedPilot project context is required before LabTools save/export/history can be enabled.",
+            paths=None,
+            save_enabled=False,
+            export_enabled=False,
+            history_enabled=False,
+        )
+    return BioMedPilotLabToolsStorageAdapter.from_project_root(Path(project_root)).diagnose()
 
 
 def list_quick_tasks() -> tuple[Any, ...]:
