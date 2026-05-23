@@ -278,9 +278,8 @@ def build_r_deseq2_rscript_adapter_plan(
     runtime = dict(runtime_gate)
     confirmation = dict(confirmation_gate or {})
     blockers = [
-        "b25_7_deseq2_rscript_adapter_planning_only",
-        "deseq2_rscript_execution_adapter_not_implemented",
-        "deseq2_result_registration_handoff_not_implemented",
+        "b25_10_deseq2_ui_activation_preflight_only",
+        "b25_11_deseq2_ui_activation_required",
     ]
     if parameter.get("status") != "passed":
         blockers.extend(parameter.get("blockers", []) or ["r_deseq2_parameter_manifest_not_passed"])
@@ -292,12 +291,12 @@ def build_r_deseq2_rscript_adapter_plan(
         "schema_version": R_DESEQ2_ADAPTER_PLAN_SCHEMA_VERSION,
         "created_at": _now(),
         "method": "deseq2",
-        "status": "planned_not_enabled",
-        "adapter_semantics": "planning_only_no_r_invocation",
+        "status": "adapter_available_ui_activation_blocked",
+        "adapter_semantics": "controlled_rscript_adapter_available_no_user_ui_execution",
         "formal_execution_enabled": False,
         "can_execute": False,
-        "can_register_formal_result": False,
-        "writes_result_index": False,
+        "can_register_formal_result": True,
+        "writes_result_index": True,
         "result_semantics": "not_executed",
         "command_manifest_contract": {
             "shell": False,
@@ -308,7 +307,7 @@ def build_r_deseq2_rscript_adapter_plan(
         "output_schema": contract["output_schema"],
         "result_index_contract": contract["result_index_contract"],
         "blockers": list(dict.fromkeys(str(item) for item in blockers if str(item))),
-        "warnings": ["B25.7 does not invoke DESeq2; real count fixture validation is required before activation."],
+        "warnings": ["B25.10 has a controlled DESeq2 Rscript adapter/runtime validation path, but user-facing UI activation remains blocked until B25.11."],
     }
 
 

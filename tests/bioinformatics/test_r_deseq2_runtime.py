@@ -8,6 +8,7 @@ import pytest
 
 from app.bioinformatics.deg_engine.r_deseq2_planning import build_r_deseq2_parameter_manifest
 from app.bioinformatics.deg_engine.r_deseq2_runtime import detect_r_deseq2_runtime_capabilities, run_r_deseq2_rscript_execution
+from app.bioinformatics.deg_engine.r_deseq2_runtime_validation import run_r_deseq2_runtime_validation
 
 
 def test_real_rscript_deseq2_controlled_count_fixture_registers_formal_result(tmp_path: Path) -> None:
@@ -100,6 +101,27 @@ def test_rscript_deseq2_execution_blocks_invalid_count_table_without_result_inde
     assert result["status"] == "blocked"
     assert "count_fixture_row_0:non_integer_count:case_1" in result["blockers"]
     assert not (tmp_path / "results" / "summaries" / "result_index.json").exists()
+
+
+def test_r_deseq2_runtime_validation_reports_package_ready_or_graceful_block(tmp_path: Path) -> None:
+    output_path = tmp_path / "deseq2_runtime.json"
+    validation = run_r_deseq2_runtime_validation(output_path=output_path)
+
+    assert output_path.is_file()
+    assert validation["schema_version"] == "biomedpilot.b25_10_r_deseq2_runtime_validation.v1"
+    assert validation["status"] in {"passed", "blocked_missing_dependency"}
+    assert validation["ui_activation_preflight"]["formal_execution_enabled"] is False
+    assert "b25_11_deseq2_ui_activation_required" in validation["ui_activation_preflight"]["blockers"]
+    if validation["status"] == "passed":
+        fixture = validation["fixture_result"]
+        assert fixture["status"] == "passed"
+        assert fixture["result_semantics"] == "formal_computed_result"
+        assert fixture["has_numeric_p_value"] is True
+        assert fixture["has_numeric_adjusted_p_value"] is True
+        assert fixture["plot_artifacts"] == []
+        assert fixture["report_artifacts"] == []
+        assert fixture["report_ready_eligible"] is False
+        assert validation["packaging_checks"]["r_bioconductor_policy"] == "detect_first_external_rscript_no_install_no_bundle"
 
 
 def _write_count_fixture(root: Path) -> Path:

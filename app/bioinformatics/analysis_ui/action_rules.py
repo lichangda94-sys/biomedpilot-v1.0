@@ -415,6 +415,14 @@ def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str,
     plan = plans.get(method) if isinstance(plans.get(method), dict) else {}
     label = "Run DESeq2 count-model DEG" if method == "deseq2" else "Run edgeR count-model DEG"
     blockers = _list(plan.get("blockers")) or [f"b25_6_count_model_planning_only:{method}"]
+    if method == "deseq2":
+        return _disabled(
+            "formal_deg_deseq2_rscript",
+            label,
+            "blocked_deseq2_ui_activation_preflight",
+            "; ".join(dict.fromkeys(blockers)),
+            "B25.10 validates DESeq2 package/open-W runtime readiness, but user-facing execution remains blocked until B25.11 UI activation.",
+        )
     return _disabled(
         f"formal_deg_{method}_rscript",
         label,
@@ -432,15 +440,15 @@ def _r_deseq2_parameter_confirmation_action(plan_matrix: dict[str, Any]) -> dict
     blockers: list[str] = []
     if parameter_manifest.get("status") != "passed":
         blockers.extend(_list(parameter_manifest.get("blockers")) or ["r_deseq2_parameter_manifest_not_passed"])
-    blockers.append("b25_7_deseq2_parameter_confirmation_ui_not_enabled")
+    blockers.append("b25_11_deseq2_ui_activation_required")
     if confirmation_gate.get("status") != "passed":
         blockers.extend(_list(confirmation_gate.get("blockers")))
     return _disabled(
         "r_deseq2_parameter_confirmation",
         "Confirm DESeq2 parameters",
-        "blocked_deseq2_planning_only",
+        "blocked_deseq2_ui_activation_preflight",
         "; ".join(dict.fromkeys(blockers)),
-        "B25.7 defines the DESeq2 parameter confirmation contract, but user-facing confirmation is held until the Rscript adapter and real count fixture validation pass.",
+        "B25.10 validates the DESeq2 Rscript runtime path, but user-facing confirmation is held until B25.11 UI activation.",
     )
 
 

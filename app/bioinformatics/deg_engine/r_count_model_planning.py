@@ -82,7 +82,7 @@ def build_r_count_model_activation_plan(
         "method": method_key,
         "label": "DESeq2" if method_key == "deseq2" else "edgeR",
         "status": "planned_not_enabled",
-        "planning_stage": "B25.7 DESeq2 planning" if method_key == "deseq2" else "B25.6 count-model activation planning",
+        "planning_stage": "B25.10 DESeq2 runtime validation / UI activation preflight" if method_key == "deseq2" else "B25.6 count-model activation planning",
         "formal_execution_enabled": False,
         "can_register_formal_result": False,
         "writes_result_index": False,
@@ -105,7 +105,7 @@ def build_r_count_model_activation_plan(
         "blockers": blockers,
         "warnings": _dedupe(
             [
-                "B25.7 records DESeq2 parameter/adapter requirements only; it does not execute R or register formal results."
+                "B25.10 validates the controlled DESeq2 adapter/runtime path but keeps user-facing UI execution blocked until B25.11."
                 if method_key == "deseq2"
                 else "B25.6 records DESeq2/edgeR activation requirements only; it does not execute R or register formal results.",
                 *[str(item) for item in method_specific.get("warnings", []) or []],
@@ -200,9 +200,8 @@ def _method_specific_plan(
     )
     return {
         "activation_blockers": [
-            "b25_7_deseq2_rscript_adapter_planning_only",
-            "deseq2_rscript_execution_adapter_not_implemented",
-            "deseq2_result_registration_handoff_not_implemented",
+            "b25_10_deseq2_ui_activation_preflight_only",
+            "b25_11_deseq2_ui_activation_required",
         ],
         "blockers": [
             *[str(item) for item in parameter_manifest.get("blockers", []) or []],

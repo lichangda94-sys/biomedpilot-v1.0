@@ -6093,7 +6093,7 @@ class BioinformaticsDegConfigWidget(QWidget):
         root.addWidget(input_card)
 
         config_card, config_layout = _card("DEG 配置草稿")
-        config_layout.addWidget(_muted("方法状态：DESeq2 / edgeR / limma 待接入；本阶段不连接真实执行器。"))
+        config_layout.addWidget(_muted("方法状态：two-group Python DEG 与 limma 已走 gated execution；DESeq2 仅 runtime/UI activation preflight，edgeR 仍 planning-only。"))
         method_row = QHBoxLayout()
         self._method_input = QLineEdit("DEG executor not connected")
         self._method_input.setPlaceholderText("方法草稿，例如 DESeq2 待接入")

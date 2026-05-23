@@ -203,9 +203,17 @@ def _r_method_row(
     missing = [key for key in keys if _capability_available(external_capabilities.get(key)) is not True]
     gate_blockers = [str(item) for item in gate.get("blockers", []) or []] if isinstance(gate.get("blockers"), list) else []
     plan_blockers = [str(item) for item in plan.get("blockers", []) or []] if isinstance(plan.get("blockers"), list) else []
-    state = "blocked_count_model_planning_only" if plan else ("ready_for_external_runtime_gate" if gate.get("status") == "ready_for_external_runtime_execution" else ("blocked_by_dependency" if missing or gate_blockers else "planned_adapter_contract"))
+    state = (
+        "blocked_deseq2_ui_activation_preflight"
+        if method == "deseq2" and plan
+        else "blocked_count_model_planning_only"
+        if plan
+        else ("ready_for_external_runtime_gate" if gate.get("status") == "ready_for_external_runtime_execution" else ("blocked_by_dependency" if missing or gate_blockers else "planned_adapter_contract"))
+    )
     reason = (
-        f"{label} B25.6 count-model activation remains blocked: {', '.join(plan_blockers)}."
+        f"{label} B25.10 runtime/package/open-W validation is available, but UI activation remains blocked: {', '.join(plan_blockers)}."
+        if method == "deseq2" and plan_blockers
+        else f"{label} B25.6 count-model activation remains blocked: {', '.join(plan_blockers)}."
         if plan_blockers
         else
         f"{label} B19 adapter gate is blocked: {', '.join(gate_blockers or missing)}."
@@ -216,7 +224,7 @@ def _r_method_row(
         "capability_id": capability_id,
         "label": label,
         "category": "DEG",
-        "implementation_status": "b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate",
+        "implementation_status": "b25_10_deseq2_runtime_validation_ui_preflight" if method == "deseq2" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate"),
         "ui_state": state,
         "formal_execution_enabled": False,
         "can_display_as_completed": False,
