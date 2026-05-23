@@ -558,6 +558,12 @@ if QWidget is not None:
             self._screening_panel = self._build_screening_panel()
             layout.addWidget(self._screening_panel)
 
+            self._result_review_panel = self._build_result_review_panel()
+            layout.addWidget(self._result_review_panel)
+
+            self._report_export_gate_panel = self._build_report_export_gate_panel()
+            layout.addWidget(self._report_export_gate_panel)
+
             self._sync_target_interaction_state()
             self._sync_type_interaction_state()
             return frame
@@ -1262,6 +1268,147 @@ if QWidget is not None:
             layout.addWidget(save)
             return frame
 
+        def _build_result_review_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaResultReviewRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "result_report")
+            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("resultSemanticKey", "testing_summary_only")
+            frame.setProperty("formalResultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("reportReadyState", "blocked")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("fileWriteAllowed", False)
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaResultReviewRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Result Review + Report-ready Gate / 结果复核与报告门控")
+            title.setObjectName("metaResultReviewRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            review_notice = QLabel("人工复核集中在此页面：前置草稿、提取和 RoB 预览不能升级为正式结果。")
+            review_notice.setObjectName("metaResultReviewHumanReviewNotice")
+            review_notice.setProperty("reviewBoundary", "human_review_required")
+            review_notice.setWordWrap(True)
+            review_notice.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 8px; background: #FFF7E6;")
+            layout.addWidget(review_notice)
+
+            readiness = _readonly_table(
+                "metaResultReadinessSummaryTable",
+                ("gate", "state", "reason"),
+                (
+                    ("result_semantic", "testing_summary_only / no_formal_result", "no formal pairwise result"),
+                    ("formal_pooled_effect", "none", "Pairwise Meta executor not enabled"),
+                    ("forest_plot", "disabled_boundary", "no formal result artifact"),
+                    ("heterogeneity", "none", "no computed model"),
+                    ("publication_bias", "none", "no computed model"),
+                    ("ai_suggestion", "advisory_only", "reviewer remains authority"),
+                ),
+            )
+            readiness.setMinimumHeight(150)
+            layout.addWidget(readiness)
+
+            pairwise = _readonly_table(
+                "metaPairwiseInputPreviewTable",
+                ("study_id", "effect_type", "effect_value", "ci_lower", "ci_upper", "readiness"),
+                (
+                    ("STUDY-001", "HR", "1.48 draft", "1.05 draft", "2.10 draft", "preflight_only"),
+                    ("STUDY-002", "HR", "1.21 draft", "0.88 draft", "1.67 draft", "warning_missing_adjustment"),
+                    ("STUDY-003", "OR", "1.76 draft", "1.10 draft", "2.82 draft", "incompatible_effect_type"),
+                ),
+            )
+            pairwise.setObjectName("metaPairwiseInputPreviewTable")
+            pairwise.setProperty("previewOnly", True)
+            pairwise.setMinimumHeight(120)
+            layout.addWidget(pairwise)
+
+            blockers = _readonly_table(
+                "metaReportReadyBlockerChecklist",
+                ("blocker", "state"),
+                (
+                    ("research question/type confirmation", "missing_or_draft"),
+                    ("search strategy", "draft"),
+                    ("references", "not_finalized"),
+                    ("screening", "not_final"),
+                    ("extraction", "not_final"),
+                    ("risk of bias", "not_final"),
+                    ("pairwise input", "not_formal"),
+                    ("formal result", "missing"),
+                ),
+            )
+            blockers.setMinimumHeight(162)
+            layout.addWidget(blockers)
+
+            generate = QPushButton("Generate Report disabled")
+            generate.setObjectName("metaGenerateReportDisabledButton")
+            generate.setProperty("actionSemantic", "disabled_report_gate")
+            generate.setProperty("formalActionEnabled", False)
+            generate.setProperty("fileWriteAllowed", False)
+            generate.setEnabled(False)
+            generate.setMinimumHeight(34)
+            layout.addWidget(generate)
+            return frame
+
+        def _build_report_export_gate_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaReportExportGateRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "report_export")
+            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("reportReadyState", "blocked")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("fileWriteAllowed", False)
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaReportExportGateRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Report Export / 报告导出门控")
+            title.setObjectName("metaReportExportGateRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            gate = _readonly_table(
+                "metaReportExportGateReasonTable",
+                ("gate", "state", "reason"),
+                (
+                    ("result", "disabled", "no formal result"),
+                    ("report", "disabled", "report not ready"),
+                    ("adapter", "disabled", "export adapter missing"),
+                    ("file_write", "false", "no file write in gated shell"),
+                ),
+            )
+            gate.setMinimumHeight(112)
+            layout.addWidget(gate)
+
+            format_row = QHBoxLayout()
+            for export_format in ("DOCX", "HTML", "PDF", "CSV", "XLSX", "ZIP"):
+                button = QPushButton(f"{export_format} disabled")
+                button.setObjectName("metaExportFormatDisabledButton")
+                button.setProperty("exportFormat", export_format)
+                button.setProperty("actionSemantic", "disabled_export_gate")
+                button.setProperty("formalActionEnabled", False)
+                button.setProperty("fileWriteAllowed", False)
+                button.setEnabled(False)
+                button.setMinimumHeight(34)
+                format_row.addWidget(button)
+            layout.addLayout(format_row)
+
+            future = QLabel("Export will be enabled after gate.")
+            future.setObjectName("metaExportAfterGateNotice")
+            future.setProperty("exportGate", "disabled_empty_result")
+            future.setWordWrap(True)
+            layout.addWidget(future)
+            return frame
+
         def _select_fulltext_extraction_tab(self, tab_key: str) -> None:
             for key, button in getattr(self, "_fulltext_extraction_tabs", {}).items():
                 button.setChecked(key == tab_key)
@@ -1299,6 +1446,10 @@ if QWidget is not None:
                 self._reference_dedup_panel.setVisible(self._current_target_page_key == "import_dedup")
             if hasattr(self, "_screening_panel"):
                 self._screening_panel.setVisible(self._current_target_page_key == "screening")
+            if hasattr(self, "_result_review_panel"):
+                self._result_review_panel.setVisible(self._current_target_page_key == "result_report")
+            if hasattr(self, "_report_export_gate_panel"):
+                self._report_export_gate_panel.setVisible(self._current_target_page_key == "report_export")
             if hasattr(self, "_result_export_panel"):
                 self._result_export_panel.setVisible(self._current_target_page_key in {"result_report", "report_export"})
 
