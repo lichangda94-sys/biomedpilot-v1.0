@@ -1,0 +1,6 @@
+component,component_type,amount,unit,stage,warning,notes
+NaCl,salt,4.00,g,main,,mockup-only amount
+KCl,salt,0.10,g,main,,mockup-only amount
+Na2HPO4,salt,0.72,g,main,hydrate confirmation required,confirm hydrate form before bench use
+KH2PO4,salt,0.12,g,main,,mockup-only amount
+Water,solvent,500,mL,adjust_to_volume,,q.s. to final volume

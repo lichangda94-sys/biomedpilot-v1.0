@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biomedpilot.local/schemas/labtools_record_schema_draft.json",
+  "title": "BioMedPilot LabTools Record Draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "product",
+    "record_type",
+    "experiment_or_tool",
+    "created_at",
+    "operator",
+    "project",
+    "sample_or_template",
+    "input_parameters",
+    "calculated_results",
+    "warnings",
+    "review_notice",
+    "storage_export_status",
+    "software_version"
+  ],
+  "properties": {
+    "product": {
+      "type": "string",
+      "const": "BioMedPilot / LabTools"
+    },
+    "record_type": {
+      "type": "string",
+      "enum": [
+        "quick_calculator",
+        "dynamic_formula_solver",
+        "reagent_template",
+        "reagent_preparation",
+        "wb_loading",
+        "sds_page_gel",
+        "bca_od_mvp_preview",
+        "cell_records_shell",
+        "image_processing_preview",
+        "elisa_boundary"
+      ]
+    },
+    "experiment_or_tool": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp or draft_not_saved for examples."
+    },
+    "operator": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string"
+    },
+    "sample_or_template": {
+      "type": "string"
+    },
+    "input_parameters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/key_value_row"
+      }
+    },
+    "calculated_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/key_value_row"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "review_notice": {
+      "type": "string",
+      "const": "本记录由 LabTools 生成，仅作为实验计算和记录辅助。所有结果需由实验人员复核后用于台面操作。"
+    },
+    "storage_export_status": {
+      "type": "string",
+      "enum": [
+        "copy_only",
+        "adapter_needed",
+        "disabled",
+        "blocked",
+        "future",
+        "boundary_shell_only"
+      ]
+    },
+    "software_version": {
+      "type": "string"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attachment"
+      },
+      "default": []
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_page_key": {
+          "type": "string"
+        },
+        "adapter_stage": {
+          "type": "string"
+        },
+        "file_write_allowed": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "key_value_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "path",
+        "status"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "adapter_needed",
+            "blocked"
+          ]
+        }
+      }
+    }
+  }
+}
