@@ -8,12 +8,15 @@ from uuid import uuid4
 
 from .multifactor_gate import COUNT_VALUE_TYPES, DISPLAY_VALUE_TYPES
 from .parameter_gate import REQUIRED_PARAMETER_FIELDS
-from .r_adapter_contract import build_r_deg_adapter_contract
+from .r_adapter_contract import build_r_deg_adapter_contract, validate_r_deg_output_schema, validate_r_deg_result_registration_bundle
+from .result_schema import validate_formal_deg_result_index_entry
+from app.bioinformatics.results.models import ResultIndexEntry
 
 
 R_DESEQ2_PARAMETER_SCHEMA_VERSION = "biomedpilot.r_deseq2_parameter_manifest.v1"
 R_DESEQ2_CONFIRMATION_SCHEMA_VERSION = "biomedpilot.r_deseq2_parameter_confirmation.v1"
 R_DESEQ2_ADAPTER_PLAN_SCHEMA_VERSION = "biomedpilot.r_deseq2_rscript_adapter_plan.v1"
+R_DESEQ2_DRY_RUN_ACCEPTANCE_SCHEMA_VERSION = "biomedpilot.r_deseq2_dry_run_acceptance_gate.v1"
 R_DESEQ2_CONFIRMATION_PATH = Path("manifests") / "r_deseq2_parameter_confirmation.json"
 
 
@@ -309,6 +312,105 @@ def build_r_deseq2_rscript_adapter_plan(
     }
 
 
+def build_r_deseq2_dry_run_acceptance_gate(
+    *,
+    parameter_manifest: Mapping[str, Any],
+    dependency_snapshot: Mapping[str, Any],
+    output_rows: list[Mapping[str, Any]] | None = None,
+    count_fixture: Mapping[str, Any] | None = None,
+    result_id: str = "r-deseq2-dry-run-candidate",
+    task_run_id: str = "task-r-deseq2-dry-run-candidate",
+    source_dataset_id: str = "deseq2-count-fixture",
+    source_repository_manifest: str = "standardized_data/repositories/repository_manifest.json",
+) -> dict[str, Any]:
+    parameter = dict(parameter_manifest)
+    dependency = dict(dependency_snapshot)
+    rows = [dict(row) for row in (output_rows or []) if isinstance(row, Mapping)]
+    blockers: list[str] = ["b25_8_deseq2_dry_run_only_no_result_index_write"]
+    warnings: list[str] = []
+    fixture_gate = validate_r_deseq2_count_fixture(count_fixture or {})
+    if count_fixture and fixture_gate["status"] != "passed":
+        blockers.extend(fixture_gate["blockers"])
+    if parameter.get("status") != "passed":
+        blockers.extend(parameter.get("blockers", []) or ["r_deseq2_parameter_manifest_not_passed"])
+    if dependency.get("status") != "passed":
+        blockers.extend(dependency.get("blockers", []) or ["r_deseq2_dependency_snapshot_not_passed"])
+    if not rows:
+        output_schema_gate = validate_r_deg_output_schema("deseq2", [])
+        blockers.append("r_deseq2_dry_run_output_rows_missing")
+    else:
+        output_schema_gate = validate_r_deg_output_schema("deseq2", list(rows[0].keys()))
+    blockers.extend(output_schema_gate.get("blockers", []) or [])
+
+    candidate_entry = _deseq2_candidate_result_index_entry(
+        parameter_manifest=parameter,
+        dependency_snapshot=dependency,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        source_dataset_id=source_dataset_id,
+        source_repository_manifest=source_repository_manifest,
+    )
+    registration_gate = validate_r_deg_result_registration_bundle(
+        method="deseq2",
+        execution_status="succeeded" if rows else "dry_run_no_execution",
+        output_columns=list(rows[0].keys()) if rows else [],
+        result_entry=candidate_entry,
+        dependency_snapshot=dependency,
+    )
+    result_index_gate = validate_formal_deg_result_index_entry(candidate_entry)
+    if rows:
+        blockers.extend(registration_gate.get("blockers", []) or [])
+        blockers.extend(result_index_gate.get("blockers", []) or [])
+    dry_run_blockers = list(dict.fromkeys(str(item) for item in blockers if str(item)))
+    contract_blockers = [item for item in dry_run_blockers if item != "b25_8_deseq2_dry_run_only_no_result_index_write"]
+    return {
+        "schema_version": R_DESEQ2_DRY_RUN_ACCEPTANCE_SCHEMA_VERSION,
+        "created_at": _now(),
+        "method": "deseq2",
+        "status": "planned_not_enabled",
+        "dry_run_validation_status": "passed" if rows and not contract_blockers else "blocked",
+        "formal_execution_enabled": False,
+        "can_execute": False,
+        "can_register_formal_result": False,
+        "writes_result_index": False,
+        "result_semantics": "not_executed",
+        "count_fixture_gate": fixture_gate,
+        "output_schema_gate": output_schema_gate,
+        "result_registration_gate": registration_gate,
+        "result_index_gate": result_index_gate,
+        "candidate_result_index_entry": candidate_entry,
+        "blockers": dry_run_blockers,
+        "warnings": list(dict.fromkeys(["Dry-run acceptance validates contracts only and must not be registered as a formal DEG result.", *warnings])),
+    }
+
+
+def validate_r_deseq2_count_fixture(fixture: Mapping[str, Any]) -> dict[str, Any]:
+    payload = dict(fixture or {})
+    blockers: list[str] = []
+    rows = payload.get("rows") if isinstance(payload.get("rows"), list) else []
+    sample_ids = [str(item) for item in payload.get("sample_ids", []) or [] if str(item)]
+    if not rows:
+        blockers.append("r_deseq2_count_fixture_rows_missing")
+    if len(sample_ids) < 4:
+        blockers.append("r_deseq2_count_fixture_requires_at_least_four_samples")
+    for index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            blockers.append(f"count_fixture_row_{index}:not_a_dict")
+            continue
+        if not row.get("feature_id"):
+            blockers.append(f"count_fixture_row_{index}:feature_id_missing")
+        for sample_id in sample_ids:
+            value = row.get(sample_id)
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                blockers.append(f"count_fixture_row_{index}:non_numeric_count:{sample_id}")
+                continue
+            if numeric < 0 or numeric != int(numeric):
+                blockers.append(f"count_fixture_row_{index}:non_integer_count:{sample_id}")
+    return {"status": "passed" if not blockers else "blocked", "blockers": list(dict.fromkeys(blockers)), "warnings": []}
+
+
 def build_r_deseq2_confirmation_summary(
     parameter_manifest: Mapping[str, Any],
     dependency_snapshot: Mapping[str, Any],
@@ -353,6 +455,62 @@ def _sample_group_map(preflight: Mapping[str, Any]) -> dict[str, str]:
     for sample in contrast.get("control_samples", []) or []:
         sample_map[str(sample)] = control_group
     return sample_map
+
+
+def _deseq2_candidate_result_index_entry(
+    *,
+    parameter_manifest: Mapping[str, Any],
+    dependency_snapshot: Mapping[str, Any],
+    result_id: str,
+    task_run_id: str,
+    source_dataset_id: str,
+    source_repository_manifest: str,
+) -> dict[str, Any]:
+    created_at = _now()
+    entry = ResultIndexEntry(
+        result_id=result_id,
+        task_run_id=task_run_id,
+        task_type="deg",
+        result_semantics="formal_computed_result",
+        input_package_id=str(parameter_manifest.get("input_package_id") or ""),
+        source_dataset_id=source_dataset_id,
+        source_repository_manifest=source_repository_manifest,
+        parameters_manifest=dict(parameter_manifest),
+        engine_name="r_deseq2_rscript_adapter",
+        engine_version="planned-0.1.0",
+        dependency_snapshot=dict(dependency_snapshot),
+        output_artifacts=(
+            {
+                "artifact_id": f"{result_id}-canonical-table",
+                "artifact_type": "deg_result_table",
+                "path": f"results/tables/{result_id}.tsv",
+                "format": "tsv",
+                "validation_status": "passed",
+            },
+            {
+                "artifact_id": f"{result_id}-deseq2-table",
+                "artifact_type": "deseq2_result_table",
+                "path": f"results/tables/r_deseq2/{result_id}_deseq2.tsv",
+                "format": "tsv",
+                "validation_status": "passed",
+            },
+        ),
+        plot_artifacts=(),
+        report_artifacts=(),
+        validation_status="passed",
+        warnings=("r_deseq2_dry_run_candidate_not_registered",),
+        blockers=(),
+        log_artifacts=(
+            {"artifact_type": "r_deseq2_dry_run_acceptance_log", "path": f"analysis/r_deg/deseq2/{result_id}_dry_run_acceptance.json"},
+        ),
+        failure_reason="",
+        created_at=created_at,
+        updated_at=created_at,
+        schema_version="2.0.0",
+        report_ready_eligible=False,
+        migration_status="native_v2",
+    )
+    return entry.to_dict()
 
 
 def _dependency_version(snapshot: Mapping[str, Any], name: str) -> str:

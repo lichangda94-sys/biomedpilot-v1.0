@@ -34,9 +34,11 @@ from .r_limma_design import (
 )
 from .r_count_model_planning import build_r_count_model_activation_plan, build_r_count_model_activation_plans
 from .r_deseq2_planning import (
+    build_r_deseq2_dry_run_acceptance_gate,
     build_r_deseq2_parameter_manifest,
     build_r_deseq2_rscript_adapter_plan,
     load_r_deseq2_parameter_confirmation,
+    validate_r_deseq2_count_fixture,
     save_r_deseq2_parameter_confirmation,
     validate_r_deseq2_parameter_confirmation,
     validate_r_deseq2_parameter_manifest,
@@ -55,6 +57,7 @@ __all__ = [
     "build_r_limma_design_config",
     "build_r_count_model_activation_plan",
     "build_r_count_model_activation_plans",
+    "build_r_deseq2_dry_run_acceptance_gate",
     "build_r_deseq2_parameter_manifest",
     "build_r_deseq2_rscript_adapter_plan",
     "build_r_deg_runtime_gate",
@@ -84,6 +87,7 @@ __all__ = [
     "validate_r_limma_parameter_manifest",
     "validate_r_deseq2_parameter_confirmation",
     "validate_r_deseq2_parameter_manifest",
+    "validate_r_deseq2_count_fixture",
     "validate_r_deg_output_schema",
     "validate_r_deg_result_registration_bundle",
 ]
