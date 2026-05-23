@@ -68,6 +68,12 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "limma Rscript runtime detection" in formal_gate_text
     assert "limma Rscript user confirmation" in formal_gate_text
     assert "external_engine_capability_registry_missing" in formal_gate_text
+    assert "B25.6 count-model activation plan: deseq2" in formal_gate_text
+    assert "b25_6_count_model_planning_only:deseq2" in formal_gate_text
+    assert _action(state, "formal_deg_deseq2_rscript")["enabled"] is False
+    assert _action(state, "formal_deg_edger_rscript")["enabled"] is False
+    assert "b25_6_count_model_planning_only:deseq2" in _action(state, "formal_deg_deseq2_rscript")["disabled_reason"]
+    assert state["r_count_model_plans"]["formal_execution_enabled"] is False
     ora_gate_text = "\n".join(str(row) for row in state["ora_gate_rows"])
     assert "ORA source DEG result" in ora_gate_text
     assert "B10.2 controlled ORA execution" in ora_gate_text

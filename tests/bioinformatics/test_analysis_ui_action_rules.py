@@ -288,6 +288,30 @@ def test_limma_rscript_action_requires_all_gates_and_confirmation() -> None:
     assert limma["button_behavior"] == "enabled_b25_2_audited_limma_rscript_only"
 
 
+def test_count_model_actions_remain_planning_only_disabled() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "passed", "blockers": []},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        r_count_model_plans={
+            "plans": {
+                "deseq2": {"blockers": ["b25_6_count_model_planning_only:deseq2"]},
+                "edger": {"blockers": ["b25_6_count_model_planning_only:edger"]},
+            }
+        },
+    )
+
+    deseq2 = _row(rows, "formal_deg_deseq2_rscript")
+    edger = _row(rows, "formal_deg_edger_rscript")
+    assert deseq2["enabled"] is False
+    assert edger["enabled"] is False
+    assert deseq2["state"] == "blocked_count_model_planning_only"
+    assert edger["state"] == "blocked_count_model_planning_only"
+    assert "b25_6_count_model_planning_only:deseq2" in deseq2["disabled_reason"]
+    assert "b25_6_count_model_planning_only:edger" in edger["disabled_reason"]
+
+
 def test_preflight_only_plot_source_is_blocked_and_report_gate_controls_export() -> None:
     rows = build_action_rows(
         packages=[],

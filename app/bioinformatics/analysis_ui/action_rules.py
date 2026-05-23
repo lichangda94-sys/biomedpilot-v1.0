@@ -19,6 +19,7 @@ def build_action_rows(
     confirmation_gate: dict[str, Any] | None = None,
     result_schema_gate: dict[str, Any] | None = None,
     limma_rscript_gate: dict[str, Any] | None = None,
+    r_count_model_plans: dict[str, Any] | None = None,
     survival_dependency: dict[str, Any] | None = None,
     km_parameter_gate: dict[str, Any] | None = None,
     km_confirmation_gate: dict[str, Any] | None = None,
@@ -62,6 +63,7 @@ def build_action_rows(
     confirmation_gate = confirmation_gate or {}
     result_schema_gate = result_schema_gate or {}
     limma_rscript_gate = limma_rscript_gate or {}
+    r_count_model_plans = r_count_model_plans or {}
     survival_dependency = survival_dependency or {}
     km_parameter_gate = km_parameter_gate or {}
     km_confirmation_gate = km_confirmation_gate or {}
@@ -110,6 +112,8 @@ def build_action_rows(
     rows.append(_limma_design_config_action(limma_rscript_gate))
     rows.append(_limma_rscript_confirmation_action(limma_rscript_gate))
     rows.append(_limma_rscript_action(limma_rscript_gate))
+    rows.append(_r_count_model_action("deseq2", r_count_model_plans))
+    rows.append(_r_count_model_action("edger", r_count_model_plans))
     rows.append(_gsea_readiness_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate, gsea_dependency))
     rows.append(_gsea_run_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate, gsea_dependency))
     rows.append(_imported_deg_action(imported_package, results))
@@ -402,6 +406,20 @@ def _limma_rscript_action(gate: dict[str, Any]) -> dict[str, Any]:
         "blocked_limma_rscript_gate",
         "; ".join(dict.fromkeys(blockers or ["r_limma_rscript_gate_not_passed"])),
         "Resolve resolver, limma design preflight, runtime detection, parameter confirmation and result schema gates.",
+    )
+
+
+def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str, Any]:
+    plans = plan_matrix.get("plans") if isinstance(plan_matrix.get("plans"), dict) else {}
+    plan = plans.get(method) if isinstance(plans.get(method), dict) else {}
+    label = "Run DESeq2 count-model DEG" if method == "deseq2" else "Run edgeR count-model DEG"
+    blockers = _list(plan.get("blockers")) or [f"b25_6_count_model_planning_only:{method}"]
+    return _disabled(
+        f"formal_deg_{method}_rscript",
+        label,
+        "blocked_count_model_planning_only",
+        "; ".join(dict.fromkeys(blockers)),
+        "B25.6 only defines count-model activation gates; implement method-specific parameter confirmation, Rscript adapter, output schema handoff and result_index_v2 validation before execution.",
     )
 
 

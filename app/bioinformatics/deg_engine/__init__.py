@@ -32,6 +32,7 @@ from .r_limma_design import (
     build_r_limma_design_config,
     save_r_limma_design_config,
 )
+from .r_count_model_planning import build_r_count_model_activation_plan, build_r_count_model_activation_plans
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
 from .result_schema import build_formal_deg_result_schema_gate, validate_deg_result_bundle, validate_deg_result_entry, validate_formal_deg_result_index_entry
@@ -44,6 +45,8 @@ __all__ = [
     "build_r_deg_external_handoff_plan",
     "build_r_limma_parameter_manifest",
     "build_r_limma_design_config",
+    "build_r_count_model_activation_plan",
+    "build_r_count_model_activation_plans",
     "build_r_deg_runtime_gate",
     "build_r_deg_runtime_gate_matrix",
     "check_deg_backend_dependencies",

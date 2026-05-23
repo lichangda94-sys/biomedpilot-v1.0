@@ -14,6 +14,7 @@ from app.bioinformatics.deg_engine import (
     build_deg_parameter_manifest,
     build_formal_deg_result_schema_gate,
     build_multifactor_deg_preflight_manifest,
+    build_r_count_model_activation_plans,
     build_r_deg_runtime_gate_matrix,
     build_r_limma_parameter_manifest,
     detect_r_limma_runtime_capabilities,
@@ -85,8 +86,14 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         dependency_snapshot=deg_dependency,
     )
     r_deg_adapter_gates = build_r_deg_runtime_gate_matrix(multi_factor_deg_gate)
+    r_count_model_plans = build_r_count_model_activation_plans(
+        deg_ready_package=deg_gates.get("deg_ready_package") if isinstance(deg_gates.get("deg_ready_package"), dict) else {},
+        design_config=load_r_limma_design_config(root),
+        dependency_snapshot={"status": "not_required_for_preflight"},
+    )
     deg_gates["multi_factor_deg_gate"] = multi_factor_deg_gate
     deg_gates["r_deg_adapter_gates"] = r_deg_adapter_gates
+    deg_gates["r_count_model_plans"] = r_count_model_plans
     limma_rscript_gate = build_limma_rscript_ui_gate_state(
         packages=packages,
         project_root=root,
@@ -112,6 +119,17 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
                     basis="B19 contract/gate only; no R invocation from Bioinformatics UI.",
                 )
             )
+    for method, plan in r_count_model_plans.get("plans", {}).items():
+        if isinstance(plan, dict):
+            deg_gates["gate_rows"].append(
+                _formal_deg_gate_row(
+                    f"B25.6 count-model activation plan: {method}",
+                    plan.get("status"),
+                    plan.get("blockers", []),
+                    plan.get("warnings", []),
+                    basis="planning-only; no DESeq2/edgeR Rscript execution or result_index write.",
+                )
+            )
     deg_gates["gate_rows"].extend(limma_rscript_gate["gate_rows"])
     ora_gates = build_ora_gate_state(project_root=root)
     ora_plot_gate = build_ora_plot_gate(root)
@@ -134,6 +152,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         confirmation_gate=deg_gates["confirmation_gate"],
         result_schema_gate=deg_gates["result_schema_gate"],
         limma_rscript_gate=limma_rscript_gate,
+        r_count_model_plans=r_count_model_plans,
         survival_dependency=survival_dependency,
         km_parameter_gate=survival_clinical_state["km_parameter_gate"],
         km_confirmation_gate=survival_clinical_state["km_confirmation_gate"],
@@ -199,6 +218,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         external_capabilities=limma_rscript_gate.get("external_capabilities") if isinstance(limma_rscript_gate.get("external_capabilities"), dict) else {},
         multi_factor_deg_gate=multi_factor_deg_gate,
         r_deg_adapter_gates=r_deg_adapter_gates,
+        r_count_model_plans=r_count_model_plans,
         limma_rscript_gate=limma_rscript_gate,
     )
     blockers = _dedupe(
@@ -207,6 +227,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
         + [item for item in multi_factor_deg_gate.get("blockers", []) or []]
         + [item for item in r_deg_adapter_gates.get("blockers", []) or []]
+        + [item for item in r_count_model_plans.get("blockers", []) or []]
         + [item for item in limma_rscript_gate.get("blockers", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
@@ -218,6 +239,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for row in package_rows for item in row["raw_warnings"]]
         + [item for row in dependency_rows for item in row["raw_warnings"]]
         + [item for item in multi_factor_deg_gate.get("warnings", []) or []]
+        + [item for item in r_count_model_plans.get("warnings", []) or []]
         + [item for item in limma_rscript_gate.get("warnings", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("warnings", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("warnings", []) or []]
@@ -239,6 +261,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "formal_deg_gate_rows": deg_gates["gate_rows"],
         "multi_factor_deg_gate": multi_factor_deg_gate,
         "r_deg_adapter_gates": r_deg_adapter_gates,
+        "r_count_model_plans": r_count_model_plans,
         "limma_rscript_gate": limma_rscript_gate,
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
@@ -259,6 +282,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "formal_deg_gate_state": deg_gates,
             "multi_factor_deg_gate": multi_factor_deg_gate,
             "r_deg_adapter_gates": r_deg_adapter_gates,
+            "r_count_model_plans": r_count_model_plans,
             "limma_rscript_gate": limma_rscript_gate,
             "ora_gate_state": ora_gates,
             "ora_plot_gate": ora_plot_gate,

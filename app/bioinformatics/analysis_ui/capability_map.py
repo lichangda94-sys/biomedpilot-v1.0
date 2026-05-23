@@ -27,6 +27,7 @@ def build_analysis_capability_map(
     external_capabilities: dict[str, Any] | None = None,
     multi_factor_deg_gate: dict[str, Any] | None = None,
     r_deg_adapter_gates: dict[str, Any] | None = None,
+    r_count_model_plans: dict[str, Any] | None = None,
     limma_rscript_gate: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     action_by_id = {str(row.get("action_id") or ""): row for row in action_rows or [] if isinstance(row, dict)}
@@ -53,8 +54,8 @@ def build_analysis_capability_map(
             required_contracts=["B8 resolver", "B18 limma design preflight", "B25 Rscript runtime detection", "B25 limma parameter confirmation", "result_index_v2"],
             result_semantics="formal_computed_result only after limma Rscript execution and B25 handoff/result schema gates pass",
         ),
-        _r_method_row("deg_deseq2", "DESeq2", "deseq2", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, DESEQ2_KEY], external_capabilities, r_deg_adapter_gates, method_policy="raw integer count model only; TPM/FPKM blocked"),
-        _r_method_row("deg_edger", "edgeR", "edger", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, EDGER_KEY], external_capabilities, r_deg_adapter_gates, method_policy="raw integer count model only; TPM/FPKM blocked"),
+        _r_method_row("deg_deseq2", "DESeq2", "deseq2", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, DESEQ2_KEY], external_capabilities, r_deg_adapter_gates, r_count_model_plans=r_count_model_plans, method_policy="raw integer count model only; TPM/FPKM blocked"),
+        _r_method_row("deg_edger", "edgeR", "edger", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, EDGER_KEY], external_capabilities, r_deg_adapter_gates, r_count_model_plans=r_count_model_plans, method_policy="raw integer count model only; TPM/FPKM blocked"),
         _multifactor_deg_row(multi_factor_deg_gate),
         _row_from_action(
             "ora_controlled_mvp",
@@ -182,14 +183,31 @@ def _row_from_action(
     }
 
 
-def _r_method_row(capability_id: str, label: str, method: str, keys: list[str], external_capabilities: dict[str, Any], r_deg_adapter_gates: dict[str, Any] | None, *, method_policy: str) -> dict[str, Any]:
+def _r_method_row(
+    capability_id: str,
+    label: str,
+    method: str,
+    keys: list[str],
+    external_capabilities: dict[str, Any],
+    r_deg_adapter_gates: dict[str, Any] | None,
+    *,
+    r_count_model_plans: dict[str, Any] | None = None,
+    method_policy: str,
+) -> dict[str, Any]:
     gate = {}
     if isinstance(r_deg_adapter_gates, dict) and isinstance(r_deg_adapter_gates.get("gates"), dict):
         gate = r_deg_adapter_gates["gates"].get(method, {}) if isinstance(r_deg_adapter_gates["gates"].get(method), dict) else {}
+    plan = {}
+    if method in {"deseq2", "edger"} and isinstance(r_count_model_plans, dict) and isinstance(r_count_model_plans.get("plans"), dict):
+        plan = r_count_model_plans["plans"].get(method, {}) if isinstance(r_count_model_plans["plans"].get(method), dict) else {}
     missing = [key for key in keys if _capability_available(external_capabilities.get(key)) is not True]
     gate_blockers = [str(item) for item in gate.get("blockers", []) or []] if isinstance(gate.get("blockers"), list) else []
-    state = "ready_for_external_runtime_gate" if gate.get("status") == "ready_for_external_runtime_execution" else ("blocked_by_dependency" if missing or gate_blockers else "planned_adapter_contract")
+    plan_blockers = [str(item) for item in plan.get("blockers", []) or []] if isinstance(plan.get("blockers"), list) else []
+    state = "blocked_count_model_planning_only" if plan else ("ready_for_external_runtime_gate" if gate.get("status") == "ready_for_external_runtime_execution" else ("blocked_by_dependency" if missing or gate_blockers else "planned_adapter_contract"))
     reason = (
+        f"{label} B25.6 count-model activation remains blocked: {', '.join(plan_blockers)}."
+        if plan_blockers
+        else
         f"{label} B19 adapter gate is blocked: {', '.join(gate_blockers or missing)}."
         if missing or gate_blockers
         else f"{label} external dependencies appear available, but B19 adapter/input/output/result schema gates are still required before formal execution."
@@ -198,14 +216,14 @@ def _r_method_row(capability_id: str, label: str, method: str, keys: list[str], 
         "capability_id": capability_id,
         "label": label,
         "category": "DEG",
-        "implementation_status": "b19_adapter_contract_gate",
+        "implementation_status": "b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate",
         "ui_state": state,
         "formal_execution_enabled": False,
         "can_display_as_completed": False,
         "reason": reason,
         "disabled_reason": reason,
         "dependency_capability_keys": keys,
-        "required_contracts": ["B18 multi-factor/preflight policy", "B19 R adapter contract", "external engine dependency snapshot"],
+        "required_contracts": ["B8 resolver", "B18 count-model design preflight", "B25.6 count-model activation plan", "method-specific parameter confirmation", "method-specific Rscript adapter", "result_index_v2"] if plan else ["B18 multi-factor/preflight policy", "B19 R adapter contract", "external engine dependency snapshot"],
         "method_policy": method_policy,
         "result_semantics_policy": "Never formal_computed_result until B19 adapter execution, output schema validation and result_index registration pass.",
         "boundary": "External dependency availability is not a completed analysis capability.",
