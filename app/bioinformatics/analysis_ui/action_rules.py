@@ -416,12 +416,23 @@ def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str,
     label = "Run DESeq2 count-model DEG" if method == "deseq2" else "Run edgeR count-model DEG"
     blockers = _list(plan.get("blockers")) or [f"b25_6_count_model_planning_only:{method}"]
     if method == "deseq2":
+        if plan.get("formal_execution_enabled") is True and not _list(plan.get("blockers")):
+            return {
+                "action_id": "formal_deg_deseq2_rscript",
+                "label": label,
+                "state": "enabled_formal_deseq2_rscript",
+                "button_behavior": "enabled_b25_11_audited_deseq2_rscript_only",
+                "enabled": True,
+                "normal_user_visible": True,
+                "disabled_reason": "",
+                "next_action": "Run audited DESeq2 Rscript adapter for raw count DEG; register formal DEG result only through result_index_v2 gates. No plot/report-ready/GSEA/survival.",
+            }
         return _disabled(
             "formal_deg_deseq2_rscript",
             label,
-            "blocked_deseq2_ui_activation_preflight",
+            "blocked_deseq2_rscript_gate",
             "; ".join(dict.fromkeys(blockers)),
-            "B25.10 validates DESeq2 package/open-W runtime readiness, but user-facing execution remains blocked until B25.11 UI activation.",
+            "Resolve resolver, raw-count design preflight, runtime detection, DESeq2 parameter confirmation and result schema gates.",
         )
     return _disabled(
         f"formal_deg_{method}_rscript",
@@ -437,19 +448,44 @@ def _r_deseq2_parameter_confirmation_action(plan_matrix: dict[str, Any]) -> dict
     plan = plans.get("deseq2") if isinstance(plans.get("deseq2"), dict) else {}
     parameter_manifest = plan.get("parameter_manifest") if isinstance(plan.get("parameter_manifest"), dict) else {}
     confirmation_gate = plan.get("parameter_confirmation_gate") if isinstance(plan.get("parameter_confirmation_gate"), dict) else {}
+    preflight = plan.get("preflight") if isinstance(plan.get("preflight"), dict) else {}
+    runtime_gate = plan.get("runtime_gate") if isinstance(plan.get("runtime_gate"), dict) else {}
     blockers: list[str] = []
+    if preflight.get("status") != "design_ready":
+        blockers.extend(_list(preflight.get("blockers")) or ["r_deseq2_design_preflight_not_ready"])
+    if runtime_gate.get("status") != "ready_for_external_runtime_execution":
+        blockers.extend(_list(runtime_gate.get("blockers")) or ["r_deseq2_runtime_gate_not_ready"])
     if parameter_manifest.get("status") != "passed":
         blockers.extend(_list(parameter_manifest.get("blockers")) or ["r_deseq2_parameter_manifest_not_passed"])
-    blockers.append("b25_11_deseq2_ui_activation_required")
-    if confirmation_gate.get("status") != "passed":
-        blockers.extend(_list(confirmation_gate.get("blockers")))
-    return _disabled(
-        "r_deseq2_parameter_confirmation",
-        "Confirm DESeq2 parameters",
-        "blocked_deseq2_ui_activation_preflight",
-        "; ".join(dict.fromkeys(blockers)),
-        "B25.10 validates the DESeq2 Rscript runtime path, but user-facing confirmation is held until B25.11 UI activation.",
-    )
+    if blockers:
+        return _disabled(
+            "r_deseq2_parameter_confirmation",
+            "Confirm DESeq2 parameters",
+            "blocked_deseq2_prerequisites",
+            "; ".join(dict.fromkeys(blockers)),
+            "Resolve raw-count design preflight, Rscript/DESeq2 runtime detection and parameter manifest before confirmation.",
+        )
+    if confirmation_gate.get("status") == "passed":
+        return {
+            "action_id": "r_deseq2_parameter_confirmation",
+            "label": "Confirm DESeq2 parameters",
+            "state": "confirmed",
+            "button_behavior": "enabled_reconfirm_deseq2_parameters_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "DESeq2 parameters are confirmed; re-confirm only if design, thresholds or R/DESeq2 versions changed.",
+        }
+    return {
+        "action_id": "r_deseq2_parameter_confirmation",
+        "label": "Confirm DESeq2 parameters",
+        "state": "requires_user_confirmation",
+        "button_behavior": "enabled_deseq2_parameter_confirmation_only",
+        "enabled": True,
+        "normal_user_visible": True,
+        "disabled_reason": "",
+        "next_action": "Review DESeq2 comparison, raw count samples, thresholds, Rscript/DESeq2 versions and output plan before execution.",
+    }
 
 
 def _limma_gate_blockers_without_confirmation(gate: dict[str, Any]) -> list[str]:

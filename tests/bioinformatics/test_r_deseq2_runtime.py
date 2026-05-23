@@ -111,8 +111,9 @@ def test_r_deseq2_runtime_validation_reports_package_ready_or_graceful_block(tmp
     assert validation["schema_version"] == "biomedpilot.b25_10_r_deseq2_runtime_validation.v1"
     assert validation["status"] in {"passed", "blocked_missing_dependency"}
     assert validation["ui_activation_preflight"]["formal_execution_enabled"] is False
-    assert "b25_11_deseq2_ui_activation_required" in validation["ui_activation_preflight"]["blockers"]
     if validation["status"] == "passed":
+        assert validation["ui_activation_preflight"]["blockers"] == []
+        assert validation["ui_activation_preflight"]["status"] == "runtime_preflight_passed_ui_gates_required"
         fixture = validation["fixture_result"]
         assert fixture["status"] == "passed"
         assert fixture["result_semantics"] == "formal_computed_result"

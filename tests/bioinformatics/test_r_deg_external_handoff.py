@@ -121,8 +121,7 @@ def test_deseq2_and_edger_external_handoff_remain_deferred() -> None:
     assert edger_plan["status"] == "planned_not_enabled"
     assert deseq2_plan["can_register_formal_result"] is False
     assert edger_plan["can_register_formal_result"] is False
-    assert "b25_10_deseq2_ui_activation_preflight_only" in deseq2_plan["blockers"]
-    assert "b25_11_deseq2_ui_activation_required" in deseq2_plan["blockers"]
+    assert "r_deseq2_generic_external_handoff_disabled_use_controlled_rscript_adapter" in deseq2_plan["blockers"]
     assert "b25_6_count_model_planning_only:edger" in edger_plan["blockers"]
     assert "deseq2_rscript_execution_adapter_not_implemented" not in deseq2_plan["blockers"]
     assert "edger_rscript_execution_adapter_not_implemented" in edger_plan["blockers"]

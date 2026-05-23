@@ -56,8 +56,8 @@ def build_r_deg_external_handoff_plan(method: str) -> dict[str, Any]:
         }
     if method_key in DEFERRED_B25_R_DEG_METHODS:
         if method_key == "deseq2":
-            blockers = ["b25_10_deseq2_ui_activation_preflight_only", "b25_11_deseq2_ui_activation_required"]
-            warning = "DESeq2 has a controlled Rscript adapter/runtime validation path, but user-facing UI execution and generic external handoff remain blocked until B25.11."
+            blockers = ["r_deseq2_generic_external_handoff_disabled_use_controlled_rscript_adapter"]
+            warning = "DESeq2 user-facing execution is available only through the B25.11 controlled Rscript adapter; generic external handoff remains disabled."
         else:
             blockers = [f"b25_6_count_model_planning_only:{method_key}", f"{method_key}_rscript_execution_adapter_not_implemented"]
             warning = "limma handoff is accepted first; edgeR still needs a separate audited adapter."

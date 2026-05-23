@@ -76,17 +76,18 @@ def build_r_count_model_activation_plan(
             *[str(item) for item in runtime_gate.get("blockers", []) or []],
         ]
     )
+    formal_execution_enabled = method_key == "deseq2" and not blockers
     return {
         "schema_version": R_COUNT_MODEL_ACTIVATION_PLAN_SCHEMA_VERSION,
         "created_at": _now(),
         "method": method_key,
         "label": "DESeq2" if method_key == "deseq2" else "edgeR",
-        "status": "planned_not_enabled",
+        "status": "ready_for_ui_execution" if formal_execution_enabled else "planned_not_enabled",
         "planning_stage": "B25.10 DESeq2 runtime validation / UI activation preflight" if method_key == "deseq2" else "B25.6 count-model activation planning",
-        "formal_execution_enabled": False,
-        "can_register_formal_result": False,
-        "writes_result_index": False,
-        "result_semantics": "not_executed",
+        "formal_execution_enabled": formal_execution_enabled,
+        "can_register_formal_result": formal_execution_enabled,
+        "writes_result_index": formal_execution_enabled,
+        "result_semantics": "formal_computed_result_when_run" if formal_execution_enabled else "not_executed",
         "input_policy": contract["input_policy"],
         "required_gates": [
             "B8 resolver deg_recompute package",
@@ -105,7 +106,7 @@ def build_r_count_model_activation_plan(
         "blockers": blockers,
         "warnings": _dedupe(
             [
-                "B25.10 validates the controlled DESeq2 adapter/runtime path but keeps user-facing UI execution blocked until B25.11."
+                "B25.11 enables controlled DESeq2 UI execution only when all method gates and user confirmation pass."
                 if method_key == "deseq2"
                 else "B25.6 records DESeq2/edgeR activation requirements only; it does not execute R or register formal results.",
                 *[str(item) for item in method_specific.get("warnings", []) or []],
@@ -145,9 +146,9 @@ def build_r_count_model_activation_plans(
     }
     return {
         "schema_version": "biomedpilot.r_count_model_activation_plan_matrix.v1",
-        "status": "planned_not_enabled",
-        "formal_execution_enabled": False,
-        "writes_result_index": False,
+        "status": "ready_for_ui_execution" if any(plan.get("formal_execution_enabled") for plan in plans.values()) else "planned_not_enabled",
+        "formal_execution_enabled": any(bool(plan.get("formal_execution_enabled")) for plan in plans.values()),
+        "writes_result_index": any(bool(plan.get("writes_result_index")) for plan in plans.values()),
         "plans": plans,
         "blockers": _dedupe([item for plan in plans.values() for item in plan.get("blockers", []) or []]),
         "warnings": _dedupe([item for plan in plans.values() for item in plan.get("warnings", []) or []]),
@@ -199,15 +200,11 @@ def _method_specific_plan(
         count_fixture=count_fixture,
     )
     return {
-        "activation_blockers": [
-            "b25_10_deseq2_ui_activation_preflight_only",
-            "b25_11_deseq2_ui_activation_required",
-        ],
+        "activation_blockers": [],
         "blockers": [
             *[str(item) for item in parameter_manifest.get("blockers", []) or []],
             *[str(item) for item in confirmation_gate.get("blockers", []) or []],
             *[str(item) for item in adapter_plan.get("blockers", []) or []],
-            *[str(item) for item in dry_run_acceptance_gate.get("blockers", []) or []],
         ],
         "warnings": [
             *[str(item) for item in adapter_plan.get("warnings", []) or []],

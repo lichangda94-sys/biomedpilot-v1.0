@@ -80,7 +80,7 @@ def test_deseq2_parameter_confirmation_can_be_saved_and_validated(tmp_path: Path
     assert loaded["output_plan"]["result_index_registry_path"] == "results/summaries/result_index.json"
 
 
-def test_deseq2_adapter_plan_keeps_ui_execution_blocked_after_runtime_preflight() -> None:
+def test_deseq2_adapter_plan_enables_after_all_gates_pass() -> None:
     preflight = _preflight()
     manifest = build_r_deseq2_parameter_manifest(
         _deg_ready("count", "raw_count_matrix"),
@@ -101,13 +101,12 @@ def test_deseq2_adapter_plan_keeps_ui_execution_blocked_after_runtime_preflight(
     )
 
     assert runtime_gate["status"] == "ready_for_external_runtime_execution"
-    assert plan["status"] == "adapter_available_ui_activation_blocked"
-    assert plan["formal_execution_enabled"] is False
-    assert plan["can_execute"] is False
+    assert plan["status"] == "ready_for_ui_execution"
+    assert plan["formal_execution_enabled"] is True
+    assert plan["can_execute"] is True
     assert plan["can_register_formal_result"] is True
     assert plan["writes_result_index"] is True
-    assert "b25_10_deseq2_ui_activation_preflight_only" in plan["blockers"]
-    assert "b25_11_deseq2_ui_activation_required" in plan["blockers"]
+    assert plan["blockers"] == []
     assert "deseq2_rscript_execution_adapter_not_implemented" not in plan["blockers"]
 
 

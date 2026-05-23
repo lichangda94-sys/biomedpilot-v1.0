@@ -277,27 +277,25 @@ def build_r_deseq2_rscript_adapter_plan(
     parameter = dict(parameter_manifest)
     runtime = dict(runtime_gate)
     confirmation = dict(confirmation_gate or {})
-    blockers = [
-        "b25_10_deseq2_ui_activation_preflight_only",
-        "b25_11_deseq2_ui_activation_required",
-    ]
+    blockers: list[str] = []
     if parameter.get("status") != "passed":
         blockers.extend(parameter.get("blockers", []) or ["r_deseq2_parameter_manifest_not_passed"])
     if runtime.get("status") != "ready_for_external_runtime_execution":
         blockers.extend(runtime.get("blockers", []) or ["r_deseq2_runtime_gate_not_ready"])
     if confirmation and confirmation.get("status") != "passed":
         blockers.extend(confirmation.get("blockers", []) or ["r_deseq2_confirmation_gate_not_passed"])
+    can_execute = not blockers
     return {
         "schema_version": R_DESEQ2_ADAPTER_PLAN_SCHEMA_VERSION,
         "created_at": _now(),
         "method": "deseq2",
-        "status": "adapter_available_ui_activation_blocked",
-        "adapter_semantics": "controlled_rscript_adapter_available_no_user_ui_execution",
-        "formal_execution_enabled": False,
-        "can_execute": False,
-        "can_register_formal_result": True,
-        "writes_result_index": True,
-        "result_semantics": "not_executed",
+        "status": "ready_for_ui_execution" if can_execute else "blocked",
+        "adapter_semantics": "controlled_rscript_adapter_available_gated_ui_execution",
+        "formal_execution_enabled": can_execute,
+        "can_execute": can_execute,
+        "can_register_formal_result": can_execute,
+        "writes_result_index": can_execute,
+        "result_semantics": "formal_computed_result_when_run" if can_execute else "not_executed",
         "command_manifest_contract": {
             "shell": False,
             "required_inputs": ["raw_count_table", "design_table", "contrast", "parameter_manifest", "dependency_snapshot"],
@@ -307,7 +305,7 @@ def build_r_deseq2_rscript_adapter_plan(
         "output_schema": contract["output_schema"],
         "result_index_contract": contract["result_index_contract"],
         "blockers": list(dict.fromkeys(str(item) for item in blockers if str(item))),
-        "warnings": ["B25.10 has a controlled DESeq2 Rscript adapter/runtime validation path, but user-facing UI activation remains blocked until B25.11."],
+        "warnings": ["B25.11 allows DESeq2 UI execution only after resolver, raw count design preflight, runtime detection, user confirmation and result-index gates pass."],
     }
 
 

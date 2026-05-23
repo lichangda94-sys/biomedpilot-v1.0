@@ -158,15 +158,14 @@ def _ui_activation_preflight(runtime_detection: dict[str, Any], fixture_result: 
         blockers.extend(str(item) for item in runtime_detection.get("blockers", []) or ["r_deseq2_runtime_detection_not_passed"])
     if fixture_result.get("status") != "passed":
         blockers.extend(str(item) for item in fixture_result.get("blockers", []) or ["r_deseq2_controlled_fixture_not_passed"])
-    blockers.append("b25_11_deseq2_ui_activation_required")
     return {
         "schema_version": "biomedpilot.b25_10_r_deseq2_ui_activation_preflight.v1",
-        "status": "preflight_passed_ui_activation_still_blocked" if len(blockers) == 1 else "blocked",
+        "status": "runtime_preflight_passed_ui_gates_required" if not blockers else "blocked",
         "runtime_validation_passed": runtime_detection.get("status") == "passed" and fixture_result.get("status") == "passed",
         "formal_execution_enabled": False,
         "normal_user_button_enabled": False,
         "blockers": list(dict.fromkeys(blockers)),
-        "warnings": ["B25.10 validates runtime/package/open-W readiness only; it does not enable user-facing DESeq2 execution."],
+        "warnings": ["B25.11 DESeq2 UI execution still requires resolver, raw-count design preflight, parameter confirmation and result-index gates in the active project."],
     }
 
 

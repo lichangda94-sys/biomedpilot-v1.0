@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.bioinformatics.deg_engine.r_count_model_planning import build_r_count_model_activation_plan, build_r_count_model_activation_plans
 
 
-def test_deseq2_count_model_plan_stays_blocked_even_when_gates_look_ready() -> None:
+def test_deseq2_count_model_plan_requires_user_confirmation_before_execution() -> None:
     plan = build_r_count_model_activation_plan(
         "DESeq2",
         deg_ready_package=_deg_ready("count", "raw_count_matrix"),
@@ -18,8 +18,8 @@ def test_deseq2_count_model_plan_stays_blocked_even_when_gates_look_ready() -> N
     assert plan["writes_result_index"] is False
     assert plan["preflight"]["status"] == "design_ready"
     assert plan["runtime_gate"]["status"] == "ready_for_external_runtime_execution"
-    assert "b25_10_deseq2_ui_activation_preflight_only" in plan["blockers"]
-    assert "b25_11_deseq2_ui_activation_required" in plan["blockers"]
+    assert "b25_10_deseq2_ui_activation_preflight_only" not in plan["blockers"]
+    assert "b25_11_deseq2_ui_activation_required" not in plan["blockers"]
     assert "r_deseq2_parameter_confirmation_missing" in plan["blockers"]
     assert plan["parameter_manifest"]["status"] == "passed"
     assert plan["parameter_confirmation_gate"]["status"] == "blocked"
@@ -54,8 +54,9 @@ def test_count_model_plan_matrix_contains_deseq2_and_edger_without_execution() -
     assert matrix["status"] == "planned_not_enabled"
     assert matrix["formal_execution_enabled"] is False
     assert set(matrix["plans"]) == {"deseq2", "edger"}
-    assert "b25_10_deseq2_ui_activation_preflight_only" in matrix["blockers"]
-    assert "b25_11_deseq2_ui_activation_required" in matrix["blockers"]
+    assert "r_deseq2_parameter_confirmation_missing" in matrix["blockers"]
+    assert "b25_10_deseq2_ui_activation_preflight_only" not in matrix["blockers"]
+    assert "b25_11_deseq2_ui_activation_required" not in matrix["blockers"]
     assert "b25_6_count_model_planning_only:edger" in matrix["blockers"]
     assert matrix["plans"]["deseq2"]["parameter_manifest"]["method"] == "deseq2"
 

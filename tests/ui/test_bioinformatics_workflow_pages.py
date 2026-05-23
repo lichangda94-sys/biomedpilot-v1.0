@@ -3025,6 +3025,8 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Confirm limma Rscript parameters" in action_text
     assert "Run limma Rscript DEG" in action_text
     assert "blocked_limma_rscript_gate" in action_text
+    assert "Confirm DESeq2 parameters" in action_text
+    assert "Run DESeq2 count-model DEG" in action_text
     assert "Review GSEA preranked readiness" in action_text
     assert "Run controlled preranked GSEA" in action_text
     assert "gsea_source_result_missing" in action_text or "gsea_input_gate_not_passed" in action_text
@@ -3086,6 +3088,12 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     limma_run_button = widget.findChild(QPushButton, "runRLimmaRscriptDegButton")
     assert limma_run_button is not None
     assert limma_run_button.isEnabled() is False
+    deseq2_confirm_button = widget.findChild(QPushButton, "confirmRDeseq2ParametersButton")
+    assert deseq2_confirm_button is not None
+    assert deseq2_confirm_button.isEnabled() is False
+    deseq2_run_button = widget.findChild(QPushButton, "runRDeseq2RscriptDegButton")
+    assert deseq2_run_button is not None
+    assert deseq2_run_button.isEnabled() is False
 
     confirmation_table = widget.findChild(QTableWidget, "analysisFormalDegConfirmationTable")
     assert confirmation_table is not None

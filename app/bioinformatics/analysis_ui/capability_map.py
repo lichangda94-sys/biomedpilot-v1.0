@@ -203,30 +203,32 @@ def _r_method_row(
     missing = [key for key in keys if _capability_available(external_capabilities.get(key)) is not True]
     gate_blockers = [str(item) for item in gate.get("blockers", []) or []] if isinstance(gate.get("blockers"), list) else []
     plan_blockers = [str(item) for item in plan.get("blockers", []) or []] if isinstance(plan.get("blockers"), list) else []
-    state = (
-        "blocked_deseq2_ui_activation_preflight"
-        if method == "deseq2" and plan
-        else "blocked_count_model_planning_only"
-        if plan
-        else ("ready_for_external_runtime_gate" if gate.get("status") == "ready_for_external_runtime_execution" else ("blocked_by_dependency" if missing or gate_blockers else "planned_adapter_contract"))
-    )
-    reason = (
-        f"{label} B25.10 runtime/package/open-W validation is available, but UI activation remains blocked: {', '.join(plan_blockers)}."
-        if method == "deseq2" and plan_blockers
-        else f"{label} B25.6 count-model activation remains blocked: {', '.join(plan_blockers)}."
-        if plan_blockers
-        else
-        f"{label} B19 adapter gate is blocked: {', '.join(gate_blockers or missing)}."
-        if missing or gate_blockers
-        else f"{label} external dependencies appear available, but B19 adapter/input/output/result schema gates are still required before formal execution."
-    )
+    plan_formal_enabled = method == "deseq2" and bool(plan.get("formal_execution_enabled")) and not plan_blockers
+    if plan_formal_enabled:
+        state = "ready_for_ui_execution"
+        reason = f"{label} B25.11 UI execution is available only through the audited DESeq2 Rscript action and result_index_v2 gates."
+    elif method == "deseq2" and plan:
+        state = "blocked_deseq2_rscript_gate"
+        reason = f"{label} B25.11 UI execution is blocked: {', '.join(plan_blockers)}."
+    elif plan:
+        state = "blocked_count_model_planning_only"
+        reason = f"{label} B25.6 count-model activation remains blocked: {', '.join(plan_blockers)}."
+    elif missing or gate_blockers:
+        state = "blocked_by_dependency"
+        reason = f"{label} B19 adapter gate is blocked: {', '.join(gate_blockers or missing)}."
+    elif gate.get("status") == "ready_for_external_runtime_execution":
+        state = "ready_for_external_runtime_gate"
+        reason = f"{label} external dependencies appear available, but B19 adapter/input/output/result schema gates are still required before formal execution."
+    else:
+        state = "planned_adapter_contract"
+        reason = f"{label} external dependencies appear available, but B19 adapter/input/output/result schema gates are still required before formal execution."
     return {
         "capability_id": capability_id,
         "label": label,
         "category": "DEG",
-        "implementation_status": "b25_10_deseq2_runtime_validation_ui_preflight" if method == "deseq2" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate"),
+        "implementation_status": "b25_11_deseq2_gated_ui_execution" if method == "deseq2" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate"),
         "ui_state": state,
-        "formal_execution_enabled": False,
+        "formal_execution_enabled": plan_formal_enabled,
         "can_display_as_completed": False,
         "reason": reason,
         "disabled_reason": reason,

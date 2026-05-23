@@ -288,7 +288,7 @@ def test_limma_rscript_action_requires_all_gates_and_confirmation() -> None:
     assert limma["button_behavior"] == "enabled_b25_2_audited_limma_rscript_only"
 
 
-def test_count_model_actions_remain_planning_only_disabled() -> None:
+def test_count_model_actions_keep_edger_planning_only_and_gate_deseq2() -> None:
     rows = build_action_rows(
         packages=[],
         deg_dependency={"status": "passed", "blockers": []},
@@ -296,7 +296,7 @@ def test_count_model_actions_remain_planning_only_disabled() -> None:
         report_gate={"status": "blocked"},
         r_count_model_plans={
             "plans": {
-                "deseq2": {"blockers": ["b25_10_deseq2_ui_activation_preflight_only", "b25_11_deseq2_ui_activation_required"]},
+                "deseq2": {"blockers": ["r_deseq2_parameter_confirmation_missing"]},
                 "edger": {"blockers": ["b25_6_count_model_planning_only:edger"]},
             }
         },
@@ -306,13 +306,65 @@ def test_count_model_actions_remain_planning_only_disabled() -> None:
     edger = _row(rows, "formal_deg_edger_rscript")
     assert deseq2["enabled"] is False
     assert edger["enabled"] is False
-    assert deseq2["state"] == "blocked_deseq2_ui_activation_preflight"
+    assert deseq2["state"] == "blocked_deseq2_rscript_gate"
     assert edger["state"] == "blocked_count_model_planning_only"
-    assert "b25_10_deseq2_ui_activation_preflight_only" in deseq2["disabled_reason"]
-    assert "b25_11_deseq2_ui_activation_required" in deseq2["disabled_reason"]
+    assert "r_deseq2_parameter_confirmation_missing" in deseq2["disabled_reason"]
     assert "b25_6_count_model_planning_only:edger" in edger["disabled_reason"]
     assert _row(rows, "r_deseq2_parameter_confirmation")["enabled"] is False
-    assert "b25_11_deseq2_ui_activation_required" in _row(rows, "r_deseq2_parameter_confirmation")["disabled_reason"]
+    assert "r_deseq2_design_preflight_not_ready" in _row(rows, "r_deseq2_parameter_confirmation")["disabled_reason"]
+
+
+def test_deseq2_actions_enable_confirmation_then_execution_when_gates_pass() -> None:
+    preflight = {"status": "design_ready", "blockers": []}
+    runtime_gate = {"status": "ready_for_external_runtime_execution", "blockers": []}
+    parameter_manifest = {"status": "passed", "blockers": []}
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "passed", "blockers": []},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        r_count_model_plans={
+            "plans": {
+                "deseq2": {
+                    "formal_execution_enabled": False,
+                    "blockers": ["r_deseq2_parameter_confirmation_missing"],
+                    "preflight": preflight,
+                    "runtime_gate": runtime_gate,
+                    "parameter_manifest": parameter_manifest,
+                    "parameter_confirmation_gate": {"status": "blocked", "blockers": ["r_deseq2_parameter_confirmation_missing"]},
+                },
+            }
+        },
+    )
+    confirm = _row(rows, "r_deseq2_parameter_confirmation")
+    assert confirm["enabled"] is True
+    assert confirm["state"] == "requires_user_confirmation"
+    assert confirm["button_behavior"] == "enabled_deseq2_parameter_confirmation_only"
+    assert _row(rows, "formal_deg_deseq2_rscript")["enabled"] is False
+
+    enabled = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "passed", "blockers": []},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        r_count_model_plans={
+            "plans": {
+                "deseq2": {
+                    "formal_execution_enabled": True,
+                    "blockers": [],
+                    "preflight": preflight,
+                    "runtime_gate": runtime_gate,
+                    "parameter_manifest": parameter_manifest,
+                    "parameter_confirmation_gate": {"status": "passed", "blockers": []},
+                },
+            }
+        },
+    )
+    assert _row(enabled, "r_deseq2_parameter_confirmation")["state"] == "confirmed"
+    deseq2 = _row(enabled, "formal_deg_deseq2_rscript")
+    assert deseq2["enabled"] is True
+    assert deseq2["state"] == "enabled_formal_deseq2_rscript"
+    assert deseq2["button_behavior"] == "enabled_b25_11_audited_deseq2_rscript_only"
 
 
 def test_preflight_only_plot_source_is_blocked_and_report_gate_controls_export() -> None:
