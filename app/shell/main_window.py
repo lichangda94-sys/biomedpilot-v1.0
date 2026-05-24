@@ -1321,6 +1321,108 @@ class MainWindow(QMainWindow):
             self._labtools_selected_local_reagent_version = result.new_version or 0
         self._populate_labtools_local_reagent_panel(self._labtools_local_data_read_model, result)
 
+    def _select_labtools_local_sample(self, sample: labtools_runtime.LabToolsLocalSampleSummary) -> None:
+        self._labtools_selected_local_sample_id = sample.sample_id
+        self._labtools_selected_local_sample_version = sample.version
+        if hasattr(self, "_labtools_local_sample_inputs"):
+            self._labtools_local_sample_inputs["sample_name"].setText(sample.sample_name)
+            self._labtools_local_sample_inputs["sample_type"].setText(sample.sample_type)
+            self._labtools_local_sample_inputs["concentration"].setText(sample.concentration)
+            self._labtools_local_sample_inputs["concentration_unit"].setText(sample.concentration_unit)
+            self._labtools_local_sample_inputs["volume"].setText(sample.volume)
+            self._labtools_local_sample_inputs["volume_unit"].setText(sample.volume_unit)
+            self._labtools_local_sample_inputs["storage_location"].setText(sample.storage_location)
+
+    def _local_sample_payload_from_inputs(self) -> dict[str, object]:
+        return {field_id: widget.text().strip() for field_id, widget in self._labtools_local_sample_inputs.items()}
+
+    def _create_labtools_local_sample(self) -> None:
+        result = labtools_runtime.create_local_sample(self._labtools_project_root, self._local_sample_payload_from_inputs())
+        self._refresh_labtools_local_sample_after_write(result)
+
+    def _update_labtools_local_sample(self) -> None:
+        sample_id = getattr(self, "_labtools_selected_local_sample_id", "")
+        expected_version = int(getattr(self, "_labtools_selected_local_sample_version", 0) or 0)
+        if not sample_id or expected_version < 1:
+            result = labtools_runtime.LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_no_selection",
+                message="请先选择一个本地样本。",
+                blocker="no_sample_selected",
+            )
+        else:
+            result = labtools_runtime.update_local_sample(
+                self._labtools_project_root,
+                sample_id,
+                self._local_sample_payload_from_inputs(),
+                expected_version=expected_version,
+            )
+        self._refresh_labtools_local_sample_after_write(result)
+
+    def _archive_labtools_local_sample(self) -> None:
+        sample_id = getattr(self, "_labtools_selected_local_sample_id", "")
+        expected_version = int(getattr(self, "_labtools_selected_local_sample_version", 0) or 0)
+        if not sample_id or expected_version < 1:
+            result = labtools_runtime.LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_no_selection",
+                message="请先选择一个本地样本。",
+                blocker="no_sample_selected",
+            )
+        else:
+            result = labtools_runtime.archive_local_sample(self._labtools_project_root, sample_id, expected_version=expected_version)
+        self._refresh_labtools_local_sample_after_write(result)
+
+    def _refresh_labtools_local_sample_after_write(self, result: labtools_runtime.LabToolsLocalWriteResult) -> None:
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
+        if result.success:
+            self._labtools_selected_local_sample_id = result.entity_id
+            self._labtools_selected_local_sample_version = result.new_version or 0
+        self._populate_labtools_local_wb_sample_panel(self._labtools_local_data_read_model, result)
+        self._run_labtools_wb_loading()
+
+    def _select_labtools_bca_sample(self, sample: labtools_runtime.LabToolsLocalSampleSummary) -> None:
+        self._labtools_bca_selected_sample_id = sample.sample_id
+        if hasattr(self, "_labtools_bca_proposal_status"):
+            self._labtools_bca_proposal_status.setText(
+                f"已选择：{sample.sample_name} · current {sample.concentration or 'no concentration'} {sample.concentration_unit or ''}".strip()
+            )
+            self._labtools_bca_proposal_status.setProperty("sampleId", sample.sample_id)
+
+    def _create_labtools_bca_sample_proposal(self) -> None:
+        sample_id = getattr(self, "_labtools_bca_selected_sample_id", "")
+        proposal = labtools_runtime.create_sample_concentration_update_proposal(
+            self._labtools_project_root,
+            sample_id,
+            self._labtools_bca_proposal_inputs["concentration"].text().strip(),
+            self._labtools_bca_proposal_inputs["concentration_unit"].text().strip(),
+        )
+        self._labtools_bca_pending_proposal = proposal if proposal.can_apply else None
+        self._labtools_bca_proposal_status.setText(proposal.message)
+        self._labtools_bca_proposal_status.setProperty("status", proposal.status)
+        self._labtools_bca_proposal_status.setProperty("sampleId", proposal.sample_id)
+        self._labtools_bca_confirm_proposal_button.setEnabled(proposal.can_apply)
+        self._labtools_bca_confirm_proposal_button.setProperty("disabledState", "" if proposal.can_apply else "proposal_required")
+
+    def _confirm_labtools_bca_sample_proposal(self) -> None:
+        proposal = getattr(self, "_labtools_bca_pending_proposal", None)
+        if proposal is None:
+            result = labtools_runtime.LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_no_proposal",
+                message="请先生成 sample concentration update proposal。",
+                blocker="no_proposal",
+            )
+        else:
+            result = labtools_runtime.confirm_sample_concentration_update(self._labtools_project_root, proposal)
+        self._labtools_bca_proposal_status.setText(_labtools_local_write_result_text(result))
+        self._labtools_bca_proposal_status.setProperty("status", result.status)
+        if result.success:
+            self._labtools_bca_confirm_proposal_button.setEnabled(False)
+            self._labtools_bca_confirm_proposal_button.setProperty("disabledState", "proposal_required")
+            self._labtools_bca_pending_proposal = None
+            self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
+
     def _render_labtools_reagent_template_detail(self, detail: labtools_runtime.ReagentTemplateDetail) -> None:
         layout = self._labtools_reagent_detail_rows_layout
         self._clear_layout(layout)
@@ -1494,6 +1596,8 @@ class MainWindow(QMainWindow):
         root.addLayout(nav)
         root.addLayout(self._labtools_wb_substep_bar())
         self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
+        self._labtools_selected_local_sample_id = ""
+        self._labtools_selected_local_sample_version = 0
 
         body = QHBoxLayout()
         body.setSpacing(12)
@@ -1628,6 +1732,17 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
+        self._labtools_local_wb_sample_layout = layout
+        self._populate_labtools_local_wb_sample_panel(model)
+        return frame
+
+    def _populate_labtools_local_wb_sample_panel(
+        self,
+        model: labtools_runtime.LabToolsLocalDataReadModel,
+        result: labtools_runtime.LabToolsLocalWriteResult | None = None,
+    ) -> None:
+        layout = self._labtools_local_wb_sample_layout
+        self._clear_layout(layout)
         header = QLabel("本地 protein sample")
         header.setStyleSheet("font-weight: 700;")
         layout.addWidget(header)
@@ -1636,33 +1751,174 @@ class MainWindow(QMainWindow):
         status.setProperty("status", model.status.status)
         status.setWordWrap(True)
         layout.addWidget(status)
-        if not model.wb_samples:
+        if not model.samples:
             layout.addWidget(
                 make_empty_state(
-                    "暂无 WB-compatible sample",
+                    "暂无本地 sample",
                     model.status.reason,
                     empty_state_key="empty_project",
                     semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
                 )
             )
-        for sample in model.wb_samples:
-            row = QLabel(
+        for sample in model.samples:
+            row = QPushButton(
                 f"{sample.sample_name} | {sample.sample_type} | {sample.concentration} {sample.concentration_unit} | {sample.storage_location or 'no location'}"
             )
             row.setObjectName("labtoolsLocalWbSampleRow")
             row.setProperty("sampleId", sample.sample_id)
             row.setProperty("sampleType", sample.sample_type)
-            row.setWordWrap(True)
+            row.setProperty("sampleName", sample.sample_name)
+            row.setProperty("version", sample.version)
+            row.setProperty("wbCompatible", sample.wb_compatible)
+            row.clicked.connect(lambda _checked=False, item=sample: self._select_labtools_local_sample(item))
             layout.addWidget(row)
+        form_header = QLabel("本地样本管理")
+        form_header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(form_header)
+        self._labtools_local_sample_inputs = {}
+        for label_text, field_id, default_text in (
+            ("样本名称", "sample_name", ""),
+            ("样本类型", "sample_type", "protein_lysate"),
+            ("浓度", "concentration", ""),
+            ("浓度单位", "concentration_unit", "mg/mL"),
+            ("体积", "volume", ""),
+            ("体积单位", "volume_unit", "µL"),
+            ("存放位置", "storage_location", ""),
+        ):
+            layout.addLayout(self._labtools_local_sample_input_row(label_text, field_id, default_text))
+        actions = QHBoxLayout()
+        create = make_button("新增本地样本", role="secondary")
+        create.setObjectName("labtoolsLocalSampleCreateButton")
+        create.clicked.connect(self._create_labtools_local_sample)
+        update = make_button("编辑本地样本", role="secondary")
+        update.setObjectName("labtoolsLocalSampleUpdateButton")
+        update.clicked.connect(self._update_labtools_local_sample)
+        archive = make_button("归档本地样本", role="secondary")
+        archive.setObjectName("labtoolsLocalSampleArchiveButton")
+        archive.clicked.connect(self._archive_labtools_local_sample)
+        write_enabled = model.status.write_enabled or model.status.status in {"blocked", "missing_project_context"}
+        for button in (create, update, archive):
+            button.setEnabled(write_enabled)
+            button.setProperty("disabledState", "" if write_enabled else "disabled_local_data_write")
+            actions.addWidget(button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._labtools_local_sample_create_button = create
+        self._labtools_local_sample_update_button = update
+        self._labtools_local_sample_archive_button = archive
+        write_status = QLabel(_labtools_local_write_result_text(result) if result is not None else "本地保存，不会同步到其他设备。")
+        write_status.setObjectName("labtoolsLocalSampleWriteStatus")
+        write_status.setProperty("status", result.status if result is not None else "idle")
+        write_status.setWordWrap(True)
+        layout.addWidget(write_status)
+        self._labtools_local_sample_write_status = write_status
         layout.addWidget(
             self._labtools_notice_card(
-                "本地样本只用于读取浓度并辅助上样计算；不会扣减样本体积。",
+                "WB 只读取 protein_lysate / WB-compatible sample 的浓度用于预览；不会扣减样本体积，也不会自动修改 sample status。",
                 object_name="labtoolsAdapterNotice",
                 semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
             )
         )
         layout.addStretch(1)
+
+    def _labtools_local_sample_input_row(self, label: str, field_id: str, default_text: str = "") -> QHBoxLayout:
+        row = QHBoxLayout()
+        title = QLabel(label)
+        title.setObjectName("labtoolsLocalSampleInputLabel")
+        title.setProperty("fieldId", field_id)
+        field = QLineEdit(default_text)
+        field.setObjectName("labtoolsLocalSampleInput")
+        field.setProperty("fieldId", field_id)
+        self._labtools_local_sample_inputs[field_id] = field
+        row.addWidget(title)
+        row.addWidget(field, 1)
+        return row
+
+    def _labtools_bca_sample_proposal_panel(self, model: labtools_runtime.LabToolsLocalDataReadModel) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsBcaSampleProposalPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "bca_od_mvp")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value)
+        frame.setStyleSheet("QFrame#labtoolsBcaSampleProposalPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("Sample concentration proposal")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        status = QLabel(f"local_data: {model.status.status}")
+        status.setObjectName("labtoolsBcaLocalDataStatus")
+        status.setProperty("status", model.status.status)
+        status.setWordWrap(True)
+        layout.addWidget(status)
+        compatible_samples = tuple(sample for sample in model.samples if sample.wb_compatible or sample.sample_type in {"", "unknown"})
+        if not compatible_samples:
+            layout.addWidget(
+                make_empty_state(
+                    "暂无可生成 proposal 的 sample",
+                    model.status.reason,
+                    empty_state_key="empty_project",
+                    semantic_key=PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+                )
+            )
+        for sample in compatible_samples:
+            row = QPushButton(
+                f"{sample.sample_name} | current {sample.concentration or 'no concentration'} {sample.concentration_unit or ''}".strip()
+            )
+            row.setObjectName("labtoolsBcaSampleRow")
+            row.setProperty("sampleId", sample.sample_id)
+            row.setProperty("version", sample.version)
+            row.clicked.connect(lambda _checked=False, item=sample: self._select_labtools_bca_sample(item))
+            layout.addWidget(row)
+        self._labtools_bca_proposal_inputs = {}
+        layout.addLayout(self._labtools_bca_proposal_input_row("拟更新浓度", "concentration", "2.5"))
+        layout.addLayout(self._labtools_bca_proposal_input_row("浓度单位", "concentration_unit", "mg/mL"))
+        actions = QHBoxLayout()
+        propose = make_button("生成 sample concentration update proposal", role="secondary")
+        propose.setObjectName("labtoolsBcaProposalButton")
+        propose.clicked.connect(self._create_labtools_bca_sample_proposal)
+        confirm = make_button("确认写入 sample concentration", role="secondary")
+        confirm.setObjectName("labtoolsBcaConfirmProposalButton")
+        confirm.setEnabled(False)
+        confirm.setProperty("disabledState", "proposal_required")
+        confirm.clicked.connect(self._confirm_labtools_bca_sample_proposal)
+        actions.addWidget(propose)
+        actions.addWidget(confirm)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._labtools_bca_proposal_button = propose
+        self._labtools_bca_confirm_proposal_button = confirm
+        proposal_status = QLabel("proposal 默认不写入 sample；确认后才更新本地 sample concentration。")
+        proposal_status.setObjectName("labtoolsBcaProposalStatus")
+        proposal_status.setProperty("status", "idle")
+        proposal_status.setWordWrap(True)
+        layout.addWidget(proposal_status)
+        self._labtools_bca_proposal_status = proposal_status
+        if compatible_samples:
+            self._select_labtools_bca_sample(compatible_samples[0])
+        layout.addWidget(
+            self._labtools_notice_card(
+                "BCA/OD 仅生成 sample concentration update proposal；不会自动覆盖 sample concentration。",
+                object_name="labtoolsAdapterNotice",
+                semantic_key=PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+            )
+        )
+        layout.addStretch(1)
         return frame
+
+    def _labtools_bca_proposal_input_row(self, label: str, field_id: str, default_text: str) -> QHBoxLayout:
+        row = QHBoxLayout()
+        title = QLabel(label)
+        title.setObjectName("labtoolsBcaProposalInputLabel")
+        title.setProperty("fieldId", field_id)
+        field = QLineEdit(default_text)
+        field.setObjectName("labtoolsBcaProposalInput")
+        field.setProperty("fieldId", field_id)
+        self._labtools_bca_proposal_inputs[field_id] = field
+        row.addWidget(title)
+        row.addWidget(field, 1)
+        return row
 
     def _labtools_wb_results_panel(self) -> QFrame:
         frame = QFrame()
@@ -2004,6 +2260,9 @@ class MainWindow(QMainWindow):
         )
         root = content.layout()
         root.addLayout(self._labtools_boundary_nav(status_label="testing / MVP preview", status_key="testing"))
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
+        self._labtools_bca_selected_sample_id = ""
+        self._labtools_bca_pending_proposal = None
         body = QHBoxLayout()
         body.setSpacing(12)
         matrix_panel = QFrame()
@@ -2047,6 +2306,7 @@ class MainWindow(QMainWindow):
             object_name="labtoolsBcaSidePanel",
         )
         body.addWidget(side, 1)
+        body.addWidget(self._labtools_bca_sample_proposal_panel(self._labtools_local_data_read_model), 1)
         root.addLayout(body)
         root.addWidget(self._labtools_notice_card("BCA / OD MVP 不包含免疫吸光度后续分析、正式报告或临床级定量；保存 BCA 记录和导出结果保持禁用。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
         root.addLayout(

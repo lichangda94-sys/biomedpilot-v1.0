@@ -25,6 +25,8 @@ def _seed_local_data(project_root: Path) -> None:
             "sample_type": "protein_lysate",
             "concentration": "2.0",
             "concentration_unit": "mg/mL",
+            "volume": "25",
+            "volume_unit": "µL",
             "storage_location": "-80C / Rack 1",
         }
     )
@@ -140,13 +142,91 @@ def test_runtime_bridge_blocks_reagent_version_conflict(tmp_path: Path) -> None:
     assert _load_store(tmp_path).load_store().reagents[0].version == 1
 
 
+def test_runtime_bridge_creates_updates_and_archives_local_sample(tmp_path: Path) -> None:
+    created = labtools_runtime.create_local_sample(
+        tmp_path,
+        {
+            "sample_name": "Tumor lysate",
+            "sample_type": "protein_lysate",
+            "concentration": "2.0",
+            "concentration_unit": "mg/mL",
+            "volume": "25",
+            "volume_unit": "µL",
+        },
+    )
+    updated = labtools_runtime.update_local_sample(
+        tmp_path,
+        created.entity_id,
+        {"sample_name": "Tumor lysate", "sample_type": "protein_lysate", "concentration": "2.5"},
+        expected_version=1,
+    )
+    archived = labtools_runtime.archive_local_sample(tmp_path, created.entity_id, expected_version=2)
+    model = labtools_runtime.get_labtools_local_data_read_model(tmp_path)
+    snapshot = _load_store(tmp_path).load_store()
+
+    assert created.success is True
+    assert created.new_version == 1
+    assert updated.success is True
+    assert updated.new_version == 2
+    assert archived.success is True
+    assert archived.new_version == 3
+    assert model.samples == ()
+    assert snapshot.samples[0].status == "archived"
+    assert snapshot.samples[0].volume == "25"
+    assert [(entry.entity_type, entry.action) for entry in snapshot.audit_log] == [
+        ("sample", "create"),
+        ("sample", "update"),
+        ("sample", "archive"),
+    ]
+
+
+def test_runtime_bridge_blocks_sample_version_conflict(tmp_path: Path) -> None:
+    created = labtools_runtime.create_local_sample(tmp_path, {"sample_name": "Tumor lysate"})
+
+    conflict = labtools_runtime.update_local_sample(
+        tmp_path,
+        created.entity_id,
+        {"sample_name": "Tumor lysate 2"},
+        expected_version=2,
+    )
+
+    assert conflict.success is False
+    assert conflict.status == "blocked_version_conflict"
+    assert conflict.blocker == "version_conflict"
+    assert _load_store(tmp_path).load_store().samples[0].version == 1
+
+
 def test_wb_preview_uses_local_samples_without_inventory_deduction(tmp_path: Path) -> None:
     _seed_local_data(tmp_path)
     samples = labtools_runtime.list_local_wb_sample_summaries(tmp_path)
+    before = _load_store(tmp_path).load_store().samples[0]
 
     result = labtools_runtime.calculate_wb_loading_preview(local_samples=samples)
     model = labtools_runtime.get_labtools_local_data_read_model(tmp_path)
+    after = _load_store(tmp_path).load_store().samples[0]
 
     assert result.samples[0].sample_id == "Tumor lysate"
     assert "no sample volume deduction" in result.samples[0].note
     assert model.wb_samples[0].version == 1
+    assert after.volume == before.volume == "25"
+    assert after.status == before.status == "available"
+
+
+def test_bca_sample_concentration_proposal_does_not_write_until_confirmed(tmp_path: Path) -> None:
+    _seed_local_data(tmp_path)
+    sample = labtools_runtime.list_local_sample_summaries(tmp_path)[0]
+
+    proposal = labtools_runtime.create_sample_concentration_update_proposal(tmp_path, sample.sample_id, "2.5", "mg/mL")
+    after_proposal = _load_store(tmp_path).load_store().samples[0]
+    confirmed = labtools_runtime.confirm_sample_concentration_update(tmp_path, proposal)
+    after_confirm = _load_store(tmp_path).load_store().samples[0]
+
+    assert proposal.success is True
+    assert proposal.status == "proposal_ready"
+    assert after_proposal.concentration == "2.0"
+    assert after_proposal.version == 1
+    assert confirmed.success is True
+    assert confirmed.new_version == 2
+    assert after_confirm.concentration == "2.5"
+    assert after_confirm.concentration_unit == "mg/mL"
+    assert after_confirm.volume == "25"

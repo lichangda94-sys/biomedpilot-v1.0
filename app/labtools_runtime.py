@@ -191,6 +191,8 @@ class LabToolsLocalSampleSummary:
     sample_type: str
     concentration: str
     concentration_unit: str
+    volume: str
+    volume_unit: str
     storage_location: str
     status: str
     version: int
@@ -252,6 +254,21 @@ class LabToolsLocalWriteResult:
     blocker: str = ""
 
 
+@dataclass(frozen=True)
+class LabToolsSampleConcentrationProposal:
+    success: bool
+    status: str
+    message: str
+    sample_id: str = ""
+    sample_name: str = ""
+    current_concentration: str = ""
+    current_unit: str = ""
+    proposed_concentration: str = ""
+    proposed_unit: str = ""
+    expected_version: int = 0
+    can_apply: bool = False
+
+
 def runtime_status() -> LabToolsRuntimeStatus:
     try:
         _ensure_labtools_importable()
@@ -309,6 +326,8 @@ def get_labtools_local_data_read_model(
                 sample_type=item.sample_type,
                 concentration=item.concentration,
                 concentration_unit=item.concentration_unit,
+                volume=item.volume,
+                volume_unit=item.volume_unit,
                 storage_location=item.storage_location,
                 status=item.status,
                 version=item.version,
@@ -438,6 +457,10 @@ def list_local_wb_sample_summaries(project_root: Path | str | None) -> tuple[Lab
     return get_labtools_local_data_read_model(project_root).wb_samples
 
 
+def list_local_sample_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalSampleSummary, ...]:
+    return get_labtools_local_data_read_model(project_root).samples
+
+
 def list_local_cell_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalCellSummary, ...]:
     return get_labtools_local_data_read_model(project_root).cells
 
@@ -531,6 +554,169 @@ def archive_local_reagent(project_root: Path | str | None, reagent_id: str, *, e
         )
     except Exception as exc:
         return _local_write_error_result(exc, entity_id=reagent_id)
+
+
+def create_local_sample(project_root: Path | str | None, payload: dict[str, object]) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before creating local samples.",
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            adapter.initialize()
+        sample = adapter.create_sample(_clean_sample_payload(payload))
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="created",
+            message="已保存到本地 LabTools 数据库。",
+            entity_id=sample.id,
+            new_version=sample.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc)
+
+
+def update_local_sample(
+    project_root: Path | str | None,
+    sample_id: str,
+    payload: dict[str, object],
+    *,
+    expected_version: int,
+) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before updating local samples.",
+            entity_id=sample_id,
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            return LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_write_disabled",
+                message=adapter.status().reason,
+                entity_id=sample_id,
+                blocker="write_disabled",
+            )
+        sample = adapter.update_sample(sample_id, _clean_sample_payload(payload), expected_version=expected_version)
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="updated",
+            message="已保存到本地 LabTools 数据库。",
+            entity_id=sample.id,
+            new_version=sample.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc, entity_id=sample_id)
+
+
+def archive_local_sample(project_root: Path | str | None, sample_id: str, *, expected_version: int) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before archiving local samples.",
+            entity_id=sample_id,
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            return LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_write_disabled",
+                message=adapter.status().reason,
+                entity_id=sample_id,
+                blocker="write_disabled",
+            )
+        sample = adapter.archive_sample(sample_id, expected_version=expected_version)
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="archived",
+            message="已归档本地样本。",
+            entity_id=sample.id,
+            new_version=sample.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc, entity_id=sample_id)
+
+
+def create_sample_concentration_update_proposal(
+    project_root: Path | str | None,
+    sample_id: str,
+    proposed_concentration: str,
+    proposed_unit: str,
+) -> LabToolsSampleConcentrationProposal:
+    model = get_labtools_local_data_read_model(project_root)
+    if not model.status.read_enabled:
+        return LabToolsSampleConcentrationProposal(
+            success=False,
+            status="blocked_local_data_unavailable",
+            message=model.status.reason,
+            sample_id=sample_id,
+        )
+    sample = next((item for item in model.samples if item.sample_id == sample_id), None)
+    if sample is None:
+        return LabToolsSampleConcentrationProposal(
+            success=False,
+            status="blocked_sample_missing",
+            message="请选择一个可用的本地样本。",
+            sample_id=sample_id,
+        )
+    proposed_value = str(proposed_concentration).strip()
+    proposed_unit_value = str(proposed_unit).strip() or sample.concentration_unit
+    if not proposed_value:
+        return LabToolsSampleConcentrationProposal(
+            success=False,
+            status="blocked_validation",
+            message="请输入拟更新的样本浓度。",
+            sample_id=sample.sample_id,
+            sample_name=sample.sample_name,
+            current_concentration=sample.concentration,
+            current_unit=sample.concentration_unit,
+            proposed_unit=proposed_unit_value,
+            expected_version=sample.version,
+        )
+    return LabToolsSampleConcentrationProposal(
+        success=True,
+        status="proposal_ready",
+        message="已生成 sample concentration update proposal；尚未写入本地样本。",
+        sample_id=sample.sample_id,
+        sample_name=sample.sample_name,
+        current_concentration=sample.concentration,
+        current_unit=sample.concentration_unit,
+        proposed_concentration=proposed_value,
+        proposed_unit=proposed_unit_value,
+        expected_version=sample.version,
+        can_apply=True,
+    )
+
+
+def confirm_sample_concentration_update(
+    project_root: Path | str | None,
+    proposal: LabToolsSampleConcentrationProposal,
+) -> LabToolsLocalWriteResult:
+    if not proposal.can_apply:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="blocked_no_proposal",
+            message=proposal.message or "请先生成 sample concentration update proposal。",
+            entity_id=proposal.sample_id,
+            blocker="no_proposal",
+        )
+    return update_local_sample(
+        project_root,
+        proposal.sample_id,
+        {"concentration": proposal.proposed_concentration, "concentration_unit": proposal.proposed_unit},
+        expected_version=proposal.expected_version,
+    )
 
 
 def list_quick_tasks() -> tuple[Any, ...]:
@@ -1291,6 +1477,22 @@ def _clean_reagent_payload(payload: dict[str, object]) -> dict[str, object]:
     return {key: value for key, value in payload.items() if key in allowed}
 
 
+def _clean_sample_payload(payload: dict[str, object]) -> dict[str, object]:
+    allowed = {
+        "sample_name",
+        "sample_type",
+        "linked_experiment",
+        "project",
+        "concentration",
+        "concentration_unit",
+        "volume",
+        "volume_unit",
+        "storage_location",
+        "notes",
+    }
+    return {key: value for key, value in payload.items() if key in allowed}
+
+
 def _local_write_error_result(exc: Exception, *, entity_id: str = "") -> LabToolsLocalWriteResult:
     text = str(exc)
     status = "blocked_error"
@@ -1298,6 +1500,9 @@ def _local_write_error_result(exc: Exception, *, entity_id: str = "") -> LabTool
     if "version conflict" in text.lower():
         status = "blocked_version_conflict"
         blocker = "version_conflict"
+    elif "required" in text.lower() or "unsupported" in text.lower() or "cannot" in text.lower():
+        status = "blocked_validation"
+        blocker = "validation"
     elif "write" in text.lower() and "disabled" in text.lower():
         status = "blocked_write_disabled"
         blocker = "write_disabled"

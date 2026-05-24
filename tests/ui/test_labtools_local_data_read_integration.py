@@ -189,7 +189,7 @@ def test_wb_loading_reads_local_sample_summary_without_deduction(qt_app, tmp_pat
     window = _window(qt_app, project)
     try:
         _open_wb(window)
-        local_row = window.findChild(QLabel, "labtoolsLocalWbSampleRow")
+        local_row = window.findChild(QPushButton, "labtoolsLocalWbSampleRow")
         sample_rows = window.findChildren(QLabel, "labtoolsWbSampleRow")
 
         assert local_row is not None
