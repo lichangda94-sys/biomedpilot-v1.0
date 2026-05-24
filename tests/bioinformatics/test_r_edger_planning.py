@@ -33,6 +33,17 @@ def test_edger_parameter_manifest_passes_for_raw_count_design() -> None:
     assert manifest["count_integer_policy"] == "raw_integer_counts_required_no_tpm_fpkm_or_log_values"
 
 
+def test_edger_parameter_manifest_uses_glm_lrt_for_covariate_design() -> None:
+    manifest = build_r_edger_parameter_manifest(
+        _deg_ready("count", "raw_count_matrix"),
+        multi_factor_preflight={**_preflight(), "design_config": {"covariates": [{"name": "batch", "variable_type": "categorical"}]}},
+        dependency_snapshot=_dependency_snapshot(),
+    )
+
+    assert manifest["status"] == "passed"
+    assert manifest["test_method"] == "glm_lrt"
+
+
 def test_edger_parameter_manifest_blocks_display_values_and_bad_policy() -> None:
     manifest = build_r_edger_parameter_manifest(
         _deg_ready("TPM", "normalized_expression_matrix"),

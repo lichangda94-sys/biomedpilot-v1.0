@@ -18,6 +18,7 @@ from typing import Any, Mapping, Sequence
 from app.bioinformatics.deg_engine.models import REQUIRED_DEG_RESULT_COLUMNS
 from app.bioinformatics.deg_engine.r_adapter_contract import build_r_deg_runtime_gate, validate_r_deg_output_schema, validate_r_deg_result_registration_bundle
 from app.bioinformatics.deg_engine.result_schema import validate_deg_result_bundle, validate_formal_deg_result_index_entry
+from app.bioinformatics.deg_engine.runtime_design import build_runtime_design_table
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 
@@ -176,7 +177,9 @@ def run_r_deseq2_rscript_execution(
     script_path = run_dir / "run_deseq2.R"
     command_manifest_path = run_dir / "command_manifest.json"
     command_log_path = run_dir / "command_log.json"
-    _write_design_table(design_path, header_gate["sample_columns"], sample_group_map)
+    design_table_gate = _write_design_table(design_path, header_gate["sample_columns"], sample_group_map, multi_factor_preflight)
+    if design_table_gate["status"] != "passed":
+        return _blocked(design_table_gate["blockers"], runtime_gate=runtime_gate, count_table_gate=header_gate, design_table_gate=design_table_gate)
     script_path.write_text(_deseq2_r_script(), encoding="utf-8")
 
     command = [
@@ -202,6 +205,8 @@ def run_r_deseq2_rscript_execution(
         "output_path": str(output_path),
         "case_group": case_group,
         "control_group": control_group,
+        "design_formula": design_table_gate["design_formula"],
+        "covariates": design_table_gate["covariate_names"],
         "dispersion_fit_type": str(parameters_manifest.get("dispersion_fit_type") or "mean"),
         "dispersion_fallback_policy": "if_DESeq_dispersion_fit_fails_use_gene_wise_dispersion_then_nbinomWaldTest",
         "timeout_seconds": timeout_seconds,
@@ -453,12 +458,15 @@ def _runtime_detection_blocked(rscript_path: str, blockers: Sequence[str], messa
     }
 
 
-def _write_design_table(path: Path, sample_columns: Sequence[str], sample_group_map: Mapping[str, str]) -> None:
+def _write_design_table(path: Path, sample_columns: Sequence[str], sample_group_map: Mapping[str, str], multi_factor_preflight: Mapping[str, Any]) -> dict[str, Any]:
+    design = build_runtime_design_table(multi_factor_preflight, sample_columns, sample_group_map)
+    if design["status"] != "passed":
+        return design
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["sample", "group"], delimiter="\t")
+        writer = csv.DictWriter(handle, fieldnames=design["fieldnames"], delimiter="\t")
         writer.writeheader()
-        for sample in sample_columns:
-            writer.writerow({"sample": sample, "group": sample_group_map[sample]})
+        writer.writerows(design["rows"])
+    return design
 
 
 def _read_tsv(path: Path) -> list[dict[str, str]]:
@@ -598,8 +606,25 @@ if (any(is.na(mat)) || any(mat < 0) || any(mat != round(mat))) {
 storage.mode(mat) <- "integer"
 rownames(mat) <- feature_id
 level_order <- unique(c(control_group, case_group, as.character(design_df$group)))
-coldata <- data.frame(row.names=sample_columns, group=factor(design_df$group, levels=level_order))
-dds <- DESeq2::DESeqDataSetFromMatrix(countData=mat, colData=coldata, design=~group)
+design_df$group <- factor(design_df$group, levels=level_order)
+covariate_columns <- setdiff(colnames(design_df), c("sample", "group"))
+for (column in covariate_columns) {
+  values <- design_df[[column]]
+  numeric_values <- suppressWarnings(as.numeric(values))
+  if (!any(is.na(numeric_values))) {
+    design_df[[column]] <- numeric_values
+  } else {
+    design_df[[column]] <- factor(values)
+  }
+}
+coldata <- design_df[, c("group", covariate_columns), drop=FALSE]
+rownames(coldata) <- sample_columns
+formula_text <- if (length(covariate_columns) > 0) {
+  paste("~", paste(c(sprintf("`%s`", covariate_columns), "group"), collapse=" + "))
+} else {
+  "~ group"
+}
+dds <- DESeq2::DESeqDataSetFromMatrix(countData=mat, colData=coldata, design=stats::as.formula(formula_text))
 dds <- tryCatch(
   DESeq2::DESeq(dds, fitType=dispersion_fit_type, quiet=TRUE),
   error=function(e) {

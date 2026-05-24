@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -103,6 +104,58 @@ def test_rscript_deseq2_execution_blocks_invalid_count_table_without_result_inde
     assert not (tmp_path / "results" / "summaries" / "result_index.json").exists()
 
 
+def test_rscript_deseq2_execution_writes_multifactor_design_table(tmp_path: Path) -> None:
+    count_table = _write_multifactor_count_fixture(tmp_path)
+    fake_rscript = _fake_rscript(
+        tmp_path,
+        """
+import csv
+import pathlib
+import sys
+design = pathlib.Path(sys.argv[3])
+output = pathlib.Path(sys.argv[4])
+rows = list(csv.DictReader(design.open(encoding="utf-8"), delimiter="\\t"))
+assert {"sample", "group", "batch", "age"}.issubset(rows[0])
+output.write_text(
+    "feature_id\\tgene_symbol\\tbaseMean\\tlog2FoldChange\\tlfcSE\\tstat\\tpvalue\\tpadj\\n"
+    "ENSG000001\\tGENE1\\t72.5\\t2.1\\t0.4\\t5.25\\t0.001\\t0.01\\n",
+    encoding="utf-8",
+)
+""",
+    )
+    sample_map = {f"case_{i}": "case" for i in range(1, 4)} | {f"control_{i}": "control" for i in range(1, 4)}
+    preflight = _preflight_with_covariates()
+    parameter_manifest = build_r_deseq2_parameter_manifest(
+        _deg_ready(count_table),
+        multi_factor_preflight=preflight,
+        dependency_snapshot=_dependency_snapshot(str(fake_rscript)),
+    )
+
+    result = run_r_deseq2_rscript_execution(
+        tmp_path,
+        count_table_path=count_table,
+        sample_group_map=sample_map,
+        case_group="case",
+        control_group="control",
+        multi_factor_preflight=preflight,
+        parameters_manifest=parameter_manifest,
+        rscript_path=str(fake_rscript),
+        external_capabilities=_capabilities(str(fake_rscript)),
+        dependency_snapshot=_dependency_snapshot(str(fake_rscript)),
+        result_id="r-deseq2-multifactor-test",
+        task_run_id="task-r-deseq2-multifactor-test",
+        input_package_id=parameter_manifest["input_package_id"],
+    )
+
+    assert result["status"] == "passed"
+    command_log = json.loads((tmp_path / "analysis" / "r_deg" / "deseq2_rscript" / "task-r-deseq2-multifactor-test" / "command_manifest.json").read_text(encoding="utf-8"))
+    assert command_log["design_formula"] == "~ batch + age + group"
+    assert command_log["covariates"] == ["batch", "age"]
+    assert result["plot_artifacts"] == []
+    assert result["report_artifacts"] == []
+    assert result["report_ready_eligible"] is False
+
+
 def test_r_deseq2_runtime_validation_reports_package_ready_or_graceful_block(tmp_path: Path) -> None:
     output_path = tmp_path / "deseq2_runtime.json"
     validation = run_r_deseq2_runtime_validation(output_path=output_path)
@@ -140,6 +193,17 @@ def _write_count_fixture(root: Path) -> Path:
     return path
 
 
+def _write_multifactor_count_fixture(root: Path) -> Path:
+    path = root / "counts_multifactor.tsv"
+    path.write_text(
+        "feature_id\tgene_symbol\tcase_1\tcase_2\tcase_3\tcontrol_1\tcontrol_2\tcontrol_3\n"
+        "ENSG000001\tGENE1\t120\t115\t118\t24\t31\t28\n"
+        "ENSG000002\tGENE2\t20\t23\t21\t80\t77\t81\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _deg_ready(count_table: Path) -> dict[str, object]:
     return {
         "input_package_id": "input-deseq2-real-fixture",
@@ -174,4 +238,61 @@ def _preflight() -> dict[str, object]:
         },
         "blockers": [],
         "warnings": [],
+    }
+
+
+def _preflight_with_covariates() -> dict[str, object]:
+    return {
+        **_preflight(),
+        "contrast": {
+            "contrast_id": "case_vs_control",
+            "factor": "group",
+            "case_level": "case",
+            "control_level": "control",
+            "case_samples": ["case_1", "case_2", "case_3"],
+            "control_samples": ["control_1", "control_2", "control_3"],
+        },
+        "design_config": {
+            "primary_factor": "group",
+            "case_group": "case",
+            "control_group": "control",
+            "sample_table": [
+                {"sample_id": "case_1", "group": "case", "batch": "b1", "age": 50},
+                {"sample_id": "case_2", "group": "case", "batch": "b2", "age": 55},
+                {"sample_id": "case_3", "group": "case", "batch": "b1", "age": 65},
+                {"sample_id": "control_1", "group": "control", "batch": "b2", "age": 52},
+                {"sample_id": "control_2", "group": "control", "batch": "b1", "age": 59},
+                {"sample_id": "control_3", "group": "control", "batch": "b2", "age": 70},
+            ],
+            "covariates": [{"name": "batch", "variable_type": "categorical"}, {"name": "age", "variable_type": "continuous"}],
+        },
+    }
+
+
+def _fake_rscript(tmp_path: Path, body: str) -> Path:
+    path = tmp_path / f"fake_rscript_{abs(hash(body))}.py"
+    path.write_text(f"#!/usr/bin/env python3\n{body.strip()}\n", encoding="utf-8")
+    os.chmod(path, 0o755)
+    return path
+
+
+def _capabilities(rscript_path: str) -> dict[str, object]:
+    return {
+        "runtime.r.available": {"available": True, "path": rscript_path, "version": "R version 4.4.2"},
+        "runtime.bioconductor.available": {"available": True, "version": "3.20"},
+        "package.r.deseq2.available": {"available": True, "version": "1.46.0"},
+    }
+
+
+def _dependency_snapshot(rscript_path: str) -> dict[str, object]:
+    return {
+        "status": "passed",
+        "runtime": "system_rscript",
+        "rscript_path": rscript_path,
+        "dependencies": {
+            "R": {"available": True, "path": rscript_path, "version": "R version 4.4.2"},
+            "BiocManager": {"available": True, "version": "3.20"},
+            "DESeq2": {"available": True, "version": "1.46.0"},
+        },
+        "blockers": [],
     }

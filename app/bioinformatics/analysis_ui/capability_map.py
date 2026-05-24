@@ -249,8 +249,8 @@ def _multifactor_deg_row(gate: dict[str, Any] | None) -> dict[str, Any]:
     status = str(gate.get("status") or "blocked")
     blockers = [str(item) for item in gate.get("blockers", []) or []] if isinstance(gate.get("blockers"), list) else []
     if status == "design_ready":
-        ui_state = "available_preflight_only"
-        reason = "Multi-factor DEG design preflight is ready, but formal execution still requires B19 adapter/output/result schema gates."
+        ui_state = "available_via_method_specific_rscript_gates"
+        reason = "Multi-factor DEG design preflight is ready; B26 execution is available only through limma/DESeq2/edgeR method-specific Rscript gates, user confirmation and result_index_v2 validation."
     elif blockers:
         ui_state = "blocked_preflight"
         reason = f"Multi-factor DEG preflight is blocked: {', '.join(blockers)}."
@@ -261,16 +261,16 @@ def _multifactor_deg_row(gate: dict[str, Any] | None) -> dict[str, Any]:
         "capability_id": "deg_multifactor",
         "label": "Multi-factor DEG design",
         "category": "DEG",
-        "implementation_status": "contract_preflight_available",
+        "implementation_status": "b26_method_specific_gated_execution" if status == "design_ready" else "contract_preflight_available",
         "ui_state": ui_state,
         "formal_execution_enabled": False,
         "can_display_as_completed": False,
         "reason": reason,
         "disabled_reason": reason,
         "dependency_capability_keys": [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, LIMMA_KEY, DESEQ2_KEY, EDGER_KEY],
-        "required_contracts": ["B18 design matrix/contrast/value-type preflight", "B19 R adapter contract", "external engine dependency snapshot"],
-        "result_semantics_policy": "B18 writes preflight_only manifest only; never formal_computed_result.",
-        "boundary": "Design readiness is not execution readiness and cannot be displayed as a completed analysis.",
+        "required_contracts": ["B18 design matrix/contrast/value-type preflight", "B19 R adapter contract", "B25/B26 method-specific Rscript gate", "external engine dependency snapshot", "user confirmation", "result_index_v2"],
+        "result_semantics_policy": "The B18 preflight remains preflight_only; only a B26 method-specific runtime result may become formal_computed_result after all gates pass.",
+        "boundary": "Design readiness is not a completed analysis; a completed badge still requires a validated method-specific formal result entry.",
     }
 
 

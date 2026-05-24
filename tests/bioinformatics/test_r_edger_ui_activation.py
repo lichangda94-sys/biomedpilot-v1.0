@@ -81,6 +81,49 @@ def test_edger_design_confirmation_flow_enables_gated_rscript_execution(tmp_path
     assert result["report_ready_eligible"] is False
 
 
+def test_edger_rscript_execution_writes_multifactor_design_table(tmp_path: Path) -> None:
+    count_table = _write_multifactor_count_table(tmp_path)
+    fake_rscript = _fake_rscript_with_design_assertion(tmp_path)
+    preflight = _preflight_with_covariates()
+    parameter_manifest = {
+        "input_package_id": "input-edger-multifactor",
+        "deg_ready_package_id": "deg-ready-edger-multifactor",
+        "method": "edger",
+        "method_family": "edger_count_model",
+        "log2fc_threshold": 1.0,
+        "fdr_threshold": 0.05,
+        "normalization_method": "TMM",
+        "test_method": "glm_lrt",
+    }
+    sample_map = {f"case_{i}": "case" for i in range(1, 4)} | {f"control_{i}": "control" for i in range(1, 4)}
+
+    result = run_r_edger_rscript_execution(
+        tmp_path,
+        count_table_path=count_table,
+        sample_group_map=sample_map,
+        case_group="case",
+        control_group="control",
+        multi_factor_preflight=preflight,
+        parameters_manifest=parameter_manifest,
+        rscript_path=str(fake_rscript),
+        external_capabilities=_runtime_detection()["external_capabilities"],
+        dependency_snapshot=_runtime_detection()["dependency_snapshot"],
+        result_id="r-edger-multifactor-test",
+        task_run_id="task-r-edger-multifactor-test",
+        input_package_id="input-edger-multifactor",
+    )
+
+    assert result["status"] == "passed"
+    manifest_path = tmp_path / "analysis" / "r_deg" / "edger_rscript" / "task-r-edger-multifactor-test" / "command_manifest.json"
+    command_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert command_manifest["design_formula"] == "~ batch + age + group"
+    assert command_manifest["covariates"] == ["batch", "age"]
+    assert command_manifest["test_method"] == "glm_lrt"
+    assert result["plot_artifacts"] == []
+    assert result["report_artifacts"] == []
+    assert result["report_ready_eligible"] is False
+
+
 def _action(state: dict[str, object], action_id: str) -> dict[str, object]:
     return next(row for row in state["action_rows"] if row["action_id"] == action_id)  # type: ignore[index]
 
@@ -124,6 +167,28 @@ def _fake_rscript(tmp_path: Path) -> Path:
         "    'feature_id\\tgene_symbol\\tlogFC\\tlogCPM\\tPValue\\tFDR\\tLR\\n'\n"
         "    'ENSG000001\\tGENE1\\t2.1\\t8.4\\t0.001\\t0.01\\t5.2\\n'\n"
         "    'ENSG000002\\tGENE2\\t-1.8\\t7.2\\t0.004\\t0.02\\t4.6\\n',\n"
+        "    encoding='utf-8',\n"
+        ")\n",
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o755)
+    return path
+
+
+def _fake_rscript_with_design_assertion(tmp_path: Path) -> Path:
+    path = tmp_path / "fake_rscript_multifactor.py"
+    path.write_text(
+        "#!/usr/bin/env python3\n"
+        "import csv\n"
+        "import pathlib\n"
+        "import sys\n"
+        "design = pathlib.Path(sys.argv[3])\n"
+        "output = pathlib.Path(sys.argv[4])\n"
+        "rows = list(csv.DictReader(design.open(encoding='utf-8'), delimiter='\\t'))\n"
+        "assert {'sample', 'group', 'batch', 'age'}.issubset(rows[0])\n"
+        "output.write_text(\n"
+        "    'feature_id\\tgene_symbol\\tlogFC\\tlogCPM\\tPValue\\tFDR\\tLR\\n'\n"
+        "    'ENSG000001\\tGENE1\\t2.1\\t8.4\\t0.001\\t0.01\\t5.2\\n',\n"
         "    encoding='utf-8',\n"
         ")\n",
         encoding="utf-8",
@@ -188,6 +253,54 @@ def _write_standardized_state(root: Path) -> None:
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     repo_path.write_text(json.dumps(repository_manifest), encoding="utf-8")
     registry_path.write_text(json.dumps(registry), encoding="utf-8")
+
+
+def _write_multifactor_count_table(root: Path) -> Path:
+    path = root / "counts_multifactor.tsv"
+    path.write_text(
+        "feature_id\tgene_symbol\tcase_1\tcase_2\tcase_3\tcontrol_1\tcontrol_2\tcontrol_3\n"
+        "ENSG000001\tGENE1\t120\t115\t118\t24\t31\t28\n"
+        "ENSG000002\tGENE2\t20\t23\t21\t80\t77\t81\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _preflight_with_covariates() -> dict[str, object]:
+    return {
+        "status": "design_ready",
+        "method": "edger",
+        "method_family": "edger_count_model",
+        "value_type": "count",
+        "value_type_policy": "edger_requires_raw_integer_counts",
+        "input_package_id": "input-edger-multifactor",
+        "deg_ready_package_id": "deg-ready-edger-multifactor",
+        "gene_id_type": "symbol",
+        "contrast": {
+            "contrast_id": "case_vs_control",
+            "factor": "group",
+            "case_level": "case",
+            "control_level": "control",
+            "case_samples": ["case_1", "case_2", "case_3"],
+            "control_samples": ["control_1", "control_2", "control_3"],
+        },
+        "design_config": {
+            "primary_factor": "group",
+            "case_group": "case",
+            "control_group": "control",
+            "sample_table": [
+                {"sample_id": "case_1", "group": "case", "batch": "b1", "age": 50},
+                {"sample_id": "case_2", "group": "case", "batch": "b2", "age": 55},
+                {"sample_id": "case_3", "group": "case", "batch": "b1", "age": 65},
+                {"sample_id": "control_1", "group": "control", "batch": "b2", "age": 52},
+                {"sample_id": "control_2", "group": "control", "batch": "b1", "age": 59},
+                {"sample_id": "control_3", "group": "control", "batch": "b2", "age": 70},
+            ],
+            "covariates": [{"name": "batch", "variable_type": "categorical"}, {"name": "age", "variable_type": "continuous"}],
+        },
+        "blockers": [],
+        "warnings": [],
+    }
 
 
 def _asset(asset_id: str, asset_type: str, repository: str, path: Path, *, value_type: str = "", gene_id_type: str = "symbol") -> dict[str, object]:

@@ -295,6 +295,7 @@ def _public_design_config(config: dict[str, Any]) -> dict[str, Any]:
         "primary_factor": str(config.get("primary_factor") or "group"),
         "case_group": str(config.get("case_group") or ""),
         "control_group": str(config.get("control_group") or ""),
+        "sample_table": [dict(row) for row in config.get("sample_table", []) or [] if isinstance(row, dict)],
         "covariates": _covariates(config),
         "contrast": config.get("contrast") if isinstance(config.get("contrast"), dict) else {},
     }

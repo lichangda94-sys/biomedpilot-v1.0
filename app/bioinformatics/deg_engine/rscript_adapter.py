@@ -17,6 +17,7 @@ from typing import Any, Mapping, Sequence
 
 from app.bioinformatics.deg_engine.r_adapter_contract import build_r_deg_runtime_gate
 from app.bioinformatics.deg_engine.r_backend_handoff import register_r_limma_external_handoff_result
+from app.bioinformatics.deg_engine.runtime_design import build_runtime_design_table
 
 R_LIMMA_RSCRIPT_ADAPTER_SCHEMA_VERSION = "biomedpilot.r_limma_rscript_adapter.v1"
 R_LIMMA_RSCRIPT_ENGINE_NAME = "r_limma_rscript_adapter"
@@ -206,10 +207,12 @@ def run_r_limma_rscript_execution(
     script_path = run_dir / "run_limma.R"
     command_manifest_path = run_dir / "command_manifest.json"
     command_log_path = run_dir / "command_log.json"
-    _write_design_table(design_path, header_gate["sample_columns"], sample_group_map)
+    design_table_gate = _write_design_table(design_path, header_gate["sample_columns"], sample_group_map, multi_factor_preflight)
+    if design_table_gate["status"] != "passed":
+        return _blocked(design_table_gate["blockers"], runtime_gate=runtime_gate, expression_header_gate=header_gate, design_table_gate=design_table_gate)
     script_path.write_text(_limma_r_script(), encoding="utf-8")
 
-    contrast = f"{_r_make_names(case_group)}-{_r_make_names(control_group)}"
+    contrast = f"group{_r_make_names(case_group)}-group{_r_make_names(control_group)}"
     command = [
         rscript_path,
         str(script_path),
@@ -217,6 +220,8 @@ def run_r_limma_rscript_execution(
         str(design_path),
         str(output_path),
         contrast,
+        case_group,
+        control_group,
     ]
     command_manifest = {
         "schema_version": "biomedpilot.r_limma_command_manifest.v1",
@@ -230,6 +235,10 @@ def run_r_limma_rscript_execution(
         "design_table_path": str(design_path),
         "output_path": str(output_path),
         "contrast": contrast,
+        "case_group": case_group,
+        "control_group": control_group,
+        "design_formula": design_table_gate["design_formula"],
+        "covariates": design_table_gate["covariate_names"],
         "timeout_seconds": timeout_seconds,
         "result_id": resolved_result_id,
         "task_run_id": resolved_task_run_id,
@@ -456,12 +465,15 @@ def _validate_expression_header(path: Path, sample_group_map: Mapping[str, str])
     }
 
 
-def _write_design_table(path: Path, sample_columns: Sequence[str], sample_group_map: Mapping[str, str]) -> None:
+def _write_design_table(path: Path, sample_columns: Sequence[str], sample_group_map: Mapping[str, str], multi_factor_preflight: Mapping[str, Any]) -> dict[str, Any]:
+    design = build_runtime_design_table(multi_factor_preflight, sample_columns, sample_group_map)
+    if design["status"] != "passed":
+        return design
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["sample", "group"], delimiter="\t")
+        writer = csv.DictWriter(handle, fieldnames=design["fieldnames"], delimiter="\t")
         writer.writeheader()
-        for sample in sample_columns:
-            writer.writerow({"sample": sample, "group": sample_group_map[sample]})
+        writer.writerows(design["rows"])
+    return design
 
 
 def _read_tsv(path: Path) -> list[dict[str, str]]:
@@ -509,6 +521,8 @@ expression_path <- args[[1]]
 design_path <- args[[2]]
 output_path <- args[[3]]
 contrast_expression <- args[[4]]
+case_group <- if (length(args) >= 5) args[[5]] else ""
+control_group <- if (length(args) >= 6) args[[6]] else ""
 if (!requireNamespace("limma", quietly=TRUE)) {
   stop("limma package is not available")
 }
@@ -530,9 +544,28 @@ design_df <- design_df[match(sample_columns, design_df$sample), , drop=FALSE]
 if (any(is.na(design_df$sample))) {
   stop("design table does not cover all expression samples")
 }
-group <- factor(design_df$group)
-design <- stats::model.matrix(~0 + group)
-colnames(design) <- make.names(levels(group))
+if (case_group != "" && control_group != "") {
+  design_df$group <- factor(design_df$group, levels=unique(c(control_group, case_group, as.character(design_df$group))))
+} else {
+  design_df$group <- factor(design_df$group)
+}
+covariate_columns <- setdiff(colnames(design_df), c("sample", "group"))
+for (column in covariate_columns) {
+  values <- design_df[[column]]
+  numeric_values <- suppressWarnings(as.numeric(values))
+  if (!any(is.na(numeric_values))) {
+    design_df[[column]] <- numeric_values
+  } else {
+    design_df[[column]] <- factor(values)
+  }
+}
+formula_text <- if (length(covariate_columns) > 0) {
+  paste("~ 0 + group +", paste(sprintf("`%s`", covariate_columns), collapse=" + "))
+} else {
+  "~ 0 + group"
+}
+design <- stats::model.matrix(stats::as.formula(formula_text), data=design_df)
+colnames(design) <- make.names(colnames(design))
 mat <- as.matrix(expr[, sample_columns, drop=FALSE])
 storage.mode(mat) <- "numeric"
 rownames(mat) <- feature_id

@@ -108,6 +108,7 @@ def build_r_edger_parameter_manifest(
     matrix_asset = ready.get("matrix_asset") if isinstance(ready.get("matrix_asset"), dict) else {}
     gene_mapping = ready.get("gene_mapping_status") if isinstance(ready.get("gene_mapping_status"), dict) else {}
     alignment = ready.get("sample_alignment_status") if isinstance(ready.get("sample_alignment_status"), dict) else {}
+    resolved_test_method = "glm_lrt" if test_method == "exact_test" and _has_covariates(preflight) else test_method
     manifest = {
         "schema_version": R_EDGER_PARAMETER_SCHEMA_VERSION,
         "created_at": _now(),
@@ -136,7 +137,7 @@ def build_r_edger_parameter_manifest(
         "minimum_count_filter": minimum_count_filter,
         "normalization_method": normalization_method,
         "dispersion_policy": dispersion_policy,
-        "test_method": test_method,
+        "test_method": resolved_test_method,
         "count_integer_policy": "raw_integer_counts_required_no_tpm_fpkm_or_log_values",
         "missing_value_policy": "count_matrix_must_be_numeric_integer_complete_or_adapter_fails",
         "multiple_testing_policy": "benjamini_hochberg",
@@ -201,7 +202,7 @@ def validate_r_edger_parameter_manifest(manifest: Mapping[str, Any]) -> dict[str
         blockers.append("invalid_edger_normalization_method")
     if payload.get("dispersion_policy") not in {"estimate_common_trended_tagwise", "common", "trended", "tagwise", "qlf_planned"}:
         blockers.append("invalid_edger_dispersion_policy")
-    if payload.get("test_method") not in {"exact_test", "glm_lrt_planned", "glm_qlf_planned"}:
+    if payload.get("test_method") not in {"exact_test", "glm_lrt", "glm_lrt_planned", "glm_qlf_planned"}:
         blockers.append("invalid_edger_test_method")
     blockers.extend(str(item) for item in payload.get("blockers", []) or [])
     return {"status": "blocked" if blockers else "passed", "blockers": list(dict.fromkeys(blockers)), "warnings": warnings}
@@ -355,6 +356,11 @@ def _sample_group_map(preflight: Mapping[str, Any]) -> dict[str, str]:
     for sample in contrast.get("control_samples", []) or []:
         assignments[str(sample)] = str(contrast.get("control_level") or "")
     return assignments
+
+
+def _has_covariates(preflight: Mapping[str, Any]) -> bool:
+    design_config = preflight.get("design_config") if isinstance(preflight.get("design_config"), dict) else {}
+    return bool(design_config.get("covariates"))
 
 
 def _now() -> str:

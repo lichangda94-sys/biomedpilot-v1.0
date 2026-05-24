@@ -103,6 +103,51 @@ sys.exit(0)
     assert result_index["results"][0]["result_id"] == "r-limma-rscript-test"
 
 
+def test_run_r_limma_rscript_execution_writes_multifactor_design_table(tmp_path: Path) -> None:
+    expression_path = _write_multifactor_expression_table(tmp_path)
+    fake_rscript = _fake_rscript(
+        tmp_path,
+        """
+import csv
+import pathlib
+import sys
+design = pathlib.Path(sys.argv[3])
+output = pathlib.Path(sys.argv[4])
+rows = list(csv.DictReader(design.open(encoding="utf-8"), delimiter="\\t"))
+assert {"sample", "group", "batch", "age"}.issubset(rows[0])
+assert sys.argv[5] == "groupcase-groupcontrol"
+output.write_text(
+    "feature_id\\tgene_symbol\\tlogFC\\tAveExpr\\tt\\tP.Value\\tadj.P.Val\\tB\\n"
+    "ENSG000001\\tGENE1\\t1.2\\t8.0\\t3.0\\t0.004\\t0.04\\t3.1\\n",
+    encoding="utf-8",
+)
+""",
+    )
+
+    sample_map = {f"case_{i}": "case" for i in range(1, 4)} | {f"control_{i}": "control" for i in range(1, 4)}
+    result = run_r_limma_rscript_execution(
+        tmp_path,
+        expression_table_path=expression_path,
+        sample_group_map=sample_map,
+        case_group="case",
+        control_group="control",
+        multi_factor_preflight=_preflight_with_covariates(method="limma", method_family="limma_normalized_expression"),
+        parameters_manifest=_parameters(),
+        rscript_path=str(fake_rscript),
+        external_capabilities=_capabilities(str(fake_rscript)),
+        dependency_snapshot=_dependency_snapshot(str(fake_rscript)),
+        result_id="r-limma-multifactor-test",
+        task_run_id="task-r-limma-multifactor-test",
+        input_package_id="input-r-limma-1",
+    )
+
+    assert result["status"] == "passed"
+    command_manifest = json.loads(Path(result["command_manifest_path"]).read_text(encoding="utf-8"))
+    assert command_manifest["design_formula"] == "~ batch + age + group"
+    assert command_manifest["covariates"] == ["batch", "age"]
+    assert result["result_index_entry"]["report_ready_eligible"] is False
+
+
 def test_run_r_limma_rscript_execution_blocks_nonzero_exit_without_result_index(tmp_path: Path) -> None:
     expression_path = _write_expression_table(tmp_path)
     fake_rscript = _fake_rscript(
@@ -205,6 +250,17 @@ def _write_expression_table(tmp_path: Path) -> Path:
     return path
 
 
+def _write_multifactor_expression_table(tmp_path: Path) -> Path:
+    path = tmp_path / "expression_multifactor.tsv"
+    path.write_text(
+        "feature_id\tgene_symbol\tcase_1\tcase_2\tcase_3\tcontrol_1\tcontrol_2\tcontrol_3\n"
+        "ENSG000001\tGENE1\t8.1\t8.4\t8.0\t6.2\t6.1\t6.0\n"
+        "ENSG000002\tGENE2\t4.2\t4.0\t4.4\t4.1\t4.5\t4.3\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _preflight() -> dict[str, object]:
     return {
         "status": "design_ready",
@@ -214,6 +270,28 @@ def _preflight() -> dict[str, object]:
         "result_semantics": "preflight_only",
         "blockers": [],
         "warnings": [],
+    }
+
+
+def _preflight_with_covariates(*, method: str, method_family: str) -> dict[str, object]:
+    return {
+        **_preflight(),
+        "method": method,
+        "method_family": method_family,
+        "design_config": {
+            "primary_factor": "group",
+            "case_group": "case",
+            "control_group": "control",
+            "sample_table": [
+                {"sample_id": "case_1", "group": "case", "batch": "b1", "age": 50},
+                {"sample_id": "case_2", "group": "case", "batch": "b2", "age": 55},
+                {"sample_id": "case_3", "group": "case", "batch": "b1", "age": 65},
+                {"sample_id": "control_1", "group": "control", "batch": "b2", "age": 52},
+                {"sample_id": "control_2", "group": "control", "batch": "b1", "age": 59},
+                {"sample_id": "control_3", "group": "control", "batch": "b2", "age": 70},
+            ],
+            "covariates": [{"name": "batch", "variable_type": "categorical"}, {"name": "age", "variable_type": "continuous"}],
+        },
     }
 
 

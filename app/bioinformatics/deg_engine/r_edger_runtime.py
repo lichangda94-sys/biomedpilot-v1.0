@@ -11,6 +11,7 @@ from typing import Any, Mapping, Sequence
 from app.bioinformatics.deg_engine.models import REQUIRED_DEG_RESULT_COLUMNS
 from app.bioinformatics.deg_engine.r_adapter_contract import build_r_deg_runtime_gate, validate_r_deg_output_schema, validate_r_deg_result_registration_bundle
 from app.bioinformatics.deg_engine.result_schema import validate_deg_result_bundle, validate_formal_deg_result_index_entry
+from app.bioinformatics.deg_engine.runtime_design import build_runtime_design_table
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 
@@ -171,7 +172,9 @@ def run_r_edger_rscript_execution(
     script_path = run_dir / "run_edger.R"
     command_manifest_path = run_dir / "command_manifest.json"
     command_log_path = run_dir / "command_log.json"
-    _write_design_table(design_path, header_gate["sample_columns"], sample_group_map)
+    design_table_gate = _write_design_table(design_path, header_gate["sample_columns"], sample_group_map, multi_factor_preflight)
+    if design_table_gate["status"] != "passed":
+        return _blocked(design_table_gate["blockers"], runtime_gate=runtime_gate, count_table_gate=header_gate, design_table_gate=design_table_gate)
     script_path.write_text(_edger_r_script(), encoding="utf-8")
 
     command = [
@@ -197,8 +200,10 @@ def run_r_edger_rscript_execution(
         "output_path": str(output_path),
         "case_group": case_group,
         "control_group": control_group,
+        "design_formula": design_table_gate["design_formula"],
+        "covariates": design_table_gate["covariate_names"],
         "normalization_method": str(parameters_manifest.get("normalization_method") or "TMM"),
-        "test_method": "exact_test",
+        "test_method": "glm_lrt" if design_table_gate["covariate_names"] else "exact_test",
         "timeout_seconds": timeout_seconds,
         "result_id": resolved_result_id,
         "task_run_id": resolved_task_run_id,
@@ -471,12 +476,15 @@ def _blocked(blockers: Sequence[str], **payload: Any) -> dict[str, Any]:
     }
 
 
-def _write_design_table(path: Path, sample_columns: Sequence[str], sample_group_map: Mapping[str, str]) -> None:
+def _write_design_table(path: Path, sample_columns: Sequence[str], sample_group_map: Mapping[str, str], multi_factor_preflight: Mapping[str, Any]) -> dict[str, Any]:
+    design = build_runtime_design_table(multi_factor_preflight, sample_columns, sample_group_map)
+    if design["status"] != "passed":
+        return design
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["sample", "group"], delimiter="\t")
+        writer = csv.DictWriter(handle, fieldnames=design["fieldnames"], delimiter="\t")
         writer.writeheader()
-        for sample in sample_columns:
-            writer.writerow({"sample": sample, "group": sample_group_map[sample]})
+        writer.writerows(design["rows"])
+    return design
 
 
 def _read_tsv(path: Path) -> list[dict[str, str]]:
@@ -616,12 +624,36 @@ if (any(is.na(mat)) || any(mat < 0) || any(mat != round(mat))) {
 storage.mode(mat) <- "integer"
 rownames(mat) <- feature_id
 group <- factor(design_df$group, levels=unique(c(control_group, case_group, as.character(design_df$group))))
+design_df$group <- group
+covariate_columns <- setdiff(colnames(design_df), c("sample", "group"))
+for (column in covariate_columns) {
+  values <- design_df[[column]]
+  numeric_values <- suppressWarnings(as.numeric(values))
+  if (!any(is.na(numeric_values))) {
+    design_df[[column]] <- numeric_values
+  } else {
+    design_df[[column]] <- factor(values)
+  }
+}
 y <- edgeR::DGEList(counts=mat, group=group, genes=data.frame(feature_id=feature_id, gene_symbol=gene_symbol, stringsAsFactors=FALSE))
 y <- edgeR::calcNormFactors(y, method=normalization_method)
-y <- edgeR::estimateCommonDisp(y)
-y <- edgeR::estimateTagwiseDisp(y)
-tested <- edgeR::exactTest(y, pair=c(control_group, case_group))
-table <- edgeR::topTags(tested, n=Inf, sort.by="none")$table
+if (length(covariate_columns) > 0) {
+  formula_text <- paste("~", paste(c(sprintf("`%s`", covariate_columns), "group"), collapse=" + "))
+  design <- stats::model.matrix(stats::as.formula(formula_text), data=design_df)
+  y <- edgeR::estimateDisp(y, design)
+  fit <- edgeR::glmFit(y, design)
+  coefficient <- paste0("group", make.names(case_group))
+  if (!(coefficient %in% colnames(design))) {
+    stop(paste("edgeR GLM coefficient missing:", coefficient))
+  }
+  tested <- edgeR::glmLRT(fit, coef=coefficient)
+  table <- edgeR::topTags(tested, n=Inf, sort.by="none")$table
+} else {
+  y <- edgeR::estimateCommonDisp(y)
+  y <- edgeR::estimateTagwiseDisp(y)
+  tested <- edgeR::exactTest(y, pair=c(control_group, case_group))
+  table <- edgeR::topTags(tested, n=Inf, sort.by="none")$table
+}
 out <- data.frame(
   feature_id=rownames(table),
   gene_symbol=gene_symbol[match(rownames(table), feature_id)],
@@ -629,6 +661,7 @@ out <- data.frame(
   logCPM=table$logCPM,
   PValue=table$PValue,
   FDR=table$FDR,
+  LR=if ("LR" %in% colnames(table)) table$LR else NA,
   check.names=FALSE
 )
 utils::write.table(out, file=output_path, sep="\t", quote=FALSE, row.names=FALSE, na="")
