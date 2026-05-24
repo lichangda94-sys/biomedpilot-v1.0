@@ -125,14 +125,18 @@ def test_wb_actions_are_gated_and_forbidden_surfaces_absent(labtools_wb_window) 
     copy = labtools_wb_window.findChild(QPushButton, "labtoolsWbCopyTableButton")
     save = labtools_wb_window.findChild(QPushButton, "labtoolsWbSaveRecordButton")
     export = labtools_wb_window.findChild(QPushButton, "labtoolsWbExportButton")
+    export_md = labtools_wb_window.findChild(QPushButton, "labtoolsWbExportMarkdownButton")
+    export_csv = labtools_wb_window.findChild(QPushButton, "labtoolsWbExportCsvButton")
     history = labtools_wb_window.findChild(QPushButton, "labtoolsWbHistoryButton")
 
     assert copy.isEnabled()
     assert not save.isEnabled()
     assert not export.isEnabled()
+    assert export_md.isEnabled()
+    assert export_csv.isEnabled()
     assert not history.isEnabled()
     assert save.property("disabledState") == "disabled_missing_storage_adapter"
-    assert export.property("disabledState") == "disabled_missing_file_picker"
+    assert export.property("disabledState") == "future"
     assert "SDS-PAGE 配胶结果表" not in labels
     assert "fake gel bands" not in labels
     assert "image analysis" not in labels

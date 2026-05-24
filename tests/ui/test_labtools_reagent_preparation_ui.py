@@ -117,14 +117,18 @@ def test_reagent_actions_preserve_adapter_gates(labtools_reagent_window) -> None
     save_template = labtools_reagent_window.findChild(QPushButton, "labtoolsReagentSaveTemplateButton")
     save_record = labtools_reagent_window.findChild(QPushButton, "labtoolsReagentSaveRecordButton")
     export = labtools_reagent_window.findChild(QPushButton, "labtoolsReagentExportButton")
+    export_md = labtools_reagent_window.findChild(QPushButton, "labtoolsReagentExportMarkdownButton")
+    export_csv = labtools_reagent_window.findChild(QPushButton, "labtoolsReagentExportCsvButton")
 
     assert copy.isEnabled()
     assert not save_template.isEnabled()
     assert not save_record.isEnabled()
     assert not export.isEnabled()
+    assert export_md.isEnabled()
+    assert export_csv.isEnabled()
     assert save_template.property("disabledState") == "disabled_missing_storage_adapter"
     assert save_record.property("disabledState") == "disabled_missing_storage_adapter"
-    assert export.property("disabledState") == "disabled_missing_file_picker"
+    assert export.property("disabledState") == "future"
 
 
 def test_reagent_invalid_input_shows_error_without_saved_record(labtools_reagent_window) -> None:

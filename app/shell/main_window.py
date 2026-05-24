@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
     QFrame,
+    QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -1001,12 +1004,20 @@ class MainWindow(QMainWindow):
         save = make_button("保存配制记录 - 项目存储试点", role="secondary")
         save.setObjectName("labtoolsReagentSaveRecordButton")
         save.clicked.connect(self._save_labtools_reagent_record)
-        export = make_button("导出配制摘要 - 需文件选择器", role="secondary")
+        export = make_button("PDF / DOCX 导出 - 未开放", role="secondary")
         export.setObjectName("labtoolsReagentExportButton")
         export.setEnabled(False)
-        export.setProperty("disabledState", "disabled_missing_file_picker")
+        export.setProperty("disabledState", "future")
+        export_md = make_button("导出 Markdown", role="secondary")
+        export_md.setObjectName("labtoolsReagentExportMarkdownButton")
+        export_md.clicked.connect(self._export_labtools_reagent_markdown)
+        export_csv = make_button("导出 CSV", role="secondary")
+        export_csv.setObjectName("labtoolsReagentExportCsvButton")
+        export_csv.clicked.connect(self._export_labtools_reagent_csv)
         actions.addWidget(copy)
         actions.addWidget(save)
+        actions.addWidget(export_md)
+        actions.addWidget(export_csv)
         actions.addWidget(export)
         actions.addStretch(1)
         layout.addLayout(actions)
@@ -1195,6 +1206,26 @@ class MainWindow(QMainWindow):
         self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
         self._refresh_labtools_reagent_history()
 
+    def _export_labtools_reagent_markdown(self) -> None:
+        result_data = getattr(self, "_labtools_reagent_last_result", None)
+        if result_data is None:
+            return
+        path = self._choose_labtools_export_path("导出试剂配制 Markdown", ".md", "reagent_preparation.md", "Markdown (*.md)")
+        if path is None:
+            return
+        result = labtools_runtime.export_reagent_preparation_markdown(path, result_data)
+        self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
+
+    def _export_labtools_reagent_csv(self) -> None:
+        result_data = getattr(self, "_labtools_reagent_last_result", None)
+        if result_data is None:
+            return
+        path = self._choose_labtools_export_path("导出试剂配制 CSV", ".csv", "reagent_preparation.csv", "CSV (*.csv)")
+        if path is None:
+            return
+        result = labtools_runtime.export_reagent_preparation_csv(path, result_data)
+        self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
+
     def _refresh_labtools_reagent_history(self) -> None:
         if not hasattr(self, "_labtools_reagent_history_list"):
             return
@@ -1267,10 +1298,16 @@ class MainWindow(QMainWindow):
         save = make_button("保存 WB 记录 - 项目存储试点", role="secondary")
         save.setObjectName("labtoolsWbSaveRecordButton")
         save.clicked.connect(self._save_labtools_wb_record)
-        export = make_button("导出 CSV / Markdown - 需文件选择器", role="secondary")
+        export = make_button("PDF / DOCX 导出 - 未开放", role="secondary")
         export.setObjectName("labtoolsWbExportButton")
         export.setEnabled(False)
-        export.setProperty("disabledState", "disabled_missing_file_picker")
+        export.setProperty("disabledState", "future")
+        export_md = make_button("导出 Markdown", role="secondary")
+        export_md.setObjectName("labtoolsWbExportMarkdownButton")
+        export_md.clicked.connect(self._export_labtools_wb_markdown)
+        export_csv = make_button("导出 CSV", role="secondary")
+        export_csv.setObjectName("labtoolsWbExportCsvButton")
+        export_csv.clicked.connect(self._export_labtools_wb_csv)
         history = make_button("历史记录 - 项目存储试点", role="secondary")
         history.setObjectName("labtoolsWbHistoryButton")
         history.clicked.connect(self._refresh_labtools_wb_history)
@@ -1278,6 +1315,8 @@ class MainWindow(QMainWindow):
         self._set_storage_gated_button_state(history, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
         actions.addWidget(copy)
         actions.addWidget(save)
+        actions.addWidget(export_md)
+        actions.addWidget(export_csv)
         actions.addWidget(export)
         actions.addWidget(history)
         actions.addStretch(1)
@@ -1550,6 +1589,26 @@ class MainWindow(QMainWindow):
         self._report_labtools_storage_result(result, self._labtools_wb_issue_rows)
         self._refresh_labtools_wb_history()
 
+    def _export_labtools_wb_markdown(self) -> None:
+        result_data = getattr(self, "_labtools_wb_last_result", None)
+        if result_data is None:
+            return
+        path = self._choose_labtools_export_path("导出 WB Loading Markdown", ".md", "wb_loading.md", "Markdown (*.md)")
+        if path is None:
+            return
+        result = labtools_runtime.export_wb_loading_markdown(path, result_data)
+        self._report_labtools_storage_result(result, self._labtools_wb_issue_rows)
+
+    def _export_labtools_wb_csv(self) -> None:
+        result_data = getattr(self, "_labtools_wb_last_result", None)
+        if result_data is None:
+            return
+        path = self._choose_labtools_export_path("导出 WB Loading CSV", ".csv", "wb_loading.csv", "CSV (*.csv)")
+        if path is None:
+            return
+        result = labtools_runtime.export_wb_loading_csv(path, result_data)
+        self._report_labtools_storage_result(result, self._labtools_wb_issue_rows)
+
     def _refresh_labtools_wb_history(self) -> None:
         if not hasattr(self, "_labtools_wb_history_list"):
             return
@@ -1598,6 +1657,18 @@ class MainWindow(QMainWindow):
             lines.append(f"- error: {error}")
         issue_label.setText("\n".join(lines))
         issue_label.setProperty("hasError", not result.ok)
+
+    def _choose_labtools_export_path(self, caption: str, suffix: str, suggested_name: str, file_filter: str):
+        start = suggested_name
+        if self._labtools_project_root is not None:
+            start = str(self._labtools_project_root / "project_storage" / "labtools" / "exports" / suggested_name)
+        selected, _filter = QFileDialog.getSaveFileName(self, caption, start, file_filter)
+        if not selected:
+            return None
+        path = Path(selected)
+        if path.suffix.lower() != suffix:
+            path = path.with_suffix(suffix)
+        return path
 
     def _show_labtools_sds_page_boundary(self) -> None:
         semantic_key = PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value
@@ -1782,6 +1853,7 @@ class MainWindow(QMainWindow):
                 semantic_key=semantic_key,
                 actions=(
                     ("保存细胞记录 - 后端未完成", "disabled_backend_missing"),
+                    ("导出细胞记录 - 后端未完成", "disabled_backend_missing"),
                     ("运行图像分析 - 暂未开放", "disabled_backend_missing"),
                     ("历史记录 - 需存储适配", "disabled_missing_storage_adapter"),
                 ),

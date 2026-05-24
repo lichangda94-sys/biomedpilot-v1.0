@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import csv
 import json
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Any, Callable
 from uuid import uuid4
@@ -560,6 +562,44 @@ def save_reagent_preparation_record(
         return LabToolsStoragePilotResult(ok=False, message="保存配制记录失败", errors=(str(exc),))
 
 
+def export_reagent_preparation_markdown(file_path: Path | str, result: ReagentPreparationUiResult) -> LabToolsStoragePilotResult:
+    if not result.valid:
+        return LabToolsStoragePilotResult(ok=False, message="当前预览包含错误，不能导出。", errors=result.errors)
+    path = Path(file_path).expanduser().resolve()
+    content = "\n".join(
+        (
+            "# BioMedPilot LabTools Reagent Preparation",
+            "",
+            "## Result",
+            result.primary_result,
+            "",
+            "## Components",
+            result.detail_text,
+            "",
+            "## Warnings",
+            "\n".join(f"- {warning}" for warning in result.warnings) or "- None",
+            "",
+            "## Review Notice",
+            REVIEW_NOTICE,
+            "",
+        )
+    )
+    return _write_export_text(path, content, expected_suffix=".md")
+
+
+def export_reagent_preparation_csv(file_path: Path | str, result: ReagentPreparationUiResult) -> LabToolsStoragePilotResult:
+    if not result.valid:
+        return LabToolsStoragePilotResult(ok=False, message="当前预览包含错误，不能导出。", errors=result.errors)
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["stage", "name", "component_type", "amount", "notes", "warning"])
+    for component in result.component_rows:
+        writer.writerow([component.stage, component.name, component.component_type, component.amount, component.notes, component.warning])
+    writer.writerow([])
+    writer.writerow(["review_notice", REVIEW_NOTICE])
+    return _write_export_text(Path(file_path).expanduser().resolve(), buffer.getvalue(), expected_suffix=".csv")
+
+
 def load_reagent_preparation_history(project_root: Path | str | None) -> LabToolsHistoryResult:
     path = _records_file(project_root, "reagent_preparations.json")
     if path is None or not path.exists():
@@ -720,6 +760,63 @@ def save_wb_loading_record(project_root: Path | str | None, *, result: WBLoading
         return LabToolsStoragePilotResult(ok=False, message="保存 WB 记录失败", errors=(str(exc),))
 
 
+def export_wb_loading_markdown(file_path: Path | str, result: WBLoadingUiResult) -> LabToolsStoragePilotResult:
+    path = Path(file_path).expanduser().resolve()
+    rows = "\n".join(
+        f"- {row.sample_id}: sample {row.sample_volume}, buffer {row.loading_buffer_volume}, water {row.diluent_volume}, status {row.status}"
+        for row in result.rows
+    )
+    lanes = "\n".join(f"- Lane {lane.lane_number}: {lane.sample_id} {lane.sample_volume} ({lane.status})" for lane in result.lanes)
+    content = "\n".join(
+        (
+            "# BioMedPilot LabTools WB Loading",
+            "",
+            "## Result",
+            result.primary_result,
+            "",
+            "## Loading Table",
+            rows,
+            "",
+            "## Lane Preview",
+            lanes,
+            "",
+            "## Warnings",
+            "\n".join(f"- {warning}" for warning in result.warnings) or "- None",
+            "",
+            "## Review Notice",
+            result.review_notice or REVIEW_NOTICE,
+            "",
+        )
+    )
+    return _write_export_text(path, content, expected_suffix=".md")
+
+
+def export_wb_loading_csv(file_path: Path | str, result: WBLoadingUiResult) -> LabToolsStoragePilotResult:
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["sample_id", "concentration", "sample_volume", "loading_buffer_volume", "diluent_volume", "final_volume", "status", "issues"])
+    for row in result.rows:
+        writer.writerow(
+            [
+                row.sample_id,
+                row.concentration,
+                row.sample_volume,
+                row.loading_buffer_volume,
+                row.diluent_volume,
+                row.final_volume,
+                row.status,
+                "; ".join(row.issues),
+            ]
+        )
+    writer.writerow([])
+    writer.writerow(["lane_number", "lane_type", "sample_id", "sample_volume", "status", "issues"])
+    for lane in result.lanes:
+        writer.writerow([lane.lane_number, lane.lane_type, lane.sample_id, lane.sample_volume, lane.status, "; ".join(lane.issues)])
+    writer.writerow([])
+    writer.writerow(["review_notice", result.review_notice or REVIEW_NOTICE])
+    return _write_export_text(Path(file_path).expanduser().resolve(), buffer.getvalue(), expected_suffix=".csv")
+
+
 def load_wb_loading_history(project_root: Path | str | None) -> LabToolsHistoryResult:
     path = _records_file(project_root, "wb_loading_records.json")
     if path is None or not path.exists():
@@ -842,6 +939,28 @@ def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, indent=2, sort_keys=True)
         handle.write("\n")
+
+
+def _write_export_text(path: Path, content: str, *, expected_suffix: str) -> LabToolsStoragePilotResult:
+    if path.suffix.lower() != expected_suffix:
+        return LabToolsStoragePilotResult(ok=False, message=f"导出文件后缀必须为 {expected_suffix}", path=path)
+    if _is_home_labtools_path(path):
+        return LabToolsStoragePilotResult(ok=False, message="拒绝写入 ~/.labtools；请选择 BioMedPilot 项目或用户指定路径。", path=path)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        return LabToolsStoragePilotResult(ok=True, message="已通过文件选择器导出 / Exported via file picker", path=path)
+    except OSError as exc:
+        return LabToolsStoragePilotResult(ok=False, message="导出失败", path=path, errors=(str(exc),))
+
+
+def _is_home_labtools_path(path: Path) -> bool:
+    home_labtools = (Path.home() / ".labtools").expanduser().resolve()
+    try:
+        path.resolve().relative_to(home_labtools)
+    except ValueError:
+        return False
+    return True
 
 
 def _utc_now() -> str:
