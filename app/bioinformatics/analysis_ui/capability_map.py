@@ -212,7 +212,7 @@ def _r_method_row(
         reason = f"{label} B25.11 UI execution is blocked: {', '.join(plan_blockers)}."
     elif plan:
         state = "blocked_count_model_planning_only"
-        reason = f"{label} B25.12 count-model parameter/runtime planning remains blocked: {', '.join(plan_blockers)}."
+        reason = f"{label} B25.13 controlled runtime validation remains UI-blocked: {', '.join(plan_blockers)}."
     elif missing or gate_blockers:
         state = "blocked_by_dependency"
         reason = f"{label} B19 adapter gate is blocked: {', '.join(gate_blockers or missing)}."
@@ -226,7 +226,7 @@ def _r_method_row(
         "capability_id": capability_id,
         "label": label,
         "category": "DEG",
-        "implementation_status": "b25_11_deseq2_gated_ui_execution" if method == "deseq2" and plan else ("b25_12_edger_parameter_runtime_planning" if method == "edger" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate")),
+        "implementation_status": "b25_11_deseq2_gated_ui_execution" if method == "deseq2" and plan else ("b25_13_edger_controlled_runtime_validation" if method == "edger" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate")),
         "ui_state": state,
         "formal_execution_enabled": plan_formal_enabled,
         "can_display_as_completed": False,

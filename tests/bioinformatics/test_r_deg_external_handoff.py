@@ -122,11 +122,10 @@ def test_deseq2_and_edger_external_handoff_remain_deferred() -> None:
     assert deseq2_plan["can_register_formal_result"] is False
     assert edger_plan["can_register_formal_result"] is False
     assert "r_deseq2_generic_external_handoff_disabled_use_controlled_rscript_adapter" in deseq2_plan["blockers"]
-    assert "b25_12_edger_planning_only_no_execution" in edger_plan["blockers"]
-    assert "b25_13_edger_real_fixture_required" in edger_plan["blockers"]
     assert "b25_14_edger_ui_activation_required" in edger_plan["blockers"]
+    assert "r_edger_generic_external_handoff_disabled_use_controlled_rscript_adapter" in edger_plan["blockers"]
     assert "deseq2_rscript_execution_adapter_not_implemented" not in deseq2_plan["blockers"]
-    assert "edger_rscript_execution_adapter_not_implemented" in edger_plan["blockers"]
+    assert "edger_rscript_execution_adapter_not_implemented" not in edger_plan["blockers"]
 
 
 def _preflight() -> dict[str, object]:

@@ -170,10 +170,7 @@ def build_r_edger_rscript_adapter_plan(
 ) -> dict[str, Any]:
     contract = build_r_deg_adapter_contract("edger")
     blockers = [
-        "b25_12_edger_planning_only_no_execution",
-        "b25_13_edger_real_fixture_required",
         "b25_14_edger_ui_activation_required",
-        "edger_rscript_execution_adapter_not_implemented",
     ]
     if parameter_manifest.get("status") != "passed":
         blockers.extend(parameter_manifest.get("blockers", []) or ["r_edger_parameter_manifest_not_passed"])
@@ -185,12 +182,12 @@ def build_r_edger_rscript_adapter_plan(
         "schema_version": R_EDGER_ADAPTER_PLAN_SCHEMA_VERSION,
         "created_at": _now(),
         "method": "edger",
-        "status": "planned_not_enabled",
-        "adapter_semantics": "edgeR_rscript_adapter_contract_planning_only_no_execution",
+        "status": "adapter_available_ui_activation_blocked",
+        "adapter_semantics": "controlled_rscript_adapter_available_no_user_ui_execution",
         "formal_execution_enabled": False,
         "can_execute": False,
-        "can_register_formal_result": False,
-        "writes_result_index": False,
+        "can_register_formal_result": True,
+        "writes_result_index": True,
         "result_semantics": "not_executed",
         "command_manifest_contract": {
             "shell": False,
@@ -201,7 +198,7 @@ def build_r_edger_rscript_adapter_plan(
         "output_schema": contract["output_schema"],
         "result_index_contract": contract["result_index_contract"],
         "blockers": list(dict.fromkeys(str(item) for item in blockers if str(item))),
-        "warnings": ["B25.12 plans edgeR parameters/runtime detection only; execution waits for a real fixture adapter and package/open-W validation."],
+        "warnings": ["B25.13 validates the controlled edgeR adapter/runtime path, but user-facing UI activation remains blocked until B25.14."],
     }
 
 

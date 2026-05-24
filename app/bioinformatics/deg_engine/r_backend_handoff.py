@@ -60,12 +60,10 @@ def build_r_deg_external_handoff_plan(method: str) -> dict[str, Any]:
             warning = "DESeq2 user-facing execution is available only through the B25.11 controlled Rscript adapter; generic external handoff remains disabled."
         else:
             blockers = [
-                "b25_12_edger_planning_only_no_execution",
-                "b25_13_edger_real_fixture_required",
                 "b25_14_edger_ui_activation_required",
-                "edger_rscript_execution_adapter_not_implemented",
+                "r_edger_generic_external_handoff_disabled_use_controlled_rscript_adapter",
             ]
-            warning = "edgeR has parameter/runtime planning only; generic external handoff remains disabled until a real fixture adapter and UI gates are audited."
+            warning = "edgeR controlled Rscript runtime validation is available, but generic external handoff and UI execution remain disabled until B25.14."
         return {
             "schema_version": R_DEG_EXTERNAL_HANDOFF_SCHEMA_VERSION,
             "method": method_key,

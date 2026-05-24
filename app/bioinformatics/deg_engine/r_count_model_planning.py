@@ -88,7 +88,7 @@ def build_r_count_model_activation_plan(
         "method": method_key,
         "label": "DESeq2" if method_key == "deseq2" else "edgeR",
         "status": "ready_for_ui_execution" if formal_execution_enabled else "planned_not_enabled",
-        "planning_stage": "B25.11 DESeq2 gated UI execution" if method_key == "deseq2" else "B25.12 edgeR parameter/runtime planning",
+        "planning_stage": "B25.11 DESeq2 gated UI execution" if method_key == "deseq2" else "B25.13 edgeR controlled runtime validation / UI activation preflight",
         "formal_execution_enabled": formal_execution_enabled,
         "can_register_formal_result": formal_execution_enabled,
         "writes_result_index": formal_execution_enabled,
@@ -113,7 +113,7 @@ def build_r_count_model_activation_plan(
             [
                 "B25.11 enables controlled DESeq2 UI execution only when all method gates and user confirmation pass."
                 if method_key == "deseq2"
-                else "B25.12 records edgeR parameter/runtime planning only; it does not execute edgeR or register formal results.",
+                else "B25.13 validates controlled edgeR runtime execution while keeping user-facing UI activation blocked.",
                 *[str(item) for item in method_specific.get("warnings", []) or []],
                 *[str(item) for item in preflight.get("warnings", []) or []],
                 *[str(item) for item in runtime_gate.get("warnings", []) or []],

@@ -40,8 +40,9 @@ def test_edger_count_model_plan_blocks_display_value_type_and_missing_count_matr
     assert "count_model_requested_for_display_value_type" in plan["blockers"]
     assert "count_model_requires_count_value_type" in plan["blockers"]
     assert "count_matrix_missing_for_deseq2_or_edger" in plan["blockers"]
-    assert "b25_12_edger_planning_only_no_execution" in plan["blockers"]
-    assert "edger_rscript_execution_adapter_not_implemented" in plan["blockers"]
+    assert "b25_12_edger_parameter_confirmation_planning_only" in plan["blockers"]
+    assert "b25_14_edger_ui_activation_required" in plan["blockers"]
+    assert "edger_rscript_execution_adapter_not_implemented" not in plan["blockers"]
 
 
 def test_count_model_plan_matrix_contains_deseq2_and_edger_without_execution() -> None:
@@ -58,12 +59,12 @@ def test_count_model_plan_matrix_contains_deseq2_and_edger_without_execution() -
     assert "r_deseq2_parameter_confirmation_missing" in matrix["blockers"]
     assert "b25_10_deseq2_ui_activation_preflight_only" not in matrix["blockers"]
     assert "b25_11_deseq2_ui_activation_required" not in matrix["blockers"]
-    assert "b25_12_edger_planning_only_no_execution" in matrix["blockers"]
-    assert "b25_13_edger_real_fixture_required" in matrix["blockers"]
+    assert "b25_12_edger_parameter_confirmation_planning_only" in matrix["blockers"]
     assert "b25_14_edger_ui_activation_required" in matrix["blockers"]
     assert matrix["plans"]["deseq2"]["parameter_manifest"]["method"] == "deseq2"
     assert matrix["plans"]["edger"]["parameter_manifest"]["method"] == "edger"
     assert matrix["plans"]["edger"]["rscript_adapter_plan"]["formal_execution_enabled"] is False
+    assert matrix["plans"]["edger"]["rscript_adapter_plan"]["can_register_formal_result"] is True
 
 
 def _deg_ready(value_type: str, asset_type: str) -> dict[str, object]:

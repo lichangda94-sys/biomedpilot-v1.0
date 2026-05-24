@@ -53,7 +53,7 @@ def test_edger_parameter_manifest_blocks_display_values_and_bad_policy() -> None
     assert "invalid_edger_test_method" in manifest["blockers"]
 
 
-def test_edger_adapter_plan_is_planning_only_even_when_runtime_ready() -> None:
+def test_edger_adapter_plan_keeps_ui_activation_blocked_after_runtime_ready() -> None:
     preflight = _preflight()
     manifest = build_r_edger_parameter_manifest(
         _deg_ready("count", "raw_count_matrix"),
@@ -78,15 +78,14 @@ def test_edger_adapter_plan_is_planning_only_even_when_runtime_ready() -> None:
     )
 
     assert runtime_gate["status"] == "ready_for_external_runtime_execution"
-    assert plan["status"] == "planned_not_enabled"
+    assert plan["status"] == "adapter_available_ui_activation_blocked"
     assert plan["formal_execution_enabled"] is False
     assert plan["can_execute"] is False
-    assert plan["writes_result_index"] is False
+    assert plan["can_register_formal_result"] is True
+    assert plan["writes_result_index"] is True
     assert plan["result_semantics"] == "not_executed"
-    assert "b25_12_edger_planning_only_no_execution" in plan["blockers"]
-    assert "b25_13_edger_real_fixture_required" in plan["blockers"]
     assert "b25_14_edger_ui_activation_required" in plan["blockers"]
-    assert "edger_rscript_execution_adapter_not_implemented" in plan["blockers"]
+    assert "edger_rscript_execution_adapter_not_implemented" not in plan["blockers"]
 
 
 def test_edger_runtime_detection_is_detect_first_graceful() -> None:
@@ -104,14 +103,21 @@ def test_edger_runtime_validation_does_not_enable_execution(tmp_path: Path) -> N
     validation = run_r_edger_runtime_validation(output_path=output_path)
 
     assert output_path.is_file()
-    assert validation["schema_version"] == "biomedpilot.b25_12_r_edger_runtime_validation.v1"
+    assert validation["schema_version"] == "biomedpilot.b25_13_r_edger_runtime_validation.v1"
     assert validation["status"] in {"passed", "blocked_missing_dependency"}
     preflight = validation["execution_activation_preflight"]
     assert preflight["formal_execution_enabled"] is False
     assert preflight["normal_user_button_enabled"] is False
-    assert "b25_12_edger_planning_only_no_execution" in preflight["blockers"]
-    assert "b25_13_edger_real_fixture_required" in preflight["blockers"]
     assert "b25_14_edger_ui_activation_required" in preflight["blockers"]
+    if validation["status"] == "passed":
+        fixture = validation["fixture_result"]
+        assert fixture["status"] == "passed"
+        assert fixture["result_semantics"] == "formal_computed_result"
+        assert fixture["has_numeric_p_value"] is True
+        assert fixture["has_numeric_adjusted_p_value"] is True
+        assert fixture["plot_artifacts"] == []
+        assert fixture["report_artifacts"] == []
+        assert fixture["report_ready_eligible"] is False
 
 
 def _deg_ready(value_type: str, asset_type: str) -> dict[str, object]:

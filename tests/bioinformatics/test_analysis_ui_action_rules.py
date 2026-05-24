@@ -297,7 +297,7 @@ def test_count_model_actions_keep_edger_planning_only_and_gate_deseq2() -> None:
         r_count_model_plans={
             "plans": {
                 "deseq2": {"blockers": ["r_deseq2_parameter_confirmation_missing"]},
-                "edger": {"blockers": ["b25_12_edger_planning_only_no_execution"]},
+                "edger": {"blockers": ["b25_14_edger_ui_activation_required"]},
             }
         },
     )
@@ -309,7 +309,7 @@ def test_count_model_actions_keep_edger_planning_only_and_gate_deseq2() -> None:
     assert deseq2["state"] == "blocked_deseq2_rscript_gate"
     assert edger["state"] == "blocked_count_model_planning_only"
     assert "r_deseq2_parameter_confirmation_missing" in deseq2["disabled_reason"]
-    assert "b25_12_edger_planning_only_no_execution" in edger["disabled_reason"]
+    assert "b25_14_edger_ui_activation_required" in edger["disabled_reason"]
     assert _row(rows, "r_deseq2_parameter_confirmation")["enabled"] is False
     assert "r_deseq2_design_preflight_not_ready" in _row(rows, "r_deseq2_parameter_confirmation")["disabled_reason"]
 

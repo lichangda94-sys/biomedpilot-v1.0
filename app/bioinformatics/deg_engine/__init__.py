@@ -52,7 +52,7 @@ from .r_edger_planning import (
     validate_r_edger_parameter_confirmation,
     validate_r_edger_parameter_manifest,
 )
-from .r_edger_runtime import detect_r_edger_runtime_capabilities
+from .r_edger_runtime import detect_r_edger_runtime_capabilities, run_r_edger_rscript_execution
 from .r_edger_runtime_validation import run_r_edger_runtime_validation
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
@@ -95,6 +95,7 @@ __all__ = [
     "run_r_limma_rscript_execution",
     "run_r_deseq2_rscript_execution",
     "run_r_deseq2_runtime_validation",
+    "run_r_edger_rscript_execution",
     "run_r_edger_runtime_validation",
     "validate_deg_result_bundle",
     "validate_deg_result_entry",

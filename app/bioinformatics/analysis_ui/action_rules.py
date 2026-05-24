@@ -439,7 +439,7 @@ def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str,
         label,
         "blocked_count_model_planning_only",
         "; ".join(dict.fromkeys(blockers)),
-        "edgeR remains B25.12 parameter/runtime planning-only; implement real fixture execution, package/open-W validation, UI gates and result_index_v2 validation before execution.",
+        "edgeR has B25.13 controlled runtime validation, but user-facing execution waits for B25.14 UI activation and result_index_v2 gate review.",
     )
 
 

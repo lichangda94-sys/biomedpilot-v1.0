@@ -6180,7 +6180,7 @@ class BioinformaticsDegConfigWidget(QWidget):
         root.addWidget(input_card)
 
         config_card, config_layout = _card("DEG 配置草稿")
-        config_layout.addWidget(_muted("方法状态：two-group Python DEG、limma、DESeq2 已走 gated execution；edgeR 仅 parameter/runtime planning。"))
+        config_layout.addWidget(_muted("方法状态：two-group Python DEG、limma、DESeq2 已走 gated execution；edgeR 已完成 controlled runtime validation，UI 仍禁用。"))
         method_row = QHBoxLayout()
         self._method_input = QLineEdit("DEG executor not connected")
         self._method_input.setPlaceholderText("方法草稿，例如 DESeq2 待接入")
