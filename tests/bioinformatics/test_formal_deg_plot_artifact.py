@@ -25,11 +25,13 @@ def test_formal_deg_plot_artifact_registers_to_result_index_and_keeps_report_dis
     assert artifact["plot_artifact_scope"] == "formal_deg_plot"
     assert artifact["source_result_semantics"] == "formal_computed_result"
     assert artifact["plot_semantics"] == "formal_computed_result"
-    assert artifact["plot_spec_artifact"]["data_source"] == "result_index_output_artifacts"
+    assert artifact["plot_spec_artifact"]["rendering"] == "real_svg_artifact_no_report_ready"
+    assert artifact["image_artifacts"][0]["format"] == "svg"
+    assert Path(artifact["image_artifacts"][0]["path"]).is_file()
     assert "clinical conclusions" in result["guard_copy"]
 
     entry = load_registry(tmp_path)["results"][0]
-    assert entry["plot_artifacts"][0]["plot_id"] == "formal-plot-volcano_plot-artifact"
+    assert entry["plot_artifacts"][0]["plot_id"].startswith("formal-plot-volcano_plot-")
     assert entry["report_ready_eligible"] is False
     report_gate = evaluate_report_ready_gate(tmp_path)
     assert report_gate["status"] == "blocked"

@@ -7,15 +7,17 @@ from app.bioinformatics.deg_engine.result_schema import validate_formal_deg_resu
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.registry import RESULT_INDEX, load_registry, save_registry
 
-from .basic_renderers import build_basic_plot_spec
 from .models import PlotArtifact
+from .real_svg import ENGINE_NAME as REAL_SVG_ENGINE_NAME
+from .real_svg import ENGINE_VERSION as REAL_SVG_ENGINE_VERSION
+from .real_svg import build_real_svg_payload, read_delimited_rows, write_plot_manifest
 from .schema import validate_plot_artifact
 
 
 FORMAL_DEG_PLOT_GATE_SCHEMA_VERSION = "biomedpilot.formal_deg_plot_gate.v1"
 FORMAL_DEG_PLOT_TYPES = {"volcano_plot", "deg_heatmap"}
 FORMAL_DEG_PLOT_GUARD_COPY = (
-    "Formal DEG plot artifacts visualize statistical analysis results only. "
+    "Formal DEG plot artifacts render SVG statistical analysis visualizations only. "
     "They are not clinical conclusions or treatment recommendations."
 )
 
@@ -82,9 +84,23 @@ def create_formal_deg_plot_artifact(
     entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
     source = next(entry for entry in entries if str(entry.get("result_id") or "") == str(gate.get("selected_result_id") or ""))
     source_semantics = normalize_result_semantics(source.get("canonical_result_semantics") or source.get("result_semantics"), default="")
-    spec = build_basic_plot_spec(source, plot_type, parameters=parameters)
+    source_table = _source_deg_table(root, source) or Path()
+    source_table_ref = _registry_path(source_table, root)
+    rows = read_delimited_rows(source_table) if source_table.is_file() else []
+    plot_id = _formal_plot_id(source, plot_type)
+    render = build_real_svg_payload(
+        root,
+        source=source,
+        source_table=source_table,
+        source_table_ref=source_table_ref,
+        plot_id=plot_id,
+        plot_type=plot_type,
+        section="deg",
+        rows=rows,
+        parameters=parameters or {},
+    )
     artifact = PlotArtifact(
-        plot_id=_formal_plot_id(source, plot_type),
+        plot_id=plot_id,
         plot_type=plot_type,
         source_result_id=str(source.get("result_id") or ""),
         source_result_semantics=source_semantics,
@@ -95,13 +111,16 @@ def create_formal_deg_plot_artifact(
         parameters_manifest={
             "source_parameters_manifest": source.get("parameters_manifest", {}),
             "plot_parameters": parameters or {},
-            "plot_policy": "formal_deg_plot_artifact_only_not_report_ready",
+            "plot_policy": "formal_deg_real_svg_plot_artifact_only_not_report_ready",
         },
-        plot_spec_artifact=spec,
+        plot_spec_artifact=render.get("plot_spec_artifact", {}),
+        image_artifacts=tuple(render.get("image_artifacts", []) or []),
         table_artifacts=tuple(_source_deg_tables(source)),
-        dependency_snapshot=source.get("dependency_snapshot") if isinstance(source.get("dependency_snapshot"), dict) else {},
-        warnings=tuple(spec.get("warnings", []) or []),
-        blockers=tuple(spec.get("blockers", []) or []),
+        engine_name=REAL_SVG_ENGINE_NAME,
+        engine_version=REAL_SVG_ENGINE_VERSION,
+        dependency_snapshot=render.get("dependency_snapshot") if isinstance(render.get("dependency_snapshot"), dict) else {},
+        warnings=tuple(render.get("warnings", []) or []),
+        blockers=tuple(render.get("blockers", []) or []),
     ).to_dict()
     validation = validate_plot_artifact(artifact)
     artifact["warnings"] = list(dict.fromkeys([*artifact.get("warnings", []), *validation.get("warnings", [])]))
@@ -119,6 +138,13 @@ def create_formal_deg_plot_artifact(
             "blockers": artifact["blockers"],
             "warnings": artifact["warnings"],
         }
+    if render.get("manifest_path"):
+        write_plot_manifest(
+            str(render["manifest_path"]),
+            plot_artifact=artifact,
+            gate_snapshot=gate,
+            limitations=["statistical_visualization_only", "no_clinical_conclusion", "no_report_ready_unlock"],
+        )
     existing = [item for item in source.get("plot_artifacts", []) or [] if isinstance(item, dict) and item.get("plot_id") != artifact["plot_id"]]
     source["plot_artifacts"] = [*existing, artifact]
     source["report_artifacts"] = list(source.get("report_artifacts", []) or [])
@@ -176,6 +202,15 @@ def _source_deg_tables(entry: dict[str, Any]) -> list[dict[str, Any]]:
     return [dict(item) for item in artifacts if isinstance(item, dict) and item.get("artifact_type") == "deg_result_table"]
 
 
+def _source_deg_table(root: Path, entry: dict[str, Any]) -> Path | None:
+    tables = _source_deg_tables(entry)
+    raw = str((tables[0] if tables else {}).get("path") or "")
+    if not raw:
+        return None
+    path = Path(raw).expanduser()
+    return path if path.is_absolute() else root / path
+
+
 def _result_options(entries: list[dict[str, Any]]) -> list[dict[str, str]]:
     return [
         {
@@ -189,3 +224,15 @@ def _result_options(entries: list[dict[str, Any]]) -> list[dict[str, str]]:
 
 def _formal_plot_id(source: dict[str, Any], plot_type: str) -> str:
     return f"{source.get('result_id') or 'formal-deg'}-{plot_type}-artifact"
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _registry_path(path: Path, root: Path) -> str:
+    return str(path.relative_to(root) if _is_within(path, root) else path)

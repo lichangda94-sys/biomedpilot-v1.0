@@ -21,8 +21,9 @@ def test_formal_gsea_creates_spec_only_plot_artifact(tmp_path: Path) -> None:
     assert artifact["source_task_type"] == "gsea_preranked"
     assert artifact["source_result_semantics"] == "formal_computed_result"
     assert artifact["plot_semantics"] == "formal_computed_result"
-    assert artifact["image_artifacts"] == []
-    assert artifact["plot_spec_artifact"]["rendering"] == "spec_only_no_image_dependency"
+    assert artifact["image_artifacts"][0]["format"] == "svg"
+    assert Path(artifact["image_artifacts"][0]["path"]).is_file()
+    assert artifact["plot_spec_artifact"]["rendering"] == "real_svg_artifact_no_report_ready"
     entry = next(item for item in load_registry(tmp_path)["results"] if item["result_id"] == "gsea-formal")
     assert entry["report_ready_eligible"] is False
     assert entry["plot_artifacts"][0]["plot_type"] == "gsea_enrichment_curve_spec"

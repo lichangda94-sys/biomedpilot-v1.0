@@ -514,8 +514,8 @@ def test_ora_plot_action_is_enabled_only_when_plot_gate_passes() -> None:
 
     plot = _row(rows, "ora_plot")
     assert plot["enabled"] is True
-    assert plot["button_behavior"] == "enabled_ora_plot_spec_only"
-    assert "no PNG/SVG/PDF" in plot["next_action"]
+    assert plot["button_behavior"] == "enabled_ora_real_svg_plot"
+    assert "SVG plot artifact" in plot["next_action"]
 
     blocked = build_action_rows(packages=[], deg_dependency={"status": "blocked"}, survival_dependency={"status": "preflight_only"}, report_gate={"status": "blocked"}, ora_plot_gate={"status": "blocked", "blockers": ["ora_result_not_found"]})
     assert _row(blocked, "ora_plot")["enabled"] is False

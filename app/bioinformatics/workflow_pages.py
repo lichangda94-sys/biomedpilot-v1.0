@@ -6851,10 +6851,10 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         result = create_gsea_plot_artifact(self._project_root, result_id=result_id or None, plot_type=plot_type)
         if result.get("status") == "passed":
             self.refresh_results()
-            self._status_label.setText(f"已注册 GSEA {plot_type} plot artifact/spec；未生成 PNG/SVG/PDF、完整报告、survival 或临床解释。")
+            self._status_label.setText(f"已注册 GSEA {plot_type} SVG plot artifact；未生成完整报告、survival 或临床解释。")
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "GSEA plot gate 未通过"
-            self._status_label.setText(f"GSEA plot artifact/spec 未生成：{blockers}")
+            self._status_label.setText(f"GSEA SVG plot artifact 未生成：{blockers}")
             self._render_gsea_plot_gate(result)
         return result
 
@@ -6888,10 +6888,10 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         result = create_ora_plot_artifact(self._project_root, result_id=result_id or None, plot_type=plot_type)
         if result.get("status") == "passed":
             self.refresh_results()
-            self._status_label.setText(f"已注册 ORA {plot_type} plot artifact/spec；未生成 PNG/SVG/PDF、report-ready、GSEA 或 survival 输出。")
+            self._status_label.setText(f"已注册 ORA {plot_type} SVG plot artifact；未生成 report-ready、GSEA 或 survival 输出。")
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "ORA plot gate 未通过"
-            self._status_label.setText(f"ORA plot artifact/spec 未生成：{blockers}")
+            self._status_label.setText(f"ORA SVG plot artifact 未生成：{blockers}")
             self._render_ora_plot_gate(result)
         return result
 
@@ -6925,7 +6925,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         result = create_formal_deg_plot_artifact(self._project_root, result_id=result_id or None, plot_type=plot_type)
         if result.get("status") == "passed":
             self.refresh_results()
-            self._status_label.setText(f"已注册 formal DEG {plot_type} plot artifact；未生成 report-ready、GSEA 或 survival 输出。")
+            self._status_label.setText(f"已注册 formal DEG {plot_type} SVG plot artifact；未生成 report-ready、GSEA 或 survival 输出。")
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG plot gate 未通过"
             self._status_label.setText(f"formal DEG plot artifact 未生成：{blockers}")
@@ -7152,7 +7152,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._formal_deg_plot_button = _button("生成 formal DEG plot artifact", "secondaryButton", self.generate_formal_deg_plot_artifact)
         self._formal_deg_plot_button.setObjectName("formalDegPlotButton")
         plot_controls.addWidget(self._formal_deg_plot_button)
-        self._formal_deg_plot_status = _muted("Formal plot artifact 只接受 formal_computed_result DEG source；不生成 report-ready。")
+        self._formal_deg_plot_status = _muted("Formal plot artifact 只接受 formal_computed_result DEG source，生成 SVG；不生成 report-ready。")
         self._formal_deg_plot_status.setObjectName("formalDegPlotStatus")
         plot_controls.addWidget(self._formal_deg_plot_status)
         plot_controls.addStretch(1)
@@ -7213,12 +7213,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._ora_plot_type = QComboBox()
         self._ora_plot_type.setObjectName("oraPlotType")
         self._ora_plot_type.addItems(["ora_barplot", "ora_dotplot"])
-        ora_plot_controls.addWidget(QLabel("ORA plot spec"))
+        ora_plot_controls.addWidget(QLabel("ORA SVG plot"))
         ora_plot_controls.addWidget(self._ora_plot_type)
-        self._ora_plot_button = _button("生成 ORA plot artifact/spec", "secondaryButton", self.generate_ora_plot_artifact)
+        self._ora_plot_button = _button("生成 ORA SVG plot artifact", "secondaryButton", self.generate_ora_plot_artifact)
         self._ora_plot_button.setObjectName("oraPlotButton")
         ora_plot_controls.addWidget(self._ora_plot_button)
-        self._ora_plot_status = _muted("ORA plot artifact 当前仅生成 spec，不渲染 PNG/SVG/PDF，不进入 report-ready。")
+        self._ora_plot_status = _muted("ORA plot artifact 从合格 ORA result 生成 SVG，不进入 report-ready。")
         self._ora_plot_status.setObjectName("oraPlotStatus")
         ora_plot_controls.addWidget(self._ora_plot_status)
         ora_plot_controls.addStretch(1)
@@ -7279,12 +7279,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._gsea_plot_type = QComboBox()
         self._gsea_plot_type.setObjectName("gseaPlotType")
         self._gsea_plot_type.addItems(["gsea_enrichment_curve_spec", "gsea_nes_barplot_spec"])
-        gsea_plot_controls.addWidget(QLabel("GSEA plot spec"))
+        gsea_plot_controls.addWidget(QLabel("GSEA SVG plot"))
         gsea_plot_controls.addWidget(self._gsea_plot_type)
-        self._gsea_plot_button = _button("生成 GSEA plot artifact/spec", "secondaryButton", self.generate_gsea_plot_artifact)
+        self._gsea_plot_button = _button("生成 GSEA SVG plot artifact", "secondaryButton", self.generate_gsea_plot_artifact)
         self._gsea_plot_button.setObjectName("gseaPlotButton")
         gsea_plot_controls.addWidget(self._gsea_plot_button)
-        self._gsea_plot_status = _muted("GSEA plot artifact 当前仅生成 spec，不渲染 PNG/SVG/PDF，不进入完整报告。")
+        self._gsea_plot_status = _muted("GSEA plot artifact 从合格 GSEA result 生成 SVG，不进入完整报告。")
         self._gsea_plot_status.setObjectName("gseaPlotStatus")
         gsea_plot_controls.addWidget(self._gsea_plot_status)
         gsea_plot_controls.addStretch(1)
@@ -7569,7 +7569,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._formal_deg_plot_button.setEnabled(True)
             self._formal_deg_plot_status.setText(
                 f"Formal DEG plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
-                "inherits formal_computed_result semantics；report-ready remains disabled."
+                "builtin SVG renderer；inherits formal_computed_result semantics；report-ready remains disabled."
             )
         else:
             self._formal_deg_plot_button.setEnabled(False)
@@ -7898,7 +7898,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._gsea_plot_button.setEnabled(True)
             self._gsea_plot_status.setText(
                 f"GSEA plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
-                "spec_only_no_image_dependency；does not render PNG/SVG/PDF；full report remains disabled."
+                "builtin SVG renderer；full report remains disabled."
             )
         else:
             self._gsea_plot_button.setEnabled(False)
@@ -7937,7 +7937,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._ora_plot_button.setEnabled(True)
             self._ora_plot_status.setText(
                 f"ORA plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
-                "spec_only_no_image_dependency；does not render PNG/SVG/PDF；report-ready remains disabled."
+                "builtin SVG renderer；report-ready remains disabled."
             )
         else:
             self._ora_plot_button.setEnabled(False)

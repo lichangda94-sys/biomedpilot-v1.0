@@ -23,13 +23,14 @@ def test_formal_ora_barplot_artifact_registers_spec_only_and_keeps_report_disabl
     assert artifact["source_task_type"] == "ora_enrichment"
     assert artifact["source_result_semantics"] == "formal_computed_result"
     assert artifact["plot_semantics"] == "formal_computed_result"
-    assert artifact["image_artifacts"] == []
-    assert artifact["plot_spec_artifact"]["rendering"] == "spec_only_no_image_dependency"
+    assert artifact["image_artifacts"][0]["format"] == "svg"
+    assert Path(artifact["image_artifacts"][0]["path"]).is_file()
+    assert artifact["plot_spec_artifact"]["rendering"] == "real_svg_artifact_no_report_ready"
     assert artifact["plot_spec_artifact"]["source_result_id"] == "ora-formal"
     assert result["report_artifacts"] == []
     assert result["report_ready_eligible"] is False
     entry = load_registry(tmp_path)["results"][0]
-    assert entry["plot_artifacts"][0]["plot_id"] == "ora-formal-ora_barplot-artifact"
+    assert entry["plot_artifacts"][0]["plot_id"].startswith("ora-formal-ora_barplot-")
     assert entry["report_ready_eligible"] is False
     assert entry["report_artifacts"] == []
 

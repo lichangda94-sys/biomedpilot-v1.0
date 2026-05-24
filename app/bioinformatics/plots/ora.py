@@ -10,6 +10,9 @@ from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.registry import RESULT_INDEX, load_registry, save_registry
 
 from .models import PlotArtifact
+from .real_svg import ENGINE_NAME as REAL_SVG_ENGINE_NAME
+from .real_svg import ENGINE_VERSION as REAL_SVG_ENGINE_VERSION
+from .real_svg import build_real_svg_payload, read_delimited_rows, write_plot_manifest
 from .schema import validate_plot_artifact
 
 
@@ -17,8 +20,8 @@ ORA_PLOT_GATE_SCHEMA_VERSION = "biomedpilot.ora_plot_gate.v1"
 ORA_PLOT_TYPES = {"ora_barplot", "ora_dotplot"}
 ORA_PLOT_SORT_FIELDS = {"adjusted_p_value", "p_value", "enrichment_ratio", "overlap_count", "input_order"}
 ORA_PLOT_GUARD_COPY = (
-    "ORA plot artifacts are spec-only pathway over-representation visualizations. "
-    "They do not render PNG/SVG/PDF, do not prove pathway activation or inhibition, "
+    "ORA plot artifacts render SVG pathway over-representation visualizations. "
+    "They do not prove pathway activation or inhibition, "
     "and are not clinical interpretation or treatment recommendation."
 )
 
@@ -93,10 +96,22 @@ def create_ora_plot_artifact(
     source_semantics = normalize_result_semantics(source.get("canonical_result_semantics") or source.get("result_semantics"), default="")
     source_table = _source_ora_table(root, source) or Path()
     source_table_ref = _registry_path(source_table, root)
-    spec = _plot_spec(source, plot_type, params, source_table_ref)
+    rows = read_delimited_rows(source_table) if source_table.is_file() else []
+    plot_id = _ora_plot_id(source, plot_type)
+    render = build_real_svg_payload(
+        root,
+        source=source,
+        source_table=source_table,
+        source_table_ref=source_table_ref,
+        plot_id=plot_id,
+        plot_type=plot_type,
+        section="ora",
+        rows=rows,
+        parameters=params,
+    )
     warnings = list(dict.fromkeys([str(item) for item in source.get("warnings", []) or []] + list(gate.get("warnings", []) or [])))
     artifact = PlotArtifact(
-        plot_id=_ora_plot_id(source, plot_type),
+        plot_id=plot_id,
         plot_type=plot_type,
         source_result_id=str(source.get("result_id") or ""),
         source_result_semantics=source_semantics,
@@ -107,14 +122,16 @@ def create_ora_plot_artifact(
         parameters_manifest={
             "source_parameters_manifest": source.get("parameters_manifest", {}),
             "plot_parameters": params,
-            "plot_policy": "ora_plot_artifact_spec_only_not_report_ready",
+            "plot_policy": "ora_real_svg_plot_artifact_not_report_ready",
         },
-        plot_spec_artifact=spec,
-        image_artifacts=(),
+        plot_spec_artifact=render.get("plot_spec_artifact", {}),
+        image_artifacts=tuple(render.get("image_artifacts", []) or []),
         table_artifacts=({"artifact_type": "ora_result_table", "path": source_table_ref},),
-        dependency_snapshot={"plot_rendering": {"available": False, "reason": "spec_only_no_image_dependency"}},
-        warnings=tuple(warnings),
-        blockers=tuple(spec.get("blockers", []) or []),
+        engine_name=REAL_SVG_ENGINE_NAME,
+        engine_version=REAL_SVG_ENGINE_VERSION,
+        dependency_snapshot=render.get("dependency_snapshot") if isinstance(render.get("dependency_snapshot"), dict) else {},
+        warnings=tuple(list(dict.fromkeys([*warnings, *render.get("warnings", [])]))),
+        blockers=tuple(render.get("blockers", []) or []),
     ).to_dict()
     artifact.update(
         {
@@ -139,6 +156,13 @@ def create_ora_plot_artifact(
             "blockers": artifact["blockers"],
             "warnings": artifact["warnings"],
         }
+    if render.get("manifest_path"):
+        write_plot_manifest(
+            str(render["manifest_path"]),
+            plot_artifact=artifact,
+            gate_snapshot=gate,
+            limitations=["statistical_visualization_only", "no_pathway_activation_claim", "no_clinical_conclusion", "no_report_ready_unlock"],
+        )
     existing = [item for item in source.get("plot_artifacts", []) or [] if isinstance(item, dict) and item.get("plot_id") != artifact["plot_id"]]
     source["plot_artifacts"] = [*existing, artifact]
     source["report_artifacts"] = list(source.get("report_artifacts", []) or [])

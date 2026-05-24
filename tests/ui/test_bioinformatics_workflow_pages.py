@@ -4391,9 +4391,10 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
     assert plot_result is not None
     assert plot_result["status"] == "passed"
     assert plot_result["report_ready_eligible"] is False
-    assert plot_result["plot_artifact"]["image_artifacts"] == []
-    assert plot_result["plot_artifact"]["plot_spec_artifact"]["rendering"] == "spec_only_no_image_dependency"
-    assert "未生成 PNG/SVG/PDF" in widget.status_message()
+    assert plot_result["plot_artifact"]["image_artifacts"][0]["format"] == "svg"
+    assert Path(str(plot_result["plot_artifact"]["image_artifacts"][0]["path"])).is_file()
+    assert plot_result["plot_artifact"]["plot_spec_artifact"]["rendering"] == "real_svg_artifact_no_report_ready"
+    assert "SVG plot artifact" in widget.status_message()
     report_status = widget.findChild(QLabel, "oraReportReadyStatus")
     assert report_status is not None
     assert "ORA report-ready gate passed" in report_status.text()
@@ -4517,8 +4518,9 @@ def test_results_browser_gsea_plot_and_report_package_gate(qt_app, project_summa
     plot_result = widget.generate_gsea_plot_artifact()
     assert plot_result is not None
     assert plot_result["status"] == "passed"
-    assert plot_result["plot_artifact"]["image_artifacts"] == []
-    assert "未生成 PNG/SVG/PDF" in widget.status_message()
+    assert plot_result["plot_artifact"]["image_artifacts"][0]["format"] == "svg"
+    assert Path(str(plot_result["plot_artifact"]["image_artifacts"][0]["path"])).is_file()
+    assert "SVG plot artifact" in widget.status_message()
     report_status = widget.findChild(QLabel, "gseaReportReadyStatus")
     assert report_status is not None
     assert "GSEA report-ready gate passed" in report_status.text()

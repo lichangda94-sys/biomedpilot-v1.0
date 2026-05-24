@@ -722,21 +722,21 @@ def _ora_plot_action(gate: dict[str, Any]) -> dict[str, Any]:
         warnings = _list(gate.get("warnings"))
         return {
             "action_id": "ora_plot",
-            "label": "Generate ORA plot artifact/spec",
+            "label": "Generate ORA SVG plot artifact",
             "state": "available",
-            "button_behavior": "enabled_ora_plot_spec_only",
+            "button_behavior": "enabled_ora_real_svg_plot",
             "enabled": True,
             "normal_user_visible": True,
             "disabled_reason": "",
-            "next_action": "Create ORA plot artifact/spec only; no PNG/SVG/PDF rendering and no report-ready output." + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
+            "next_action": "Create ORA SVG plot artifact from eligible ORA result; no report-ready output, GSEA, survival, or clinical interpretation." + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
         }
     blockers = _list(gate.get("blockers")) or ["ora_plot_gate_not_passed"]
     return _disabled(
         "ora_plot",
-        "Generate ORA plot artifact/spec",
+        "Generate ORA SVG plot artifact",
         "blocked_ora_plot_gate",
         "; ".join(blockers),
-        "Register a valid ORA enrichment result before creating a spec-only ORA plot artifact.",
+        "Register a valid ORA enrichment result before creating an ORA SVG plot artifact.",
     )
 
 
@@ -773,16 +773,16 @@ def _gsea_plot_action(gate: dict[str, Any]) -> dict[str, Any]:
         warnings = _list(gate.get("warnings"))
         return {
             "action_id": "gsea_plot",
-            "label": "Generate GSEA plot artifact/spec",
+            "label": "Generate GSEA SVG plot artifact",
             "state": "available",
-            "button_behavior": "enabled_gsea_plot_spec_only",
+            "button_behavior": "enabled_gsea_real_svg_plot",
             "enabled": True,
             "normal_user_visible": True,
             "disabled_reason": "",
-            "next_action": "Create GSEA plot artifact/spec only; no PNG/SVG/PDF rendering and no report-ready output." + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
+            "next_action": "Create GSEA SVG plot artifact from eligible preranked GSEA result; no full report, survival, or clinical interpretation." + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
         }
     blockers = _list(gate.get("blockers")) or ["gsea_plot_gate_not_passed"]
-    return _disabled("gsea_plot", "Generate GSEA plot artifact/spec", "blocked_gsea_plot_gate", "; ".join(blockers), "Register a valid GSEA preranked result before creating a spec-only GSEA plot artifact.")
+    return _disabled("gsea_plot", "Generate GSEA SVG plot artifact", "blocked_gsea_plot_gate", "; ".join(blockers), "Register a valid GSEA preranked result before creating a GSEA SVG plot artifact.")
 
 
 def _gsea_report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
