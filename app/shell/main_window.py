@@ -365,6 +365,7 @@ class MainWindow(QMainWindow):
             subtitle="通用计算、试剂配制与实验流程工具集合，为生物医学实验提供可靠的计算与规划支持。",
         )
         root = content.layout()
+        root.addWidget(self._labtools_local_data_status_panel(page_key="home", semantic_key=PageKey.LABTOOLS_HOME.value))
 
         entry_row = QHBoxLayout()
         entry_row.setSpacing(14)
@@ -435,6 +436,39 @@ class MainWindow(QMainWindow):
 
     def _show_labtools_home(self) -> None:
         self._set_labtools_content(self._build_labtools_home_content())
+
+    def _labtools_local_data_status_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
+        model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
+        frame = QFrame()
+        frame.setObjectName("labtoolsLocalDataStatusPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", page_key)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setStyleSheet("QFrame#labtoolsLocalDataStatusPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(8)
+        header = QLabel("本地数据 / Local Data")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        status = QLabel(f"数据源：本地模式 · 状态：{model.status.status} · {model.status.reason}")
+        status.setObjectName("labtoolsLocalDataStatusText")
+        status.setProperty("status", model.status.status)
+        status.setProperty("dataSourceMode", model.status.data_source_mode)
+        status.setWordWrap(True)
+        layout.addWidget(status)
+        counts = QLabel(
+            f"reagent {model.status.reagent_count} · sample {model.status.sample_count} · "
+            f"cell {model.status.cell_count} · freeze vial {model.status.freeze_vial_count} · record {model.status.record_count}"
+        )
+        counts.setObjectName("labtoolsLocalDataCountRow")
+        counts.setProperty("reagentCount", model.status.reagent_count)
+        counts.setProperty("sampleCount", model.status.sample_count)
+        counts.setProperty("cellCount", model.status.cell_count)
+        counts.setProperty("recordCount", model.status.record_count)
+        counts.setWordWrap(True)
+        layout.addWidget(counts)
+        return frame
 
     def _show_labtools_general_calculator_shell(self) -> None:
         status = labtools_runtime.runtime_status()
@@ -898,9 +932,12 @@ class MainWindow(QMainWindow):
 
         self._labtools_reagent_templates = {template.template_id: template for template in templates}
         self._labtools_reagent_selected_template_id = templates[0].template_id if templates else ""
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
+        self._labtools_selected_local_reagent_id = ""
         body = QHBoxLayout()
         body.setSpacing(12)
         body.addWidget(self._labtools_reagent_template_list_panel(templates), 1)
+        body.addWidget(self._labtools_local_reagent_list_panel(self._labtools_local_data_read_model), 1)
         body.addWidget(self._labtools_reagent_run_panel(), 2)
         body.addWidget(self._labtools_reagent_detail_panel(), 1)
         root.addLayout(body)
@@ -946,6 +983,53 @@ class MainWindow(QMainWindow):
         layout.addWidget(
             self._labtools_notice_card(
                 "默认展示示例模板；如已启用项目存储试点则优先读取 project_storage/labtools/templates。仍不连接库存系统、批次放行或协作能力。",
+                object_name="labtoolsAdapterNotice",
+                semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
+            )
+        )
+        layout.addStretch(1)
+        return frame
+
+    def _labtools_local_reagent_list_panel(self, model: labtools_runtime.LabToolsLocalDataReadModel) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsLocalReagentPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "reagent_preparation")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_REAGENT_PREPARATION.value)
+        frame.setStyleSheet("QFrame#labtoolsLocalReagentPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("本地试剂引用")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        status = QLabel(f"local_data: {model.status.status}")
+        status.setObjectName("labtoolsLocalReagentStatus")
+        status.setProperty("status", model.status.status)
+        status.setWordWrap(True)
+        layout.addWidget(status)
+        if not model.reagents:
+            layout.addWidget(
+                make_empty_state(
+                    "暂无本地试剂",
+                    model.status.reason,
+                    empty_state_key="empty_project",
+                    semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
+                )
+            )
+        for reagent in model.reagents:
+            row = QPushButton(
+                f"{reagent.name}\n{reagent.category or 'uncategorized'} · {reagent.concentration or 'no concentration'} · {reagent.storage_location or 'no location'}"
+            )
+            row.setObjectName("labtoolsLocalReagentRow")
+            row.setProperty("reagentId", reagent.reagent_id)
+            row.setProperty("reagentName", reagent.name)
+            row.setProperty("status", reagent.status)
+            row.clicked.connect(lambda _checked=False, item=reagent: self._select_labtools_local_reagent(item))
+            layout.addWidget(row)
+        layout.addWidget(
+            self._labtools_notice_card(
+                "本阶段只引用本地试剂信息；不会扣减库存，也不会覆盖 reagent template。",
                 object_name="labtoolsAdapterNotice",
                 semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
             )
@@ -1028,6 +1112,10 @@ class MainWindow(QMainWindow):
         self._labtools_reagent_save_record_button = save
         self._labtools_reagent_copy_text = ""
         self._labtools_reagent_last_result = None
+        self._labtools_local_reagent_reference = QLabel("未引用本地试剂。")
+        self._labtools_local_reagent_reference.setObjectName("labtoolsLocalReagentReference")
+        self._labtools_local_reagent_reference.setWordWrap(True)
+        layout.addWidget(self._labtools_local_reagent_reference)
         self._set_storage_gated_button_state(save, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
         return frame
 
@@ -1110,6 +1198,14 @@ class MainWindow(QMainWindow):
         self._labtools_reagent_selected_template_id = template_id
         detail = labtools_runtime.get_reagent_template_detail(template_id, self._labtools_project_root)
         self._render_labtools_reagent_template_detail(detail)
+
+    def _select_labtools_local_reagent(self, reagent: labtools_runtime.LabToolsLocalReagentSummary) -> None:
+        self._labtools_selected_local_reagent_id = reagent.reagent_id
+        if hasattr(self, "_labtools_local_reagent_reference"):
+            self._labtools_local_reagent_reference.setText(
+                f"已引用本地试剂：{reagent.name} · {reagent.concentration or 'no concentration'} · {reagent.storage_location or 'no location'}"
+            )
+            self._labtools_local_reagent_reference.setProperty("reagentId", reagent.reagent_id)
 
     def _render_labtools_reagent_template_detail(self, detail: labtools_runtime.ReagentTemplateDetail) -> None:
         layout = self._labtools_reagent_detail_rows_layout
@@ -1283,10 +1379,12 @@ class MainWindow(QMainWindow):
         nav.addStretch(1)
         root.addLayout(nav)
         root.addLayout(self._labtools_wb_substep_bar())
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
 
         body = QHBoxLayout()
         body.setSpacing(12)
         body.addWidget(self._labtools_wb_config_panel(), 1)
+        body.addWidget(self._labtools_local_wb_sample_panel(self._labtools_local_data_read_model), 1)
         body.addWidget(self._labtools_wb_results_panel(), 2)
         body.addWidget(self._labtools_wb_lane_panel(), 2)
         root.addLayout(body)
@@ -1406,6 +1504,52 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return frame
 
+    def _labtools_local_wb_sample_panel(self, model: labtools_runtime.LabToolsLocalDataReadModel) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsLocalWbSamplePanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "wb_loading")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value)
+        frame.setStyleSheet("QFrame#labtoolsLocalWbSamplePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("本地 protein sample")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        status = QLabel(f"local_data: {model.status.status}")
+        status.setObjectName("labtoolsLocalWbSampleStatus")
+        status.setProperty("status", model.status.status)
+        status.setWordWrap(True)
+        layout.addWidget(status)
+        if not model.wb_samples:
+            layout.addWidget(
+                make_empty_state(
+                    "暂无 WB-compatible sample",
+                    model.status.reason,
+                    empty_state_key="empty_project",
+                    semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+                )
+            )
+        for sample in model.wb_samples:
+            row = QLabel(
+                f"{sample.sample_name} | {sample.sample_type} | {sample.concentration} {sample.concentration_unit} | {sample.storage_location or 'no location'}"
+            )
+            row.setObjectName("labtoolsLocalWbSampleRow")
+            row.setProperty("sampleId", sample.sample_id)
+            row.setProperty("sampleType", sample.sample_type)
+            row.setWordWrap(True)
+            layout.addWidget(row)
+        layout.addWidget(
+            self._labtools_notice_card(
+                "本地样本只用于读取浓度并辅助上样计算；不会扣减样本体积。",
+                object_name="labtoolsAdapterNotice",
+                semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+            )
+        )
+        layout.addStretch(1)
+        return frame
+
     def _labtools_wb_results_panel(self) -> QFrame:
         frame = QFrame()
         frame.setObjectName("labtoolsWbSampleResultPanel")
@@ -1501,6 +1645,7 @@ class MainWindow(QMainWindow):
             final_volume_ul=self._labtools_wb_inputs["final_volume_ul"].text().strip(),
             reducing_agent_enabled=True,
             lane_count=self._labtools_wb_inputs["lane_count"].text().strip() or "10",
+            local_samples=getattr(self, "_labtools_local_data_read_model", labtools_runtime.LabToolsLocalDataReadModel(labtools_runtime.get_labtools_local_data_status(None))).wb_samples,
         )
         self._render_labtools_wb_loading_result(result)
 
@@ -1814,17 +1959,24 @@ class MainWindow(QMainWindow):
         )
         root = content.layout()
         root.addLayout(self._labtools_boundary_nav(status_label="shell_only / record_store_missing", status_key="shell_only"))
+        local_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
         body = QHBoxLayout()
         body.setSpacing(12)
         body.addWidget(
             self._labtools_boundary_panel(
                 "细胞信息 / Cell Profile & Dynamic State",
                 [
+                    f"local_data status: {local_model.status.status}",
+                    f"local cell profiles: {local_model.status.cell_count}",
                     "Cell line: A549（mock-labelled shell field）",
                     "Passage: P12",
                     "Culture condition: DMEM + 10% FBS, 37 C, 5% CO2",
                     "Current state: 培养中 / 待处理",
                     "污染 / 支原体 / 形态观察 / 汇合度：待记录",
+                    *[
+                        f"Local cell: {cell.cell_name} P{cell.passage} · {cell.storage_status}"
+                        for cell in local_model.cells
+                    ],
                 ],
                 object_name="labtoolsCellProfilePanel",
             ),
@@ -1846,6 +1998,11 @@ class MainWindow(QMainWindow):
         result_panel = self._labtools_boundary_panel(
             "细胞结果处理工具 / Result Processing",
             [
+                f"freeze vial overview: {', '.join(local_model.freeze_vial_status_rows)}",
+                *[
+                    f"Local vial: {vial.vial_label} · {vial.status} · {vial.location or 'no location'}"
+                    for vial in local_model.freeze_vials[:6]
+                ],
                 "Scratch / Transwell / Fluorescence/Staining：规划中",
                 "ImageJ/Fiji：Settings-linked 外部能力配置入口",
                 "不显示自动 ROI、自动细胞计数或自动分析结果。",

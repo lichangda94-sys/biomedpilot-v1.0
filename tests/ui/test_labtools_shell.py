@@ -100,9 +100,14 @@ def test_labtools_statuses_and_quick_access_are_explicit(labtools_window) -> Non
     status_keys = {chip.property("statusKey") for chip in chips}
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
     quick_buttons = content.findChildren(QPushButton, "quickAccessButton")
+    local_status = content.findChild(QLabel, "labtoolsLocalDataStatusText")
+    local_counts = content.findChild(QLabel, "labtoolsLocalDataCountRow")
 
     assert {"planned", "testing", "shell_only", "developer_preview"} <= status_keys
     assert [button.property("quickAccessKey") for button in quick_buttons] == ["使用指南", "常见问题", "意见反馈", "最近使用"]
+    assert local_status is not None
+    assert local_status.property("dataSourceMode") == "local"
+    assert local_counts is not None
     assert "不实现完整库存系统" not in labels
     assert "不做云端协作" not in labels
     assert "不做局域网共享" not in labels

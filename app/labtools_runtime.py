@@ -157,6 +157,91 @@ class LabToolsHistoryResult:
     error: str = ""
 
 
+@dataclass(frozen=True)
+class LabToolsLocalDataStatus:
+    status: str
+    data_source_mode: str
+    read_enabled: bool
+    write_enabled: bool
+    history_enabled: bool
+    export_enabled: bool
+    reason: str
+    reagent_count: int = 0
+    sample_count: int = 0
+    cell_count: int = 0
+    freeze_vial_count: int = 0
+    record_count: int = 0
+
+
+@dataclass(frozen=True)
+class LabToolsLocalReagentSummary:
+    reagent_id: str
+    name: str
+    category: str
+    concentration: str
+    storage_location: str
+    status: str
+    version: int
+
+
+@dataclass(frozen=True)
+class LabToolsLocalSampleSummary:
+    sample_id: str
+    sample_name: str
+    sample_type: str
+    concentration: str
+    concentration_unit: str
+    storage_location: str
+    status: str
+    version: int
+    wb_compatible: bool
+
+
+@dataclass(frozen=True)
+class LabToolsLocalCellSummary:
+    cell_id: str
+    cell_name: str
+    passage: int
+    species: str
+    storage_status: str
+    status: str
+    version: int
+
+
+@dataclass(frozen=True)
+class LabToolsLocalFreezeVialSummary:
+    vial_id: str
+    freeze_batch_id: str
+    vial_label: str
+    location: str
+    status: str
+    version: int
+
+
+@dataclass(frozen=True)
+class LabToolsLocalRecordSummary:
+    record_id: str
+    record_type: str
+    title: str
+    status: str
+    linked_reagent_count: int
+    linked_sample_count: int
+    linked_cell_count: int
+    version: int
+
+
+@dataclass(frozen=True)
+class LabToolsLocalDataReadModel:
+    status: LabToolsLocalDataStatus
+    reagents: tuple[LabToolsLocalReagentSummary, ...] = ()
+    samples: tuple[LabToolsLocalSampleSummary, ...] = ()
+    wb_samples: tuple[LabToolsLocalSampleSummary, ...] = ()
+    cells: tuple[LabToolsLocalCellSummary, ...] = ()
+    freeze_vials: tuple[LabToolsLocalFreezeVialSummary, ...] = ()
+    freeze_vial_status_rows: tuple[str, ...] = ()
+    records: tuple[LabToolsLocalRecordSummary, ...] = ()
+
+
 def runtime_status() -> LabToolsRuntimeStatus:
     try:
         _ensure_labtools_importable()
@@ -182,6 +267,169 @@ def get_labtools_storage_adapter_status(project_root: Path | str | None) -> LabT
 
 def labtools_storage_pilot_enabled(project_root: Path | str | None) -> bool:
     return project_root is not None
+
+
+def get_labtools_local_data_read_model(
+    project_root: Path | str | None,
+    *,
+    data_source_mode: str = "local",
+) -> LabToolsLocalDataReadModel:
+    status = get_labtools_local_data_status(project_root, data_source_mode=data_source_mode)
+    if not status.read_enabled or project_root is None or data_source_mode in {"future_lan", "future_cloud"}:
+        return LabToolsLocalDataReadModel(status=status)
+
+    try:
+        adapter = _local_data_adapter(project_root, data_source_mode=data_source_mode)
+        reagents = tuple(
+            LabToolsLocalReagentSummary(
+                reagent_id=item.id,
+                name=item.name,
+                category=item.category,
+                concentration=item.concentration,
+                storage_location=item.storage_location,
+                status=item.status,
+                version=item.version,
+            )
+            for item in adapter.list_reagents()
+        )
+        samples = tuple(
+            LabToolsLocalSampleSummary(
+                sample_id=item.id,
+                sample_name=item.sample_name,
+                sample_type=item.sample_type,
+                concentration=item.concentration,
+                concentration_unit=item.concentration_unit,
+                storage_location=item.storage_location,
+                status=item.status,
+                version=item.version,
+                wb_compatible=_is_wb_compatible_sample(item.sample_type),
+            )
+            for item in adapter.list_samples()
+        )
+        cells = tuple(
+            LabToolsLocalCellSummary(
+                cell_id=item.id,
+                cell_name=item.cell_name,
+                passage=item.passage,
+                species=item.species,
+                storage_status=item.storage_status,
+                status=item.status,
+                version=item.version,
+            )
+            for item in adapter.list_cells()
+        )
+        freeze_vials = tuple(
+            LabToolsLocalFreezeVialSummary(
+                vial_id=item.id,
+                freeze_batch_id=item.freeze_batch_id,
+                vial_label=item.vial_label,
+                location=item.location,
+                status=item.status,
+                version=item.version,
+            )
+            for item in adapter.list_freeze_vials()
+        )
+        records = tuple(
+            LabToolsLocalRecordSummary(
+                record_id=item.id,
+                record_type=item.record_type,
+                title=item.title,
+                status=item.status,
+                linked_reagent_count=len(item.linked_reagents),
+                linked_sample_count=len(item.linked_samples),
+                linked_cell_count=len(item.linked_cells),
+                version=item.version,
+            )
+            for item in adapter.list_records()
+        )
+        status = LabToolsLocalDataStatus(
+            status=status.status,
+            data_source_mode=status.data_source_mode,
+            read_enabled=status.read_enabled,
+            write_enabled=status.write_enabled,
+            history_enabled=status.history_enabled,
+            export_enabled=status.export_enabled,
+            reason=status.reason,
+            reagent_count=len(reagents),
+            sample_count=len(samples),
+            cell_count=len(cells),
+            freeze_vial_count=len(freeze_vials),
+            record_count=len(records),
+        )
+        return LabToolsLocalDataReadModel(
+            status=status,
+            reagents=reagents,
+            samples=samples,
+            wb_samples=tuple(sample for sample in samples if sample.wb_compatible),
+            cells=cells,
+            freeze_vials=freeze_vials,
+            freeze_vial_status_rows=_freeze_vial_status_rows(freeze_vials),
+            records=records,
+        )
+    except Exception as exc:
+        return LabToolsLocalDataReadModel(
+            status=LabToolsLocalDataStatus(
+                status="blocked_invalid_store",
+                data_source_mode=data_source_mode,
+                read_enabled=False,
+                write_enabled=False,
+                history_enabled=False,
+                export_enabled=False,
+                reason=f"local_data store unavailable: {exc}",
+            )
+        )
+
+
+def get_labtools_local_data_status(
+    project_root: Path | str | None,
+    *,
+    data_source_mode: str = "local",
+) -> LabToolsLocalDataStatus:
+    _ensure_labtools_importable()
+    if project_root is None:
+        return LabToolsLocalDataStatus(
+            status="missing_project_context",
+            data_source_mode=data_source_mode,
+            read_enabled=False,
+            write_enabled=False,
+            history_enabled=False,
+            export_enabled=False,
+            reason="BioMedPilot project context is required before LabTools local_data can be read.",
+        )
+    try:
+        adapter = _local_data_adapter(project_root, data_source_mode=data_source_mode)
+        status = adapter.status()
+        return LabToolsLocalDataStatus(
+            status=status.status,
+            data_source_mode=status.data_source_mode,
+            read_enabled=status.read_enabled,
+            write_enabled=status.write_enabled,
+            history_enabled=status.history_enabled,
+            export_enabled=status.export_enabled,
+            reason=status.reason,
+        )
+    except Exception as exc:
+        return LabToolsLocalDataStatus(
+            status="blocked_invalid_store",
+            data_source_mode=data_source_mode,
+            read_enabled=False,
+            write_enabled=False,
+            history_enabled=False,
+            export_enabled=False,
+            reason=f"local_data adapter unavailable: {exc}",
+        )
+
+
+def list_local_reagent_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalReagentSummary, ...]:
+    return get_labtools_local_data_read_model(project_root).reagents
+
+
+def list_local_wb_sample_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalSampleSummary, ...]:
+    return get_labtools_local_data_read_model(project_root).wb_samples
+
+
+def list_local_cell_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalCellSummary, ...]:
+    return get_labtools_local_data_read_model(project_root).cells
 
 
 def list_quick_tasks() -> tuple[Any, ...]:
@@ -629,13 +877,14 @@ def calculate_wb_loading_preview(
     final_volume_ul: str = "20",
     reducing_agent_enabled: bool = True,
     lane_count: str | int = 10,
+    local_samples: tuple[LabToolsLocalSampleSummary, ...] = (),
 ) -> WBLoadingUiResult:
     _ensure_labtools_importable()
     from labtools.western_blot.calculator import calculate_wb_loading
     from labtools.western_blot.models import WBLoadingConfig, WBSampleInput
 
     try:
-        samples = (
+        samples = _wb_sample_inputs_from_local_samples(local_samples) or (
             WBSampleInput(sample_name="S1", concentration_ug_per_ul=2.0, note="control"),
             WBSampleInput(sample_name="S2", concentration_ug_per_ul=1.5, note="treatment low"),
             WBSampleInput(sample_name="S3", concentration_ug_per_ul=0.8, note="treatment high"),
@@ -856,6 +1105,73 @@ def _records_file(project_root: Path | str | None, filename: str) -> Path | None
         return None
     paths = BioMedPilotLabToolsStorageAdapter.from_project_root(Path(project_root)).resolve_paths()
     return paths.records / filename
+
+
+def _local_data_root(project_root: Path | str) -> Path:
+    return BioMedPilotLabToolsStorageAdapter.from_project_root(Path(project_root)).resolve_paths().labtools_root
+
+
+def _local_data_adapter(project_root: Path | str, *, data_source_mode: str = "local") -> Any:
+    _ensure_labtools_importable()
+    from labtools.local_data import (
+        FutureCloudDataSourceAdapter,
+        FutureLanDataSourceAdapter,
+        LocalLabToolsDataSourceAdapter,
+        ReadOnlyLabToolsDataSourceAdapter,
+    )
+
+    if data_source_mode == "readonly":
+        return ReadOnlyLabToolsDataSourceAdapter(_local_data_root(project_root))
+    if data_source_mode == "future_lan":
+        return FutureLanDataSourceAdapter()
+    if data_source_mode == "future_cloud":
+        return FutureCloudDataSourceAdapter()
+    return LocalLabToolsDataSourceAdapter(_local_data_root(project_root))
+
+
+def _is_wb_compatible_sample(sample_type: str) -> bool:
+    return sample_type in {"protein_lysate", "protein", "lysate"}
+
+
+def _freeze_vial_status_rows(freeze_vials: tuple[LabToolsLocalFreezeVialSummary, ...]) -> tuple[str, ...]:
+    counts: dict[str, int] = {}
+    for vial in freeze_vials:
+        counts[vial.status] = counts.get(vial.status, 0) + 1
+    return tuple(f"{status}: {count}" for status, count in sorted(counts.items())) or ("No freeze vials in local_data.",)
+
+
+def _wb_sample_inputs_from_local_samples(local_samples: tuple[LabToolsLocalSampleSummary, ...]) -> tuple[Any, ...]:
+    if not local_samples:
+        return ()
+    _ensure_labtools_importable()
+    from labtools.western_blot.models import WBSampleInput
+
+    inputs = []
+    for sample in local_samples:
+        concentration = _parse_protein_concentration_as_ug_per_ul(sample.concentration, sample.concentration_unit)
+        if concentration is None:
+            continue
+        inputs.append(
+            WBSampleInput(
+                sample_name=sample.sample_name or sample.sample_id,
+                concentration_ug_per_ul=concentration,
+                note=f"local_data:{sample.sample_id}; no sample volume deduction",
+            )
+        )
+    return tuple(inputs)
+
+
+def _parse_protein_concentration_as_ug_per_ul(value: str, unit: str) -> float | None:
+    try:
+        concentration = float(value)
+    except (TypeError, ValueError):
+        return None
+    normalized_unit = unit.strip().lower().replace("μ", "µ")
+    if normalized_unit in {"µg/µl", "ug/ul", "mg/ml"}:
+        return concentration
+    if normalized_unit in {"ng/µl", "ng/ul"}:
+        return concentration / 1000
+    return None
 
 
 def _load_stored_reagent_templates(project_root: Path | str | None) -> tuple[dict[str, Any], ...]:
