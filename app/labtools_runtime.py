@@ -242,6 +242,16 @@ class LabToolsLocalDataReadModel:
     records: tuple[LabToolsLocalRecordSummary, ...] = ()
 
 
+@dataclass(frozen=True)
+class LabToolsLocalWriteResult:
+    success: bool
+    status: str
+    message: str
+    entity_id: str = ""
+    new_version: int | None = None
+    blocker: str = ""
+
+
 def runtime_status() -> LabToolsRuntimeStatus:
     try:
         _ensure_labtools_importable()
@@ -430,6 +440,97 @@ def list_local_wb_sample_summaries(project_root: Path | str | None) -> tuple[Lab
 
 def list_local_cell_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalCellSummary, ...]:
     return get_labtools_local_data_read_model(project_root).cells
+
+
+def create_local_reagent(project_root: Path | str | None, payload: dict[str, object]) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before creating local reagents.",
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            adapter.initialize()
+        reagent = adapter.create_reagent(_clean_reagent_payload(payload))
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="created",
+            message="已保存到本地 LabTools 数据库。",
+            entity_id=reagent.id,
+            new_version=reagent.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc)
+
+
+def update_local_reagent(
+    project_root: Path | str | None,
+    reagent_id: str,
+    payload: dict[str, object],
+    *,
+    expected_version: int,
+) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before updating local reagents.",
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            return LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_write_disabled",
+                message=adapter.status().reason,
+                entity_id=reagent_id,
+                blocker="write_disabled",
+            )
+        reagent = adapter.update_reagent(reagent_id, _clean_reagent_payload(payload), expected_version=expected_version)
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="updated",
+            message="已保存到本地 LabTools 数据库。",
+            entity_id=reagent.id,
+            new_version=reagent.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc, entity_id=reagent_id)
+
+
+def archive_local_reagent(project_root: Path | str | None, reagent_id: str, *, expected_version: int) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before archiving local reagents.",
+            entity_id=reagent_id,
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            return LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_write_disabled",
+                message=adapter.status().reason,
+                entity_id=reagent_id,
+                blocker="write_disabled",
+            )
+        reagent = adapter.archive_reagent(reagent_id, expected_version=expected_version)
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="archived",
+            message="已归档本地试剂。",
+            entity_id=reagent.id,
+            new_version=reagent.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc, entity_id=reagent_id)
 
 
 def list_quick_tasks() -> tuple[Any, ...]:
@@ -1172,6 +1273,41 @@ def _parse_protein_concentration_as_ug_per_ul(value: str, unit: str) -> float | 
     if normalized_unit in {"ng/µl", "ng/ul"}:
         return concentration / 1000
     return None
+
+
+def _clean_reagent_payload(payload: dict[str, object]) -> dict[str, object]:
+    allowed = {
+        "name",
+        "category",
+        "concentration",
+        "unit",
+        "vendor",
+        "catalog_number",
+        "lot_number",
+        "storage_location",
+        "expiry_date",
+        "notes",
+    }
+    return {key: value for key, value in payload.items() if key in allowed}
+
+
+def _local_write_error_result(exc: Exception, *, entity_id: str = "") -> LabToolsLocalWriteResult:
+    text = str(exc)
+    status = "blocked_error"
+    blocker = "local_data_error"
+    if "version conflict" in text.lower():
+        status = "blocked_version_conflict"
+        blocker = "version_conflict"
+    elif "write" in text.lower() and "disabled" in text.lower():
+        status = "blocked_write_disabled"
+        blocker = "write_disabled"
+    return LabToolsLocalWriteResult(
+        success=False,
+        status=status,
+        message=text,
+        entity_id=entity_id,
+        blocker=blocker,
+    )
 
 
 def _load_stored_reagent_templates(project_root: Path | str | None) -> tuple[dict[str, Any], ...]:

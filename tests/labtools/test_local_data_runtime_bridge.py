@@ -42,6 +42,13 @@ def _seed_local_data(project_root: Path) -> None:
     )
 
 
+def _load_store(project_root: Path):
+    labtools_runtime._ensure_labtools_importable()
+    from labtools.local_data import LocalLabToolsDataStore
+
+    return LocalLabToolsDataStore(project_root / "project_storage" / "labtools")
+
+
 def test_runtime_bridge_gracefully_blocks_missing_store(tmp_path: Path) -> None:
     status = labtools_runtime.get_labtools_local_data_status(tmp_path)
     model = labtools_runtime.get_labtools_local_data_read_model(tmp_path)
@@ -94,6 +101,43 @@ def test_runtime_bridge_keeps_future_adapters_disabled(tmp_path: Path) -> None:
     assert lan.read_enabled is False
     assert cloud.write_enabled is False
     assert "Future adapter only" in lan.reason
+
+
+def test_runtime_bridge_creates_updates_and_archives_local_reagent(tmp_path: Path) -> None:
+    created = labtools_runtime.create_local_reagent(
+        tmp_path,
+        {"name": "Tris-HCl", "category": "buffer", "concentration": "1 M", "storage_location": "4C fridge"},
+    )
+    updated = labtools_runtime.update_local_reagent(
+        tmp_path,
+        created.entity_id,
+        {"name": "Tris-HCl", "category": "buffer", "concentration": "2 M", "storage_location": "4C fridge"},
+        expected_version=1,
+    )
+    archived = labtools_runtime.archive_local_reagent(tmp_path, created.entity_id, expected_version=2)
+    model = labtools_runtime.get_labtools_local_data_read_model(tmp_path)
+    snapshot = _load_store(tmp_path).load_store()
+
+    assert created.success is True
+    assert created.new_version == 1
+    assert updated.success is True
+    assert updated.new_version == 2
+    assert archived.success is True
+    assert archived.new_version == 3
+    assert model.reagents == ()
+    assert snapshot.reagents[0].status == "archived"
+    assert [entry.action for entry in snapshot.audit_log] == ["create", "update", "archive"]
+
+
+def test_runtime_bridge_blocks_reagent_version_conflict(tmp_path: Path) -> None:
+    created = labtools_runtime.create_local_reagent(tmp_path, {"name": "Tris-HCl"})
+
+    conflict = labtools_runtime.update_local_reagent(tmp_path, created.entity_id, {"name": "Tris-HCl 2"}, expected_version=2)
+
+    assert conflict.success is False
+    assert conflict.status == "blocked_version_conflict"
+    assert conflict.blocker == "version_conflict"
+    assert _load_store(tmp_path).load_store().reagents[0].version == 1
 
 
 def test_wb_preview_uses_local_samples_without_inventory_deduction(tmp_path: Path) -> None:

@@ -1000,6 +1000,17 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
+        self._labtools_local_reagent_layout = layout
+        self._populate_labtools_local_reagent_panel(model)
+        return frame
+
+    def _populate_labtools_local_reagent_panel(
+        self,
+        model: labtools_runtime.LabToolsLocalDataReadModel,
+        result: labtools_runtime.LabToolsLocalWriteResult | None = None,
+    ) -> None:
+        layout = self._labtools_local_reagent_layout
+        self._clear_layout(layout)
         header = QLabel("本地试剂引用")
         header.setStyleSheet("font-weight: 700;")
         layout.addWidget(header)
@@ -1024,9 +1035,47 @@ class MainWindow(QMainWindow):
             row.setObjectName("labtoolsLocalReagentRow")
             row.setProperty("reagentId", reagent.reagent_id)
             row.setProperty("reagentName", reagent.name)
+            row.setProperty("version", reagent.version)
             row.setProperty("status", reagent.status)
             row.clicked.connect(lambda _checked=False, item=reagent: self._select_labtools_local_reagent(item))
             layout.addWidget(row)
+        form_header = QLabel("本地试剂管理")
+        form_header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(form_header)
+        self._labtools_local_reagent_inputs = {}
+        for label_text, field_id in (
+            ("名称", "name"),
+            ("分类", "category"),
+            ("浓度", "concentration"),
+            ("存放位置", "storage_location"),
+        ):
+            layout.addLayout(self._labtools_local_reagent_input_row(label_text, field_id))
+        actions = QHBoxLayout()
+        create = make_button("新增本地试剂", role="secondary")
+        create.setObjectName("labtoolsLocalReagentCreateButton")
+        create.clicked.connect(self._create_labtools_local_reagent)
+        update = make_button("编辑本地试剂", role="secondary")
+        update.setObjectName("labtoolsLocalReagentUpdateButton")
+        update.clicked.connect(self._update_labtools_local_reagent)
+        archive = make_button("归档本地试剂", role="secondary")
+        archive.setObjectName("labtoolsLocalReagentArchiveButton")
+        archive.clicked.connect(self._archive_labtools_local_reagent)
+        write_enabled = model.status.write_enabled or model.status.status in {"blocked", "missing_project_context"}
+        for button in (create, update, archive):
+            button.setEnabled(write_enabled)
+            button.setProperty("disabledState", "" if write_enabled else "disabled_local_data_write")
+            actions.addWidget(button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._labtools_local_reagent_create_button = create
+        self._labtools_local_reagent_update_button = update
+        self._labtools_local_reagent_archive_button = archive
+        write_status = QLabel(_labtools_local_write_result_text(result) if result is not None else "本地保存，不会同步到其他设备。")
+        write_status.setObjectName("labtoolsLocalReagentWriteStatus")
+        write_status.setProperty("status", result.status if result is not None else "idle")
+        write_status.setWordWrap(True)
+        layout.addWidget(write_status)
+        self._labtools_local_reagent_write_status = write_status
         layout.addWidget(
             self._labtools_notice_card(
                 "本阶段只引用本地试剂信息；不会扣减库存，也不会覆盖 reagent template。",
@@ -1035,7 +1084,19 @@ class MainWindow(QMainWindow):
             )
         )
         layout.addStretch(1)
-        return frame
+
+    def _labtools_local_reagent_input_row(self, label: str, field_id: str) -> QHBoxLayout:
+        row = QHBoxLayout()
+        title = QLabel(label)
+        title.setObjectName("labtoolsLocalReagentInputLabel")
+        title.setProperty("fieldId", field_id)
+        field = QLineEdit()
+        field.setObjectName("labtoolsLocalReagentInput")
+        field.setProperty("fieldId", field_id)
+        self._labtools_local_reagent_inputs[field_id] = field
+        row.addWidget(title)
+        row.addWidget(field, 1)
+        return row
 
     def _labtools_reagent_run_panel(self) -> QFrame:
         frame = QFrame()
@@ -1201,11 +1262,64 @@ class MainWindow(QMainWindow):
 
     def _select_labtools_local_reagent(self, reagent: labtools_runtime.LabToolsLocalReagentSummary) -> None:
         self._labtools_selected_local_reagent_id = reagent.reagent_id
+        self._labtools_selected_local_reagent_version = reagent.version
+        if hasattr(self, "_labtools_local_reagent_inputs"):
+            self._labtools_local_reagent_inputs["name"].setText(reagent.name)
+            self._labtools_local_reagent_inputs["category"].setText(reagent.category)
+            self._labtools_local_reagent_inputs["concentration"].setText(reagent.concentration)
+            self._labtools_local_reagent_inputs["storage_location"].setText(reagent.storage_location)
         if hasattr(self, "_labtools_local_reagent_reference"):
             self._labtools_local_reagent_reference.setText(
                 f"已引用本地试剂：{reagent.name} · {reagent.concentration or 'no concentration'} · {reagent.storage_location or 'no location'}"
             )
             self._labtools_local_reagent_reference.setProperty("reagentId", reagent.reagent_id)
+
+    def _local_reagent_payload_from_inputs(self) -> dict[str, object]:
+        return {field_id: widget.text().strip() for field_id, widget in self._labtools_local_reagent_inputs.items()}
+
+    def _create_labtools_local_reagent(self) -> None:
+        result = labtools_runtime.create_local_reagent(self._labtools_project_root, self._local_reagent_payload_from_inputs())
+        self._refresh_labtools_local_reagent_after_write(result)
+
+    def _update_labtools_local_reagent(self) -> None:
+        reagent_id = getattr(self, "_labtools_selected_local_reagent_id", "")
+        expected_version = int(getattr(self, "_labtools_selected_local_reagent_version", 0) or 0)
+        if not reagent_id or expected_version < 1:
+            result = labtools_runtime.LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_no_selection",
+                message="请先选择一个本地试剂。",
+                blocker="no_reagent_selected",
+            )
+        else:
+            result = labtools_runtime.update_local_reagent(
+                self._labtools_project_root,
+                reagent_id,
+                self._local_reagent_payload_from_inputs(),
+                expected_version=expected_version,
+            )
+        self._refresh_labtools_local_reagent_after_write(result)
+
+    def _archive_labtools_local_reagent(self) -> None:
+        reagent_id = getattr(self, "_labtools_selected_local_reagent_id", "")
+        expected_version = int(getattr(self, "_labtools_selected_local_reagent_version", 0) or 0)
+        if not reagent_id or expected_version < 1:
+            result = labtools_runtime.LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_no_selection",
+                message="请先选择一个本地试剂。",
+                blocker="no_reagent_selected",
+            )
+        else:
+            result = labtools_runtime.archive_local_reagent(self._labtools_project_root, reagent_id, expected_version=expected_version)
+        self._refresh_labtools_local_reagent_after_write(result)
+
+    def _refresh_labtools_local_reagent_after_write(self, result: labtools_runtime.LabToolsLocalWriteResult) -> None:
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
+        if result.success:
+            self._labtools_selected_local_reagent_id = result.entity_id
+            self._labtools_selected_local_reagent_version = result.new_version or 0
+        self._populate_labtools_local_reagent_panel(self._labtools_local_data_read_model, result)
 
     def _render_labtools_reagent_template_detail(self, detail: labtools_runtime.ReagentTemplateDetail) -> None:
         layout = self._labtools_reagent_detail_rows_layout
@@ -2987,3 +3101,11 @@ class MainWindow(QMainWindow):
     def generate_testing_feedback_template(self) -> None:
         path = generate_feedback_template()
         self.statusBar().showMessage(f"已生成反馈模板：{path}", 8000)
+
+
+def _labtools_local_write_result_text(result: labtools_runtime.LabToolsLocalWriteResult) -> str:
+    if result.success:
+        version = f" v{result.new_version}" if result.new_version is not None else ""
+        return f"{result.message} {result.entity_id}{version}".strip()
+    blocker = f" blocker={result.blocker}" if result.blocker else ""
+    return f"{result.message}{blocker}"
