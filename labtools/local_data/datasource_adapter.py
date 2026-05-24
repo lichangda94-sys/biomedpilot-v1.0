@@ -73,11 +73,32 @@ class LocalLabToolsDataSourceAdapter:
     def list_freeze_vials(self) -> tuple[FreezeVialRecord, ...]:
         return self.store.list_freeze_vials()
 
+    def list_record_index(self, record_type: str | None = None) -> tuple[LabToolsRecordIndexEntry, ...]:
+        return self.store.list_record_index(record_type=record_type)
+
     def list_records(self) -> tuple[LabToolsRecordIndexEntry, ...]:
-        return self.store.list_record_index()
+        return self.list_record_index()
+
+    def create_record_index_entry(self, payload: Mapping[str, object]) -> LabToolsRecordIndexEntry:
+        return self.store.create_record_index_entry(payload)
 
     def create_record_summary(self, payload: Mapping[str, object]) -> LabToolsRecordIndexEntry:
-        return self.store.create_record_index_entry(payload)
+        return self.create_record_index_entry(payload)
+
+    def get_record_index(self, record_id: str) -> LabToolsRecordIndexEntry:
+        return self.store.get_record_index(record_id)
+
+    def update_record_index_status(self, record_id: str, status: str, *, expected_version: int) -> LabToolsRecordIndexEntry:
+        return self.store.update_record_index_status(record_id, status, expected_version=expected_version)
+
+    def list_records_by_reagent(self, reagent_id: str) -> tuple[LabToolsRecordIndexEntry, ...]:
+        return self.store.list_records_by_reagent(reagent_id)
+
+    def list_records_by_sample(self, sample_id: str) -> tuple[LabToolsRecordIndexEntry, ...]:
+        return self.store.list_records_by_sample(sample_id)
+
+    def list_records_by_cell(self, cell_id: str) -> tuple[LabToolsRecordIndexEntry, ...]:
+        return self.store.list_records_by_cell(cell_id)
 
 
 class ReadOnlyLabToolsDataSourceAdapter(LocalLabToolsDataSourceAdapter):
@@ -96,7 +117,13 @@ class ReadOnlyLabToolsDataSourceAdapter(LocalLabToolsDataSourceAdapter):
             local_store_status=store_status,
         )
 
+    def create_record_index_entry(self, payload: Mapping[str, object]) -> LabToolsRecordIndexEntry:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
     def create_record_summary(self, payload: Mapping[str, object]) -> LabToolsRecordIndexEntry:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
+    def update_record_index_status(self, record_id: str, status: str, *, expected_version: int) -> LabToolsRecordIndexEntry:
         raise PermissionError("Read-only LabTools data source does not allow writes.")
 
     def create_reagent(self, payload: Mapping[str, object]) -> ReagentRecord:

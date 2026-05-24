@@ -22,7 +22,7 @@ def test_local_datasource_adapter_reports_status_and_lists_entities(tmp_path: Pa
     adapter.store.create_cell({"cell_name": "TPC-1"})
     batch = adapter.store.create_freeze_batch({"cell_id": adapter.list_cells()[0].id, "batch_name": "TPC-1_P12"})
     vial = adapter.store.create_freeze_vial({"freeze_batch_id": batch.id, "vial_label": "TPC-1 P12 #01"})
-    record = adapter.create_record_summary({"record_type": "quick_calculation", "title": "Dilution"})
+    record = adapter.create_record_index_entry({"record_type": "quick_calculation", "title": "Dilution"})
 
     assert status.data_source_mode == "local"
     assert status.write_enabled is True
@@ -34,6 +34,8 @@ def test_local_datasource_adapter_reports_status_and_lists_entities(tmp_path: Pa
     assert len(adapter.list_cells()) == 1
     assert adapter.list_freeze_vials() == (vial,)
     assert adapter.list_records() == (record,)
+    assert adapter.list_record_index("quick_calculation") == (record,)
+    assert adapter.get_record_index(record.id) == record
 
 
 def test_readonly_datasource_adapter_disables_writes(tmp_path: Path) -> None:
@@ -50,6 +52,10 @@ def test_readonly_datasource_adapter_disables_writes(tmp_path: Path) -> None:
     assert len(readonly.list_reagents()) == 1
     with pytest.raises(PermissionError):
         readonly.create_record_summary({"record_type": "quick_calculation", "title": "Dilution"})
+    with pytest.raises(PermissionError):
+        readonly.create_record_index_entry({"record_type": "quick_calculation", "title": "Dilution"})
+    with pytest.raises(PermissionError):
+        readonly.update_record_index_status("record_1", "archived", expected_version=1)
     with pytest.raises(PermissionError):
         readonly.create_reagent({"name": "Blocked"})
     with pytest.raises(PermissionError):
@@ -95,6 +101,44 @@ def test_local_datasource_adapter_archives_sample_and_writes_audit(tmp_path: Pat
         ("sample", "create"),
         ("sample", "update"),
         ("sample", "archive"),
+    ]
+
+
+def test_local_datasource_adapter_manages_record_index_and_reverse_links(tmp_path: Path) -> None:
+    adapter = LocalLabToolsDataSourceAdapter(tmp_path)
+    adapter.initialize()
+    reagent = adapter.create_reagent({"name": "Tris-HCl"})
+    sample = adapter.create_sample({"sample_name": "Tumor lysate"})
+    cell = adapter.store.create_cell({"cell_name": "TPC-1"})
+
+    record = adapter.create_record_index_entry(
+        {
+            "record_type": "wb_loading",
+            "title": "WB loading summary",
+            "record_summary": "WB loading calculation draft.",
+            "linked_reagents": [reagent.id],
+            "linked_samples": [sample.id],
+            "linked_cells": [cell.id],
+            "artifact_refs": ["local-summary-only"],
+        }
+    )
+    updated = adapter.update_record_index_status(record.id, "archived", expected_version=1)
+
+    assert record.version == 1
+    assert record.status == "draft"
+    assert record.record_summary == "WB loading calculation draft."
+    assert record.linked_reagents == (reagent.id,)
+    assert record.linked_samples == (sample.id,)
+    assert updated.version == 2
+    assert updated.status == "archived"
+    assert adapter.list_record_index("wb_loading") == (updated,)
+    assert adapter.get_record_index(record.id) == updated
+    assert adapter.list_records_by_reagent(reagent.id) == (updated,)
+    assert adapter.list_records_by_sample(sample.id) == (updated,)
+    assert adapter.list_records_by_cell(cell.id) == (updated,)
+    assert [(entry.entity_type, entry.action) for entry in adapter.store.load_store().audit_log][-2:] == [
+        ("record", "create"),
+        ("record", "archive"),
     ]
 
 
