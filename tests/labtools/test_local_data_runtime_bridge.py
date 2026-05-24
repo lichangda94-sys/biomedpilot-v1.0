@@ -230,3 +230,64 @@ def test_bca_sample_concentration_proposal_does_not_write_until_confirmed(tmp_pa
     assert after_confirm.concentration == "2.5"
     assert after_confirm.concentration_unit == "mg/mL"
     assert after_confirm.volume == "25"
+
+
+def test_runtime_bridge_creates_lists_and_updates_local_record_summary(tmp_path: Path) -> None:
+    _seed_local_data(tmp_path)
+    model = labtools_runtime.get_labtools_local_data_read_model(tmp_path)
+    reagent_id = model.reagents[0].reagent_id
+    sample_id = model.samples[0].sample_id
+
+    created = labtools_runtime.create_local_record_summary(
+        tmp_path,
+        {
+            "record_type": "reagent_preparation",
+            "title": "PBS prep summary",
+            "summary": "Prepared PBS preview.",
+            "linked_reagents": [reagent_id],
+            "linked_samples": [sample_id],
+            "artifact_refs": ["ui:reagent_preparation:local-summary-only"],
+        },
+    )
+    listed = labtools_runtime.list_local_record_summaries(tmp_path, record_type="reagent_preparation")
+    fetched = labtools_runtime.get_local_record_summary(tmp_path, created.entity_id)
+    updated = labtools_runtime.update_local_record_summary_status(tmp_path, created.entity_id, "archived", expected_version=1)
+    snapshot = _load_store(tmp_path).load_store()
+
+    assert created.success is True
+    assert created.new_version == 1
+    assert listed[0].record_id == created.entity_id
+    assert listed[0].summary == "Prepared PBS preview."
+    assert listed[0].linked_reagents == (reagent_id,)
+    assert listed[0].linked_samples == (sample_id,)
+    assert fetched is not None
+    assert fetched.version == 1
+    assert updated.success is True
+    assert updated.new_version == 2
+    assert snapshot.records[-1].status == "archived"
+    assert snapshot.records[-1].version == 2
+    assert [(entry.entity_type, entry.action) for entry in snapshot.audit_log][-2:] == [
+        ("record", "create"),
+        ("record", "archive"),
+    ]
+
+
+def test_runtime_bridge_blocks_record_stale_version_and_formal_report_status(tmp_path: Path) -> None:
+    created = labtools_runtime.create_local_record_summary(
+        tmp_path,
+        {"record_type": "quick_calculation", "title": "Dilution summary", "summary": "Draft only."},
+    )
+
+    stale = labtools_runtime.update_local_record_summary_status(tmp_path, created.entity_id, "archived", expected_version=2)
+    formal = labtools_runtime.create_local_record_summary(
+        tmp_path,
+        {"record_type": "quick_calculation", "title": "Formal report", "summary": "Blocked.", "status": "formal_report"},
+    )
+    snapshot = _load_store(tmp_path).load_store()
+
+    assert stale.success is False
+    assert stale.status == "blocked_version_conflict"
+    assert formal.success is False
+    assert formal.status == "blocked_validation"
+    assert snapshot.records[0].status == "draft"
+    assert snapshot.records[0].version == 1

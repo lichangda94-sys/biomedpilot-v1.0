@@ -225,10 +225,17 @@ class LabToolsLocalRecordSummary:
     record_id: str
     record_type: str
     title: str
+    summary: str
+    linked_reagents: tuple[str, ...]
+    linked_samples: tuple[str, ...]
+    linked_cells: tuple[str, ...]
+    artifact_refs: tuple[str, ...]
     status: str
     linked_reagent_count: int
     linked_sample_count: int
     linked_cell_count: int
+    created_at: str
+    updated_at: str
     version: int
 
 
@@ -358,19 +365,7 @@ def get_labtools_local_data_read_model(
             )
             for item in adapter.list_freeze_vials()
         )
-        records = tuple(
-            LabToolsLocalRecordSummary(
-                record_id=item.id,
-                record_type=item.record_type,
-                title=item.title,
-                status=item.status,
-                linked_reagent_count=len(item.linked_reagents),
-                linked_sample_count=len(item.linked_samples),
-                linked_cell_count=len(item.linked_cells),
-                version=item.version,
-            )
-            for item in adapter.list_records()
-        )
+        records = tuple(_local_record_summary_from_entry(item) for item in adapter.list_record_index())
         status = LabToolsLocalDataStatus(
             status=status.status,
             data_source_mode=status.data_source_mode,
@@ -463,6 +458,34 @@ def list_local_sample_summaries(project_root: Path | str | None) -> tuple[LabToo
 
 def list_local_cell_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalCellSummary, ...]:
     return get_labtools_local_data_read_model(project_root).cells
+
+
+def list_local_record_summaries(
+    project_root: Path | str | None,
+    *,
+    record_type: str | None = None,
+) -> tuple[LabToolsLocalRecordSummary, ...]:
+    if project_root is None:
+        return ()
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().read_enabled:
+            return ()
+        return tuple(_local_record_summary_from_entry(item) for item in adapter.list_record_index(record_type))
+    except Exception:
+        return ()
+
+
+def get_local_record_summary(project_root: Path | str | None, record_id: str) -> LabToolsLocalRecordSummary | None:
+    if project_root is None:
+        return None
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().read_enabled:
+            return None
+        return _local_record_summary_from_entry(adapter.get_record_index(record_id))
+    except Exception:
+        return None
 
 
 def create_local_reagent(project_root: Path | str | None, payload: dict[str, object]) -> LabToolsLocalWriteResult:
@@ -717,6 +740,67 @@ def confirm_sample_concentration_update(
         {"concentration": proposal.proposed_concentration, "concentration_unit": proposal.proposed_unit},
         expected_version=proposal.expected_version,
     )
+
+
+def create_local_record_summary(project_root: Path | str | None, payload: dict[str, object]) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before saving local record summaries.",
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            adapter.initialize()
+        record = adapter.create_record_index_entry(_clean_record_summary_payload(payload))
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="created",
+            message="已保存本地实验记录摘要；这不是正式报告。",
+            entity_id=record.id,
+            new_version=record.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc)
+
+
+def update_local_record_summary_status(
+    project_root: Path | str | None,
+    record_id: str,
+    status: str,
+    *,
+    expected_version: int,
+) -> LabToolsLocalWriteResult:
+    if project_root is None:
+        return LabToolsLocalWriteResult(
+            success=False,
+            status="missing_project_context",
+            message="BioMedPilot project context is required before updating local record summaries.",
+            entity_id=record_id,
+            blocker="missing_project_context",
+        )
+    try:
+        adapter = _local_data_adapter(project_root)
+        if not adapter.status().write_enabled:
+            return LabToolsLocalWriteResult(
+                success=False,
+                status="blocked_write_disabled",
+                message=adapter.status().reason,
+                entity_id=record_id,
+                blocker="write_disabled",
+            )
+        record = adapter.update_record_index_status(record_id, str(status).strip(), expected_version=expected_version)
+        return LabToolsLocalWriteResult(
+            success=True,
+            status="updated",
+            message="已更新本地实验记录摘要状态。",
+            entity_id=record.id,
+            new_version=record.version,
+        )
+    except Exception as exc:
+        return _local_write_error_result(exc, entity_id=record_id)
 
 
 def list_quick_tasks() -> tuple[Any, ...]:
@@ -1427,6 +1511,26 @@ def _freeze_vial_status_rows(freeze_vials: tuple[LabToolsLocalFreezeVialSummary,
     return tuple(f"{status}: {count}" for status, count in sorted(counts.items())) or ("No freeze vials in local_data.",)
 
 
+def _local_record_summary_from_entry(item: Any) -> LabToolsLocalRecordSummary:
+    return LabToolsLocalRecordSummary(
+        record_id=item.id,
+        record_type=item.record_type,
+        title=item.title,
+        summary=item.record_summary,
+        linked_reagents=tuple(item.linked_reagents),
+        linked_samples=tuple(item.linked_samples),
+        linked_cells=tuple(item.linked_cells),
+        artifact_refs=tuple(item.artifact_refs),
+        status=item.status,
+        linked_reagent_count=len(item.linked_reagents),
+        linked_sample_count=len(item.linked_samples),
+        linked_cell_count=len(item.linked_cells),
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+        version=item.version,
+    )
+
+
 def _wb_sample_inputs_from_local_samples(local_samples: tuple[LabToolsLocalSampleSummary, ...]) -> tuple[Any, ...]:
     if not local_samples:
         return ()
@@ -1491,6 +1595,28 @@ def _clean_sample_payload(payload: dict[str, object]) -> dict[str, object]:
         "notes",
     }
     return {key: value for key, value in payload.items() if key in allowed}
+
+
+def _clean_record_summary_payload(payload: dict[str, object]) -> dict[str, object]:
+    clean = {
+        "record_type": str(payload.get("record_type", "")).strip(),
+        "title": str(payload.get("title", "")).strip(),
+        "record_summary": str(payload.get("record_summary", payload.get("summary", ""))).strip(),
+        "status": str(payload.get("status", "draft") or "draft").strip(),
+        "linked_reagents": _clean_id_list(payload.get("linked_reagents")),
+        "linked_samples": _clean_id_list(payload.get("linked_samples")),
+        "linked_cells": _clean_id_list(payload.get("linked_cells")),
+        "artifact_refs": _clean_id_list(payload.get("artifact_refs")),
+    }
+    return clean
+
+
+def _clean_id_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, (list, tuple)):
+        return [str(value).strip()] if str(value).strip() else []
+    return [text for item in value if (text := str(item).strip())]
 
 
 def _local_write_error_result(exc: Exception, *, entity_id: str = "") -> LabToolsLocalWriteResult:

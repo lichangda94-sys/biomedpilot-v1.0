@@ -769,11 +769,11 @@ class MainWindow(QMainWindow):
         copy_button.setObjectName("labtoolsCopyResultButton")
         copy_button.setProperty("pageKey", page_key)
         copy_button.clicked.connect(lambda _checked=False, key=page_key: self._copy_labtools_result(key))
-        save_button = make_button("保存到历史 - 需适配", role="secondary")
+        save_button = make_button("保存本地记录摘要", role="secondary")
         save_button.setObjectName("labtoolsSaveHistoryButton")
         save_button.setProperty("pageKey", page_key)
-        save_button.setEnabled(False)
-        save_button.setProperty("disabledState", "disabled_missing_storage_adapter")
+        save_button.clicked.connect(lambda _checked=False, key=page_key: self._save_labtools_calculation_record(key))
+        self._set_storage_gated_button_state(save_button, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
         export_button = make_button("导出结果 - 暂未开放", role="secondary")
         export_button.setObjectName("labtoolsExportResultButton")
         export_button.setProperty("pageKey", page_key)
@@ -789,6 +789,7 @@ class MainWindow(QMainWindow):
             "text": result_text,
             "issue": issue_label,
             "copy_text": "",
+            "last_result": None,
         }
         return frame
 
@@ -819,6 +820,7 @@ class MainWindow(QMainWindow):
         issue_label.setText("\n".join(f"- {issue}" for issue in issues))
         issue_label.setProperty("hasError", bool(result.errors))
         widgets["copy_text"] = result.copy_text if result.valid else ""
+        widgets["last_result"] = result if result.valid else None
 
     def _set_labtools_result_empty(self, message: str, *, page_key: str) -> None:
         if hasattr(self, "_labtools_result_widgets") and page_key in self._labtools_result_widgets:
@@ -834,6 +836,7 @@ class MainWindow(QMainWindow):
             issue_label.setText(labtools_runtime.REVIEW_NOTICE)
             issue_label.setProperty("hasError", False)
             widgets["copy_text"] = ""
+            widgets["last_result"] = None
 
     def _copy_labtools_result(self, page_key: str) -> None:
         from PySide6.QtWidgets import QApplication
@@ -841,6 +844,26 @@ class MainWindow(QMainWindow):
         copy_text = self._labtools_result_widgets.get(page_key, {}).get("copy_text", "")
         if copy_text:
             QApplication.clipboard().setText(str(copy_text))
+
+    def _save_labtools_calculation_record(self, page_key: str) -> None:
+        widgets = self._labtools_result_widgets.get(page_key, {})
+        issue_label = widgets.get("issue")
+        result = widgets.get("last_result")
+        if not isinstance(issue_label, QLabel) or not isinstance(result, labtools_runtime.LabToolsUiResult):
+            return
+        record_type = "formula_solver" if page_key == "formula_solver" else "quick_calculation"
+        write_result = labtools_runtime.create_local_record_summary(
+            self._labtools_project_root,
+            {
+                "record_type": record_type,
+                "title": result.title,
+                "summary": result.primary_result,
+                "artifact_refs": [f"ui:{page_key}:local-summary-only"],
+                "status": "draft",
+            },
+        )
+        self._report_labtools_local_write_result(write_result, issue_label)
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
 
     def _selected_formula_target(self) -> str:
         for button in self._labtools_formula_target_group.buttons():
@@ -1146,7 +1169,7 @@ class MainWindow(QMainWindow):
         copy = make_button("复制摘要", role="secondary")
         copy.setObjectName("labtoolsReagentCopySummaryButton")
         copy.clicked.connect(self._copy_labtools_reagent_summary)
-        save = make_button("保存配制记录 - 项目存储试点", role="secondary")
+        save = make_button("保存本地记录摘要", role="secondary")
         save.setObjectName("labtoolsReagentSaveRecordButton")
         save.clicked.connect(self._save_labtools_reagent_record)
         export = make_button("PDF / DOCX 导出 - 未开放", role="secondary")
@@ -1509,17 +1532,19 @@ class MainWindow(QMainWindow):
         result_data = getattr(self, "_labtools_reagent_last_result", None)
         if result_data is None:
             return
-        result = labtools_runtime.save_reagent_preparation_record(
+        result = labtools_runtime.create_local_record_summary(
             self._labtools_project_root,
-            template_id=self._labtools_reagent_selected_template_id or "demo_pbs_1x",
-            target_volume=self._labtools_reagent_run_inputs["target_volume"].text().strip(),
-            target_volume_unit=self._labtools_reagent_target_unit.currentText(),
-            operator_name=self._labtools_reagent_run_inputs["operator_name"].text().strip(),
-            measured_ph=self._labtools_reagent_run_inputs["measured_ph"].text().strip(),
-            adjustment_note=self._labtools_reagent_run_inputs["adjustment_note"].text().strip(),
-            result=result_data,
+            {
+                "record_type": "reagent_preparation",
+                "title": f"Reagent preparation: {result_data.primary_result}",
+                "summary": result_data.primary_result,
+                "linked_reagents": [getattr(self, "_labtools_selected_local_reagent_id", "")],
+                "artifact_refs": [f"template:{self._labtools_reagent_selected_template_id or 'demo_pbs_1x'}", "ui:reagent_preparation:local-summary-only"],
+                "status": "draft",
+            },
         )
-        self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
+        self._report_labtools_local_write_result(result, self._labtools_reagent_issue_rows)
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
         self._refresh_labtools_reagent_history()
 
     def _export_labtools_reagent_markdown(self) -> None:
@@ -1548,19 +1573,15 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "_labtools_reagent_history_list"):
             return
         self._labtools_reagent_history_list.clear()
-        history = labtools_runtime.load_reagent_preparation_history(self._labtools_project_root)
-        if history.error:
-            self._labtools_reagent_history_status.setText(history.error)
+        records = labtools_runtime.list_local_record_summaries(self._labtools_project_root, record_type="reagent_preparation")
+        if not records:
+            self._labtools_reagent_history_status.setText("暂无本地配制记录摘要；保存后会写入 local_data record index。")
             self._labtools_reagent_history_detail.setPlainText("")
             return
-        if not history.entries:
-            self._labtools_reagent_history_status.setText("暂无已保存配制记录；保存试点启用后会写入 project_storage/labtools/records。")
-            self._labtools_reagent_history_detail.setPlainText("")
-            return
-        self._labtools_reagent_history_status.setText("已保存到项目存储 / Saved to project storage")
-        for entry in history.entries:
-            item = QListWidgetItem(f"{entry.created_at} | {entry.title}")
-            item.setData(Qt.UserRole, entry)
+        self._labtools_reagent_history_status.setText("本地实验记录摘要；不是正式报告。")
+        for record in records:
+            item = QListWidgetItem(f"{record.created_at} | {record.title}")
+            item.setData(Qt.UserRole, record)
             self._labtools_reagent_history_list.addItem(item)
         self._labtools_reagent_history_list.setCurrentRow(self._labtools_reagent_history_list.count() - 1)
 
@@ -1568,12 +1589,13 @@ class MainWindow(QMainWindow):
         if current is None:
             self._labtools_reagent_history_detail.setPlainText("")
             return
-        entry = current.data(Qt.UserRole)
-        if entry is None:
+        record = current.data(Qt.UserRole)
+        if record is None:
             self._labtools_reagent_history_detail.setPlainText("")
             return
         self._labtools_reagent_history_detail.setPlainText(
-            f"record_id: {entry.record_id}\ncreated_at: {entry.created_at}\nsummary: {entry.summary}\n\n{entry.detail_text}"
+            f"record_id: {record.record_id}\nstatus: {record.status}\nversion: {record.version}\n"
+            f"linked_reagents: {', '.join(record.linked_reagents) or 'none'}\nsummary: {record.summary}\n\n本地实验记录摘要，不是正式报告。"
         )
 
     def _show_labtools_wb_loading_page(self) -> None:
@@ -1617,7 +1639,7 @@ class MainWindow(QMainWindow):
         copy = make_button("复制上样表", role="primary")
         copy.setObjectName("labtoolsWbCopyTableButton")
         copy.clicked.connect(self._copy_labtools_wb_summary)
-        save = make_button("保存 WB 记录 - 项目存储试点", role="secondary")
+        save = make_button("保存本地记录摘要", role="secondary")
         save.setObjectName("labtoolsWbSaveRecordButton")
         save.clicked.connect(self._save_labtools_wb_record)
         export = make_button("PDF / DOCX 导出 - 未开放", role="secondary")
@@ -2110,8 +2132,19 @@ class MainWindow(QMainWindow):
         result_data = getattr(self, "_labtools_wb_last_result", None)
         if result_data is None:
             return
-        result = labtools_runtime.save_wb_loading_record(self._labtools_project_root, result=result_data)
-        self._report_labtools_storage_result(result, self._labtools_wb_issue_rows)
+        result = labtools_runtime.create_local_record_summary(
+            self._labtools_project_root,
+            {
+                "record_type": "wb_loading",
+                "title": result_data.title,
+                "summary": result_data.primary_result,
+                "linked_samples": [sample.sample_id for sample in getattr(self, "_labtools_local_data_read_model", labtools_runtime.LabToolsLocalDataReadModel(labtools_runtime.get_labtools_local_data_status(None))).wb_samples],
+                "artifact_refs": ["ui:wb_loading:local-summary-only"],
+                "status": "draft",
+            },
+        )
+        self._report_labtools_local_write_result(result, self._labtools_wb_issue_rows)
+        self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
         self._refresh_labtools_wb_history()
 
     def _export_labtools_wb_markdown(self) -> None:
@@ -2140,19 +2173,15 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "_labtools_wb_history_list"):
             return
         self._labtools_wb_history_list.clear()
-        history = labtools_runtime.load_wb_loading_history(self._labtools_project_root)
-        if history.error:
-            self._labtools_wb_history_status.setText(history.error)
+        records = labtools_runtime.list_local_record_summaries(self._labtools_project_root, record_type="wb_loading")
+        if not records:
+            self._labtools_wb_history_status.setText("暂无 WB 本地记录摘要；保存后会写入 local_data record index。")
             self._labtools_wb_history_detail.setPlainText("")
             return
-        if not history.entries:
-            self._labtools_wb_history_status.setText("暂无 WB 保存历史；保存试点启用后会写入 project_storage/labtools/records。")
-            self._labtools_wb_history_detail.setPlainText("")
-            return
-        self._labtools_wb_history_status.setText("已保存到项目存储 / Saved to project storage")
-        for entry in history.entries:
-            item = QListWidgetItem(f"{entry.created_at} | {entry.title}")
-            item.setData(Qt.UserRole, entry)
+        self._labtools_wb_history_status.setText("本地实验记录摘要；不是正式报告。")
+        for record in records:
+            item = QListWidgetItem(f"{record.created_at} | {record.title}")
+            item.setData(Qt.UserRole, record)
             self._labtools_wb_history_list.addItem(item)
         self._labtools_wb_history_list.setCurrentRow(self._labtools_wb_history_list.count() - 1)
 
@@ -2160,12 +2189,13 @@ class MainWindow(QMainWindow):
         if current is None:
             self._labtools_wb_history_detail.setPlainText("")
             return
-        entry = current.data(Qt.UserRole)
-        if entry is None:
+        record = current.data(Qt.UserRole)
+        if record is None:
             self._labtools_wb_history_detail.setPlainText("")
             return
         self._labtools_wb_history_detail.setPlainText(
-            f"record_id: {entry.record_id}\ncreated_at: {entry.created_at}\nsummary: {entry.summary}\n\n{entry.detail_text}"
+            f"record_id: {record.record_id}\nstatus: {record.status}\nversion: {record.version}\n"
+            f"linked_samples: {', '.join(record.linked_samples) or 'none'}\nsummary: {record.summary}\n\n本地实验记录摘要，不是正式报告。"
         )
 
     def _set_storage_gated_button_state(self, button: QPushButton, enabled: bool, disabled_state: str) -> None:
@@ -2184,6 +2214,17 @@ class MainWindow(QMainWindow):
             lines.append(f"- error: {error}")
         issue_label.setText("\n".join(lines))
         issue_label.setProperty("hasError", not result.ok)
+
+    def _report_labtools_local_write_result(self, result: labtools_runtime.LabToolsLocalWriteResult, issue_label: QLabel) -> None:
+        lines = [f"- {result.message}"]
+        if result.entity_id:
+            lines.append(f"- record_id: {result.entity_id}")
+        if result.new_version is not None:
+            lines.append(f"- version: {result.new_version}")
+        lines.append("- 保存的是本地实验记录摘要，不是正式报告。")
+        issue_label.setText("\n".join(lines))
+        issue_label.setProperty("hasError", not result.success)
+        issue_label.setProperty("status", result.status)
 
     def _report_labtools_export_cancelled(self, issue_label: QLabel) -> None:
         issue_label.setText("- 导出已取消；未写入任何文件。")
