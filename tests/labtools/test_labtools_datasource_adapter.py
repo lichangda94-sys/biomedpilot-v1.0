@@ -18,6 +18,8 @@ def test_local_datasource_adapter_reports_status_and_lists_entities(tmp_path: Pa
     adapter.store.create_reagent({"name": "Tris-HCl"})
     adapter.store.create_sample({"sample_name": "S1"})
     adapter.store.create_cell({"cell_name": "TPC-1"})
+    batch = adapter.store.create_freeze_batch({"cell_id": adapter.list_cells()[0].id, "batch_name": "TPC-1_P12"})
+    vial = adapter.store.create_freeze_vial({"freeze_batch_id": batch.id, "vial_label": "TPC-1 P12 #01"})
     record = adapter.create_record_summary({"record_type": "quick_calculation", "title": "Dilution"})
 
     assert status.data_source_mode == "local"
@@ -25,6 +27,7 @@ def test_local_datasource_adapter_reports_status_and_lists_entities(tmp_path: Pa
     assert len(adapter.list_reagents()) == 1
     assert len(adapter.list_samples()) == 1
     assert len(adapter.list_cells()) == 1
+    assert adapter.list_freeze_vials() == (vial,)
     assert adapter.list_records() == (record,)
 
 

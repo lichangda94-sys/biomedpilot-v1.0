@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
-from labtools.local_data.models import CellProfileRecord, LabToolsRecordIndexEntry, ReagentRecord, SampleRecord
+from labtools.local_data.models import CellProfileRecord, FreezeVialRecord, LabToolsRecordIndexEntry, ReagentRecord, SampleRecord
 from labtools.local_data.store import LocalLabToolsDataStore, LocalStoreStatus
 
 
@@ -51,6 +51,9 @@ class LocalLabToolsDataSourceAdapter:
 
     def list_cells(self) -> tuple[CellProfileRecord, ...]:
         return self.store.list_cells()
+
+    def list_freeze_vials(self) -> tuple[FreezeVialRecord, ...]:
+        return self.store.list_freeze_vials()
 
     def list_records(self) -> tuple[LabToolsRecordIndexEntry, ...]:
         return self.store.list_record_index()
