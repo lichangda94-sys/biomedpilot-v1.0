@@ -24,6 +24,7 @@ labtools = "labtools.__main__:main"
 packages = [
     "labtools",
     "labtools.calculators",
+    "labtools.local_data",
     "labtools.reagent_templates",
     "labtools.western_blot",
     "labtools.shared",

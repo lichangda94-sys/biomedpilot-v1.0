@@ -68,13 +68,14 @@ from labtools.shared.version import APP_VERSION as __version__
 def smoke_test() -> dict[str, object]:
     """Import key public surfaces and return a small status payload."""
 
-    from labtools import cell_culture, elisa, pcr_qpcr, reagent_templates, western_blot
+    from labtools import cell_culture, elisa, local_data, pcr_qpcr, reagent_templates, western_blot
 
     return {
         "version": __version__,
         "modules": (
             "labtools.calculators",
             reagent_templates.__name__,
+            local_data.__name__,
             western_blot.__name__,
             pcr_qpcr.__name__,
             cell_culture.__name__,
