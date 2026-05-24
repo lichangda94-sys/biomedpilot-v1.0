@@ -6,6 +6,7 @@ from app.bioinformatics.deg_engine.r_adapter_contract import build_r_deg_runtime
 from app.bioinformatics.deg_engine.r_edger_planning import (
     build_r_edger_parameter_manifest,
     build_r_edger_rscript_adapter_plan,
+    save_r_edger_parameter_confirmation,
     validate_r_edger_parameter_confirmation,
 )
 from app.bioinformatics.deg_engine.r_edger_runtime import detect_r_edger_runtime_capabilities
@@ -53,7 +54,7 @@ def test_edger_parameter_manifest_blocks_display_values_and_bad_policy() -> None
     assert "invalid_edger_test_method" in manifest["blockers"]
 
 
-def test_edger_adapter_plan_keeps_ui_activation_blocked_after_runtime_ready() -> None:
+def test_edger_adapter_plan_requires_confirmation_before_ui_execution(tmp_path: Path) -> None:
     preflight = _preflight()
     manifest = build_r_edger_parameter_manifest(
         _deg_ready("count", "raw_count_matrix"),
@@ -78,14 +79,36 @@ def test_edger_adapter_plan_keeps_ui_activation_blocked_after_runtime_ready() ->
     )
 
     assert runtime_gate["status"] == "ready_for_external_runtime_execution"
-    assert plan["status"] == "adapter_available_ui_activation_blocked"
+    assert plan["status"] == "blocked"
     assert plan["formal_execution_enabled"] is False
     assert plan["can_execute"] is False
-    assert plan["can_register_formal_result"] is True
-    assert plan["writes_result_index"] is True
+    assert plan["can_register_formal_result"] is False
+    assert plan["writes_result_index"] is False
     assert plan["result_semantics"] == "not_executed"
-    assert "b25_14_edger_ui_activation_required" in plan["blockers"]
+    assert "r_edger_parameter_confirmation_missing" in plan["blockers"]
     assert "edger_rscript_execution_adapter_not_implemented" not in plan["blockers"]
+
+    confirmation = save_r_edger_parameter_confirmation(
+        tmp_path,
+        deg_ready_package=_deg_ready("count", "raw_count_matrix"),
+        multi_factor_preflight=preflight,
+        dependency_snapshot=_dependency_snapshot(),
+    )
+    confirmation_gate = validate_r_edger_parameter_confirmation(
+        confirmation,
+        parameter_manifest=manifest,
+        dependency_snapshot=_dependency_snapshot(),
+    )
+    enabled = build_r_edger_rscript_adapter_plan(
+        parameter_manifest=manifest,
+        runtime_gate=runtime_gate,
+        confirmation_gate=confirmation_gate,
+    )
+    assert confirmation_gate["status"] == "passed"
+    assert enabled["status"] == "ready_for_ui_execution"
+    assert enabled["formal_execution_enabled"] is True
+    assert enabled["can_execute"] is True
+    assert enabled["writes_result_index"] is True
 
 
 def test_edger_runtime_detection_is_detect_first_graceful() -> None:
@@ -103,13 +126,14 @@ def test_edger_runtime_validation_does_not_enable_execution(tmp_path: Path) -> N
     validation = run_r_edger_runtime_validation(output_path=output_path)
 
     assert output_path.is_file()
-    assert validation["schema_version"] == "biomedpilot.b25_13_r_edger_runtime_validation.v1"
+    assert validation["schema_version"] == "biomedpilot.b25_14_r_edger_runtime_validation.v1"
     assert validation["status"] in {"passed", "blocked_missing_dependency"}
-    preflight = validation["execution_activation_preflight"]
+    preflight = validation["ui_activation_preflight"]
     assert preflight["formal_execution_enabled"] is False
     assert preflight["normal_user_button_enabled"] is False
-    assert "b25_14_edger_ui_activation_required" in preflight["blockers"]
     if validation["status"] == "passed":
+        assert preflight["blockers"] == []
+        assert preflight["status"] == "runtime_preflight_passed_ui_gates_required"
         fixture = validation["fixture_result"]
         assert fixture["status"] == "passed"
         assert fixture["result_semantics"] == "formal_computed_result"

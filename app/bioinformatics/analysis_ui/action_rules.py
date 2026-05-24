@@ -113,6 +113,7 @@ def build_action_rows(
     rows.append(_limma_rscript_confirmation_action(limma_rscript_gate))
     rows.append(_limma_rscript_action(limma_rscript_gate))
     rows.append(_r_deseq2_parameter_confirmation_action(r_count_model_plans))
+    rows.append(_r_edger_parameter_confirmation_action(r_count_model_plans))
     rows.append(_r_count_model_action("deseq2", r_count_model_plans))
     rows.append(_r_count_model_action("edger", r_count_model_plans))
     rows.append(_gsea_readiness_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate, gsea_dependency))
@@ -434,12 +435,23 @@ def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str,
             "; ".join(dict.fromkeys(blockers)),
             "Resolve resolver, raw-count design preflight, runtime detection, DESeq2 parameter confirmation and result schema gates.",
         )
+    if plan.get("formal_execution_enabled") is True and not _list(plan.get("blockers")):
+        return {
+            "action_id": "formal_deg_edger_rscript",
+            "label": label,
+            "state": "enabled_formal_edger_rscript",
+            "button_behavior": "enabled_b25_14_audited_edger_rscript_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run audited edgeR Rscript adapter for raw count DEG; register formal DEG result only through result_index_v2 gates. No plot/report-ready/GSEA/survival.",
+        }
     return _disabled(
         f"formal_deg_{method}_rscript",
         label,
-        "blocked_count_model_planning_only",
+        "blocked_edger_rscript_gate",
         "; ".join(dict.fromkeys(blockers)),
-        "edgeR has B25.13 controlled runtime validation, but user-facing execution waits for B25.14 UI activation and result_index_v2 gate review.",
+        "Resolve resolver, raw-count design preflight, runtime detection, edgeR parameter confirmation and result schema gates.",
     )
 
 
@@ -485,6 +497,51 @@ def _r_deseq2_parameter_confirmation_action(plan_matrix: dict[str, Any]) -> dict
         "normal_user_visible": True,
         "disabled_reason": "",
         "next_action": "Review DESeq2 comparison, raw count samples, thresholds, Rscript/DESeq2 versions and output plan before execution.",
+    }
+
+
+def _r_edger_parameter_confirmation_action(plan_matrix: dict[str, Any]) -> dict[str, Any]:
+    plans = plan_matrix.get("plans") if isinstance(plan_matrix.get("plans"), dict) else {}
+    plan = plans.get("edger") if isinstance(plans.get("edger"), dict) else {}
+    parameter_manifest = plan.get("parameter_manifest") if isinstance(plan.get("parameter_manifest"), dict) else {}
+    confirmation_gate = plan.get("parameter_confirmation_gate") if isinstance(plan.get("parameter_confirmation_gate"), dict) else {}
+    preflight = plan.get("preflight") if isinstance(plan.get("preflight"), dict) else {}
+    runtime_gate = plan.get("runtime_gate") if isinstance(plan.get("runtime_gate"), dict) else {}
+    blockers: list[str] = []
+    if preflight.get("status") != "design_ready":
+        blockers.extend(_list(preflight.get("blockers")) or ["r_edger_design_preflight_not_ready"])
+    if runtime_gate.get("status") != "ready_for_external_runtime_execution":
+        blockers.extend(_list(runtime_gate.get("blockers")) or ["r_edger_runtime_gate_not_ready"])
+    if parameter_manifest.get("status") != "passed":
+        blockers.extend(_list(parameter_manifest.get("blockers")) or ["r_edger_parameter_manifest_not_passed"])
+    if blockers:
+        return _disabled(
+            "r_edger_parameter_confirmation",
+            "Confirm edgeR parameters",
+            "blocked_edger_prerequisites",
+            "; ".join(dict.fromkeys(blockers)),
+            "Resolve raw-count design preflight, Rscript/edgeR runtime detection and parameter manifest before confirmation.",
+        )
+    if confirmation_gate.get("status") == "passed":
+        return {
+            "action_id": "r_edger_parameter_confirmation",
+            "label": "Confirm edgeR parameters",
+            "state": "confirmed",
+            "button_behavior": "enabled_reconfirm_edger_parameters_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "edgeR parameters are confirmed; re-confirm only if design, thresholds or R/edgeR versions changed.",
+        }
+    return {
+        "action_id": "r_edger_parameter_confirmation",
+        "label": "Confirm edgeR parameters",
+        "state": "requires_user_confirmation",
+        "button_behavior": "enabled_edger_parameter_confirmation_only",
+        "enabled": True,
+        "normal_user_visible": True,
+        "disabled_reason": "",
+        "next_action": "Review edgeR comparison, raw count samples, thresholds, Rscript/edgeR versions and output plan before execution.",
     }
 
 

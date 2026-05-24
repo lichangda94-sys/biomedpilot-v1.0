@@ -141,7 +141,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
                     plan.get("status"),
                     plan.get("blockers", []),
                     plan.get("warnings", []),
-                    basis="DESeq2 may execute only through B25.11 gates; edgeR is B25.12 parameter/runtime planning only.",
+                    basis="DESeq2 and edgeR may execute only through method-specific B25 gated UI confirmation and controlled Rscript adapters.",
                 )
             )
     deg_gates["gate_rows"].extend(limma_rscript_gate["gate_rows"])
@@ -568,11 +568,11 @@ def build_dependency_rows(
                     "status": "installed" if dep.get("available") else "missing",
                     "version": str(dep.get("version") or ""),
                     "blockers": "None" if dep.get("available") else compact_list(r_edger_runtime_detection.get("blockers", []) or ["edger_missing"]),
-                    "warnings": "Detect-first external R backend; no install action. B25.12 planning only.",
+                    "warnings": "Detect-first external R backend; no install action. edgeR execution is gated by B25.14 UI confirmation.",
                     "action": "Detect only; no install action.",
-                    "packaging_impact": "external_rscript_not_bundled_required_for_future_edger_activation",
+                    "packaging_impact": "external_rscript_not_bundled_required_for_edger_ui_activation",
                     "raw_blockers": [] if dep.get("available") else list(r_edger_runtime_detection.get("blockers", []) or ["edger_missing"]),
-                    "raw_warnings": ["r_edger_external_runtime_detect_first_planning_only"],
+                    "raw_warnings": ["r_edger_external_runtime_detect_first"],
                 }
             )
             continue

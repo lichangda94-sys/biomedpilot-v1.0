@@ -81,14 +81,14 @@ def build_r_count_model_activation_plan(
             *[str(item) for item in runtime_gate.get("blockers", []) or []],
         ]
     )
-    formal_execution_enabled = method_key == "deseq2" and not blockers
+    formal_execution_enabled = method_key in {"deseq2", "edger"} and not blockers
     return {
         "schema_version": R_COUNT_MODEL_ACTIVATION_PLAN_SCHEMA_VERSION,
         "created_at": _now(),
         "method": method_key,
         "label": "DESeq2" if method_key == "deseq2" else "edgeR",
         "status": "ready_for_ui_execution" if formal_execution_enabled else "planned_not_enabled",
-        "planning_stage": "B25.11 DESeq2 gated UI execution" if method_key == "deseq2" else "B25.13 edgeR controlled runtime validation / UI activation preflight",
+        "planning_stage": "B25.11 DESeq2 gated UI execution" if method_key == "deseq2" else "B25.14 edgeR gated UI execution",
         "formal_execution_enabled": formal_execution_enabled,
         "can_register_formal_result": formal_execution_enabled,
         "writes_result_index": formal_execution_enabled,
@@ -113,7 +113,7 @@ def build_r_count_model_activation_plan(
             [
                 "B25.11 enables controlled DESeq2 UI execution only when all method gates and user confirmation pass."
                 if method_key == "deseq2"
-                else "B25.13 validates controlled edgeR runtime execution while keeping user-facing UI activation blocked.",
+                else "B25.14 enables controlled edgeR UI execution only when resolver, raw-count design preflight, runtime detection, user confirmation and result-index gates pass.",
                 *[str(item) for item in method_specific.get("warnings", []) or []],
                 *[str(item) for item in preflight.get("warnings", []) or []],
                 *[str(item) for item in runtime_gate.get("warnings", []) or []],

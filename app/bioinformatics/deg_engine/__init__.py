@@ -49,6 +49,7 @@ from .r_edger_planning import (
     build_r_edger_parameter_manifest,
     build_r_edger_rscript_adapter_plan,
     load_r_edger_parameter_confirmation,
+    save_r_edger_parameter_confirmation,
     validate_r_edger_parameter_confirmation,
     validate_r_edger_parameter_manifest,
 )
@@ -90,6 +91,7 @@ __all__ = [
     "save_r_limma_design_config",
     "save_r_limma_parameter_confirmation",
     "save_r_deseq2_parameter_confirmation",
+    "save_r_edger_parameter_confirmation",
     "register_r_limma_external_handoff_result",
     "resolve_rscript_path",
     "run_r_limma_rscript_execution",

@@ -63,12 +63,15 @@ from app.bioinformatics.acquisition_adapters import (
 from app.bioinformatics.deg_engine import (
     load_deg_parameter_confirmation,
     load_r_deseq2_parameter_confirmation,
+    load_r_edger_parameter_confirmation,
     load_r_limma_parameter_confirmation,
     run_formal_controlled_deg,
     run_r_deseq2_rscript_execution,
+    run_r_edger_rscript_execution,
     run_r_limma_rscript_execution,
     save_deg_parameter_confirmation,
     save_r_deseq2_parameter_confirmation,
+    save_r_edger_parameter_confirmation,
     save_r_limma_design_config,
     save_r_limma_parameter_confirmation,
 )
@@ -5666,6 +5669,76 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._status_label.setText(f"DESeq2 Rscript DEG 未运行：{blockers}")
         return result
 
+    def confirm_r_edger_parameters(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        analysis_state = build_analysis_center_state(self._project_root)
+        plans = analysis_state.get("r_count_model_plans") if isinstance(analysis_state.get("r_count_model_plans"), dict) else {}
+        plan_map = plans.get("plans") if isinstance(plans.get("plans"), dict) else {}
+        edger_plan = plan_map.get("edger") if isinstance(plan_map.get("edger"), dict) else {}
+        diagnostics = analysis_state.get("developer_diagnostics") if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}
+        formal_state = diagnostics.get("formal_deg_gate_state") if isinstance(diagnostics.get("formal_deg_gate_state"), dict) else {}
+        deg_ready_package = formal_state.get("deg_ready_package") if isinstance(formal_state.get("deg_ready_package"), dict) else {}
+        try:
+            confirmation = save_r_edger_parameter_confirmation(
+                self._project_root,
+                deg_ready_package=deg_ready_package,
+                multi_factor_preflight=edger_plan.get("preflight", {}) if isinstance(edger_plan.get("preflight"), dict) else {},
+                dependency_snapshot=(edger_plan.get("runtime_gate", {}) or {}).get("dependency_snapshot", {}) if isinstance(edger_plan.get("runtime_gate"), dict) else {},
+                log2fc_threshold=float(self._formal_deg_log2fc_input.text() or "1.0"),
+                p_value_threshold=float(self._formal_deg_pvalue_input.text() or "0.05"),
+                fdr_threshold=float(self._formal_deg_fdr_input.text() or "0.05"),
+            )
+        except ValueError:
+            self._status_label.setText("edgeR 参数确认失败：threshold 必须是数字。")
+            return None
+        self.refresh_task_center()
+        if confirmation.get("status") == "confirmed":
+            plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+            self._status_label.setText(f"已确认 edgeR 参数；task-run id：{plan.get('task_run_id', '')}。只允许运行 raw count edgeR DEG，不生成 plot/report-ready。")
+        else:
+            blockers = "；".join(str(item) for item in confirmation.get("blockers", []) or []) or "edgeR gate 未通过"
+            self._status_label.setText(f"edgeR 参数未确认：{blockers}")
+        return confirmation
+
+    def run_r_edger_rscript_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        analysis_state = build_analysis_center_state(self._project_root)
+        plans = analysis_state.get("r_count_model_plans") if isinstance(analysis_state.get("r_count_model_plans"), dict) else {}
+        plan_map = plans.get("plans") if isinstance(plans.get("plans"), dict) else {}
+        edger_plan = plan_map.get("edger") if isinstance(plan_map.get("edger"), dict) else {}
+        confirmation = load_r_edger_parameter_confirmation(self._project_root)
+        parameter_manifest = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
+        output_plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+        runtime_gate = edger_plan.get("runtime_gate") if isinstance(edger_plan.get("runtime_gate"), dict) else {}
+        result = run_r_edger_rscript_execution(
+            self._project_root,
+            count_table_path=str(parameter_manifest.get("expression_table_path") or ""),
+            sample_group_map=parameter_manifest.get("sample_group_map") if isinstance(parameter_manifest.get("sample_group_map"), dict) else {},
+            case_group=str(parameter_manifest.get("case_group") or ""),
+            control_group=str(parameter_manifest.get("control_group") or ""),
+            multi_factor_preflight=edger_plan.get("preflight", {}) if isinstance(edger_plan.get("preflight"), dict) else {},
+            parameters_manifest=parameter_manifest,
+            external_capabilities=runtime_gate.get("external_capabilities") if isinstance(runtime_gate.get("external_capabilities"), dict) else None,
+            dependency_snapshot=runtime_gate.get("dependency_snapshot") if isinstance(runtime_gate.get("dependency_snapshot"), dict) else None,
+            rscript_path=str((runtime_gate.get("dependency_snapshot", {}) or {}).get("rscript_path") or "Rscript") if isinstance(runtime_gate.get("dependency_snapshot"), dict) else "Rscript",
+            result_id=str(output_plan.get("result_id") or ""),
+            task_run_id=str(output_plan.get("task_run_id") or ""),
+            input_package_id=str(parameter_manifest.get("input_package_id") or ""),
+            source_dataset_id=str(parameter_manifest.get("input_package_id") or ""),
+            source_repository_manifest="standardized_data/repositories/repository_manifest.json",
+        )
+        self.refresh_task_center()
+        if result.get("status") == "passed":
+            self._status_label.setText("已完成 edgeR Rscript DEG，并写入 result index v2。未生成 plot/report-ready/GSEA/survival。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "edgeR Rscript gate 未通过"
+            self._status_label.setText(f"edgeR Rscript DEG 未运行：{blockers}")
+        return result
+
     def run_controlled_ora_task(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -5852,6 +5925,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._deseq2_rscript_button.setEnabled(False)
         self._deseq2_rscript_button.setObjectName("runRDeseq2RscriptDegButton")
         actions.addWidget(self._deseq2_rscript_button)
+        self._edger_confirm_button = _button("确认 edgeR 参数", "secondaryButton", self.confirm_r_edger_parameters)
+        self._edger_confirm_button.setEnabled(False)
+        self._edger_confirm_button.setObjectName("confirmREdgerParametersButton")
+        actions.addWidget(self._edger_confirm_button)
+        self._edger_rscript_button = _button("运行 edgeR Rscript DEG", "secondaryButton", self.run_r_edger_rscript_task)
+        self._edger_rscript_button.setEnabled(False)
+        self._edger_rscript_button.setObjectName("runREdgerRscriptDegButton")
+        actions.addWidget(self._edger_rscript_button)
         self._ora_button = _button("运行 controlled ORA", "secondaryButton", self.run_controlled_ora_task)
         self._ora_button.setEnabled(False)
         self._ora_button.setObjectName("runControlledOraButton")
@@ -6029,6 +6110,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         limma_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_limma_rscript")
         deseq2_confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "r_deseq2_parameter_confirmation")
         deseq2_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_deseq2_rscript")
+        edger_confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "r_edger_parameter_confirmation")
+        edger_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_edger_rscript")
         ora_action = _analysis_ui_action(analysis_state.get("action_rows", []), "run_ora_enrichment")
         gsea_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_gsea")
         self._formal_deg_confirm_button.setEnabled(bool(confirmation_action.get("enabled")))
@@ -6048,6 +6131,10 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._deseq2_confirm_button.setToolTip(str(deseq2_confirmation_action.get("disabled_reason") or deseq2_confirmation_action.get("next_action") or "确认 DESeq2 参数"))
         self._deseq2_rscript_button.setEnabled(bool(deseq2_action.get("enabled")))
         self._deseq2_rscript_button.setToolTip(str(deseq2_action.get("next_action") or deseq2_action.get("disabled_reason") or "DESeq2 Rscript gate 未通过"))
+        self._edger_confirm_button.setEnabled(bool(edger_confirmation_action.get("enabled")))
+        self._edger_confirm_button.setToolTip(str(edger_confirmation_action.get("disabled_reason") or edger_confirmation_action.get("next_action") or "确认 edgeR 参数"))
+        self._edger_rscript_button.setEnabled(bool(edger_action.get("enabled")))
+        self._edger_rscript_button.setToolTip(str(edger_action.get("next_action") or edger_action.get("disabled_reason") or "edgeR Rscript gate 未通过"))
         self._ora_button.setEnabled(bool(ora_action.get("enabled")))
         self._ora_button.setToolTip(str(ora_action.get("next_action") or ora_action.get("disabled_reason") or "controlled ORA gate 未通过"))
         self._gsea_button.setEnabled(bool(gsea_action.get("enabled")))
@@ -6180,7 +6267,7 @@ class BioinformaticsDegConfigWidget(QWidget):
         root.addWidget(input_card)
 
         config_card, config_layout = _card("DEG 配置草稿")
-        config_layout.addWidget(_muted("方法状态：two-group Python DEG、limma、DESeq2 已走 gated execution；edgeR 已完成 controlled runtime validation，UI 仍禁用。"))
+        config_layout.addWidget(_muted("方法状态：two-group Python DEG、limma、DESeq2、edgeR 已走 gated execution；count-model 方法仍需 raw count、design preflight、runtime detection 与用户确认。"))
         method_row = QHBoxLayout()
         self._method_input = QLineEdit("DEG executor not connected")
         self._method_input.setPlaceholderText("方法草稿，例如 DESeq2 待接入")

@@ -16,13 +16,14 @@ from .r_edger_planning import build_r_edger_parameter_manifest
 from .r_edger_runtime import detect_r_edger_runtime_capabilities, run_r_edger_rscript_execution
 
 
-R_EDGER_RUNTIME_VALIDATION_SCHEMA_VERSION = "biomedpilot.b25_13_r_edger_runtime_validation.v1"
+R_EDGER_RUNTIME_VALIDATION_SCHEMA_VERSION = "biomedpilot.b25_14_r_edger_runtime_validation.v1"
 
 
 def run_r_edger_runtime_validation(*, output_path: str | Path | None = None) -> dict[str, Any]:
     started = time.perf_counter()
     runtime_detection = detect_r_edger_runtime_capabilities(timeout_seconds=20)
     fixture_result = _run_fixture(runtime_detection)
+    ui_activation_preflight = _execution_activation_preflight(runtime_detection, fixture_result)
     payload = {
         "schema_version": R_EDGER_RUNTIME_VALIDATION_SCHEMA_VERSION,
         "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -30,7 +31,8 @@ def run_r_edger_runtime_validation(*, output_path: str | Path | None = None) -> 
         "runtime_detection": runtime_detection,
         "packaging_checks": _packaging_checks(runtime_detection),
         "fixture_result": fixture_result,
-        "execution_activation_preflight": _execution_activation_preflight(runtime_detection, fixture_result),
+        "ui_activation_preflight": ui_activation_preflight,
+        "execution_activation_preflight": ui_activation_preflight,
         "status": _overall_status(runtime_detection, fixture_result),
         "elapsed_seconds": round(time.perf_counter() - started, 4),
     }
@@ -157,15 +159,14 @@ def _execution_activation_preflight(runtime_detection: dict[str, Any], fixture_r
         blockers.extend(str(item) for item in runtime_detection.get("blockers", []) or ["r_edger_runtime_detection_not_passed"])
     if fixture_result.get("status") != "passed":
         blockers.extend(str(item) for item in fixture_result.get("blockers", []) or ["r_edger_controlled_fixture_not_passed"])
-    blockers.append("b25_14_edger_ui_activation_required")
     return {
-        "schema_version": "biomedpilot.b25_13_r_edger_execution_activation_preflight.v1",
-        "status": "blocked",
+        "schema_version": "biomedpilot.b25_14_r_edger_ui_activation_preflight.v1",
+        "status": "runtime_preflight_passed_ui_gates_required" if not blockers else "blocked",
         "runtime_validation_passed": runtime_detection.get("status") == "passed" and fixture_result.get("status") == "passed",
         "formal_execution_enabled": False,
         "normal_user_button_enabled": False,
         "blockers": list(dict.fromkeys(blockers)),
-        "warnings": ["B25.13 validates runtime/fixture/result-index only; user-facing edgeR execution remains blocked until B25.14 UI activation."],
+        "warnings": ["B25.14 edgeR UI execution still requires resolver, raw-count design preflight, parameter confirmation and result-index gates in the active project."],
     }
 
 

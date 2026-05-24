@@ -203,16 +203,20 @@ def _r_method_row(
     missing = [key for key in keys if _capability_available(external_capabilities.get(key)) is not True]
     gate_blockers = [str(item) for item in gate.get("blockers", []) or []] if isinstance(gate.get("blockers"), list) else []
     plan_blockers = [str(item) for item in plan.get("blockers", []) or []] if isinstance(plan.get("blockers"), list) else []
-    plan_formal_enabled = method == "deseq2" and bool(plan.get("formal_execution_enabled")) and not plan_blockers
+    plan_formal_enabled = method in {"deseq2", "edger"} and bool(plan.get("formal_execution_enabled")) and not plan_blockers
     if plan_formal_enabled:
         state = "ready_for_ui_execution"
-        reason = f"{label} B25.11 UI execution is available only through the audited DESeq2 Rscript action and result_index_v2 gates."
+        stage = "B25.11" if method == "deseq2" else "B25.14"
+        reason = f"{label} {stage} UI execution is available only through the audited {label} Rscript action and result_index_v2 gates."
     elif method == "deseq2" and plan:
         state = "blocked_deseq2_rscript_gate"
         reason = f"{label} B25.11 UI execution is blocked: {', '.join(plan_blockers)}."
+    elif method == "edger" and plan:
+        state = "blocked_edger_rscript_gate"
+        reason = f"{label} B25.14 UI execution is blocked: {', '.join(plan_blockers)}."
     elif plan:
         state = "blocked_count_model_planning_only"
-        reason = f"{label} B25.13 controlled runtime validation remains UI-blocked: {', '.join(plan_blockers)}."
+        reason = f"{label} count-model activation remains blocked: {', '.join(plan_blockers)}."
     elif missing or gate_blockers:
         state = "blocked_by_dependency"
         reason = f"{label} B19 adapter gate is blocked: {', '.join(gate_blockers or missing)}."
@@ -226,7 +230,7 @@ def _r_method_row(
         "capability_id": capability_id,
         "label": label,
         "category": "DEG",
-        "implementation_status": "b25_11_deseq2_gated_ui_execution" if method == "deseq2" and plan else ("b25_13_edger_controlled_runtime_validation" if method == "edger" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate")),
+        "implementation_status": "b25_11_deseq2_gated_ui_execution" if method == "deseq2" and plan else ("b25_14_edger_gated_ui_execution" if method == "edger" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate")),
         "ui_state": state,
         "formal_execution_enabled": plan_formal_enabled,
         "can_display_as_completed": False,

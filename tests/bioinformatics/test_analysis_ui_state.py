@@ -183,7 +183,7 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
     assert "PDF/DOCX export remains disabled" in text
     assert "no install action" in text
     assert "required_in_packaged_app_for_formal_deg" in text
-    assert "external_rscript_not_bundled_required_for_future_edger_activation" in text
+    assert "external_rscript_not_bundled_required_for_edger_ui_activation" in text
     assert "4.4.2" in text
 
 
