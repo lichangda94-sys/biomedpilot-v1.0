@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         self._project_center = ProjectCenter.default()
         self._dashboard = dashboard or build_dashboard_model()
         self._session: LocalSession | None = None
+        self._labtools_project_root = None
         self.setWindowTitle(APP_NAME)
         icon = load_app_icon()
         if not icon.isNull():
@@ -125,6 +126,9 @@ class MainWindow(QMainWindow):
 
     def current_session(self) -> LocalSession | None:
         return self._session
+
+    def set_labtools_project_root(self, project_root) -> None:
+        self._labtools_project_root = project_root
 
     def _complete_login(self, session: LocalSession) -> None:
         self._session = session
@@ -850,11 +854,12 @@ class MainWindow(QMainWindow):
 
     def _show_labtools_reagent_preparation_shell(self) -> None:
         semantic_key = PageKey.LABTOOLS_REAGENT_PREPARATION.value
+        self._labtools_storage_state = labtools_runtime.get_labtools_storage_adapter_status(self._labtools_project_root)
         content = self._build_labtools_base_content(
             page_key="reagent_preparation",
             semantic_key=semantic_key,
             title="试剂制备 / Reagent Preparation",
-            subtitle="展示只读试剂模板、模板详情和本次配制计算预览；保存、导出和记录写入都保持 storage adapter gated。",
+            subtitle="展示试剂模板、模板详情和本次配制计算预览；保存历史仅在 BioMedPilot project storage 试点中启用，文件导出继续禁用。",
         )
         root = content.layout()
         nav = QHBoxLayout()
@@ -868,14 +873,14 @@ class MainWindow(QMainWindow):
         root.addLayout(nav)
         root.addWidget(
             self._labtools_notice_card(
-                "桌面 UI 不默认写入 ~/.labtools；模板保存、配制记录和导出必须等待 BioMedPilotLabToolsStorageAdapter / FilePickerExportAdapter。",
+                "桌面 UI 不默认写入 ~/.labtools；保存试点仅写入 BioMedPilot project_storage/labtools/，文件导出仍等待 FilePickerExportAdapter。",
                 object_name="labtoolsAdapterNotice",
                 semantic_key=semantic_key,
             )
         )
 
         try:
-            templates = labtools_runtime.list_reagent_templates()
+            templates = labtools_runtime.list_reagent_templates(self._labtools_project_root)
         except Exception as exc:
             root.addWidget(
                 make_empty_state(
@@ -896,19 +901,13 @@ class MainWindow(QMainWindow):
         body.addWidget(self._labtools_reagent_run_panel(), 2)
         body.addWidget(self._labtools_reagent_detail_panel(), 1)
         root.addLayout(body)
-        root.addWidget(
-            make_empty_state(
-                "暂无已保存配制记录",
-                "历史记录需要 BioMedPilot project storage adapter；当前页面只显示预览，不创建记录。",
-                empty_state_key="empty_history",
-                semantic_key=semantic_key,
-            )
-        )
+        root.addWidget(self._labtools_reagent_history_panel())
         root.addStretch(1)
         self._set_labtools_content(content)
         if templates:
             self._select_labtools_reagent_template(self._labtools_reagent_selected_template_id)
             self._run_labtools_reagent_preparation()
+        self._refresh_labtools_reagent_history()
 
     def _labtools_reagent_template_list_panel(self, templates: tuple[labtools_runtime.ReagentTemplateSummary, ...]) -> QFrame:
         frame = QFrame()
@@ -941,7 +940,13 @@ class MainWindow(QMainWindow):
             status = make_status_chip(template.status_label, status_key="planned")
             status.setProperty("templateId", template.template_id)
             layout.addWidget(status)
-        layout.addWidget(self._labtools_notice_card("当前只展示内存示例模板；不连接外部模板源、库存系统、批次放行或协作能力。", object_name="labtoolsAdapterNotice", semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value))
+        layout.addWidget(
+            self._labtools_notice_card(
+                "默认展示示例模板；如已启用项目存储试点则优先读取 project_storage/labtools/templates。仍不连接库存系统、批次放行或协作能力。",
+                object_name="labtoolsAdapterNotice",
+                semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
+            )
+        )
         layout.addStretch(1)
         return frame
 
@@ -993,10 +998,9 @@ class MainWindow(QMainWindow):
         copy = make_button("复制摘要", role="secondary")
         copy.setObjectName("labtoolsReagentCopySummaryButton")
         copy.clicked.connect(self._copy_labtools_reagent_summary)
-        save = make_button("保存配制记录 - 需存储适配", role="secondary")
+        save = make_button("保存配制记录 - 项目存储试点", role="secondary")
         save.setObjectName("labtoolsReagentSaveRecordButton")
-        save.setEnabled(False)
-        save.setProperty("disabledState", "disabled_missing_storage_adapter")
+        save.clicked.connect(self._save_labtools_reagent_record)
         export = make_button("导出配制摘要 - 需文件选择器", role="secondary")
         export.setObjectName("labtoolsReagentExportButton")
         export.setEnabled(False)
@@ -1006,7 +1010,10 @@ class MainWindow(QMainWindow):
         actions.addWidget(export)
         actions.addStretch(1)
         layout.addLayout(actions)
+        self._labtools_reagent_save_record_button = save
         self._labtools_reagent_copy_text = ""
+        self._labtools_reagent_last_result = None
+        self._set_storage_gated_button_state(save, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
         return frame
 
     def _labtools_reagent_detail_panel(self) -> QFrame:
@@ -1032,12 +1039,40 @@ class MainWindow(QMainWindow):
         detail_body_layout.setSpacing(8)
         self._labtools_reagent_detail_rows_layout = detail_body_layout
         layout.addWidget(detail_body)
-        save = make_button("保存模板 - 需存储适配", role="secondary")
+        save = make_button("保存模板 - 项目存储试点", role="secondary")
         save.setObjectName("labtoolsReagentSaveTemplateButton")
-        save.setEnabled(False)
-        save.setProperty("disabledState", "disabled_missing_storage_adapter")
+        save.clicked.connect(self._save_labtools_reagent_template)
+        self._set_storage_gated_button_state(save, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
+        self._labtools_reagent_save_template_button = save
         layout.addWidget(save)
         layout.addStretch(1)
+        return frame
+
+    def _labtools_reagent_history_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsReagentHistoryPanel")
+        frame.setProperty("pageKey", "reagent_preparation")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_REAGENT_PREPARATION.value)
+        frame.setStyleSheet("QFrame#labtoolsReagentHistoryPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(8)
+        header = QLabel("项目存储历史记录 / History Preview")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        self._labtools_reagent_history_status = QLabel("未连接项目存储上下文。")
+        self._labtools_reagent_history_status.setObjectName("labtoolsReagentHistoryStatus")
+        self._labtools_reagent_history_status.setWordWrap(True)
+        layout.addWidget(self._labtools_reagent_history_status)
+        self._labtools_reagent_history_list = QListWidget()
+        self._labtools_reagent_history_list.setObjectName("labtoolsReagentHistoryList")
+        self._labtools_reagent_history_list.currentItemChanged.connect(self._select_labtools_reagent_history_item)
+        layout.addWidget(self._labtools_reagent_history_list)
+        self._labtools_reagent_history_detail = QPlainTextEdit()
+        self._labtools_reagent_history_detail.setObjectName("labtoolsReagentHistoryDetail")
+        self._labtools_reagent_history_detail.setReadOnly(True)
+        self._labtools_reagent_history_detail.setMinimumHeight(90)
+        layout.addWidget(self._labtools_reagent_history_detail)
         return frame
 
     def _labtools_reagent_input_row(self, label: str, field_id: str, default_value: str, *, unit_widget: QComboBox | None = None) -> QHBoxLayout:
@@ -1058,7 +1093,7 @@ class MainWindow(QMainWindow):
 
     def _select_labtools_reagent_template(self, template_id: str) -> None:
         self._labtools_reagent_selected_template_id = template_id
-        detail = labtools_runtime.get_reagent_template_detail(template_id)
+        detail = labtools_runtime.get_reagent_template_detail(template_id, self._labtools_project_root)
         self._render_labtools_reagent_template_detail(detail)
 
     def _render_labtools_reagent_template_detail(self, detail: labtools_runtime.ReagentTemplateDetail) -> None:
@@ -1107,6 +1142,7 @@ class MainWindow(QMainWindow):
         self._render_labtools_reagent_preparation_result(result)
 
     def _render_labtools_reagent_preparation_result(self, result: labtools_runtime.ReagentPreparationUiResult) -> None:
+        self._labtools_reagent_last_result = result
         self._labtools_reagent_result_primary.setText(result.primary_result)
         self._labtools_reagent_result_text.setPlainText(result.detail_text)
         self._clear_layout(self._labtools_reagent_result_rows)
@@ -1123,12 +1159,73 @@ class MainWindow(QMainWindow):
         self._labtools_reagent_issue_rows.setText("\n".join(f"- {issue}" for issue in issues))
         self._labtools_reagent_issue_rows.setProperty("hasError", bool(result.errors))
         self._labtools_reagent_copy_text = result.copy_text if result.valid else ""
+        if self._labtools_project_root:
+            self._labtools_reagent_issue_rows.setText(
+                f"{self._labtools_reagent_issue_rows.text()}\n- 保存试点路径：project_storage/labtools/"
+            )
 
     def _copy_labtools_reagent_summary(self) -> None:
         from PySide6.QtWidgets import QApplication
 
         if self._labtools_reagent_copy_text:
             QApplication.clipboard().setText(self._labtools_reagent_copy_text)
+
+    def _save_labtools_reagent_template(self) -> None:
+        result = labtools_runtime.save_reagent_template_to_project(self._labtools_project_root, self._labtools_reagent_selected_template_id or "demo_pbs_1x")
+        self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
+        if result.ok:
+            templates = labtools_runtime.list_reagent_templates(self._labtools_project_root)
+            self._labtools_reagent_templates = {template.template_id: template for template in templates}
+            self._refresh_labtools_reagent_history()
+
+    def _save_labtools_reagent_record(self) -> None:
+        result_data = getattr(self, "_labtools_reagent_last_result", None)
+        if result_data is None:
+            return
+        result = labtools_runtime.save_reagent_preparation_record(
+            self._labtools_project_root,
+            template_id=self._labtools_reagent_selected_template_id or "demo_pbs_1x",
+            target_volume=self._labtools_reagent_run_inputs["target_volume"].text().strip(),
+            target_volume_unit=self._labtools_reagent_target_unit.currentText(),
+            operator_name=self._labtools_reagent_run_inputs["operator_name"].text().strip(),
+            measured_ph=self._labtools_reagent_run_inputs["measured_ph"].text().strip(),
+            adjustment_note=self._labtools_reagent_run_inputs["adjustment_note"].text().strip(),
+            result=result_data,
+        )
+        self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
+        self._refresh_labtools_reagent_history()
+
+    def _refresh_labtools_reagent_history(self) -> None:
+        if not hasattr(self, "_labtools_reagent_history_list"):
+            return
+        self._labtools_reagent_history_list.clear()
+        history = labtools_runtime.load_reagent_preparation_history(self._labtools_project_root)
+        if history.error:
+            self._labtools_reagent_history_status.setText(history.error)
+            self._labtools_reagent_history_detail.setPlainText("")
+            return
+        if not history.entries:
+            self._labtools_reagent_history_status.setText("暂无已保存配制记录；保存试点启用后会写入 project_storage/labtools/records。")
+            self._labtools_reagent_history_detail.setPlainText("")
+            return
+        self._labtools_reagent_history_status.setText("已保存到项目存储 / Saved to project storage")
+        for entry in history.entries:
+            item = QListWidgetItem(f"{entry.created_at} | {entry.title}")
+            item.setData(Qt.UserRole, entry)
+            self._labtools_reagent_history_list.addItem(item)
+        self._labtools_reagent_history_list.setCurrentRow(self._labtools_reagent_history_list.count() - 1)
+
+    def _select_labtools_reagent_history_item(self, current, _previous) -> None:
+        if current is None:
+            self._labtools_reagent_history_detail.setPlainText("")
+            return
+        entry = current.data(Qt.UserRole)
+        if entry is None:
+            self._labtools_reagent_history_detail.setPlainText("")
+            return
+        self._labtools_reagent_history_detail.setPlainText(
+            f"record_id: {entry.record_id}\ncreated_at: {entry.created_at}\nsummary: {entry.summary}\n\n{entry.detail_text}"
+        )
 
     def _show_labtools_wb_loading_page(self) -> None:
         semantic_key = PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value
@@ -1167,27 +1264,32 @@ class MainWindow(QMainWindow):
         copy = make_button("复制上样表", role="primary")
         copy.setObjectName("labtoolsWbCopyTableButton")
         copy.clicked.connect(self._copy_labtools_wb_summary)
-        save = make_button("保存 WB 记录 - 需适配", role="secondary")
+        save = make_button("保存 WB 记录 - 项目存储试点", role="secondary")
         save.setObjectName("labtoolsWbSaveRecordButton")
-        save.setEnabled(False)
-        save.setProperty("disabledState", "disabled_missing_storage_adapter")
+        save.clicked.connect(self._save_labtools_wb_record)
         export = make_button("导出 CSV / Markdown - 需文件选择器", role="secondary")
         export.setObjectName("labtoolsWbExportButton")
         export.setEnabled(False)
         export.setProperty("disabledState", "disabled_missing_file_picker")
-        history = make_button("历史记录 - 需存储适配", role="secondary")
+        history = make_button("历史记录 - 项目存储试点", role="secondary")
         history.setObjectName("labtoolsWbHistoryButton")
-        history.setEnabled(False)
-        history.setProperty("disabledState", "disabled_missing_storage_adapter")
+        history.clicked.connect(self._refresh_labtools_wb_history)
+        self._set_storage_gated_button_state(save, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
+        self._set_storage_gated_button_state(history, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
         actions.addWidget(copy)
         actions.addWidget(save)
         actions.addWidget(export)
         actions.addWidget(history)
         actions.addStretch(1)
         root.addLayout(actions)
+        root.addWidget(self._labtools_wb_history_panel())
         root.addStretch(1)
+        self._labtools_wb_save_record_button = save
+        self._labtools_wb_history_button = history
+        self._labtools_wb_last_result = None
         self._set_labtools_content(content)
         self._run_labtools_wb_loading()
+        self._refresh_labtools_wb_history()
 
     def _labtools_wb_substep_bar(self) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -1354,6 +1456,7 @@ class MainWindow(QMainWindow):
         self._render_labtools_wb_loading_result(result)
 
     def _render_labtools_wb_loading_result(self, result: labtools_runtime.WBLoadingUiResult) -> None:
+        self._labtools_wb_last_result = result
         self._clear_layout(self._labtools_wb_sample_rows)
         for sample in result.samples:
             label = QLabel(f"{sample.sample_id} | {sample.concentration} | {sample.note}")
@@ -1411,6 +1514,90 @@ class MainWindow(QMainWindow):
 
         if getattr(self, "_labtools_wb_copy_text", ""):
             QApplication.clipboard().setText(self._labtools_wb_copy_text)
+
+    def _labtools_wb_history_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsWbHistoryPanel")
+        frame.setProperty("pageKey", "wb_loading")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value)
+        frame.setStyleSheet("QFrame#labtoolsWbHistoryPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 10, 16, 10)
+        layout.setSpacing(8)
+        title = QLabel("WB 项目存储历史 / WB History Preview")
+        title.setStyleSheet("font-weight: 700;")
+        layout.addWidget(title)
+        self._labtools_wb_history_status = QLabel("未连接项目存储上下文。")
+        self._labtools_wb_history_status.setObjectName("labtoolsWbHistoryStatus")
+        self._labtools_wb_history_status.setWordWrap(True)
+        layout.addWidget(self._labtools_wb_history_status)
+        self._labtools_wb_history_list = QListWidget()
+        self._labtools_wb_history_list.setObjectName("labtoolsWbHistoryList")
+        self._labtools_wb_history_list.currentItemChanged.connect(self._select_labtools_wb_history_item)
+        layout.addWidget(self._labtools_wb_history_list)
+        self._labtools_wb_history_detail = QPlainTextEdit()
+        self._labtools_wb_history_detail.setObjectName("labtoolsWbHistoryDetail")
+        self._labtools_wb_history_detail.setReadOnly(True)
+        self._labtools_wb_history_detail.setMinimumHeight(90)
+        layout.addWidget(self._labtools_wb_history_detail)
+        return frame
+
+    def _save_labtools_wb_record(self) -> None:
+        result_data = getattr(self, "_labtools_wb_last_result", None)
+        if result_data is None:
+            return
+        result = labtools_runtime.save_wb_loading_record(self._labtools_project_root, result=result_data)
+        self._report_labtools_storage_result(result, self._labtools_wb_issue_rows)
+        self._refresh_labtools_wb_history()
+
+    def _refresh_labtools_wb_history(self) -> None:
+        if not hasattr(self, "_labtools_wb_history_list"):
+            return
+        self._labtools_wb_history_list.clear()
+        history = labtools_runtime.load_wb_loading_history(self._labtools_project_root)
+        if history.error:
+            self._labtools_wb_history_status.setText(history.error)
+            self._labtools_wb_history_detail.setPlainText("")
+            return
+        if not history.entries:
+            self._labtools_wb_history_status.setText("暂无 WB 保存历史；保存试点启用后会写入 project_storage/labtools/records。")
+            self._labtools_wb_history_detail.setPlainText("")
+            return
+        self._labtools_wb_history_status.setText("已保存到项目存储 / Saved to project storage")
+        for entry in history.entries:
+            item = QListWidgetItem(f"{entry.created_at} | {entry.title}")
+            item.setData(Qt.UserRole, entry)
+            self._labtools_wb_history_list.addItem(item)
+        self._labtools_wb_history_list.setCurrentRow(self._labtools_wb_history_list.count() - 1)
+
+    def _select_labtools_wb_history_item(self, current, _previous) -> None:
+        if current is None:
+            self._labtools_wb_history_detail.setPlainText("")
+            return
+        entry = current.data(Qt.UserRole)
+        if entry is None:
+            self._labtools_wb_history_detail.setPlainText("")
+            return
+        self._labtools_wb_history_detail.setPlainText(
+            f"record_id: {entry.record_id}\ncreated_at: {entry.created_at}\nsummary: {entry.summary}\n\n{entry.detail_text}"
+        )
+
+    def _set_storage_gated_button_state(self, button: QPushButton, enabled: bool, disabled_state: str) -> None:
+        button.setEnabled(enabled)
+        button.setProperty("disabledState", "" if enabled else disabled_state)
+
+    def _report_labtools_storage_result(self, result, issue_label: QLabel) -> None:
+        lines = [f"- {result.message}"]
+        if result.path is not None:
+            lines.append(f"- 路径：{result.path}")
+        if result.record_id:
+            lines.append(f"- record_id: {result.record_id}")
+        for warning in result.warnings:
+            lines.append(f"- warning: {warning}")
+        for error in result.errors:
+            lines.append(f"- error: {error}")
+        issue_label.setText("\n".join(lines))
+        issue_label.setProperty("hasError", not result.ok)
 
     def _show_labtools_sds_page_boundary(self) -> None:
         semantic_key = PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value

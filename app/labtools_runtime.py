@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+from uuid import uuid4
 
 from app.labtools_storage_adapter import BioMedPilotLabToolsStorageAdapter, LabToolsStorageAdapterState
 
@@ -127,6 +130,31 @@ class WBLoadingUiResult:
         return not self.errors
 
 
+@dataclass(frozen=True)
+class LabToolsStoragePilotResult:
+    ok: bool
+    message: str
+    path: Path | None = None
+    record_id: str = ""
+    warnings: tuple[str, ...] = ()
+    errors: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class LabToolsHistoryEntry:
+    record_id: str
+    title: str
+    created_at: str
+    summary: str
+    detail_text: str
+
+
+@dataclass(frozen=True)
+class LabToolsHistoryResult:
+    entries: tuple[LabToolsHistoryEntry, ...]
+    error: str = ""
+
+
 def runtime_status() -> LabToolsRuntimeStatus:
     try:
         _ensure_labtools_importable()
@@ -148,6 +176,10 @@ def get_labtools_storage_adapter_status(project_root: Path | str | None) -> LabT
             history_enabled=False,
         )
     return BioMedPilotLabToolsStorageAdapter.from_project_root(Path(project_root)).diagnose()
+
+
+def labtools_storage_pilot_enabled(project_root: Path | str | None) -> bool:
+    return project_root is not None
 
 
 def list_quick_tasks() -> tuple[Any, ...]:
@@ -335,12 +367,41 @@ def execute_formula(spec_id: str, solve_target: str, values: dict[str, str], uni
         return _error_result(spec.short_title, exc)
 
 
-def list_reagent_templates() -> tuple[ReagentTemplateSummary, ...]:
+def list_reagent_templates(project_root: Path | str | None = None) -> tuple[ReagentTemplateSummary, ...]:
+    stored = _load_stored_reagent_templates(project_root)
+    if stored:
+        return tuple(_reagent_template_summary_from_payload(template) for template in stored)
     templates = _demo_reagent_templates()
     return tuple(_reagent_template_summary(template) for template in templates)
 
 
-def get_reagent_template_detail(template_id: str) -> ReagentTemplateDetail:
+def get_reagent_template_detail(template_id: str, project_root: Path | str | None = None) -> ReagentTemplateDetail:
+    stored = _stored_reagent_template_by_id(project_root, template_id)
+    if stored is not None:
+        summary = _reagent_template_summary_from_payload(stored)
+        components = tuple(
+            ReagentComponentView(
+                name=str(component.get("name", "")),
+                component_type=str(component.get("component_type", "")),
+                amount=f"{component.get('base_amount', '')} {component.get('unit', '')}".strip(),
+                stage=str(component.get("stage_label", "") or "默认"),
+                notes=str(component.get("notes", "")),
+                warning=str(component.get("warning", "")),
+            )
+            for component in stored.get("components", ())
+            if isinstance(component, dict)
+        )
+        validation_rows = tuple(str(row) for row in stored.get("validation_rows", ()) if row)
+        return ReagentTemplateDetail(
+            summary=summary,
+            notes=str(stored.get("notes", "")),
+            components=components,
+            ph_target=str(stored.get("ph_target", "")),
+            ph_measured=str(stored.get("ph_measured", "")),
+            ph_adjustment_note=str(stored.get("ph_adjustment_note", "")),
+            validation_rows=validation_rows or ("项目存储模板；使用前需人工复核。",),
+        )
+
     template = _get_demo_reagent_template(template_id)
     summary = _reagent_template_summary(template)
     components = tuple(
@@ -369,6 +430,30 @@ def get_reagent_template_detail(template_id: str) -> ReagentTemplateDetail:
         ph_adjustment_note=ph_record.adjustment_note if ph_record else "",
         validation_rows=validation_rows,
     )
+
+
+def save_reagent_template_to_project(project_root: Path | str | None, template_id: str = "demo_pbs_1x") -> LabToolsStoragePilotResult:
+    paths_result = _pilot_storage_paths(project_root)
+    if not paths_result.ok or paths_result.path is None:
+        return paths_result
+    try:
+        template = _get_demo_reagent_template(template_id)
+        payload = _reagent_template_payload(template)
+        path = paths_result.path / "reagent_templates.json"
+        data = _read_json_payload(path, default={"version": "labtools_reagent_templates_v1", "templates": []})
+        templates = [item for item in data.get("templates", ()) if isinstance(item, dict)]
+        duplicate = any(item.get("template_id") == template_id for item in templates)
+        templates = [item for item in templates if item.get("template_id") != template_id]
+        templates.append(payload)
+        data["templates"] = templates
+        _write_json_payload(path, data)
+        warnings = ("Duplicate template ID was safely updated.",) if duplicate else ()
+        message = "已保存到项目存储 / Saved to project storage"
+        if duplicate:
+            message = "已安全更新项目存储模板 / Saved duplicate template by safe update"
+        return LabToolsStoragePilotResult(ok=True, message=message, path=path, record_id=template_id, warnings=warnings)
+    except Exception as exc:
+        return LabToolsStoragePilotResult(ok=False, message="保存模板失败", errors=(str(exc),))
 
 
 def calculate_reagent_preparation(
@@ -425,6 +510,76 @@ def calculate_reagent_preparation(
             errors=(str(exc),),
             copy_text="",
         )
+
+
+def save_reagent_preparation_record(
+    project_root: Path | str | None,
+    *,
+    template_id: str,
+    target_volume: str,
+    target_volume_unit: str,
+    operator_name: str,
+    measured_ph: str,
+    adjustment_note: str,
+    result: ReagentPreparationUiResult,
+) -> LabToolsStoragePilotResult:
+    paths_result = _pilot_storage_paths(project_root)
+    if not paths_result.ok or paths_result.path is None:
+        return paths_result
+    if not result.valid:
+        return LabToolsStoragePilotResult(ok=False, message="当前预览包含错误，不能保存记录。", errors=result.errors)
+    try:
+        path = paths_result.path.parent / "records" / "reagent_preparations.json"
+        data = _read_json_payload(path, default={"version": "labtools_reagent_preparations_v1", "records": []})
+        records = [item for item in data.get("records", ()) if isinstance(item, dict)]
+        record_id = _new_record_id("reagent-prep")
+        records.append(
+            {
+                "record_id": record_id,
+                "record_type": "reagent_preparation",
+                "created_at": _utc_now(),
+                "template_id": template_id,
+                "operator_name": operator_name,
+                "input_parameters": {
+                    "target_volume": target_volume,
+                    "target_volume_unit": target_volume_unit,
+                    "measured_ph": measured_ph,
+                    "adjustment_note": adjustment_note,
+                },
+                "primary_result": result.primary_result,
+                "detail_text": result.detail_text,
+                "warnings": list(result.warnings),
+                "review_notice": REVIEW_NOTICE,
+                "storage_status": "saved_to_biomedpilot_project_storage",
+            }
+        )
+        data["records"] = records
+        _write_json_payload(path, data)
+        return LabToolsStoragePilotResult(ok=True, message="已保存到项目存储 / Saved to project storage", path=path, record_id=record_id)
+    except Exception as exc:
+        return LabToolsStoragePilotResult(ok=False, message="保存配制记录失败", errors=(str(exc),))
+
+
+def load_reagent_preparation_history(project_root: Path | str | None) -> LabToolsHistoryResult:
+    path = _records_file(project_root, "reagent_preparations.json")
+    if path is None or not path.exists():
+        return LabToolsHistoryResult(entries=())
+    try:
+        data = _read_json_payload(path, default={"records": []})
+        entries = tuple(
+            LabToolsHistoryEntry(
+                record_id=str(item.get("record_id", "")),
+                title=str(item.get("primary_result", "Reagent preparation")),
+                created_at=str(item.get("created_at", "")),
+                summary=f"{item.get('template_id', '')} · {item.get('operator_name', '')}".strip(" ·"),
+                detail_text=str(item.get("detail_text", "")),
+            )
+            for item in data.get("records", ())
+            if isinstance(item, dict)
+        )
+        return LabToolsHistoryResult(entries=entries)
+    except Exception as exc:
+        return LabToolsHistoryResult(entries=(), error=f"项目存储 JSON 读取失败：{exc}")
 
 
 def calculate_wb_loading_preview(
@@ -529,6 +684,172 @@ def calculate_wb_loading_preview(
             copy_text="",
             detail_text="",
         )
+
+
+def save_wb_loading_record(project_root: Path | str | None, *, result: WBLoadingUiResult) -> LabToolsStoragePilotResult:
+    paths_result = _pilot_storage_paths(project_root)
+    if not paths_result.ok or paths_result.path is None:
+        return paths_result
+    try:
+        path = paths_result.path.parent / "records" / "wb_loading_records.json"
+        data = _read_json_payload(path, default={"version": "labtools_wb_loading_records_v1", "records": []})
+        records = [item for item in data.get("records", ()) if isinstance(item, dict)]
+        record_id = _new_record_id("wb-loading")
+        records.append(
+            {
+                "record_id": record_id,
+                "record_type": "wb_loading",
+                "created_at": _utc_now(),
+                "title": result.title,
+                "primary_result": result.primary_result,
+                "samples": [sample.__dict__ for sample in result.samples],
+                "rows": [row.__dict__ for row in result.rows],
+                "lanes": [lane.__dict__ for lane in result.lanes],
+                "warnings": list(result.warnings),
+                "errors": list(result.errors),
+                "review_notice": result.review_notice or REVIEW_NOTICE,
+                "detail_text": result.detail_text,
+                "copy_text": result.copy_text,
+                "storage_status": "saved_to_biomedpilot_project_storage",
+            }
+        )
+        data["records"] = records
+        _write_json_payload(path, data)
+        return LabToolsStoragePilotResult(ok=True, message="已保存到项目存储 / Saved to project storage", path=path, record_id=record_id)
+    except Exception as exc:
+        return LabToolsStoragePilotResult(ok=False, message="保存 WB 记录失败", errors=(str(exc),))
+
+
+def load_wb_loading_history(project_root: Path | str | None) -> LabToolsHistoryResult:
+    path = _records_file(project_root, "wb_loading_records.json")
+    if path is None or not path.exists():
+        return LabToolsHistoryResult(entries=())
+    try:
+        data = _read_json_payload(path, default={"records": []})
+        entries = tuple(
+            LabToolsHistoryEntry(
+                record_id=str(item.get("record_id", "")),
+                title=str(item.get("primary_result", "WB loading")),
+                created_at=str(item.get("created_at", "")),
+                summary=str(item.get("title", "Western Blot Loading")),
+                detail_text=str(item.get("detail_text", "")),
+            )
+            for item in data.get("records", ())
+            if isinstance(item, dict)
+        )
+        return LabToolsHistoryResult(entries=entries)
+    except Exception as exc:
+        return LabToolsHistoryResult(entries=(), error=f"项目存储 JSON 读取失败：{exc}")
+
+
+def _pilot_storage_paths(project_root: Path | str | None) -> LabToolsStoragePilotResult:
+    if project_root is None:
+        return LabToolsStoragePilotResult(ok=False, message="missing_project_context：保存历史需要 BioMedPilot project context。")
+    adapter = BioMedPilotLabToolsStorageAdapter.from_project_root(Path(project_root))
+    state = adapter.ensure_readiness(create_missing=True)
+    if state.paths is None:
+        return LabToolsStoragePilotResult(ok=False, message=state.message, errors=tuple(error.user_message for error in state.errors))
+    if state.status != "ready_read_only":
+        return LabToolsStoragePilotResult(ok=False, message=state.message, path=state.paths.templates, errors=tuple(error.user_message for error in state.errors))
+    return LabToolsStoragePilotResult(ok=True, message=state.message, path=state.paths.templates)
+
+
+def _records_file(project_root: Path | str | None, filename: str) -> Path | None:
+    if project_root is None:
+        return None
+    paths = BioMedPilotLabToolsStorageAdapter.from_project_root(Path(project_root)).resolve_paths()
+    return paths.records / filename
+
+
+def _load_stored_reagent_templates(project_root: Path | str | None) -> tuple[dict[str, Any], ...]:
+    if project_root is None:
+        return ()
+    path = BioMedPilotLabToolsStorageAdapter.from_project_root(Path(project_root)).resolve_paths().templates / "reagent_templates.json"
+    if not path.exists():
+        return ()
+    data = _read_json_payload(path, default={"templates": []})
+    return tuple(item for item in data.get("templates", ()) if isinstance(item, dict))
+
+
+def _stored_reagent_template_by_id(project_root: Path | str | None, template_id: str) -> dict[str, Any] | None:
+    for template in _load_stored_reagent_templates(project_root):
+        if template.get("template_id") == template_id:
+            return template
+    return None
+
+
+def _reagent_template_payload(template: Any) -> dict[str, Any]:
+    ph_record = getattr(template, "ph_record", None)
+    return {
+        "template_id": template.template_id,
+        "name": template.name,
+        "category": "缓冲液 / buffer",
+        "default_volume": template.default_volume,
+        "default_volume_unit": template.default_volume_unit,
+        "default_strength": template.default_strength,
+        "notes": template.notes,
+        "ph_target": ph_record.target_ph if ph_record else "",
+        "ph_measured": ph_record.measured_ph if ph_record else "",
+        "ph_adjustment_note": ph_record.adjustment_note if ph_record else "",
+        "components": [
+            {
+                "name": component.name,
+                "component_type": component.component_type,
+                "base_amount": component.base_amount,
+                "unit": component.unit,
+                "stage_label": component.stage_label or "默认",
+                "notes": component.notes,
+                "warning": "水合物形式需人工确认" if component.name == "Na2HPO4" else "",
+            }
+            for component in template.components
+        ],
+        "validation_rows": [
+            "Na2HPO4：水合物形式需人工确认。",
+            "KH2PO4：称量量由模板换算，使用前需复核 SOP。",
+            "项目存储模板；不连接库存、云模板或批次放行。",
+        ],
+        "storage_status": "saved_to_biomedpilot_project_storage",
+    }
+
+
+def _reagent_template_summary_from_payload(template: dict[str, Any]) -> ReagentTemplateSummary:
+    volume = template.get("default_volume", "")
+    unit = template.get("default_volume_unit", "")
+    components = template.get("components", ())
+    return ReagentTemplateSummary(
+        template_id=str(template.get("template_id", "")),
+        name=str(template.get("name", "")),
+        category=str(template.get("category", "缓冲液 / buffer")),
+        default_volume=f"{volume:g} {unit}" if isinstance(volume, int | float) else f"{volume} {unit}".strip(),
+        component_count=len(components) if isinstance(components, list) else 0,
+        ph_target=str(template.get("ph_target", "")),
+        status_label="saved_to_project_storage / review_required",
+    )
+
+
+def _read_json_payload(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return dict(default)
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path.name} must contain a JSON object")
+    return payload
+
+
+def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2, sort_keys=True)
+        handle.write("\n")
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _new_record_id(prefix: str) -> str:
+    return f"{prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}"
 
 
 def _ensure_labtools_importable() -> None:
