@@ -92,7 +92,7 @@ def test_reagent_shell_keeps_save_and_export_adapter_needed(labtools_window) -> 
     assert save_record is not None and not save_record.isEnabled()
     assert export is not None and not export.isEnabled()
     assert save_record.property("disabledState") == "disabled_missing_storage_adapter"
-    assert export.property("disabledState") == "disabled_missing_file_picker"
+    assert export.property("disabledState") == "future"
     assert "不默认写入 ~/.labtools" in labels
     assert "库存扣减" not in labels
     assert "云模板库" not in labels

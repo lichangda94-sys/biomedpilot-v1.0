@@ -1010,9 +1010,13 @@ class MainWindow(QMainWindow):
         export.setProperty("disabledState", "future")
         export_md = make_button("导出 Markdown", role="secondary")
         export_md.setObjectName("labtoolsReagentExportMarkdownButton")
+        export_md.setProperty("exportRequiresFilePicker", True)
+        export_md.setProperty("exportFormat", "markdown")
         export_md.clicked.connect(self._export_labtools_reagent_markdown)
         export_csv = make_button("导出 CSV", role="secondary")
         export_csv.setObjectName("labtoolsReagentExportCsvButton")
+        export_csv.setProperty("exportRequiresFilePicker", True)
+        export_csv.setProperty("exportFormat", "csv")
         export_csv.clicked.connect(self._export_labtools_reagent_csv)
         actions.addWidget(copy)
         actions.addWidget(save)
@@ -1212,6 +1216,7 @@ class MainWindow(QMainWindow):
             return
         path = self._choose_labtools_export_path("导出试剂配制 Markdown", ".md", "reagent_preparation.md", "Markdown (*.md)")
         if path is None:
+            self._report_labtools_export_cancelled(self._labtools_reagent_issue_rows)
             return
         result = labtools_runtime.export_reagent_preparation_markdown(path, result_data)
         self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
@@ -1222,6 +1227,7 @@ class MainWindow(QMainWindow):
             return
         path = self._choose_labtools_export_path("导出试剂配制 CSV", ".csv", "reagent_preparation.csv", "CSV (*.csv)")
         if path is None:
+            self._report_labtools_export_cancelled(self._labtools_reagent_issue_rows)
             return
         result = labtools_runtime.export_reagent_preparation_csv(path, result_data)
         self._report_labtools_storage_result(result, self._labtools_reagent_issue_rows)
@@ -1304,9 +1310,13 @@ class MainWindow(QMainWindow):
         export.setProperty("disabledState", "future")
         export_md = make_button("导出 Markdown", role="secondary")
         export_md.setObjectName("labtoolsWbExportMarkdownButton")
+        export_md.setProperty("exportRequiresFilePicker", True)
+        export_md.setProperty("exportFormat", "markdown")
         export_md.clicked.connect(self._export_labtools_wb_markdown)
         export_csv = make_button("导出 CSV", role="secondary")
         export_csv.setObjectName("labtoolsWbExportCsvButton")
+        export_csv.setProperty("exportRequiresFilePicker", True)
+        export_csv.setProperty("exportFormat", "csv")
         export_csv.clicked.connect(self._export_labtools_wb_csv)
         history = make_button("历史记录 - 项目存储试点", role="secondary")
         history.setObjectName("labtoolsWbHistoryButton")
@@ -1595,6 +1605,7 @@ class MainWindow(QMainWindow):
             return
         path = self._choose_labtools_export_path("导出 WB Loading Markdown", ".md", "wb_loading.md", "Markdown (*.md)")
         if path is None:
+            self._report_labtools_export_cancelled(self._labtools_wb_issue_rows)
             return
         result = labtools_runtime.export_wb_loading_markdown(path, result_data)
         self._report_labtools_storage_result(result, self._labtools_wb_issue_rows)
@@ -1605,6 +1616,7 @@ class MainWindow(QMainWindow):
             return
         path = self._choose_labtools_export_path("导出 WB Loading CSV", ".csv", "wb_loading.csv", "CSV (*.csv)")
         if path is None:
+            self._report_labtools_export_cancelled(self._labtools_wb_issue_rows)
             return
         result = labtools_runtime.export_wb_loading_csv(path, result_data)
         self._report_labtools_storage_result(result, self._labtools_wb_issue_rows)
@@ -1657,6 +1669,10 @@ class MainWindow(QMainWindow):
             lines.append(f"- error: {error}")
         issue_label.setText("\n".join(lines))
         issue_label.setProperty("hasError", not result.ok)
+
+    def _report_labtools_export_cancelled(self, issue_label: QLabel) -> None:
+        issue_label.setText("- 导出已取消；未写入任何文件。")
+        issue_label.setProperty("hasError", False)
 
     def _choose_labtools_export_path(self, caption: str, suffix: str, suggested_name: str, file_filter: str):
         start = suggested_name
