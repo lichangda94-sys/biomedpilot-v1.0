@@ -46,6 +46,15 @@ class LocalLabToolsDataSourceAdapter:
     def list_reagents(self) -> tuple[ReagentRecord, ...]:
         return self.store.list_reagents()
 
+    def create_reagent(self, payload: Mapping[str, object]) -> ReagentRecord:
+        return self.store.create_reagent(payload)
+
+    def update_reagent(self, reagent_id: str, payload: Mapping[str, object], *, expected_version: int) -> ReagentRecord:
+        return self.store.update_reagent(reagent_id, payload, expected_version=expected_version)
+
+    def archive_reagent(self, reagent_id: str, *, expected_version: int) -> ReagentRecord:
+        return self.store.archive_reagent(reagent_id, expected_version=expected_version)
+
     def list_samples(self) -> tuple[SampleRecord, ...]:
         return self.store.list_samples()
 
@@ -79,6 +88,15 @@ class ReadOnlyLabToolsDataSourceAdapter(LocalLabToolsDataSourceAdapter):
         )
 
     def create_record_summary(self, payload: Mapping[str, object]) -> LabToolsRecordIndexEntry:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
+    def create_reagent(self, payload: Mapping[str, object]) -> ReagentRecord:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
+    def update_reagent(self, reagent_id: str, payload: Mapping[str, object], *, expected_version: int) -> ReagentRecord:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
+    def archive_reagent(self, reagent_id: str, *, expected_version: int) -> ReagentRecord:
         raise PermissionError("Read-only LabTools data source does not allow writes.")
 
 
