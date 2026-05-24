@@ -96,3 +96,19 @@ Before LAN implementation can begin, a separate task must define:
 
 Until that gate is accepted, `future_lan` and `future_cloud` remain disabled
 placeholders and must not alter LabTools runtime behavior.
+
+## LAN-LT1 Server Skeleton
+
+`labtools.lan_server` provides a contract-only server skeleton. It exposes:
+
+- `LabToolsLanServerConfig`.
+- `LabToolsLanServerStatus`.
+- `LabToolsLanServerSkeleton`.
+- `build_lan_server_skeleton()`.
+
+The skeleton is importable for future planning and tests, but it does not bind a
+port, listen on the network, start a background service, authenticate users, or
+synchronize data. `start()` and `stop()` return disabled non-listening status.
+
+This keeps the future LAN line visible without changing the current local-first
+runtime.

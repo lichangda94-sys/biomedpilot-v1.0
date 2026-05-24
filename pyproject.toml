@@ -25,6 +25,7 @@ packages = [
     "labtools",
     "labtools.calculators",
     "labtools.local_data",
+    "labtools.lan_server",
     "labtools.reagent_templates",
     "labtools.western_blot",
     "labtools.shared",
