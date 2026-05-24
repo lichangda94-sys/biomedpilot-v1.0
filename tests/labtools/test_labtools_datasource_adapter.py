@@ -17,7 +17,8 @@ def test_local_datasource_adapter_reports_status_and_lists_entities(tmp_path: Pa
     status = adapter.initialize()
     reagent = adapter.create_reagent({"name": "Tris-HCl"})
     updated = adapter.update_reagent(reagent.id, {"storage_location": "4C fridge / Box A"}, expected_version=1)
-    adapter.store.create_sample({"sample_name": "S1"})
+    sample = adapter.create_sample({"sample_name": "S1", "sample_type": "protein_lysate", "concentration": "2.0"})
+    updated_sample = adapter.update_sample(sample.id, {"concentration": "2.5"}, expected_version=1)
     adapter.store.create_cell({"cell_name": "TPC-1"})
     batch = adapter.store.create_freeze_batch({"cell_id": adapter.list_cells()[0].id, "batch_name": "TPC-1_P12"})
     vial = adapter.store.create_freeze_vial({"freeze_batch_id": batch.id, "vial_label": "TPC-1 P12 #01"})
@@ -28,6 +29,8 @@ def test_local_datasource_adapter_reports_status_and_lists_entities(tmp_path: Pa
     assert updated.version == 2
     assert len(adapter.list_reagents()) == 1
     assert len(adapter.list_samples()) == 1
+    assert updated_sample.version == 2
+    assert updated_sample.concentration == "2.5"
     assert len(adapter.list_cells()) == 1
     assert adapter.list_freeze_vials() == (vial,)
     assert adapter.list_records() == (record,)
@@ -53,6 +56,12 @@ def test_readonly_datasource_adapter_disables_writes(tmp_path: Path) -> None:
         readonly.update_reagent("reagent_1", {"name": "Blocked"}, expected_version=1)
     with pytest.raises(PermissionError):
         readonly.archive_reagent("reagent_1", expected_version=1)
+    with pytest.raises(PermissionError):
+        readonly.create_sample({"sample_name": "Blocked"})
+    with pytest.raises(PermissionError):
+        readonly.update_sample("sample_1", {"sample_name": "Blocked"}, expected_version=1)
+    with pytest.raises(PermissionError):
+        readonly.archive_sample("sample_1", expected_version=1)
 
 
 def test_local_datasource_adapter_archives_reagent_and_writes_audit(tmp_path: Path) -> None:
@@ -65,6 +74,28 @@ def test_local_datasource_adapter_archives_reagent_and_writes_audit(tmp_path: Pa
     assert archived.status == "archived"
     assert adapter.list_reagents() == ()
     assert [entry.action for entry in adapter.store.load_store().audit_log] == ["create", "archive"]
+
+
+def test_local_datasource_adapter_archives_sample_and_writes_audit(tmp_path: Path) -> None:
+    adapter = LocalLabToolsDataSourceAdapter(tmp_path)
+    adapter.initialize()
+    sample = adapter.create_sample({"sample_name": "Tumor lysate", "sample_type": "protein_lysate", "volume": "25"})
+
+    updated = adapter.update_sample(sample.id, {"concentration": "2.0", "concentration_unit": "mg/mL"}, expected_version=1)
+    archived = adapter.archive_sample(sample.id, expected_version=2)
+
+    assert updated.version == 2
+    assert archived.version == 3
+    assert archived.status == "archived"
+    assert adapter.list_samples() == ()
+    snapshot = adapter.store.load_store()
+    assert snapshot.samples[0].status == "archived"
+    assert snapshot.samples[0].volume == "25"
+    assert [(entry.entity_type, entry.action) for entry in snapshot.audit_log] == [
+        ("sample", "create"),
+        ("sample", "update"),
+        ("sample", "archive"),
+    ]
 
 
 def test_future_datasource_placeholders_are_disabled() -> None:

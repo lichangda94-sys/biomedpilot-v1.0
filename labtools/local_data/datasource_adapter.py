@@ -58,6 +58,15 @@ class LocalLabToolsDataSourceAdapter:
     def list_samples(self) -> tuple[SampleRecord, ...]:
         return self.store.list_samples()
 
+    def create_sample(self, payload: Mapping[str, object]) -> SampleRecord:
+        return self.store.create_sample(payload)
+
+    def update_sample(self, sample_id: str, payload: Mapping[str, object], *, expected_version: int) -> SampleRecord:
+        return self.store.update_sample(sample_id, payload, expected_version=expected_version)
+
+    def archive_sample(self, sample_id: str, *, expected_version: int) -> SampleRecord:
+        return self.store.archive_sample(sample_id, expected_version=expected_version)
+
     def list_cells(self) -> tuple[CellProfileRecord, ...]:
         return self.store.list_cells()
 
@@ -97,6 +106,15 @@ class ReadOnlyLabToolsDataSourceAdapter(LocalLabToolsDataSourceAdapter):
         raise PermissionError("Read-only LabTools data source does not allow writes.")
 
     def archive_reagent(self, reagent_id: str, *, expected_version: int) -> ReagentRecord:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
+    def create_sample(self, payload: Mapping[str, object]) -> SampleRecord:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
+    def update_sample(self, sample_id: str, payload: Mapping[str, object], *, expected_version: int) -> SampleRecord:
+        raise PermissionError("Read-only LabTools data source does not allow writes.")
+
+    def archive_sample(self, sample_id: str, *, expected_version: int) -> SampleRecord:
         raise PermissionError("Read-only LabTools data source does not allow writes.")
 
 
