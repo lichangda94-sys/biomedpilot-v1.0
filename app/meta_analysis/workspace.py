@@ -15,7 +15,7 @@ from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_an
 from app.meta_analysis.version import META_ANALYSIS_MAINLINE_CONTRACT_VERSION
 
 try:
-    from PySide6.QtCore import QSize
+    from PySide6.QtCore import QSize, Qt
     from PySide6.QtWidgets import (
         QFrame,
         QGridLayout,
@@ -24,6 +24,7 @@ try:
         QListWidget,
         QListWidgetItem,
         QPushButton,
+        QScrollArea,
         QSizePolicy,
         QStackedWidget,
         QTableWidget,
@@ -349,7 +350,7 @@ if QWidget is not None:
                 back.clicked.connect(self._on_back)
                 header_layout.addWidget(back)
             root.addWidget(header)
-            root.addWidget(self._build_target_ia_shell())
+            root.addWidget(self._build_target_ia_shell(), 1)
 
             self._status_label = QLabel("")
             self._status_label.setObjectName("metaProjectStatus")
@@ -361,9 +362,11 @@ if QWidget is not None:
             self._navigation_list.setMaximumWidth(260)
             self._page_stack = QStackedWidget()
             self._page_stack.setObjectName("metaCurrentStepWorkspace")
+            self._navigation_list.setMaximumHeight(150)
+            self._page_stack.setMaximumHeight(150)
             body.addWidget(self._navigation_list)
             body.addWidget(self._page_stack, 1)
-            root.addLayout(body, 1)
+            root.addLayout(body, 0)
 
             self._navigation_list.currentRowChanged.connect(self._page_stack.setCurrentIndex)
             self._build_pages()
@@ -397,23 +400,29 @@ if QWidget is not None:
             preview = make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview")
             preview.setObjectName("metaDeveloperPreviewChip")
             layout.addWidget(preview)
-            self._result_export_panel = make_result_report_export_adoption_panel(module="meta_analysis")
-            layout.addWidget(self._result_export_panel)
 
-            self._target_interaction_status = QLabel("")
-            self._target_interaction_status.setObjectName("metaTargetInteractionStatus")
-            self._target_interaction_status.setWordWrap(True)
-            layout.addWidget(self._target_interaction_status)
+            runtime_body = QHBoxLayout()
+            runtime_body.setSpacing(14)
+            layout.addLayout(runtime_body, 1)
 
-            page_grid = QGridLayout()
-            page_grid.setHorizontalSpacing(10)
-            page_grid.setVerticalSpacing(10)
+            nav_frame = QFrame()
+            nav_frame.setObjectName("metaWorkflowNavigationPanel")
+            nav_frame.setProperty("layoutPolishNoOverlap", True)
+            nav_frame.setMinimumWidth(280)
+            nav_frame.setMaximumWidth(320)
+            nav_frame.setStyleSheet("QFrame#metaWorkflowNavigationPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            nav_layout = QVBoxLayout(nav_frame)
+            nav_layout.setContentsMargins(10, 10, 10, 10)
+            nav_layout.setSpacing(8)
+            nav_title = QLabel("Workflow / 流程导航")
+            nav_title.setObjectName("metaWorkflowNavigationTitle")
+            nav_title.setStyleSheet("font-weight: 750;")
+            nav_layout.addWidget(nav_title)
             for index, page in enumerate(meta_target_ia_pages()):
                 item = QPushButton(_meta_flow_button_text(page))
                 item.setObjectName("metaTargetIANavItem")
                 item.setCheckable(True)
                 item.setMinimumHeight(74)
-                item.setMinimumWidth(138)
                 item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
@@ -430,17 +439,45 @@ if QWidget is not None:
                 _apply_meta_page_icon(item, _META_PAGE_SEMANTIC_KEYS[page.key], size=22)
                 item.clicked.connect(lambda _checked=False, key=page.key: self.show_target_ia_page(key))
                 self._target_ia_buttons[page.key] = item
-                page_grid.addWidget(item, index // 4, index % 4)
-            layout.addLayout(page_grid)
+                nav_layout.addWidget(item)
+            nav_layout.addStretch(1)
+            runtime_body.addWidget(nav_frame, 0)
+
+            runtime_main = QFrame()
+            runtime_main.setObjectName("metaRuntimeContentPanel")
+            runtime_main.setProperty("layoutPolishNoOverlap", True)
+            runtime_main.setStyleSheet("QFrame#metaRuntimeContentPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            runtime_main_layout = QVBoxLayout(runtime_main)
+            runtime_main_layout.setContentsMargins(12, 12, 12, 12)
+            runtime_main_layout.setSpacing(10)
+
+            self._target_interaction_status = QLabel("")
+            self._target_interaction_status.setObjectName("metaTargetInteractionStatus")
+            self._target_interaction_status.setWordWrap(True)
+            self._target_interaction_status.setStyleSheet("font-weight: 650; color: #334155;")
+            runtime_main_layout.addWidget(self._target_interaction_status)
+
+            self._target_runtime_stack = QStackedWidget()
+            self._target_runtime_stack.setObjectName("metaTargetRuntimeStack")
+            self._target_runtime_stack.setProperty("layoutPolishNoOverlap", True)
+            self._target_runtime_page_indices: dict[str, int] = {}
+            runtime_main_layout.addWidget(self._target_runtime_stack, 1)
+            runtime_body.addWidget(runtime_main, 1)
+
+            self._result_export_panel = make_result_report_export_adoption_panel(module="meta_analysis")
+            self._result_export_panel.setObjectName("resultReportExportAdoptionPanel")
+            self._result_export_panel.setMinimumWidth(300)
+            self._result_export_panel.setMaximumWidth(360)
+            runtime_body.addWidget(self._result_export_panel, 0)
 
             self._project_home_panel = self._build_project_home_runtime_panel()
-            layout.addWidget(self._project_home_panel)
+            self._add_target_runtime_page("project_home", self._project_home_panel)
 
             self._fulltext_extraction_panel = self._build_fulltext_extraction_panel()
-            layout.addWidget(self._fulltext_extraction_panel)
+            self._add_target_runtime_page("fulltext_extraction", self._fulltext_extraction_panel)
 
             self._risk_of_bias_panel = self._build_risk_of_bias_panel()
-            layout.addWidget(self._risk_of_bias_panel)
+            self._add_target_runtime_page("quality_assessment", self._risk_of_bias_panel)
 
             self._active_type_section = QFrame()
             self._active_type_section.setObjectName("metaActiveTypeSection")
@@ -547,25 +584,93 @@ if QWidget is not None:
             next_search.setMinimumHeight(36)
             next_search.clicked.connect(lambda _checked=False: self.show_target_ia_page("search_strategy"))
             active_type_layout.addWidget(next_search)
-            layout.addWidget(self._active_type_section)
+            self._add_target_runtime_page("question_meta_type", self._active_type_section)
 
             self._search_strategy_panel = self._build_search_strategy_panel()
-            layout.addWidget(self._search_strategy_panel)
+            self._add_target_runtime_page("search_strategy", self._search_strategy_panel)
 
             self._reference_dedup_panel = self._build_reference_dedup_panel()
-            layout.addWidget(self._reference_dedup_panel)
+            self._add_target_runtime_page("import_dedup", self._reference_dedup_panel)
 
             self._screening_panel = self._build_screening_panel()
-            layout.addWidget(self._screening_panel)
+            self._add_target_runtime_page("screening", self._screening_panel)
 
             self._result_review_panel = self._build_result_review_panel()
-            layout.addWidget(self._result_review_panel)
+            self._add_target_runtime_page("result_report", self._result_review_panel)
 
             self._report_export_gate_panel = self._build_report_export_gate_panel()
-            layout.addWidget(self._report_export_gate_panel)
+            self._add_target_runtime_page("report_export", self._report_export_gate_panel)
+
+            self._analysis_tasks_panel = self._build_target_boundary_panel(
+                page_key="analysis_tasks",
+                title="Meta Analysis Tasks / 统计分析",
+                status_key="planned",
+                rows=(
+                    "Pairwise Meta executor is not enabled in this runtime shell.",
+                    "Network Meta remains planned / disabled.",
+                    "No formal statistical output, figure output, report, or export is generated.",
+                ),
+            )
+            self._add_target_runtime_page("analysis_tasks", self._analysis_tasks_panel)
+
+            self._meta_settings_panel = self._build_target_boundary_panel(
+                page_key="meta_settings",
+                title="Meta Settings / Meta 设置",
+                status_key="shell_only",
+                rows=(
+                    "Meta preferences, logs, and external resource checks remain shell-only.",
+                    "No executor, retrieval adapter, report adapter, or export adapter is enabled from this page.",
+                ),
+            )
+            self._add_target_runtime_page("meta_settings", self._meta_settings_panel)
 
             self._sync_target_interaction_state()
             self._sync_type_interaction_state()
+            return frame
+
+        def _add_target_runtime_page(self, page_key: str, widget: QWidget) -> None:
+            scroll = QScrollArea()
+            scroll.setObjectName(f"metaRuntimeScrollArea_{page_key}")
+            scroll.setWidgetResizable(True)
+            scroll.setProperty("pageKey", page_key)
+            scroll.setProperty("layoutPolishNoOverlap", True)
+            scroll.setFrameShape(QFrame.NoFrame)
+            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+            scroll.setWidget(widget)
+            self._target_runtime_page_indices[page_key] = self._target_runtime_stack.addWidget(scroll)
+
+        def _build_target_boundary_panel(self, *, page_key: str, title: str, rows: tuple[str, ...], status_key: str) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaTargetBoundaryRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", page_key)
+            frame.setProperty("runtimeStatus", status_key)
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaTargetBoundaryRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+            heading = QLabel(title)
+            heading.setObjectName("metaTargetBoundaryRuntimeTitle")
+            heading.setStyleSheet("font-weight: 750;")
+            layout.addWidget(heading)
+            layout.addWidget(make_status_chip(status_key=status_key))
+            for row in rows:
+                label = QLabel(row)
+                label.setObjectName("metaTargetBoundaryRuntimeRow")
+                label.setWordWrap(True)
+                layout.addWidget(label)
+            disabled = QPushButton("Formal action disabled")
+            disabled.setObjectName("metaTargetBoundaryDisabledAction")
+            disabled.setProperty("formalActionEnabled", False)
+            disabled.setProperty("actionSemantic", "disabled_boundary")
+            disabled.setEnabled(False)
+            layout.addWidget(disabled)
+            layout.addStretch(1)
             return frame
 
         def _build_project_home_runtime_panel(self) -> QFrame:
@@ -1432,24 +1537,10 @@ if QWidget is not None:
                 self._target_interaction_status.setText(
                     f"当前页面：{current.label} · {current.status_key}"
                 )
-            if hasattr(self, "_fulltext_extraction_panel"):
-                self._fulltext_extraction_panel.setVisible(self._current_target_page_key == "fulltext_extraction")
-            if hasattr(self, "_risk_of_bias_panel"):
-                self._risk_of_bias_panel.setVisible(self._current_target_page_key == "quality_assessment")
-            if hasattr(self, "_project_home_panel"):
-                self._project_home_panel.setVisible(self._current_target_page_key == "project_home")
-            if hasattr(self, "_active_type_section"):
-                self._active_type_section.setVisible(self._current_target_page_key == "question_meta_type")
-            if hasattr(self, "_search_strategy_panel"):
-                self._search_strategy_panel.setVisible(self._current_target_page_key == "search_strategy")
-            if hasattr(self, "_reference_dedup_panel"):
-                self._reference_dedup_panel.setVisible(self._current_target_page_key == "import_dedup")
-            if hasattr(self, "_screening_panel"):
-                self._screening_panel.setVisible(self._current_target_page_key == "screening")
-            if hasattr(self, "_result_review_panel"):
-                self._result_review_panel.setVisible(self._current_target_page_key == "result_report")
-            if hasattr(self, "_report_export_gate_panel"):
-                self._report_export_gate_panel.setVisible(self._current_target_page_key == "report_export")
+            if hasattr(self, "_target_runtime_stack"):
+                target_index = self._target_runtime_page_indices.get(self._current_target_page_key)
+                if target_index is not None:
+                    self._target_runtime_stack.setCurrentIndex(target_index)
             if hasattr(self, "_result_export_panel"):
                 self._result_export_panel.setVisible(self._current_target_page_key in {"result_report", "report_export"})
 
