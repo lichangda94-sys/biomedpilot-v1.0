@@ -12,6 +12,11 @@ from .r_deseq2_planning import (
     build_r_deseq2_rscript_adapter_plan,
     validate_r_deseq2_parameter_confirmation,
 )
+from .r_edger_planning import (
+    build_r_edger_parameter_manifest,
+    build_r_edger_rscript_adapter_plan,
+    validate_r_edger_parameter_confirmation,
+)
 
 
 R_COUNT_MODEL_ACTIVATION_PLAN_SCHEMA_VERSION = "biomedpilot.r_count_model_activation_plan.v1"
@@ -83,7 +88,7 @@ def build_r_count_model_activation_plan(
         "method": method_key,
         "label": "DESeq2" if method_key == "deseq2" else "edgeR",
         "status": "ready_for_ui_execution" if formal_execution_enabled else "planned_not_enabled",
-        "planning_stage": "B25.10 DESeq2 runtime validation / UI activation preflight" if method_key == "deseq2" else "B25.6 count-model activation planning",
+        "planning_stage": "B25.11 DESeq2 gated UI execution" if method_key == "deseq2" else "B25.12 edgeR parameter/runtime planning",
         "formal_execution_enabled": formal_execution_enabled,
         "can_register_formal_result": formal_execution_enabled,
         "writes_result_index": formal_execution_enabled,
@@ -108,7 +113,7 @@ def build_r_count_model_activation_plan(
             [
                 "B25.11 enables controlled DESeq2 UI execution only when all method gates and user confirmation pass."
                 if method_key == "deseq2"
-                else "B25.6 records DESeq2/edgeR activation requirements only; it does not execute R or register formal results.",
+                else "B25.12 records edgeR parameter/runtime planning only; it does not execute edgeR or register formal results.",
                 *[str(item) for item in method_specific.get("warnings", []) or []],
                 *[str(item) for item in preflight.get("warnings", []) or []],
                 *[str(item) for item in runtime_gate.get("warnings", []) or []],
@@ -124,11 +129,15 @@ def build_r_count_model_activation_plans(
     design_config: Mapping[str, Any] | None = None,
     external_capabilities: Mapping[str, Any] | None = None,
     dependency_snapshot: Mapping[str, Any] | None = None,
+    method_external_capabilities: Mapping[str, Mapping[str, Any]] | None = None,
+    method_dependency_snapshots: Mapping[str, Mapping[str, Any]] | None = None,
     parameter_confirmations: Mapping[str, Any] | None = None,
     dry_run_output_rows: Mapping[str, list[Mapping[str, Any]]] | None = None,
     count_fixtures: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     confirmations = parameter_confirmations if isinstance(parameter_confirmations, MappingABC) else {}
+    method_caps = method_external_capabilities if isinstance(method_external_capabilities, MappingABC) else {}
+    method_deps = method_dependency_snapshots if isinstance(method_dependency_snapshots, MappingABC) else {}
     dry_rows = dry_run_output_rows if isinstance(dry_run_output_rows, MappingABC) else {}
     fixtures = count_fixtures if isinstance(count_fixtures, MappingABC) else {}
     plans = {
@@ -136,8 +145,8 @@ def build_r_count_model_activation_plans(
             method,
             deg_ready_package=deg_ready_package,
             design_config=design_config,
-            external_capabilities=external_capabilities,
-            dependency_snapshot=dependency_snapshot,
+            external_capabilities=method_caps.get(method) if isinstance(method_caps.get(method), MappingABC) else external_capabilities,
+            dependency_snapshot=method_deps.get(method) if isinstance(method_deps.get(method), MappingABC) else dependency_snapshot,
             parameter_confirmation=confirmations.get(method) if isinstance(confirmations.get(method), MappingABC) else None,
             dry_run_output_rows=dry_rows.get(method) if isinstance(dry_rows.get(method), list) else None,
             count_fixture=fixtures.get(method) if isinstance(fixtures.get(method), MappingABC) else None,
@@ -166,17 +175,37 @@ def _method_specific_plan(
     dry_run_output_rows: list[Mapping[str, Any]] | None,
     count_fixture: Mapping[str, Any],
 ) -> dict[str, Any]:
-    if method_key != "deseq2":
+    if method_key == "edger":
+        parameter_manifest = build_r_edger_parameter_manifest(
+            ready,
+            multi_factor_preflight=preflight,
+            dependency_snapshot=dependency_snapshot,
+        )
+        confirmation_gate = validate_r_edger_parameter_confirmation(
+            parameter_confirmation,
+            parameter_manifest=parameter_manifest,
+            dependency_snapshot=dependency_snapshot,
+        )
+        adapter_plan = build_r_edger_rscript_adapter_plan(
+            parameter_manifest=parameter_manifest,
+            runtime_gate=runtime_gate,
+            confirmation_gate=confirmation_gate,
+        )
         return {
-            "activation_blockers": [
-                f"b25_6_count_model_planning_only:{method_key}",
-                f"{method_key}_rscript_execution_adapter_not_implemented",
-                f"{method_key}_parameter_confirmation_contract_not_implemented",
-                f"{method_key}_result_registration_handoff_not_implemented",
+            "activation_blockers": [],
+            "blockers": [
+                *[str(item) for item in parameter_manifest.get("blockers", []) or []],
+                *[str(item) for item in confirmation_gate.get("blockers", []) or []],
+                *[str(item) for item in adapter_plan.get("blockers", []) or []],
             ],
-            "blockers": [],
-            "warnings": [],
-            "public_state": {},
+            "warnings": [
+                *[str(item) for item in adapter_plan.get("warnings", []) or []],
+            ],
+            "public_state": {
+                "parameter_manifest": parameter_manifest,
+                "parameter_confirmation_gate": confirmation_gate,
+                "rscript_adapter_plan": adapter_plan,
+            },
         }
     parameter_manifest = build_r_deseq2_parameter_manifest(
         ready,

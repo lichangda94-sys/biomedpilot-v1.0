@@ -18,8 +18,10 @@ from app.bioinformatics.deg_engine import (
     build_r_deg_runtime_gate_matrix,
     build_r_limma_parameter_manifest,
     detect_r_deseq2_runtime_capabilities,
+    detect_r_edger_runtime_capabilities,
     detect_r_limma_runtime_capabilities,
     load_r_deseq2_parameter_confirmation,
+    load_r_edger_parameter_confirmation,
     load_r_limma_design_config,
     load_r_limma_parameter_confirmation,
     validate_r_limma_parameter_confirmation,
@@ -91,12 +93,17 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     deseq2_runtime_detection = detect_r_deseq2_runtime_capabilities(timeout_seconds=5)
     deseq2_external_capabilities = deseq2_runtime_detection.get("external_capabilities") if isinstance(deseq2_runtime_detection.get("external_capabilities"), dict) else {}
     deseq2_dependency_snapshot = deseq2_runtime_detection.get("dependency_snapshot") if isinstance(deseq2_runtime_detection.get("dependency_snapshot"), dict) else {"status": "blocked", "blockers": ["r_deseq2_runtime_detection_missing"]}
+    edger_runtime_detection = detect_r_edger_runtime_capabilities(timeout_seconds=5)
+    edger_external_capabilities = edger_runtime_detection.get("external_capabilities") if isinstance(edger_runtime_detection.get("external_capabilities"), dict) else {}
+    edger_dependency_snapshot = edger_runtime_detection.get("dependency_snapshot") if isinstance(edger_runtime_detection.get("dependency_snapshot"), dict) else {"status": "blocked", "blockers": ["r_edger_runtime_detection_missing"]}
     r_count_model_plans = build_r_count_model_activation_plans(
         deg_ready_package=deg_gates.get("deg_ready_package") if isinstance(deg_gates.get("deg_ready_package"), dict) else {},
         design_config=load_r_limma_design_config(root),
         external_capabilities=deseq2_external_capabilities,
         dependency_snapshot=deseq2_dependency_snapshot,
-        parameter_confirmations={"deseq2": load_r_deseq2_parameter_confirmation(root)},
+        method_external_capabilities={"deseq2": deseq2_external_capabilities, "edger": edger_external_capabilities},
+        method_dependency_snapshots={"deseq2": deseq2_dependency_snapshot, "edger": edger_dependency_snapshot},
+        parameter_confirmations={"deseq2": load_r_deseq2_parameter_confirmation(root), "edger": load_r_edger_parameter_confirmation(root)},
     )
     deg_gates["multi_factor_deg_gate"] = multi_factor_deg_gate
     deg_gates["r_deg_adapter_gates"] = r_deg_adapter_gates
@@ -130,11 +137,11 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         if isinstance(plan, dict):
             deg_gates["gate_rows"].append(
                 _formal_deg_gate_row(
-                    f"B25.6 count-model activation plan: {method}",
+                    f"B25 count-model activation plan: {method}",
                     plan.get("status"),
                     plan.get("blockers", []),
                     plan.get("warnings", []),
-                    basis="DESeq2 is B25.10 runtime-validated but UI activation remains blocked; edgeR remains planning-only.",
+                    basis="DESeq2 may execute only through B25.11 gates; edgeR is B25.12 parameter/runtime planning only.",
                 )
             )
     deg_gates["gate_rows"].extend(limma_rscript_gate["gate_rows"])
@@ -205,7 +212,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         km_report_gate=km_report_gate,
         cox_report_gate=cox_report_gate,
     )
-    dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency, r_deseq2_runtime_detection=deseq2_runtime_detection)
+    dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency, r_deseq2_runtime_detection=deseq2_runtime_detection, r_edger_runtime_detection=edger_runtime_detection)
     survival_rows = build_survival_clinical_rows(
         packages=packages,
         survival_dependency=survival_dependency,
@@ -225,6 +232,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         external_capabilities={
             **(limma_rscript_gate.get("external_capabilities") if isinstance(limma_rscript_gate.get("external_capabilities"), dict) else {}),
             **deseq2_external_capabilities,
+            **edger_external_capabilities,
         },
         multi_factor_deg_gate=multi_factor_deg_gate,
         r_deg_adapter_gates=r_deg_adapter_gates,
@@ -294,6 +302,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "r_deg_adapter_gates": r_deg_adapter_gates,
             "r_count_model_plans": r_count_model_plans,
             "deseq2_runtime_detection": deseq2_runtime_detection,
+            "edger_runtime_detection": edger_runtime_detection,
             "limma_rscript_gate": limma_rscript_gate,
             "ora_gate_state": ora_gates,
             "ora_plot_gate": ora_plot_gate,
@@ -517,6 +526,7 @@ def build_dependency_rows(
     survival_dependency: dict[str, Any] | None = None,
     renderer_snapshot: dict[str, Any] | None = None,
     r_deseq2_runtime_detection: dict[str, Any] | None = None,
+    r_edger_runtime_detection: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     deg_dependency = deg_dependency or check_deg_backend_dependencies()
     survival_dependency = survival_dependency or check_survival_backend_dependencies()
@@ -526,7 +536,9 @@ def build_dependency_rows(
         status = packages.get(name) if isinstance(packages, dict) and isinstance(packages.get(name), dict) else {}
         rows.append(_dependency_row(f"python:{name}", name, status, required=True))
     r_deseq2_runtime_detection = r_deseq2_runtime_detection or {}
+    r_edger_runtime_detection = r_edger_runtime_detection or {}
     deseq2_dependencies = (r_deseq2_runtime_detection.get("dependency_snapshot") or {}).get("dependencies") if isinstance(r_deseq2_runtime_detection.get("dependency_snapshot"), dict) else {}
+    edger_dependencies = (r_edger_runtime_detection.get("dependency_snapshot") or {}).get("dependencies") if isinstance(r_edger_runtime_detection.get("dependency_snapshot"), dict) else {}
     r_backend = deg_dependency.get("r_backend") if isinstance(deg_dependency.get("r_backend"), dict) else {}
     r_packages = r_backend.get("packages") if isinstance(r_backend.get("packages"), dict) else {}
     for name in ("R", "limma", "DESeq2", "edgeR"):
@@ -544,6 +556,23 @@ def build_dependency_rows(
                     "packaging_impact": "external_rscript_not_bundled_required_for_deseq2_ui_activation",
                     "raw_blockers": [] if dep.get("available") else list(r_deseq2_runtime_detection.get("blockers", []) or [f"{name.lower()}_missing"]),
                     "raw_warnings": ["r_deseq2_external_runtime_detect_first"],
+                }
+            )
+            continue
+        if name == "edgeR" and isinstance(edger_dependencies, dict) and isinstance(edger_dependencies.get("edgeR"), dict):
+            dep = edger_dependencies["edgeR"]
+            rows.append(
+                {
+                    "dependency_id": "optional_r:edgeR",
+                    "label": "edgeR",
+                    "status": "installed" if dep.get("available") else "missing",
+                    "version": str(dep.get("version") or ""),
+                    "blockers": "None" if dep.get("available") else compact_list(r_edger_runtime_detection.get("blockers", []) or ["edger_missing"]),
+                    "warnings": "Detect-first external R backend; no install action. B25.12 planning only.",
+                    "action": "Detect only; no install action.",
+                    "packaging_impact": "external_rscript_not_bundled_required_for_future_edger_activation",
+                    "raw_blockers": [] if dep.get("available") else list(r_edger_runtime_detection.get("blockers", []) or ["edger_missing"]),
+                    "raw_warnings": ["r_edger_external_runtime_detect_first_planning_only"],
                 }
             )
             continue

@@ -414,7 +414,7 @@ def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str,
     plans = plan_matrix.get("plans") if isinstance(plan_matrix.get("plans"), dict) else {}
     plan = plans.get(method) if isinstance(plans.get(method), dict) else {}
     label = "Run DESeq2 count-model DEG" if method == "deseq2" else "Run edgeR count-model DEG"
-    blockers = _list(plan.get("blockers")) or [f"b25_6_count_model_planning_only:{method}"]
+    blockers = _list(plan.get("blockers")) or [f"b25_12_{method}_planning_only_no_execution"]
     if method == "deseq2":
         if plan.get("formal_execution_enabled") is True and not _list(plan.get("blockers")):
             return {
@@ -439,7 +439,7 @@ def _r_count_model_action(method: str, plan_matrix: dict[str, Any]) -> dict[str,
         label,
         "blocked_count_model_planning_only",
         "; ".join(dict.fromkeys(blockers)),
-        "B25.6 only defines count-model activation gates; implement method-specific parameter confirmation, Rscript adapter, output schema handoff and result_index_v2 validation before execution.",
+        "edgeR remains B25.12 parameter/runtime planning-only; implement real fixture execution, package/open-W validation, UI gates and result_index_v2 validation before execution.",
     )
 
 

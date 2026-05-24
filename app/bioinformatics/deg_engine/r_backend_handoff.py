@@ -59,15 +59,20 @@ def build_r_deg_external_handoff_plan(method: str) -> dict[str, Any]:
             blockers = ["r_deseq2_generic_external_handoff_disabled_use_controlled_rscript_adapter"]
             warning = "DESeq2 user-facing execution is available only through the B25.11 controlled Rscript adapter; generic external handoff remains disabled."
         else:
-            blockers = [f"b25_6_count_model_planning_only:{method_key}", f"{method_key}_rscript_execution_adapter_not_implemented"]
-            warning = "limma handoff is accepted first; edgeR still needs a separate audited adapter."
+            blockers = [
+                "b25_12_edger_planning_only_no_execution",
+                "b25_13_edger_real_fixture_required",
+                "b25_14_edger_ui_activation_required",
+                "edger_rscript_execution_adapter_not_implemented",
+            ]
+            warning = "edgeR has parameter/runtime planning only; generic external handoff remains disabled until a real fixture adapter and UI gates are audited."
         return {
             "schema_version": R_DEG_EXTERNAL_HANDOFF_SCHEMA_VERSION,
             "method": method_key,
             "status": "planned_not_enabled",
             "can_register_formal_result": False,
             "required_gates": [
-                "B25.6 count-model activation plan accepted",
+                "B25 count-model activation plan accepted",
                 "raw integer count matrix resolver package",
                 "count-model design preflight passed",
                 "method-specific R output schema",

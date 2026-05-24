@@ -17,6 +17,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bio-formal-deg-runtime-check-output", default="", help="Optional JSON output path for --bio-formal-deg-runtime-check.")
     parser.add_argument("--bio-r-deseq2-runtime-check", action="store_true", help="Validate Rscript/DESeq2 runtime detection and controlled count fixture execution.")
     parser.add_argument("--bio-r-deseq2-runtime-check-output", default="", help="Optional JSON output path for --bio-r-deseq2-runtime-check.")
+    parser.add_argument("--bio-r-edger-runtime-check", action="store_true", help="Detect Rscript/edgeR runtime readiness without executing formal DEG.")
+    parser.add_argument("--bio-r-edger-runtime-check-output", default="", help="Optional JSON output path for --bio-r-edger-runtime-check.")
     parser.add_argument("--bio-report-renderer-runtime-check", action="store_true", help="Detect report renderer capabilities without installing or rendering.")
     parser.add_argument("--bio-report-renderer-runtime-check-output", default="", help="Optional JSON output path for --bio-report-renderer-runtime-check.")
     normalized_argv = list(sys.argv[1:] if argv is None else argv)
@@ -39,6 +41,14 @@ def main(argv: list[str] | None = None) -> int:
 
         output_path = Path(args.bio_r_deseq2_runtime_check_output) if args.bio_r_deseq2_runtime_check_output else None
         payload = run_r_deseq2_runtime_validation(output_path=output_path)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0 if payload["status"] in {"passed", "blocked_missing_dependency"} else 1
+
+    if args.bio_r_edger_runtime_check:
+        from app.bioinformatics.deg_engine.r_edger_runtime_validation import run_r_edger_runtime_validation
+
+        output_path = Path(args.bio_r_edger_runtime_check_output) if args.bio_r_edger_runtime_check_output else None
+        payload = run_r_edger_runtime_validation(output_path=output_path)
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0 if payload["status"] in {"passed", "blocked_missing_dependency"} else 1
 

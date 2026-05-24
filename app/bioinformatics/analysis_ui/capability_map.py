@@ -212,7 +212,7 @@ def _r_method_row(
         reason = f"{label} B25.11 UI execution is blocked: {', '.join(plan_blockers)}."
     elif plan:
         state = "blocked_count_model_planning_only"
-        reason = f"{label} B25.6 count-model activation remains blocked: {', '.join(plan_blockers)}."
+        reason = f"{label} B25.12 count-model parameter/runtime planning remains blocked: {', '.join(plan_blockers)}."
     elif missing or gate_blockers:
         state = "blocked_by_dependency"
         reason = f"{label} B19 adapter gate is blocked: {', '.join(gate_blockers or missing)}."
@@ -226,14 +226,14 @@ def _r_method_row(
         "capability_id": capability_id,
         "label": label,
         "category": "DEG",
-        "implementation_status": "b25_11_deseq2_gated_ui_execution" if method == "deseq2" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate"),
+        "implementation_status": "b25_11_deseq2_gated_ui_execution" if method == "deseq2" and plan else ("b25_12_edger_parameter_runtime_planning" if method == "edger" and plan else ("b25_6_count_model_activation_planning" if plan else "b19_adapter_contract_gate")),
         "ui_state": state,
         "formal_execution_enabled": plan_formal_enabled,
         "can_display_as_completed": False,
         "reason": reason,
         "disabled_reason": reason,
         "dependency_capability_keys": keys,
-        "required_contracts": ["B8 resolver", "B18 count-model design preflight", "B25.6 count-model activation plan", "method-specific parameter confirmation", "method-specific Rscript adapter", "result_index_v2"] if plan else ["B18 multi-factor/preflight policy", "B19 R adapter contract", "external engine dependency snapshot"],
+        "required_contracts": ["B8 resolver", "B18 count-model design preflight", "B25 count-model activation plan", "method-specific parameter confirmation", "method-specific Rscript adapter", "result_index_v2"] if plan else ["B18 multi-factor/preflight policy", "B19 R adapter contract", "external engine dependency snapshot"],
         "method_policy": method_policy,
         "result_semantics_policy": "Never formal_computed_result until B19 adapter execution, output schema validation and result_index registration pass.",
         "boundary": "External dependency availability is not a completed analysis capability.",

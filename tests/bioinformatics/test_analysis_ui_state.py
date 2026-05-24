@@ -68,7 +68,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "limma Rscript runtime detection" in formal_gate_text
     assert "limma Rscript user confirmation" in formal_gate_text
     assert "external_engine_capability_registry_missing" in formal_gate_text
-    assert "B25.6 count-model activation plan: deseq2" in formal_gate_text
+    assert "B25 count-model activation plan: deseq2" in formal_gate_text
+    assert "B25 count-model activation plan: edger" in formal_gate_text
     assert "multi_factor_design_config_missing" in formal_gate_text
     assert _action(state, "r_deseq2_parameter_confirmation")["enabled"] is False
     assert _action(state, "formal_deg_deseq2_rscript")["enabled"] is False
@@ -154,6 +155,15 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
             "r_backend": {"packages": {"R": "not_checked", "limma": "not_checked", "DESeq2": "not_checked", "edgeR": "not_checked"}},
         },
         survival_dependency={"status": "preflight_only", "python_lifelines": {"available": False, "version": ""}, "blockers": ["lifelines_missing_formal_survival_disabled"]},
+        r_edger_runtime_detection={
+            "status": "passed",
+            "dependency_snapshot": {
+                "dependencies": {
+                    "edgeR": {"available": True, "version": "4.4.2"},
+                }
+            },
+            "blockers": [],
+        },
         renderer_snapshot={
             "capabilities": {
                 "pandoc": {"available": False, "version": "", "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled"},
@@ -173,6 +183,8 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
     assert "PDF/DOCX export remains disabled" in text
     assert "no install action" in text
     assert "required_in_packaged_app_for_formal_deg" in text
+    assert "external_rscript_not_bundled_required_for_future_edger_activation" in text
+    assert "4.4.2" in text
 
 
 def test_analysis_center_state_shows_b12_survival_clinical_input_hardening(tmp_path: Path) -> None:
