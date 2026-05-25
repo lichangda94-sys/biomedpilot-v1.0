@@ -9,12 +9,14 @@ from typing import Any
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.registry import RESULT_INDEX, load_registry, save_registry
 from app.bioinformatics.survival_clinical._io import read_table
+from app.bioinformatics.survival_clinical.cox_multivariate_result_schema import validate_cox_multivariate_result_index_entry, validate_cox_multivariate_result_table
 from app.bioinformatics.survival_clinical.cox_result_schema import validate_cox_result_index_entry, validate_cox_result_table
 from app.bioinformatics.survival_clinical.km_result_schema import validate_km_result_index_entry, validate_km_result_tables
 
 
 KM_REPORT_READY_GATE_SCHEMA_VERSION = "biomedpilot.km_logrank_report_ready_gate.v1"
 COX_REPORT_READY_GATE_SCHEMA_VERSION = "biomedpilot.cox_univariate_report_ready_gate.v1"
+COX_MULTIVARIATE_REPORT_READY_GATE_SCHEMA_VERSION = "biomedpilot.cox_multivariate_report_ready_gate.v1"
 SURVIVAL_CLINICAL_REPORT_PACKAGE_SCHEMA_VERSION = "biomedpilot.survival_clinical_report_ready_package.v1"
 FORBIDDEN_CLINICAL_PHRASES = (
     "clinical_conclusion",
@@ -94,18 +96,20 @@ def evaluate_cox_report_ready_gate(
     allow_table_only_report: bool = False,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
-    entry = _select_entry(root, "cox_univariate", result_id)
+    entry = _select_entry(root, ("cox_univariate", "cox_multivariate"), result_id)
     if entry is None:
         return _gate(
             COX_REPORT_READY_GATE_SCHEMA_VERSION,
             "blocked",
             result_id or "",
-            "cox_univariate",
+            "cox",
             allow_table_only_report,
-            ["missing_cox_univariate_result"],
+            ["missing_cox_result"],
             [],
             {},
         )
+    if entry.get("task_type") == "cox_multivariate":
+        return _evaluate_cox_multivariate_report_ready_gate(root, entry, allow_table_only_report=allow_table_only_report)
     blockers: list[str] = []
     warnings: list[str] = [str(item) for item in entry.get("warnings", []) or []]
     if normalize_result_semantics(entry.get("result_semantics"), default="") != "formal_computed_result":
@@ -171,18 +175,59 @@ def create_cox_report_ready_package(
     result_id: str | None = None,
     allow_table_only_report: bool = False,
 ) -> dict[str, Any]:
+    config = _cox_package_config(project_root, result_id)
     return _create_section_package(
         project_root,
         result_id=result_id,
         allow_table_only_report=allow_table_only_report,
         gate_fn=evaluate_cox_report_ready_gate,
-        task_type="cox_univariate",
-        section_scope="cox_univariate_only",
-        report_filename="cox_univariate_report.md",
-        manifest_filename="cox_univariate_report_package_manifest.json",
-        artifact_type="cox_univariate_report_ready_package",
-        table_artifact_types=("cox_result_table",),
-        section_title="Cox Univariate Clinical Association Section",
+        task_type=config["task_type"],
+        section_scope=config["section_scope"],
+        report_filename=config["report_filename"],
+        manifest_filename=config["manifest_filename"],
+        artifact_type=config["artifact_type"],
+        table_artifact_types=config["table_artifact_types"],
+        section_title=config["section_title"],
+    )
+
+
+def _evaluate_cox_multivariate_report_ready_gate(root: Path, entry: dict[str, Any], *, allow_table_only_report: bool) -> dict[str, Any]:
+    blockers: list[str] = []
+    warnings: list[str] = [str(item) for item in entry.get("warnings", []) or []]
+    if normalize_result_semantics(entry.get("result_semantics"), default="") != "formal_computed_result":
+        blockers.append("cox_multivariate_report_ready_requires_formal_computed_result")
+    if entry.get("task_type") != "cox_multivariate":
+        blockers.append("cox_multivariate_report_ready_requires_cox_multivariate_task")
+    blockers.extend(_base_entry_blockers(root, entry, required_artifacts=("cox_multivariate_result_table",)))
+    schema_gate = validate_cox_multivariate_result_index_entry(_schema_validation_view(entry))
+    blockers.extend(str(item) for item in schema_gate.get("blockers", []) or [])
+    table_paths = _artifact_paths(entry)
+    cox_rows = read_table(_resolve(root, table_paths.get("cox_multivariate_result_table", "")))
+    table_gate = validate_cox_multivariate_result_table(cox_rows)
+    blockers.extend(str(item) for item in table_gate.get("blockers", []) or [])
+    warnings.extend(str(item) for item in table_gate.get("warnings", []) or [])
+    blockers.extend(_parameter_blockers(entry, ("survival_clinical_input_id", "survival_outcome_gate_id", "time_field", "event_field", "selected_covariates", "missingness_policy", "minimum_event_count")))
+    if not allow_table_only_report and not _has_formal_plot(entry, "cox_forest_plot"):
+        blockers.append("cox_multivariate_report_ready_requires_formal_cox_plot_artifact_or_explicit_table_only_mode")
+    if _clinical_text_detected(entry):
+        blockers.append("clinical_conclusion_text_forbidden")
+    status = "eligible_for_cox_report_ready" if not blockers else "blocked"
+    return _gate(
+        COX_MULTIVARIATE_REPORT_READY_GATE_SCHEMA_VERSION,
+        status,
+        str(entry.get("result_id") or ""),
+        "cox_multivariate",
+        allow_table_only_report,
+        blockers,
+        warnings,
+        {
+            "result_index_path": str(root / RESULT_INDEX),
+            "cox_row_count": len(cox_rows),
+            "covariate_count": len(cox_rows),
+            "plot_artifact_count": len(entry.get("plot_artifacts", []) or []),
+            "table_validation": table_gate,
+            "result_schema_validation": schema_gate,
+        },
     )
 
 
@@ -204,13 +249,38 @@ def _gate(schema: str, status: str, selected_result_id: str, task_type: str, all
     }
 
 
-def _select_entry(root: Path, task_type: str, result_id: str | None) -> dict[str, Any] | None:
+def _select_entry(root: Path, task_type: str | tuple[str, ...], result_id: str | None) -> dict[str, Any] | None:
     entries = [entry for entry in load_registry(root).get("results", []) if isinstance(entry, dict)]
     if result_id:
         return next((entry for entry in entries if str(entry.get("result_id") or "") == result_id), None)
-    candidates = [entry for entry in entries if str(entry.get("task_type") or "") == task_type]
+    task_types = {task_type} if isinstance(task_type, str) else set(task_type)
+    candidates = [entry for entry in entries if str(entry.get("task_type") or "") in task_types]
     formal = [entry for entry in candidates if normalize_result_semantics(entry.get("result_semantics"), default="") == "formal_computed_result"]
     return (formal or candidates or [None])[-1]
+
+
+def _cox_package_config(project_root: str | Path, result_id: str | None) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    entry = _select_entry(root, ("cox_univariate", "cox_multivariate"), result_id)
+    if entry and entry.get("task_type") == "cox_multivariate":
+        return {
+            "task_type": "cox_multivariate",
+            "section_scope": "cox_multivariate_only",
+            "report_filename": "cox_multivariate_report.md",
+            "manifest_filename": "cox_multivariate_report_package_manifest.json",
+            "artifact_type": "cox_multivariate_report_ready_package",
+            "table_artifact_types": ("cox_multivariate_result_table",),
+            "section_title": "Cox Multivariate Clinical Association Section",
+        }
+    return {
+        "task_type": "cox_univariate",
+        "section_scope": "cox_univariate_only",
+        "report_filename": "cox_univariate_report.md",
+        "manifest_filename": "cox_univariate_report_package_manifest.json",
+        "artifact_type": "cox_univariate_report_ready_package",
+        "table_artifact_types": ("cox_result_table",),
+        "section_title": "Cox Univariate Clinical Association Section",
+    }
 
 
 def _create_section_package(
@@ -325,7 +395,7 @@ def _base_entry_blockers(root: Path, entry: dict[str, Any], *, required_artifact
         blockers.append("missing_task_run_log_artifact")
     if entry.get("report_artifacts"):
         scopes = _registered_report_scopes(entry)
-        invalid = [scope for scope in scopes if scope not in {"survival_km_logrank_only", "cox_univariate_only"}]
+        invalid = [scope for scope in scopes if scope not in {"survival_km_logrank_only", "cox_univariate_only", "cox_multivariate_only"}]
         blockers.extend(f"invalid_existing_report_artifact_scope:{scope}" for scope in invalid)
     return blockers
 

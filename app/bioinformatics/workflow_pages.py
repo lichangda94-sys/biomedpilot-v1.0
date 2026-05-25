@@ -6981,10 +6981,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         result_id = str(gate.get("selected_result_id") or "") or None
         allow_table_only = bool(self._cox_table_only_report.isChecked()) if hasattr(self, "_cox_table_only_report") else False
         result = create_cox_report_ready_package(self._project_root, result_id=result_id, allow_table_only_report=allow_table_only)
-        if result.get("status") == "cox_univariate_only_report_ready_package_created":
+        if result.get("status") in {"cox_univariate_only_report_ready_package_created", "cox_multivariate_only_report_ready_package_created"}:
             self.refresh_results()
+            task_label = "Cox multivariate" if result.get("section_scope") == "cox_multivariate_only" else "Cox univariate"
             self._status_label.setText(
-                "已生成 Cox univariate section package；"
+                f"已生成 {task_label} section package；"
                 f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
                 "仅包含 Cox section，未生成 full integrated report、risk score、预后或治疗建议。"
             )
@@ -7341,7 +7342,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._cox_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
         self._cox_report_button = _button("生成 Cox section package", "secondaryButton", self.generate_cox_report_ready_package)
         self._cox_report_button.setObjectName("coxReportReadyButton")
-        self._cox_report_status = _muted("Cox section gate 只接受 formal Cox univariate result；无图 table-only 模式需显式勾选。")
+        self._cox_report_status = _muted("Cox section gate 接受 formal Cox univariate 或 multivariate result；无图 table-only 模式需显式勾选。")
         self._cox_report_status.setObjectName("coxReportReadyStatus")
         cox_report_controls.addWidget(self._cox_table_only_report)
         cox_report_controls.addWidget(self._cox_report_button)

@@ -1105,7 +1105,7 @@ def _cox_multivariate_action(package: dict[str, Any] | None, dependency: dict[st
             "enabled": True,
             "normal_user_visible": True,
             "disabled_reason": "",
-            "next_action": "Run B20 controlled multivariate Cox with selected covariates only; no risk score, prognosis label, treatment advice or survival report-ready.",
+            "next_action": "Run B20 controlled multivariate Cox with selected covariates only; no risk score, prognosis label or treatment advice. Section report-ready remains controlled by the B28 Cox gate.",
         }
     return _disabled("cox_multivariate", "Run multivariate Cox", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, outcome, Cox multivariate parameter, confirmation and lifelines dependency gates.")
 

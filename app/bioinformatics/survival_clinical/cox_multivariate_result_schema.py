@@ -63,14 +63,23 @@ def validate_cox_multivariate_result_index_entry(entry: dict[str, Any]) -> dict[
         blockers.append("validation_status_failed_or_blocked")
     if entry.get("blockers"):
         blockers.append("formal_cox_multivariate_result_has_blockers")
-    if entry.get("report_ready_eligible") is True:
-        blockers.append("cox_multivariate_report_ready_forbidden_in_b20")
+    if entry.get("report_ready_eligible") is True and not _has_b28_report_artifact(entry):
+        blockers.append("cox_multivariate_report_ready_requires_b28_section_package")
     artifact_types = {str(item.get("artifact_type") or "") for item in entry.get("output_artifacts", []) or [] if isinstance(item, dict)}
     if "cox_multivariate_result_table" not in artifact_types:
         blockers.append("missing_cox_multivariate_result_table_artifact")
-    if entry.get("report_artifacts"):
-        blockers.append("cox_multivariate_report_artifacts_forbidden_in_b20")
+    if entry.get("report_artifacts") and not _has_b28_report_artifact(entry):
+        blockers.append("cox_multivariate_report_artifacts_must_be_b28_section_package")
     base = validate_result_entry(entry)
     blockers.extend(str(item) for item in base.get("blockers", []) or [])
     warnings.extend(str(item) for item in base.get("warnings", []) or [])
     return {"status": "blocked" if blockers else "passed", "blockers": list(dict.fromkeys(blockers)), "warnings": list(dict.fromkeys(warnings))}
+
+
+def _has_b28_report_artifact(entry: dict[str, Any]) -> bool:
+    for artifact in entry.get("report_artifacts", []) or []:
+        if not isinstance(artifact, dict):
+            continue
+        if artifact.get("artifact_type") == "cox_multivariate_report_ready_package" and artifact.get("section_scope") == "cox_multivariate_only":
+            return True
+    return False

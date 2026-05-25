@@ -55,16 +55,14 @@ def test_cox_report_ready_gate_passes_formal_univariate_result_with_plot(tmp_pat
     assert gate["diagnostics"]["cox_row_count"] == 1
 
 
-def test_cox_report_ready_gate_blocks_multivariate_and_clinical_conclusion(tmp_path: Path) -> None:
+def test_cox_report_ready_gate_blocks_clinical_conclusion_text(tmp_path: Path) -> None:
     entry = _cox_entry(tmp_path)
-    entry["task_type"] = "cox_multivariate"
     entry["parameters_manifest"]["clinical_conclusion"] = "forbidden"
     save_registry(tmp_path, [entry])
 
     gate = evaluate_cox_report_ready_gate(tmp_path, result_id="cox-ready")
 
     assert gate["status"] == "blocked"
-    assert "cox_report_ready_requires_cox_univariate_task" in gate["blockers"]
     assert "clinical_conclusion_text_forbidden" in gate["blockers"]
 
 

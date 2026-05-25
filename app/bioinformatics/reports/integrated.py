@@ -62,12 +62,12 @@ SECTION_PLOT_REQUIREMENTS = {
 }
 SUPPORTED_EXPORT_FORMATS = ("markdown", "pdf", "docx")
 SURVIVAL_CLINICAL_SECTION_SCOPES = {
-    "survival_km_logrank": "survival_km_logrank_only",
-    "cox": "cox_univariate_only",
+    "survival_km_logrank": ("survival_km_logrank_only",),
+    "cox": ("cox_univariate_only", "cox_multivariate_only"),
 }
 SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES = {
-    "survival_km_logrank": "km_logrank_report.md",
-    "cox": "cox_univariate_report.md",
+    "survival_km_logrank": {"survival_km_logrank_only": "km_logrank_report.md"},
+    "cox": {"cox_univariate_only": "cox_univariate_report.md", "cox_multivariate_only": "cox_multivariate_report.md"},
 }
 SECTION_PACKAGE_REQUIRED_FILES = (
     "README_limitations.md",
@@ -884,18 +884,19 @@ def _section_only_package_satisfies_prerequisite(section_id: str, section: dict[
 
 
 def _survival_clinical_section_package_validation(root: Path, entry: dict[str, Any], section_id: str) -> dict[str, Any]:
-    expected_scope = SURVIVAL_CLINICAL_SECTION_SCOPES.get(section_id)
-    if not expected_scope:
+    expected_scopes = SURVIVAL_CLINICAL_SECTION_SCOPES.get(section_id, ())
+    if not expected_scopes:
         return {"status": "not_required", "blockers": [], "warnings": []}
     blockers: list[str] = []
     warnings: list[str] = []
     result_id = str(entry.get("result_id") or "")
     artifacts = [artifact for artifact in entry.get("report_artifacts", []) or [] if isinstance(artifact, dict)]
-    matching = [artifact for artifact in artifacts if str(artifact.get("section_scope") or "") == expected_scope]
+    matching = [artifact for artifact in artifacts if str(artifact.get("section_scope") or "") in expected_scopes]
     if not matching:
-        blockers.append(f"section_package_artifact_missing:{section_id}:{expected_scope}")
-        return _section_package_validation_payload(section_id, expected_scope, "", "", blockers, warnings, {})
+        blockers.append(f"section_package_artifact_missing:{section_id}:{'|'.join(expected_scopes)}")
+        return _section_package_validation_payload(section_id, "|".join(expected_scopes), "", "", blockers, warnings, {})
     artifact = matching[-1]
+    expected_scope = str(artifact.get("section_scope") or "")
     manifest_path = _artifact_path(root, artifact)
     if not manifest_path.is_file():
         blockers.append(f"section_package_manifest_missing:{section_id}:{expected_scope}")
@@ -917,7 +918,7 @@ def _survival_clinical_section_package_validation(root: Path, entry: dict[str, A
         blockers.append(f"section_package_clinical_conclusion_flag_not_false:{section_id}")
     if manifest.get("full_integrated_report_enabled") is not False:
         blockers.append(f"section_package_full_integrated_flag_not_false:{section_id}")
-    required_files = [SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES[section_id], *SECTION_PACKAGE_REQUIRED_FILES]
+    required_files = [SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES[section_id][expected_scope], *SECTION_PACKAGE_REQUIRED_FILES]
     missing_files = [relative for relative in required_files if not (package_dir / relative).is_file()]
     blockers.extend(f"section_package_required_file_missing:{section_id}:{relative}" for relative in missing_files)
     for dirname in ("tables", "plots", "manifests", "logs", "provenance"):

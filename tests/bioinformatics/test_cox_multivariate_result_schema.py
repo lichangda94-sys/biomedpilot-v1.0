@@ -59,6 +59,14 @@ def test_cox_multivariate_result_index_keeps_task_type_and_report_boundary() -> 
 
     assert validate_cox_multivariate_result_index_entry(entry)["status"] == "passed"
     blocked = validate_cox_multivariate_result_index_entry({**entry, "report_ready_eligible": True})
-    assert "cox_multivariate_report_ready_forbidden_in_b20" in blocked["blockers"]
+    assert "cox_multivariate_report_ready_requires_b28_section_package" in blocked["blockers"]
+    report_ready = validate_cox_multivariate_result_index_entry(
+        {
+            **entry,
+            "report_ready_eligible": True,
+            "report_artifacts": [{"artifact_type": "cox_multivariate_report_ready_package", "section_scope": "cox_multivariate_only", "path": "manifest.json"}],
+        }
+    )
+    assert report_ready["status"] == "passed"
     wrong_task = validate_cox_multivariate_result_index_entry({**entry, "task_type": "cox_univariate"})
     assert "task_type_must_be_cox_multivariate" in wrong_task["blockers"]
