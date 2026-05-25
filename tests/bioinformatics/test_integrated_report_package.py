@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from app.bioinformatics.reports import integrated
 from app.bioinformatics.reports.integrated import (
@@ -303,6 +306,39 @@ def test_docx_rendered_export_creates_docx_and_registers_package_export_when_pan
     assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
     assert log_payload["conversion_invoked"] is True
     assert log_payload["exit_code"] == 0
+    assert package_manifest["rendered_exports_summary"]["exports_count"] == 1
+    assert package_manifest["rendered_exports_summary"]["docx_conversion_enabled"] is True
+
+
+def test_docx_rendered_export_real_pandoc_environment_acceptance(tmp_path: Path, monkeypatch) -> None:
+    if not shutil.which("pandoc"):
+        pytest.skip("user/system Pandoc is not installed on the renderer search path")
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    result = create_full_integrated_docx_rendered_export(package["package_path"], timeout_seconds=30)
+
+    package_path = Path(package["package_path"])
+    output = Path(result["output_path"])
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
+
+    assert result["status"] == "full_integrated_docx_rendered_export_created"
+    assert result["blockers"] == []
+    assert output.suffix == ".docx"
+    assert output.is_file()
+    assert output.stat().st_size > 0
+    assert rendered["exports"][0]["artifact_type"] == "full_integrated_report_rendered_export"
+    assert rendered["exports"][0]["export_format"] == "docx"
+    assert rendered["exports"][0]["validation_status"] == "passed"
+    assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
+    assert rendered["policy"]["do_not_write_formal_computed_result"] is True
+    assert log_payload["conversion_invoked"] is True
+    assert log_payload["exit_code"] == 0
+    assert log_payload["markdown_package_preserved"] is True
+    assert "pandoc" in log_payload["renderer_command"]
     assert package_manifest["rendered_exports_summary"]["exports_count"] == 1
     assert package_manifest["rendered_exports_summary"]["docx_conversion_enabled"] is True
 
