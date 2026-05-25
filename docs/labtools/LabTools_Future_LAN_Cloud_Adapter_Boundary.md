@@ -112,3 +112,22 @@ synchronize data. `start()` and `stop()` return disabled non-listening status.
 
 This keeps the future LAN line visible without changing the current local-first
 runtime.
+
+## LAN-LT2 Client Adapter Skeleton
+
+`labtools.lan_client` provides a contract-only client adapter skeleton. It
+exposes:
+
+- `LabToolsLanClientConfig`.
+- `LabToolsLanClientStatus`.
+- `LabToolsLanClientDataSourceAdapter`.
+- `build_lan_client_adapter_skeleton()`.
+
+The client adapter skeleton reports `future_lan` disabled status through the
+same adapter status surface used by local data. It returns empty read results
+and blocks write methods with a graceful disabled reason. It does not make
+network requests, resolve devices, authenticate users, or synchronize data.
+
+The client skeleton exists only to keep the future LAN adapter shape explicit.
+It must remain disconnected until a later LAN implementation task defines
+server authority, auth, conflict handling, and network failure behavior.
