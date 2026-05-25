@@ -239,15 +239,19 @@ Confirmed LT9 defaults:
 - Unauthenticated read-only remains available only through an explicit
   compatibility flag.
 - Revocation is supported by token id in the runtime manager.
+- Paired client listing is host-local only and excludes token/hash material.
 
 LT9 available runtime surfaces:
 
 - Host creates a pairing session through `create_pairing_session()`.
 - Client claims the pairing code through `POST /pairing/claim`.
+- Host can list and revoke paired clients through in-process runtime methods.
 - Read-only endpoints require a valid paired viewer token when auth is enabled.
 - `GET /health` stays minimal and unauthenticated.
 - `GET /status` reports auth state, and withholds adapter status unless the
   request is authenticated or compatibility mode is enabled.
+- Remote LAN management endpoints for listing/revoking clients remain disabled
+  until an admin-auth design exists.
 
 ## Acceptance Criteria
 

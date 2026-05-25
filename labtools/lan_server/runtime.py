@@ -18,7 +18,13 @@ from labtools.local_data.models import (
     ReagentRecord,
     SampleRecord,
 )
-from labtools.lan_server.auth import LabToolsLanAuthManager, LabToolsLanAuthResult, LabToolsLanPairingSession, LabToolsLanTokenIssueResult
+from labtools.lan_server.auth import (
+    LabToolsLanAuthManager,
+    LabToolsLanAuthResult,
+    LabToolsLanPairedClient,
+    LabToolsLanPairingSession,
+    LabToolsLanTokenIssueResult,
+)
 
 
 LAN_API_SCHEMA_VERSION = "labtools_lan_api.v1"
@@ -199,6 +205,16 @@ class LabToolsLanHealthServer:
         if self.config.health_only or not self.config.auth_required:
             return LabToolsLanTokenIssueResult(False, "auth_not_implemented", "LAN auth is not enabled for this server.")
         return self.auth_manager.claim_pairing(pairing_code=pairing_code, client_label=client_label)
+
+    def list_paired_clients(self, *, include_revoked: bool = True) -> tuple[LabToolsLanPairedClient, ...]:
+        if self.config.health_only or not self.config.auth_required:
+            return ()
+        return self.auth_manager.list_paired_clients(include_revoked=include_revoked)
+
+    def revoke_paired_client(self, token_id: str) -> bool:
+        if self.config.health_only or not self.config.auth_required:
+            return False
+        return self.auth_manager.revoke_token(token_id)
 
     def __enter__(self) -> "LabToolsLanHealthServer":
         self.start()

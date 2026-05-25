@@ -48,6 +48,25 @@ class LabToolsLanAuthResult:
     role: str = VIEWER_ROLE
 
 
+@dataclass(frozen=True)
+class LabToolsLanPairedClient:
+    token_id: str
+    client_label: str
+    role: str
+    created_at: str
+    expires_at: str
+    last_seen_at: str = ""
+    revoked_at: str = ""
+
+    @property
+    def revoked(self) -> bool:
+        return bool(self.revoked_at.strip())
+
+    @property
+    def expired(self) -> bool:
+        return _parse_iso(self.expires_at) <= _utc_now()
+
+
 class LabToolsLanAuthManager:
     def __init__(self, root: str | Path | None = None) -> None:
         self.root = resolve_labtools_local_data_paths(root).root
@@ -146,6 +165,25 @@ class LabToolsLanAuthManager:
                 role=role,
             )
         return LabToolsLanAuthResult(False, "auth_invalid", "LAN token is unknown.")
+
+    def list_paired_clients(self, *, include_revoked: bool = True) -> tuple[LabToolsLanPairedClient, ...]:
+        payload = self._load_payload(create_missing=False)
+        clients: list[LabToolsLanPairedClient] = []
+        for record in payload.get("paired_clients", []):
+            if not isinstance(record, Mapping):
+                continue
+            client = LabToolsLanPairedClient(
+                token_id=str(record.get("token_id") or ""),
+                client_label=str(record.get("client_label") or ""),
+                role=str(record.get("role") or VIEWER_ROLE),
+                created_at=str(record.get("created_at") or ""),
+                expires_at=str(record.get("expires_at") or ""),
+                last_seen_at=str(record.get("last_seen_at") or ""),
+                revoked_at=str(record.get("revoked_at") or ""),
+            )
+            if client.token_id and (include_revoked or not client.revoked):
+                clients.append(client)
+        return tuple(clients)
 
     def revoke_token(self, token_id: str) -> bool:
         payload = self._load_payload(create_missing=False)

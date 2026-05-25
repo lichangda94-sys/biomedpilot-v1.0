@@ -95,6 +95,32 @@ def test_lan_auth_manager_blocks_revoked_expired_and_unknown_tokens(tmp_path: Pa
     assert unknown.status == "auth_invalid"
 
 
+def test_lan_auth_manager_lists_paired_clients_without_token_material(tmp_path: Path) -> None:
+    manager = LabToolsLanAuthManager(tmp_path)
+    pairing = manager.create_pairing_session(client_label="bench laptop")
+    issued = manager.claim_pairing(pairing_code=pairing.pairing_code, client_label="bench laptop")
+
+    clients = manager.list_paired_clients()
+    revoked = manager.revoke_token(issued.token_id)
+    active_clients = manager.list_paired_clients(include_revoked=False)
+    all_clients = manager.list_paired_clients()
+
+    assert revoked is True
+    assert len(clients) == 1
+    assert clients[0].token_id == issued.token_id
+    assert clients[0].client_label == "bench laptop"
+    assert clients[0].role == "viewer"
+    assert clients[0].created_at
+    assert clients[0].expires_at
+    assert clients[0].revoked is False
+    assert clients[0].expired is False
+    assert not hasattr(clients[0], "token")
+    assert not hasattr(clients[0], "token_hash")
+    assert active_clients == ()
+    assert len(all_clients) == 1
+    assert all_clients[0].revoked is True
+
+
 def test_lan_auth_required_blocks_readonly_until_pairing_token_is_present(tmp_path: Path) -> None:
     store_adapter = _seed_store(tmp_path)
     audit_count = len(store_adapter.store.load_store().audit_log)
@@ -152,6 +178,36 @@ def test_lan_auth_required_blocks_readonly_until_pairing_token_is_present(tmp_pa
     assert len(store_adapter.store.load_store().audit_log) == audit_count
     assert after_sample.volume == before_sample.volume == "25"
     assert after_sample.status == before_sample.status == "available"
+
+
+def test_lan_runtime_host_side_lists_and_revokes_paired_clients_without_remote_management(tmp_path: Path) -> None:
+    _seed_store(tmp_path)
+    config = LabToolsLanHealthServerConfig(
+        health_only=False,
+        local_data_root=tmp_path,
+        auth_required=True,
+        allow_unauthenticated_readonly=False,
+    )
+    with build_lan_health_server(config) as server:
+        pairing = server.create_pairing_session(client_label="bench laptop")
+        issued = server.claim_pairing(pairing_code=pairing.pairing_code, client_label="bench laptop")
+        clients = server.list_paired_clients()
+        remote_list_code, remote_list = _request_json(server.url("/pairing/clients"))
+        remote_revoke_code, remote_revoke = _request_json(server.url("/pairing/revoke"), method="POST", payload=b"{}")
+        revoked = server.revoke_paired_client(issued.token_id)
+        revoked_read_code, revoked_read = _request_json(server.url("/samples"), headers={"Authorization": f"Bearer {issued.token}"})
+
+    assert issued.ok is True
+    assert len(clients) == 1
+    assert clients[0].token_id == issued.token_id
+    assert clients[0].client_label == "bench laptop"
+    assert remote_list_code == 404
+    assert remote_list["status"] == "disabled_or_not_implemented"
+    assert remote_revoke_code == 405
+    assert remote_revoke["status"] == "blocked_write_disabled"
+    assert revoked is True
+    assert revoked_read_code == 401
+    assert revoked_read["status"] == "auth_revoked"
 
 
 def test_lan_readonly_client_claims_pairing_and_reads_with_bearer_token(tmp_path: Path) -> None:

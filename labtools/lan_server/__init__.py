@@ -24,6 +24,7 @@ from labtools.lan_server.auth import (
     TOKEN_EXPIRY_DAYS,
     LabToolsLanAuthManager,
     LabToolsLanAuthResult,
+    LabToolsLanPairedClient,
     LabToolsLanPairingSession,
     LabToolsLanTokenIssueResult,
 )
@@ -39,6 +40,7 @@ __all__ = [
     "TOKEN_EXPIRY_DAYS",
     "LabToolsLanAuthManager",
     "LabToolsLanAuthResult",
+    "LabToolsLanPairedClient",
     "LabToolsLanHealthServer",
     "LabToolsLanHealthServerConfig",
     "LabToolsLanHealthServerRuntimeStatus",

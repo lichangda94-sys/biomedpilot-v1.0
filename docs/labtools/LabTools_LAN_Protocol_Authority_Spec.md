@@ -479,6 +479,9 @@ Runtime defaults:
 - Server token metadata is stored under
   `local_data_root/lan_auth/paired_clients.json`.
 - Server stores `token_hash`, never plaintext tokens.
+- Host-side runtime can list paired clients without exposing token/hash
+  material.
+- Host-side runtime can revoke paired clients by `token_id`.
 
 Auth endpoints:
 
@@ -490,6 +493,10 @@ Read endpoints continue to be summary-only and still block all write methods
 with `blocked_write_disabled`. Authenticated reads must not write audit entries,
 deduct reagent inventory, deduct sample volume, change sample status, generate
 reports, or expose raw store files.
+
+Remote paired-device management endpoints are not exposed in LT9/LT10. Listing
+or revoking tokens is host-local runtime behavior only until an admin-auth
+design exists.
 
 Manual checkpoint before LAN-LT10:
 

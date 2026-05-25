@@ -53,7 +53,7 @@ The audit also relies on the local-first data store line through:
 | Manual read-only client contract | Prototype complete | 100% | Explicit loopback URL client; graceful unavailable/malformed handling; no writes. |
 | UIShell manual LAN status panel | Prototype complete | 100% | Manual URL entry and read-only counts; no data-source switch yet. |
 | Pairing/auth/token design | Complete for design gate | 100% | Pairing flow, token lifecycle, auth envelope, audit identity, and migration policy documented. |
-| Pairing/auth/token runtime | Prototype complete | 100% | Read-only bearer token auth, 8-digit single-use pairing, 30-day token expiry, hash-only token store. |
+| Pairing/auth/token runtime | Prototype complete | 100% | Read-only bearer token auth, 8-digit single-use pairing, 30-day token expiry, hash-only token store, host-local client list/revoke. |
 | Cross-device LAN data server runtime | Prototype complete | 40% | Explicit private LAN read-only bind exists; no writes, sync, discovery, or user accounts. |
 | Real LAN client network I/O | Prototype complete | 40% | Manual URL read-only HTTP client exists; no discovery, sync, or write flow. |
 | Sync protocol | Not started | 0% | No pull/push/delta/full snapshot protocol exists. |
@@ -146,6 +146,7 @@ LT9 adds:
 - `token_hash` storage instead of plaintext tokens.
 - `POST /pairing/claim`.
 - `Authorization: Bearer <opaque-token>` handling for read-only endpoints.
+- host-local paired client listing and revocation by token id.
 - explicit unauthenticated read-only compatibility mode.
 
 ### Loopback Health And Read-Only Runtime
@@ -223,6 +224,8 @@ Current tests verify:
   `Authorization` headers.
 - Pairing codes are single-use.
 - Token revocation and unknown-token states block gracefully.
+- Paired client listing does not expose plaintext tokens or token hashes.
+- Remote paired-device management endpoints remain disabled.
 - Authenticated reads do not write audit entries or deduct sample volume.
 - Skeleton source does not include network client/server imports or listener
   calls.
@@ -235,7 +238,8 @@ The following are not implemented and should not be described as available:
 - Device discovery.
 - Workspace pairing runtime in UIShell.
 - Editor/admin user roles.
-- UI paired-device management.
+- Remote paired-device management endpoints.
+- Full UI paired-device management.
 - Remote database.
 - Remote JSON or SQLite sharing.
 - Sync scheduling.
@@ -329,6 +333,8 @@ Expected output:
 - Feed stored bearer token into the manual read-only LAN client.
 - Show clear read-only/auth/expiry status.
 - Keep unauthenticated read-only as an explicit compatibility state only.
+- Surface host-local paired client list/revoke in a local-only UI without
+  exposing remote admin endpoints.
 - No write endpoints.
 - No sync.
 - No automatic inventory/sample deduction.
