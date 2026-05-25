@@ -4,22 +4,23 @@ Date: 2026-05-25
 
 ## Executive Summary
 
-LabTools LAN development is currently in a manual loopback read-only connection
+LabTools LAN development is currently in an explicit private LAN read-only
 prototype stage.
 
 Usable cross-device LAN product capability is still effectively 0%: there is no
 LAN client network connection, no public-network binding, no sync protocol, no
 authentication, no multi-user permission model, and no conflict merge behavior.
-The runtime service is manually started on loopback and can expose read-only
-summary endpoints for local validation. A manual read-only client contract now
-exists, but it is still loopback-only and does not create cross-device sharing.
+The runtime service is manually started and can expose read-only summary
+endpoints on loopback or an explicitly allowed private LAN bind. A manual
+read-only client contract can connect to explicit private LAN URLs. This is
+still read-only and unauthenticated; pairing/auth/token is the next design gate.
 
-LAN architecture readiness is approximately 65-75%. The local-first data
+LAN architecture readiness is approximately 70-80%. The local-first data
 contract, adapter boundary, disabled future adapters, server skeleton contract,
-client adapter skeleton, protocol authority spec, loopback health server, and
-loopback read-only summary endpoints are in place. The read-only client contract
-can consume those summaries manually. These are important prerequisites, but
-they do not yet move LabTools data across machines.
+client adapter skeleton, protocol authority spec, loopback health server,
+read-only summary endpoints, explicit private LAN bind, and read-only client
+contract are in place. These are important prerequisites, but they still do not
+cover pairing, auth, sync, or writes.
 
 ## Current Commits Reviewed
 
@@ -48,6 +49,7 @@ The audit also relies on the local-first data store line through:
 | Client adapter skeleton contract | Complete for skeleton | 100% | `labtools.lan_client` is importable and blocks reads/writes as disabled. |
 | Loopback health server runtime | Prototype complete | 100% | Manual `127.0.0.1` health/status server; no data endpoints. |
 | Loopback read-only summary runtime | Prototype complete | 100% | Manual `127.0.0.1` summary endpoints through read-only adapter; no writes. |
+| Explicit private LAN read-only bind | Prototype complete | 100% | `--allow-lan-bind` permits `0.0.0.0` or private/link-local IP read-only bind. |
 | Manual read-only client contract | Prototype complete | 100% | Explicit loopback URL client; graceful unavailable/malformed handling; no writes. |
 | UIShell manual LAN status panel | Prototype complete | 100% | Manual URL entry and read-only counts; no data-source switch yet. |
 | Cross-device LAN data server runtime | Not started | 0% | No public bind, client connection flow, auth, or cross-device listener exists. |
@@ -116,9 +118,9 @@ I/O.
 - `LabToolsLanReadonlyReadModel`
 - `build_lan_readonly_client_adapter()`
 
-The client accepts only explicit loopback HTTP URLs, consumes the stable LAN
-envelope, returns graceful blocked statuses for server unavailable and malformed
-responses, and blocks all writes.
+The client accepts explicit loopback/private/link-local/`.local` HTTP URLs,
+consumes the stable LAN envelope, returns graceful blocked statuses for server
+unavailable and malformed responses, and blocks all writes.
 
 ### Loopback Health And Read-Only Runtime
 
@@ -139,6 +141,12 @@ The read-only summary runtime is manually started only:
 
 ```text
 python3 -m labtools.lan_server --host 127.0.0.1 --port 0 --read-only-summaries
+```
+
+Private LAN bind is explicit:
+
+```text
+python3 -m labtools.lan_server --host 0.0.0.0 --port 8787 --read-only-summaries --allow-lan-bind
 ```
 
 It supports:
@@ -176,7 +184,10 @@ Current tests verify:
 - Loopback read-only runtime does not write audit entries or deduct sample
   volume.
 - Loopback read-only runtime does not expose local filesystem paths.
+- Explicit private LAN bind requires `--allow-lan-bind`.
+- Public IP bind remains blocked.
 - Manual read-only client reads loopback summaries.
+- Manual read-only client accepts private LAN URLs and rejects public IP URLs.
 - Manual read-only client blocks server unavailable and malformed responses
   gracefully.
 - Manual read-only client blocks writes.
@@ -218,20 +229,20 @@ validation step, not a data-sharing capability.
 
 ### Engineering Foundation
 
-Current LAN engineering foundation: approximately 65-75%.
+Current LAN engineering foundation: approximately 70-80%.
 
 Reason: local-first data contracts, adapter boundaries, disabled future modes,
 server skeleton, client adapter skeleton, protocol authority spec, loopback
-health runtime, loopback read-only summary endpoints, manual read-only client
-contract, and boundary tests are in place. These reduce future design risk but
-do not implement LAN data sharing.
+health runtime, read-only summary endpoints, explicit private LAN bind, manual
+read-only client contract, and boundary tests are in place. These reduce future
+design risk but do not implement auth, pairing, sync, or writes.
 
 ### Recommended Overall Label
 
 Use this label in status reports:
 
 ```text
-LAN: manual-loopback-readonly-ready / data-sharing-disabled
+LAN: explicit-private-readonly-ready / auth-sync-write-disabled
 ```
 
 Avoid labels such as:
@@ -277,19 +288,18 @@ cross-device server available
 Stop for manual checkpoint, then implement:
 
 ```text
-LAN-LT7 manual LAN data-source switch or public-bind design gate
+LAN-LT8 pairing/auth/token design gate
 ```
 
 Expected output:
 
-- Decide whether LAN summaries can feed Reagent/WB/Cell pages, or remain
-  status-only.
-- If public bind is considered, design firewall, auth/token, pairing, and
-  privacy boundaries before implementation.
-- Preserve manual connection until automatic discovery has a separate approved
-  design.
+- Pairing model.
+- Token creation, storage, expiry, and revocation.
+- Auth failure envelope.
+- Audit identity mapping.
+- UIShell pairing UX.
+- Migration policy for unauthenticated read-only LAN.
 - No write endpoints.
-- No auth/token.
 - No sync.
 - No automatic inventory/sample deduction.
 - No UI direct store access.
@@ -298,7 +308,6 @@ Expected output:
 
 Do not implement LAN sync yet.
 
-The current codebase is ready for a manual checkpoint on the manual loopback
-read-only connection prototype. It is not ready for multi-user sync, automatic
-conflict handling, networked writes, automatic discovery, or public-network
-exposure.
+The current codebase is ready for the pairing/auth/token design checkpoint. It
+is not ready for multi-user sync, automatic conflict handling, networked writes,
+or automatic discovery.

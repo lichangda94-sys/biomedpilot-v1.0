@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from ipaddress import ip_address
 import json
 from typing import Any, Mapping
 from urllib.error import HTTPError, URLError
@@ -28,8 +29,8 @@ class LabToolsLanReadonlyClientConfig:
         parsed = urlparse(url)
         if parsed.scheme != "http":
             raise ValueError("LAN read-only client prototype only supports http loopback URLs.")
-        if parsed.hostname not in LOOPBACK_NETLOCS:
-            raise ValueError("LAN read-only client prototype only allows loopback server URLs.")
+        if not _is_allowed_lan_readonly_host(parsed.hostname):
+            raise ValueError("LAN read-only client only allows loopback or private LAN server URLs.")
         if parsed.path not in {"", "/"}:
             raise ValueError("LAN read-only client server_url must not include an API path.")
         timeout = float(self.timeout_seconds)
@@ -248,3 +249,15 @@ def _blocked_read_status(value: object) -> str:
     if text.startswith("blocked_"):
         return text
     return "blocked_read_disabled"
+
+
+def _is_allowed_lan_readonly_host(host: str | None) -> bool:
+    if host in LOOPBACK_NETLOCS:
+        return True
+    if not host:
+        return False
+    try:
+        parsed = ip_address(host)
+    except ValueError:
+        return host.endswith(".local")
+    return parsed.is_private or parsed.is_link_local

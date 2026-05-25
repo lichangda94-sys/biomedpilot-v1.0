@@ -9,6 +9,7 @@ import pytest
 
 from labtools.lan_server import (
     LAN_API_SCHEMA_VERSION,
+    LAN_READONLY_RUNTIME_MODE,
     LOOPBACK_HEALTH_RUNTIME_MODE,
     LOOPBACK_READONLY_RUNTIME_MODE,
     LabToolsLanHealthServerConfig,
@@ -29,13 +30,29 @@ def _request_json(url: str, *, method: str = "GET", payload: bytes | None = None
 def test_lan_health_server_config_rejects_public_bind_hosts() -> None:
     with pytest.raises(ValueError, match="loopback"):
         LabToolsLanHealthServerConfig(host="0.0.0.0", port=8787).normalized()
+    with pytest.raises(ValueError, match="private LAN"):
+        LabToolsLanHealthServerConfig(host="8.8.8.8", port=8787, allow_lan_bind=True).normalized()
 
     config = LabToolsLanHealthServerConfig(host="localhost", port=0, data_source_mode="local", health_only=False).normalized()
+    lan_config = LabToolsLanHealthServerConfig(host="0.0.0.0", port=8787, health_only=False, allow_lan_bind=True).normalized()
 
     assert config.host == "127.0.0.1"
     assert config.port == 0
     assert config.data_source_mode == "future_lan"
     assert config.health_only is False
+    assert lan_config.host == "0.0.0.0"
+    assert lan_config.allow_lan_bind is True
+
+
+def test_lan_readonly_server_status_reports_lan_bind_mode() -> None:
+    server = build_lan_health_server(LabToolsLanHealthServerConfig(host="0.0.0.0", port=0, health_only=False, allow_lan_bind=True))
+
+    status = server.status()
+
+    assert status.lan_runtime_mode == LAN_READONLY_RUNTIME_MODE
+    assert status.data_access_enabled is True
+    assert status.auth_enabled is False
+    assert "pairing" in status.reason
 
 
 def test_lan_health_server_does_not_bind_until_started() -> None:

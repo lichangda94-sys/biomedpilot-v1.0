@@ -9,7 +9,9 @@ LabTools. The original LAN-LT3 section is a design gate. LAN-LT4 added the
 first manual loopback health server prototype. LAN-LT5 adds loopback read-only
 summary endpoints while keeping writes, auth, sync, and public-network binding
 disabled. LAN-LT6 adds a manual read-only client contract and UIShell connection
-surface without automatic discovery or sync.
+surface without automatic discovery or sync. LAN-LT7 permits explicit private
+LAN read-only binding while leaving pairing/auth/token for the next design
+phase.
 
 This phase does not add LAN client network I/O, auth, token storage, sync jobs,
 write endpoints, public-network binding, or UI behavior.
@@ -377,6 +379,44 @@ Manual checkpoint before LAN-LT7:
 - Confirm whether public LAN binding can be designed, still without auth/sync.
 - Confirm no automatic discovery, auth/token, multi-user permission, sync, or
   write behavior should be enabled yet.
+
+## LAN-LT7 Explicit Private LAN Read-Only Bind
+
+LAN-LT7 allows the read-only server to bind beyond loopback only when explicitly
+requested:
+
+```text
+python3 -m labtools.lan_server --host 0.0.0.0 --port 8787 --read-only-summaries --allow-lan-bind
+```
+
+Allowed host classes:
+
+- `127.0.0.1` / `localhost` without extra flags.
+- `0.0.0.0` only with `--allow-lan-bind`.
+- private or link-local IP addresses only with `--allow-lan-bind`.
+
+Public IP addresses remain blocked by config validation. The read-only client
+may connect to explicit loopback, private LAN, link-local, or `.local` URLs. It
+still does not perform automatic discovery.
+
+Runtime constraints remain unchanged:
+
+- no writes.
+- no sync.
+- no auth/token yet.
+- no pairing yet.
+- no multi-user permissions.
+- no automatic discovery.
+- no raw store paths or files.
+- no inventory/sample deduction.
+
+Manual checkpoint before LAN-LT8:
+
+- Start pairing/auth/token design.
+- Define whether unauthenticated read-only LAN should remain available after
+  auth exists.
+- Define pairing UX, token storage, revocation, and audit identity mapping.
+- Continue blocking LAN writes until a later write-specific design gate.
 
 ## Acceptance Criteria For LAN-LT3 Spec Gate
 

@@ -8,9 +8,10 @@ from labtools.lan_server.runtime import LabToolsLanHealthServerConfig, build_lan
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="LabTools loopback LAN server prototype.")
-    parser.add_argument("--host", default="127.0.0.1", help="Loopback host. Only 127.0.0.1/localhost are accepted.")
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind. Non-loopback private LAN hosts require --allow-lan-bind.")
     parser.add_argument("--port", default=0, type=int, help="Loopback port. Use 0 to allocate an ephemeral port.")
     parser.add_argument("--local-data-root", default=None, help="Optional LabTools local_data root for read-only summary mode.")
+    parser.add_argument("--allow-lan-bind", action="store_true", help="Allow binding read-only summaries to 0.0.0.0 or a private LAN address.")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--health-only", action="store_true", help="Run health/status only; data endpoints remain disabled.")
     mode.add_argument("--read-only-summaries", action="store_true", help="Run loopback read-only summary endpoints.")
@@ -22,6 +23,7 @@ def main() -> int:
             port=args.port,
             health_only=args.health_only,
             local_data_root=args.local_data_root,
+            allow_lan_bind=args.allow_lan_bind,
         )
     )
     status = server.start()
@@ -36,6 +38,8 @@ def main() -> int:
             flush=True,
         )
         print("Writes, auth, sync, and public-network binding are disabled.", flush=True)
+        if args.allow_lan_bind:
+            print("LAN bind is explicitly enabled for read-only summaries; pairing/auth/token are not implemented yet.", flush=True)
     try:
         while True:
             time.sleep(3600)

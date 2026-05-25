@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from ipaddress import ip_address
 import json
 from pathlib import Path
 import threading
@@ -22,7 +23,9 @@ from labtools.local_data.models import (
 LAN_API_SCHEMA_VERSION = "labtools_lan_api.v1"
 LOOPBACK_HEALTH_RUNTIME_MODE = "loopback_health_only"
 LOOPBACK_READONLY_RUNTIME_MODE = "loopback_readonly_summary"
+LAN_READONLY_RUNTIME_MODE = "lan_readonly_summary"
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost"})
+LAN_BIND_ALL_HOST = "0.0.0.0"
 READONLY_ENDPOINTS = frozenset(
     {
         "/records/summary",
@@ -42,14 +45,16 @@ class LabToolsLanHealthServerConfig:
     data_source_mode: str = "future_lan"
     health_only: bool = True
     local_data_root: str | Path | None = None
+    allow_lan_bind: bool = False
 
     def normalized(self) -> "LabToolsLanHealthServerConfig":
         host = str(self.host or "127.0.0.1").strip()
         if host == "localhost":
             host = "127.0.0.1"
         port = int(self.port)
-        if host not in LOOPBACK_HOSTS:
-            raise ValueError("LAN health server prototype only allows loopback hosts.")
+        allow_lan_bind = bool(self.allow_lan_bind)
+        if host not in LOOPBACK_HOSTS and not _is_allowed_lan_bind_host(host, allow_lan_bind=allow_lan_bind):
+            raise ValueError("LAN read-only server only allows loopback hosts unless allow_lan_bind is enabled for private LAN hosts.")
         if port < 0 or port > 65535:
             raise ValueError("LAN health server port must be between 0 and 65535.")
         return LabToolsLanHealthServerConfig(
@@ -58,6 +63,7 @@ class LabToolsLanHealthServerConfig:
             data_source_mode="future_lan",
             health_only=bool(self.health_only),
             local_data_root=self.local_data_root,
+            allow_lan_bind=allow_lan_bind,
         )
 
 
@@ -136,7 +142,11 @@ class LabToolsLanHealthServer:
 
     @property
     def lan_runtime_mode(self) -> str:
-        return LOOPBACK_HEALTH_RUNTIME_MODE if self.config.health_only else LOOPBACK_READONLY_RUNTIME_MODE
+        if self.config.health_only:
+            return LOOPBACK_HEALTH_RUNTIME_MODE
+        if self.config.host in LOOPBACK_HOSTS:
+            return LOOPBACK_READONLY_RUNTIME_MODE
+        return LAN_READONLY_RUNTIME_MODE
 
     def start(self) -> LabToolsLanHealthServerRuntimeStatus:
         if self._thread is None:
@@ -168,6 +178,8 @@ class LabToolsLanHealthServer:
     def _runtime_reason(self) -> str:
         if self.config.health_only:
             return "Loopback health/status only; LabTools data endpoints are disabled."
+        if self.config.host not in LOOPBACK_HOSTS:
+            return "LAN read-only summaries; writes, sync, auth, pairing, and automatic discovery are disabled."
         return "Loopback read-only summaries; writes, sync, auth, and public-network access are disabled."
 
     def __enter__(self) -> "LabToolsLanHealthServer":
@@ -391,6 +403,18 @@ def _record_type_from_query(query: str) -> str | None:
     if not values:
         return None
     return values[0].strip() or None
+
+
+def _is_allowed_lan_bind_host(host: str, *, allow_lan_bind: bool) -> bool:
+    if not allow_lan_bind:
+        return False
+    if host == LAN_BIND_ALL_HOST:
+        return True
+    try:
+        parsed = ip_address(host)
+    except ValueError:
+        return False
+    return parsed.is_private or parsed.is_link_local
 
 
 def adapter_status_to_blocked_state(status: object) -> str:

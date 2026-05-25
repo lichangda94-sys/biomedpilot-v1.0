@@ -49,18 +49,20 @@ def _seed_store(root: Path) -> LocalLabToolsDataSourceAdapter:
 
 
 def test_lan_readonly_client_config_rejects_non_loopback_urls() -> None:
-    with pytest.raises(ValueError, match="loopback"):
-        LabToolsLanReadonlyClientConfig("http://192.168.1.20:8787").normalized()
+    with pytest.raises(ValueError, match="private LAN"):
+        LabToolsLanReadonlyClientConfig("http://8.8.8.8:8787").normalized()
     with pytest.raises(ValueError, match="http"):
         LabToolsLanReadonlyClientConfig("https://127.0.0.1:8787").normalized()
     with pytest.raises(ValueError, match="API path"):
         LabToolsLanReadonlyClientConfig("http://127.0.0.1:8787/reagents").normalized()
 
     config = LabToolsLanReadonlyClientConfig("http://localhost:8787/", timeout_seconds=1).normalized()
+    lan_config = LabToolsLanReadonlyClientConfig("http://192.168.1.20:8787", timeout_seconds=1).normalized()
 
     assert config.server_url == "http://localhost:8787"
     assert config.data_source_mode == "future_lan"
     assert config.timeout_seconds == 1
+    assert lan_config.server_url == "http://192.168.1.20:8787"
 
 
 def test_lan_readonly_client_reads_summary_endpoints_without_mutating_store(tmp_path: Path) -> None:
