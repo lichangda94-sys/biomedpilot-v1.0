@@ -8,7 +8,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QScrollArea
+    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QScrollArea, QWidget
 
     from app import labtools_runtime
     from app.shell.main_window import MainWindow
@@ -69,9 +69,13 @@ def test_wb_loading_page_opens_with_focused_structure(labtools_wb_window) -> Non
     content = _content(labtools_wb_window)
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
     substeps = content.findChildren(QLabel, "labtoolsWbSubstepTitle")
+    left_column = content.findChild(QWidget, "labtoolsWbLeftColumn")
 
     assert content.property("pageKey") == "wb_loading"
     assert content.property("semanticKey") == PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value
+    assert left_column is not None
+    assert left_column.property("uiPrimitive") == "workbench_secondary_column"
+    assert left_column.property("layoutPolishNoOverlap") is True
     assert content.findChild(QLabel, "labtoolsWbIssueRows") is not None
     assert [step.text() for step in substeps][:3] == ["1. 蛋白定量", "2. WB 上样计算", "3. SDS-PAGE 配胶"]
     assert "当前步骤" in labels

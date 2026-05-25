@@ -8,7 +8,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QScrollArea
+    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QScrollArea, QWidget
 
     from app import labtools_runtime
     from app.shell.main_window import MainWindow
@@ -62,9 +62,13 @@ def _input(window: MainWindow, field_id: str) -> QLineEdit:
 def test_reagent_preparation_renders_three_panel_safe_ui(labtools_reagent_window) -> None:
     content = _content(labtools_reagent_window)
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
+    left_column = content.findChild(QWidget, "labtoolsReagentLeftColumn")
 
     assert content.property("pageKey") == "reagent_preparation"
     assert content.property("semanticKey") == PageKey.LABTOOLS_REAGENT_PREPARATION.value
+    assert left_column is not None
+    assert left_column.property("uiPrimitive") == "workbench_secondary_column"
+    assert left_column.property("layoutPolishNoOverlap") is True
     assert content.findChild(QLabel, "labtoolsReagentResultPrimary") is not None
     assert content.findChild(QPushButton, "labtoolsReagentTemplateRow") is not None
     assert content.findChild(QLineEdit, "labtoolsReagentSearchInput") is not None
