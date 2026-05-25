@@ -10,6 +10,7 @@ from labtools.lan_server.skeleton import (
 from labtools.lan_server.runtime import (
     LAN_API_SCHEMA_VERSION,
     LOOPBACK_HEALTH_RUNTIME_MODE,
+    LOOPBACK_READONLY_RUNTIME_MODE,
     LabToolsLanHealthServer,
     LabToolsLanHealthServerConfig,
     LabToolsLanHealthServerRuntimeStatus,
@@ -21,6 +22,7 @@ __all__ = [
     "LAN_API_SCHEMA_VERSION",
     "LAN_SERVER_DISABLED_REASON",
     "LOOPBACK_HEALTH_RUNTIME_MODE",
+    "LOOPBACK_READONLY_RUNTIME_MODE",
     "LabToolsLanHealthServer",
     "LabToolsLanHealthServerConfig",
     "LabToolsLanHealthServerRuntimeStatus",

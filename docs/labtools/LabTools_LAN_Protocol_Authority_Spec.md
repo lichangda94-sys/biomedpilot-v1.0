@@ -5,10 +5,12 @@ Date: 2026-05-25
 ## Purpose
 
 This document defines the minimum LAN MVP protocol and authority boundary for
-LabTools. The original LAN-LT3 section is a design gate. LAN-LT4 adds the first
-manual loopback health server prototype while keeping data access disabled.
+LabTools. The original LAN-LT3 section is a design gate. LAN-LT4 added the
+first manual loopback health server prototype. LAN-LT5 adds loopback read-only
+summary endpoints while keeping writes, auth, sync, and public-network binding
+disabled.
 
-This phase does not add client network I/O, auth, token storage, sync jobs,
+This phase does not add LAN client network I/O, auth, token storage, sync jobs,
 write endpoints, public-network binding, or UI behavior.
 
 ## MVP Mode
@@ -299,6 +301,50 @@ Manual checkpoint before LAN-LT5:
 - Confirm no data read endpoints should be enabled yet.
 - Confirm LAN client transport should remain disabled until a separate read-only
   endpoint phase.
+- Confirm auth/token/multi-user/sync/write behavior remains out of scope.
+
+## LAN-LT5 Loopback Read-Only Summary Prototype
+
+LAN-LT5 implements manually started loopback-only summary endpoints:
+
+```text
+python3 -m labtools.lan_server --host 127.0.0.1 --port 0 --read-only-summaries
+```
+
+Available endpoints:
+
+```text
+GET /health
+GET /status
+GET /records/summary
+GET /reagents
+GET /samples
+GET /cells
+GET /freeze-vials
+GET /record-index
+GET /record-index?record_type=wb_loading
+```
+
+Runtime constraints:
+
+- Uses `ReadOnlyLabToolsDataSourceAdapter`.
+- Does not initialize a missing store automatically.
+- Does not expose local paths in response envelopes.
+- Does not expose raw JSON store files, backups, exports, binary artifacts,
+  images, PDF, or DOCX files.
+- Does not create audit entries for reads.
+- Does not deduct reagent amount or sample volume.
+- Does not change sample, cell, freeze vial, reagent, or record status.
+- Blocks write methods with `blocked_write_disabled`.
+- Maps missing/corrupted/read-disabled store states to graceful blocked
+  envelopes.
+
+Manual checkpoint before LAN-LT6:
+
+- Confirm loopback read-only summaries are sufficient for the first product
+  validation.
+- Confirm whether UIShell should add a manual LAN connection/status panel next.
+- Confirm no public-network binding should be enabled yet.
 - Confirm auth/token/multi-user/sync/write behavior remains out of scope.
 
 ## Acceptance Criteria For LAN-LT3 Spec Gate

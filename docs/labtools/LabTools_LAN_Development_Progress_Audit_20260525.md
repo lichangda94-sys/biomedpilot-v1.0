@@ -4,19 +4,20 @@ Date: 2026-05-25
 
 ## Executive Summary
 
-LabTools LAN development is currently in a loopback health prototype stage.
+LabTools LAN development is currently in a loopback read-only summary prototype
+stage.
 
 Usable cross-device LAN product capability is still effectively 0%: there is no
-client network connection, no data read endpoint, no sync protocol, no
+LAN client network connection, no public-network binding, no sync protocol, no
 authentication, no multi-user permission model, and no conflict merge behavior.
-The only runtime service is a manually started loopback health/status endpoint
-for local validation.
+The runtime service is manually started on loopback and can expose read-only
+summary endpoints for local validation.
 
-LAN architecture readiness is approximately 50-60%. The local-first data
+LAN architecture readiness is approximately 60-70%. The local-first data
 contract, adapter boundary, disabled future adapters, server skeleton contract,
-client adapter skeleton, protocol authority spec, and loopback health server are
-in place. These are important prerequisites, but they do not yet move LabTools
-data across machines.
+client adapter skeleton, protocol authority spec, loopback health server, and
+loopback read-only summary endpoints are in place. These are important
+prerequisites, but they do not yet move LabTools data across machines.
 
 ## Current Commits Reviewed
 
@@ -24,6 +25,7 @@ data across machines.
 - `7131cd6 feat(labtools): add LAN server skeleton contract`
 - `9b34485 feat(labtools): add LAN client adapter skeleton`
 - `d137569 docs(labtools): define LAN protocol authority spec`
+- `c4f9f03 feat(labtools): add loopback LAN health server`
 
 The audit also relies on the local-first data store line through:
 
@@ -43,7 +45,8 @@ The audit also relies on the local-first data store line through:
 | Server skeleton contract | Complete for skeleton | 100% | `labtools.lan_server` is importable and returns disabled non-listening status. |
 | Client adapter skeleton contract | Complete for skeleton | 100% | `labtools.lan_client` is importable and blocks reads/writes as disabled. |
 | Loopback health server runtime | Prototype complete | 100% | Manual `127.0.0.1` health/status server; no data endpoints. |
-| Real LAN data server runtime | Not started | 0% | No read data endpoints, server storage authority, or cross-device listener exists. |
+| Loopback read-only summary runtime | Prototype complete | 100% | Manual `127.0.0.1` summary endpoints through read-only adapter; no writes. |
+| Cross-device LAN data server runtime | Not started | 0% | No public bind, client connection flow, auth, or cross-device listener exists. |
 | Real LAN client network I/O | Not started | 0% | No requests, device discovery, or connection flow exists. |
 | Sync protocol | Not started | 0% | No pull/push/delta/full snapshot protocol exists. |
 | Server storage authority | Not started | 0% | No decision whether server owns JSON, SQLite, or another store. |
@@ -100,7 +103,7 @@ The adapter reports `future_lan` disabled status, returns empty read results,
 and blocks write methods with a disabled reason. It does not perform network
 I/O.
 
-### Loopback Health Runtime
+### Loopback Health And Read-Only Runtime
 
 `labtools.lan_server` also exposes:
 
@@ -109,19 +112,32 @@ I/O.
 - `LabToolsLanHealthServer`
 - `build_lan_health_server()`
 
-The runtime is manually started only:
+The health-only runtime is manually started only:
 
 ```text
 python3 -m labtools.lan_server --host 127.0.0.1 --port 0 --health-only
+```
+
+The read-only summary runtime is manually started only:
+
+```text
+python3 -m labtools.lan_server --host 127.0.0.1 --port 0 --read-only-summaries
 ```
 
 It supports:
 
 - `GET /health`
 - `GET /status`
+- `GET /records/summary`
+- `GET /reagents`
+- `GET /samples`
+- `GET /cells`
+- `GET /freeze-vials`
+- `GET /record-index`
 
 It rejects non-loopback bind hosts, does not bind during object construction,
-does not auto-start from imports, and blocks data endpoints and write methods.
+does not auto-start from imports, uses `ReadOnlyLabToolsDataSourceAdapter` for
+summary reads, blocks write methods, and does not expose local paths.
 
 ### Tests
 
@@ -136,6 +152,13 @@ Current tests verify:
 - Loopback health runtime serves `/health` and `/status`.
 - Loopback health runtime blocks data endpoints and write methods.
 - Loopback health runtime does not create local data files.
+- Loopback read-only runtime blocks missing/corrupted stores gracefully.
+- Loopback read-only runtime lists reagent/sample/cell/freeze vial/record
+  summaries.
+- Loopback read-only runtime filters record index by `record_type`.
+- Loopback read-only runtime does not write audit entries or deduct sample
+  volume.
+- Loopback read-only runtime does not expose local filesystem paths.
 - Skeleton source does not include network client/server imports or listener
   calls.
 - Package smoke includes `labtools.lan_server` and `labtools.lan_client`.
@@ -145,7 +168,6 @@ Current tests verify:
 The following are not implemented and should not be described as available:
 
 - Cross-device LAN server process.
-- LAN data API endpoints.
 - LAN client network transport.
 - Device discovery.
 - Workspace pairing.
@@ -168,31 +190,31 @@ The following are not implemented and should not be described as available:
 
 Current cross-device LAN product capability: 0%.
 
-Reason: no LabTools data can be shared across devices, no client can connect to
-a server for summaries, and no data endpoint exists. The local-only health
-server is a runtime validation step, not a data-sharing capability.
+Reason: no LabTools data can be shared across devices and no client can connect
+to a server for summaries. The local-only loopback summary server is a runtime
+validation step, not a data-sharing capability.
 
 ### Engineering Foundation
 
-Current LAN engineering foundation: approximately 50-60%.
+Current LAN engineering foundation: approximately 60-70%.
 
 Reason: local-first data contracts, adapter boundaries, disabled future modes,
 server skeleton, client adapter skeleton, protocol authority spec, loopback
-health runtime, and boundary tests are in place. These reduce future design risk
-but do not implement LAN data sharing.
+health runtime, loopback read-only summary endpoints, and boundary tests are in
+place. These reduce future design risk but do not implement LAN data sharing.
 
 ### Recommended Overall Label
 
 Use this label in status reports:
 
 ```text
-LAN: loopback-health-ready / data-sharing-disabled
+LAN: loopback-readonly-ready / data-sharing-disabled
 ```
 
 Avoid labels such as:
 
 ```text
-LAN data ready
+cross-device LAN data ready
 LAN sync available
 multi-user ready
 cross-device server available
@@ -232,15 +254,15 @@ cross-device server available
 Stop for manual checkpoint, then implement:
 
 ```text
-LAN-LT5 read-only server summary endpoints
+LAN-LT6 manual LAN connection UI and client read contract
 ```
 
 Expected output:
 
-- Adapter-backed read-only endpoint layer.
-- Store missing/corrupted/read-disabled graceful envelopes.
-- Read-only summary endpoints for reagents, samples, cells, freeze vials, and
-  record index.
+- UIShell manual LAN status panel or runtime wrapper design.
+- LAN client adapter transport contract for read-only summaries.
+- Server unavailable/malformed response graceful client states.
+- No automatic server discovery.
 - No write endpoints.
 - No auth/token.
 - No sync.
@@ -251,6 +273,6 @@ Expected output:
 
 Do not implement LAN sync yet.
 
-The current codebase is ready for a manual checkpoint on the loopback
-health/status prototype. It is not ready for multi-user sync, automatic conflict
+The current codebase is ready for a manual checkpoint on the loopback read-only
+summary prototype. It is not ready for multi-user sync, automatic conflict
 handling, networked writes, or public-network exposure.

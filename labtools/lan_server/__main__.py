@@ -7,20 +7,35 @@ from labtools.lan_server.runtime import LabToolsLanHealthServerConfig, build_lan
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="LabTools loopback LAN health server prototype.")
+    parser = argparse.ArgumentParser(description="LabTools loopback LAN server prototype.")
     parser.add_argument("--host", default="127.0.0.1", help="Loopback host. Only 127.0.0.1/localhost are accepted.")
     parser.add_argument("--port", default=0, type=int, help="Loopback port. Use 0 to allocate an ephemeral port.")
-    parser.add_argument("--health-only", action="store_true", help="Required guard for the prototype health/status-only runtime.")
+    parser.add_argument("--local-data-root", default=None, help="Optional LabTools local_data root for read-only summary mode.")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--health-only", action="store_true", help="Run health/status only; data endpoints remain disabled.")
+    mode.add_argument("--read-only-summaries", action="store_true", help="Run loopback read-only summary endpoints.")
     args = parser.parse_args()
 
-    if not args.health_only:
-        parser.error("--health-only is required; data endpoints are not enabled in this phase.")
-
-    server = build_lan_health_server(LabToolsLanHealthServerConfig(host=args.host, port=args.port, health_only=True))
+    server = build_lan_health_server(
+        LabToolsLanHealthServerConfig(
+            host=args.host,
+            port=args.port,
+            health_only=args.health_only,
+            local_data_root=args.local_data_root,
+        )
+    )
     status = server.start()
-    print(f"LabTools LAN health server listening on http://{status.host}:{status.port}", flush=True)
-    print("Available endpoints: GET /health, GET /status", flush=True)
-    print("Data endpoints, writes, auth, sync, and public-network binding are disabled.", flush=True)
+    print(f"LabTools LAN loopback server listening on http://{status.host}:{status.port}", flush=True)
+    if args.health_only:
+        print("Available endpoints: GET /health, GET /status", flush=True)
+        print("Data endpoints, writes, auth, sync, and public-network binding are disabled.", flush=True)
+    else:
+        print(
+            "Available endpoints: GET /health, GET /status, GET /records/summary, "
+            "GET /reagents, GET /samples, GET /cells, GET /freeze-vials, GET /record-index",
+            flush=True,
+        )
+        print("Writes, auth, sync, and public-network binding are disabled.", flush=True)
     try:
         while True:
             time.sleep(3600)
