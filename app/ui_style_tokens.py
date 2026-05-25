@@ -30,11 +30,15 @@ class UIStatusKey(StrEnum):
     SHELL_ONLY = "shell_only"
     PREFLIGHT_ONLY = "preflight_only"
     BLOCKED = "blocked"
+    DISABLED = "disabled"
     AVAILABLE = "available"
     NOT_CONFIGURED = "not_configured"
     MISSING = "missing"
     FAILED = "failed"
     DRAFT = "draft"
+    ADAPTER_NEEDED = "adapter_needed"
+    REPORT_DISABLED = "report_disabled"
+    EXPORT_DISABLED = "export_disabled"
     REPORT_READY = "report_ready"
 
 
@@ -122,11 +126,15 @@ STATUS_TOKENS: dict[str, StatusVisualToken] = {
     UIStatusKey.SHELL_ONLY.value: StatusVisualToken(UIStatusKey.SHELL_ONLY.value, "Shell only", "#F5F3FF", "#DDD6FE", "#5B21B6", "layout"),
     UIStatusKey.PREFLIGHT_ONLY.value: StatusVisualToken(UIStatusKey.PREFLIGHT_ONLY.value, "仅预检", "#EFF6FF", "#BFDBFE", "#1D4ED8", "checklist"),
     UIStatusKey.BLOCKED.value: StatusVisualToken(UIStatusKey.BLOCKED.value, "已阻塞", COLORS["warning_soft"], COLORS["warning_border"], "#92400E", "blocked"),
+    UIStatusKey.DISABLED.value: StatusVisualToken(UIStatusKey.DISABLED.value, "已禁用", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], "disabled"),
     UIStatusKey.AVAILABLE.value: StatusVisualToken(UIStatusKey.AVAILABLE.value, "可用", "#ECFDF3", "#BBF7D0", "#166534", "check"),
     UIStatusKey.NOT_CONFIGURED.value: StatusVisualToken(UIStatusKey.NOT_CONFIGURED.value, "未配置", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], "settings"),
     UIStatusKey.MISSING.value: StatusVisualToken(UIStatusKey.MISSING.value, "缺失", COLORS["warning_soft"], COLORS["warning_border"], "#92400E", "missing"),
     UIStatusKey.FAILED.value: StatusVisualToken(UIStatusKey.FAILED.value, "失败", COLORS["danger_soft"], COLORS["danger_border"], COLORS["danger"], "alert"),
     UIStatusKey.DRAFT.value: StatusVisualToken(UIStatusKey.DRAFT.value, "草稿", "#F8FAFC", COLORS["border"], COLORS["text"], "draft"),
+    UIStatusKey.ADAPTER_NEEDED.value: StatusVisualToken(UIStatusKey.ADAPTER_NEEDED.value, "需要适配器", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], "adapter"),
+    UIStatusKey.REPORT_DISABLED.value: StatusVisualToken(UIStatusKey.REPORT_DISABLED.value, "报告未开放", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], "report-disabled"),
+    UIStatusKey.EXPORT_DISABLED.value: StatusVisualToken(UIStatusKey.EXPORT_DISABLED.value, "导出未开放", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], "export-disabled"),
     UIStatusKey.REPORT_READY.value: StatusVisualToken(UIStatusKey.REPORT_READY.value, "Report-ready", "#ECFDF3", "#86EFAC", "#14532D", "report"),
 }
 
@@ -135,6 +143,8 @@ BUTTON_TOKENS: dict[str, ButtonVisualToken] = {
     "primary_action": ButtonVisualToken("primary_action", COLORS["bio_accent"], COLORS["bio_accent"], "#FFFFFF", "#138F83"),
     "secondary": ButtonVisualToken("secondary", COLORS["bio_soft"], "#D6E2EA", COLORS["bio"], "#F4F8FB"),
     "ghost": ButtonVisualToken("ghost", "transparent", "transparent", COLORS["bio"], COLORS["surface_muted"]),
+    "file_picker": ButtonVisualToken("file_picker", "#FFFFFF", COLORS["border"], COLORS["bio"], COLORS["surface_muted"]),
+    "disabled_action": ButtonVisualToken("disabled_action", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], COLORS["surface_muted"]),
     "danger": ButtonVisualToken("danger", "#FFFFFF", COLORS["danger_border"], COLORS["danger"], "#FFF7F7"),
 }
 

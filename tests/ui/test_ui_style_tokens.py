@@ -33,11 +33,15 @@ def test_status_tokens_cover_rebuild_semantics() -> None:
         "shell_only",
         "preflight_only",
         "blocked",
+        "disabled",
         "available",
         "not_configured",
         "missing",
         "failed",
         "draft",
+        "adapter_needed",
+        "report_disabled",
+        "export_disabled",
         "report_ready",
     }
     assert required <= set(STATUS_TOKENS)
@@ -47,7 +51,7 @@ def test_status_tokens_cover_rebuild_semantics() -> None:
 
 
 def test_button_tokens_and_radius_follow_b1_constraints() -> None:
-    assert {"primary", "primary_action", "secondary", "ghost", "danger"} <= set(BUTTON_TOKENS)
+    assert {"primary", "primary_action", "secondary", "ghost", "file_picker", "disabled_action", "danger"} <= set(BUTTON_TOKENS)
     assert get_button_token("unknown").role == "secondary"
     assert RADIUS["card"] <= 8
     assert RADIUS["control"] <= RADIUS["card"]

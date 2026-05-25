@@ -83,7 +83,9 @@ def test_secondary_nav_keeps_navigation_separate_from_formal_actions(qt_app) -> 
     buttons = nav.findChildren(QPushButton, "workbenchSecondaryNavItem")
     assert [button.property("pageKey") for button in buttons] == ["project_home", "export"]
     assert buttons[0].property("currentStep") is True
+    assert buttons[0].property("semanticState") == "testing"
     assert buttons[1].isEnabled() is False
+    assert buttons[1].property("semanticState") == "blocked"
     assert all(button.property("formalActionEnabled") is False for button in buttons)
     assert all(button.property("fileWriteAllowed") is False for button in buttons)
 
@@ -99,6 +101,7 @@ def test_workbench_disabled_actions_preserve_gate_semantics(qt_app) -> None:
     assert button.isEnabled() is False
     assert button.property("actionKey") == "generate_report"
     assert button.property("disabledState") == "report_not_ready"
+    assert button.property("semanticState") == "report_disabled"
     assert button.property("formalActionEnabled") is False
     assert button.property("fileWriteAllowed") is False
 

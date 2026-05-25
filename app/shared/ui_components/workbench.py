@@ -176,9 +176,14 @@ def make_workbench_secondary_nav(
     layout.addWidget(title_label)
 
     for item in items:
-        button = make_button(item.label, role="ghost", size="small")
+        button = make_button(
+            item.label,
+            role="ghost",
+            size="small",
+            semantic_state=item.status_key,
+            enabled=item.enabled,
+        )
         button.setObjectName("workbenchSecondaryNavItem")
-        button.setEnabled(item.enabled)
         button.setProperty("uiPrimitive", "workbench_secondary_nav_item")
         button.setProperty("pageKey", item.key)
         button.setProperty("statusKey", item.status_key)
@@ -279,14 +284,20 @@ def make_workbench_action_bar(
     layout.setSpacing(SPACING["sm"])
     layout.addStretch(1)
     for action in actions:
-        button = make_button(action.label, role=action.role)
+        button = make_button(
+            action.label,
+            role=action.role,
+            semantic_state=_semantic_state_for_disabled_action(action.disabled_state, action.enabled),
+            enabled=action.enabled,
+            action_key=action.key,
+            disabled_reason=action.tooltip,
+        )
         button.setObjectName("workbenchActionButton")
         button.setProperty("uiPrimitive", "workbench_action_button")
         button.setProperty("actionKey", action.key)
         button.setProperty("disabledState", action.disabled_state)
         button.setProperty("formalActionEnabled", False)
         button.setProperty("fileWriteAllowed", False)
-        button.setEnabled(action.enabled)
         if action.tooltip:
             button.setToolTip(action.tooltip)
         layout.addWidget(button)
@@ -389,9 +400,15 @@ def make_workbench_disabled_action(
     disabled_state: str = "disabled_boundary",
     tooltip: str = "",
 ):
-    button = make_button(text, role="secondary")
+    button = make_button(
+        text,
+        role="disabled_action",
+        semantic_state=_semantic_state_for_disabled_action(disabled_state, False),
+        action_key=action_key,
+        disabled_reason=tooltip,
+        enabled=False,
+    )
     button.setObjectName("workbenchDisabledAction")
-    button.setEnabled(False)
     button.setProperty("uiPrimitive", "workbench_disabled_action")
     button.setProperty("actionKey", action_key)
     button.setProperty("disabledState", disabled_state)
@@ -437,6 +454,23 @@ def make_workbench_empty_state(
     empty.setObjectName("workbenchEmptyState")
     empty.setProperty("uiPrimitive", "workbench_empty_state")
     return empty
+
+
+def _semantic_state_for_disabled_action(disabled_state: str, enabled: bool) -> str:
+    if enabled:
+        return "available"
+    lowered = disabled_state.lower()
+    if "export" in lowered:
+        return "export_disabled"
+    if "report" in lowered:
+        return "report_disabled"
+    if "adapter" in lowered:
+        return "adapter_needed"
+    if "planned" in lowered:
+        return "planned"
+    if "blocked" in lowered or "gate" in lowered:
+        return "blocked"
+    return "disabled"
 
 
 __all__ = [

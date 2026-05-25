@@ -1,26 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Callable
 
 from app.shared.semantic_keys import NavKey
+from app.shared.ui_components.primitives import AppSidebar, AppSidebarItem
 
 try:
-    from PySide6.QtCore import QSize
-    from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout
-    from app.app_identity import MODULE_ICON_PATHS, load_module_icon
+    from PySide6.QtWidgets import QPushButton
 except Exception:  # pragma: no cover
-    QSize = None
-    MODULE_ICON_PATHS = {}
-    load_module_icon = None
-    QFrame = QLabel = QPushButton = QVBoxLayout = None
+    QPushButton = None
 
 
-@dataclass(frozen=True)
-class SidebarItem:
-    key: str
-    label: str
-    semantic_key: str
+SidebarItem = AppSidebarItem
 
 
 COMMON_SIDEBAR_ITEMS = (
@@ -41,9 +32,9 @@ SIDEBAR_MODULE_ICON_KEYS = {
 }
 
 
-if QFrame is not None:
+if QPushButton is not None:
 
-    class SidebarWidget(QFrame):
+    class SidebarWidget(AppSidebar):
         def __init__(
             self,
             *,
@@ -55,65 +46,26 @@ if QFrame is not None:
             on_test_feedback: Callable[[], None],
             on_about: Callable[[], None],
         ) -> None:
-            super().__init__()
-            self.setFixedWidth(220)
-            self.setStyleSheet(
-                "QFrame { background: #F8FAFC; border-right: 1px solid #D8DEE9; }"
-                "QPushButton { text-align: left; padding: 8px 10px; border: 0; border-radius: 6px; }"
-                "QPushButton:hover { background: #EAF0F7; }"
+            callbacks = {
+                "dashboard": on_dashboard,
+                "bioinformatics": on_bioinformatics,
+                "meta_analysis": on_meta_analysis,
+                "labtools": on_labtools,
+                "settings": on_settings,
+                "test_feedback": on_test_feedback,
+                "about": on_about,
+            }
+            items = tuple(
+                AppSidebarItem(
+                    key=item.key,
+                    label=item.label,
+                    semantic_key=item.semantic_key,
+                    icon_key=SIDEBAR_MODULE_ICON_KEYS.get(item.key, ""),
+                    usability_role="primary_navigation" if index < 5 else "auxiliary_navigation",
+                )
+                for index, item in enumerate(COMMON_SIDEBAR_ITEMS)
             )
-            layout = QVBoxLayout(self)
-            layout.setContentsMargins(12, 14, 12, 14)
-            layout.setSpacing(8)
-            title = QLabel("萤火虫 / Firefly")
-            title.setStyleSheet("font-size: 18px; font-weight: 700;")
-            layout.addWidget(title)
-            for item, callback in (
-                (COMMON_SIDEBAR_ITEMS[0], on_dashboard),
-                (COMMON_SIDEBAR_ITEMS[1], on_bioinformatics),
-                (COMMON_SIDEBAR_ITEMS[2], on_meta_analysis),
-                (COMMON_SIDEBAR_ITEMS[3], on_labtools),
-                (COMMON_SIDEBAR_ITEMS[4], on_settings),
-            ):
-                button = QPushButton(item.label)
-                button.setObjectName("sidebarButton")
-                button.setProperty("navKey", item.semantic_key)
-                button.setProperty("semanticKey", item.semantic_key)
-                button.setProperty("pageKey", item.key)
-                button.setProperty("usabilityRole", "primary_navigation")
-                button.setAccessibleName(item.label)
-                button.setToolTip(item.label)
-                button.setMinimumHeight(36)
-                module_icon_key = SIDEBAR_MODULE_ICON_KEYS.get(item.key)
-                if module_icon_key is not None:
-                    icon = load_module_icon(module_icon_key)
-                    if not icon.isNull():
-                        button.setIcon(icon)
-                        button.setIconSize(QSize(18, 18))
-                    button.setProperty("moduleKey", module_icon_key)
-                    button.setProperty("iconSource", str(MODULE_ICON_PATHS.get(module_icon_key, "")))
-                    button.setProperty("iconFallback", icon.isNull())
-                button.clicked.connect(callback)
-                layout.addWidget(button)
-            layout.addStretch(1)
-            for item, callback in (
-                (COMMON_SIDEBAR_ITEMS[5], on_test_feedback),
-                (COMMON_SIDEBAR_ITEMS[6], on_about),
-            ):
-                button = QPushButton(item.label)
-                button.setObjectName("sidebarAuxButton")
-                button.setProperty("navKey", item.semantic_key)
-                button.setProperty("semanticKey", item.semantic_key)
-                button.setProperty("pageKey", item.key)
-                button.setProperty("usabilityRole", "auxiliary_navigation")
-                button.setAccessibleName(item.label)
-                button.setToolTip(item.label)
-                button.setMinimumHeight(36)
-                button.clicked.connect(callback)
-                layout.addWidget(button)
-            footer = QLabel("Developer Preview")
-            footer.setStyleSheet("color: #64748B;")
-            layout.addWidget(footer)
+            super().__init__(items=items, callbacks=callbacks)
 
 else:
 

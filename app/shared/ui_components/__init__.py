@@ -1,11 +1,21 @@
 """Shared UI component namespace."""
 
 from app.shared.ui_components.primitives import (
+    AppSidebar,
+    AppSidebarItem,
     diagnostic_disclosure_title,
+    make_action_button,
+    make_app_sidebar,
     make_button,
     make_card,
     make_empty_state,
+    make_icon_label,
+    make_info_banner,
+    make_page_header,
+    make_page_shell,
+    make_section_title,
     make_status_chip,
+    make_workbench_card,
 )
 from app.shared.ui_components.workbench import (
     WorkbenchActionSpec,
@@ -26,11 +36,21 @@ from app.shared.ui_components.workbench import (
 __all__ = [
     "WorkbenchActionSpec",
     "WorkbenchNavItem",
+    "AppSidebar",
+    "AppSidebarItem",
     "diagnostic_disclosure_title",
+    "make_action_button",
+    "make_app_sidebar",
     "make_button",
     "make_card",
     "make_empty_state",
+    "make_icon_label",
+    "make_info_banner",
+    "make_page_header",
+    "make_page_shell",
+    "make_section_title",
     "make_status_chip",
+    "make_workbench_card",
     "make_workbench_action_bar",
     "make_workbench_content_area",
     "make_workbench_disabled_action",
