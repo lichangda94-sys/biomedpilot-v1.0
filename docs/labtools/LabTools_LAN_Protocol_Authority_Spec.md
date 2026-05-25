@@ -5,10 +5,11 @@ Date: 2026-05-25
 ## Purpose
 
 This document defines the minimum LAN MVP protocol and authority boundary for
-LabTools. It is a design gate, not a runtime implementation.
+LabTools. The original LAN-LT3 section is a design gate. LAN-LT4 adds the first
+manual loopback health server prototype while keeping data access disabled.
 
-This phase does not add server runtime code, client network I/O, auth, token
-storage, port listeners, sync jobs, write endpoints, or UI behavior.
+This phase does not add client network I/O, auth, token storage, sync jobs,
+write endpoints, public-network binding, or UI behavior.
 
 ## MVP Mode
 
@@ -264,7 +265,43 @@ for:
 - Write endpoint allowlist.
 - Reagent/sample/record-specific write boundaries.
 
-## Acceptance Criteria For This Spec
+## LAN-LT4 Loopback Health Prototype
+
+LAN-LT4 implements a manually started loopback-only health runtime:
+
+```text
+python3 -m labtools.lan_server --host 127.0.0.1 --port 0 --health-only
+```
+
+Available endpoints:
+
+```text
+GET /health
+GET /status
+```
+
+Runtime constraints:
+
+- Binds only to `127.0.0.1` or `localhost`, normalized to `127.0.0.1`.
+- Does not bind a port until `start()` or the CLI is invoked.
+- Does not auto-start from package import, smoke test, adapter construction, or
+  UI runtime.
+- Does not expose reagent, sample, cell, freeze vial, record, report, image,
+  PDF, DOCX, filesystem, or raw store endpoints.
+- Does not import or mutate `LocalLabToolsDataStore`.
+- Returns the stable `labtools_lan_api.v1` envelope for health/status and
+  blocked endpoints.
+- Blocks write methods with `blocked_write_disabled`.
+
+Manual checkpoint before LAN-LT5:
+
+- Confirm loopback health/status behavior is acceptable.
+- Confirm no data read endpoints should be enabled yet.
+- Confirm LAN client transport should remain disabled until a separate read-only
+  endpoint phase.
+- Confirm auth/token/multi-user/sync/write behavior remains out of scope.
+
+## Acceptance Criteria For LAN-LT3 Spec Gate
 
 - This file exists.
 - No runtime server code is added.
