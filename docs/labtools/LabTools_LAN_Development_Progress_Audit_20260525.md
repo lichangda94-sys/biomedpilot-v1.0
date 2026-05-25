@@ -1,0 +1,232 @@
+# LabTools LAN Development Progress Audit
+
+Date: 2026-05-25
+
+## Executive Summary
+
+LabTools LAN development is currently in a skeleton and boundary stage.
+
+Usable LAN product capability is effectively 0%: there is no running LAN server,
+no client network connection, no sync protocol, no authentication, no
+multi-user permission model, and no conflict merge behavior.
+
+LAN architecture readiness is approximately 45-55%. The local-first data
+contract, adapter boundary, disabled future adapters, server skeleton contract,
+and client adapter skeleton are in place. These are important prerequisites, but
+they do not yet move data across machines.
+
+## Current Commits Reviewed
+
+- `487d369 docs(labtools): define future LAN cloud adapter boundary`
+- `7131cd6 feat(labtools): add LAN server skeleton contract`
+- `9b34485 feat(labtools): add LAN client adapter skeleton`
+
+The audit also relies on the local-first data store line through:
+
+- `9b77128 feat(labtools): add local-first data store`
+- `41a5e9a feat(labtools): support local reagent write operations`
+- `b373ab0 feat(labtools): support local sample write operations`
+- `818cbee feat(labtools): support local record index operations`
+
+## Completion Matrix
+
+| Area | Status | Completion | Notes |
+| --- | --- | ---: | --- |
+| Local-first route decision | Complete | 100% | LAN is explicitly delayed behind local-first. |
+| Future LAN/cloud boundary doc | Complete | 100% | Current non-goals and future adapter rules are documented. |
+| Future adapter disabled placeholders | Complete | 100% | `future_lan` and `future_cloud` report disabled status. |
+| Local data contract reuse | Mostly complete | 80% | Reagent, sample, cell, freeze vial, record index, audit, version, and source mode are available for future adapters. |
+| Server skeleton contract | Complete for skeleton | 100% | `labtools.lan_server` is importable and returns disabled non-listening status. |
+| Client adapter skeleton contract | Complete for skeleton | 100% | `labtools.lan_client` is importable and blocks reads/writes as disabled. |
+| Real LAN server runtime | Not started | 0% | No socket, HTTP server, event loop, or daemon exists. |
+| Real LAN client network I/O | Not started | 0% | No requests, device discovery, or connection flow exists. |
+| Sync protocol | Not started | 0% | No pull/push/delta/full snapshot protocol exists. |
+| Server storage authority | Not started | 0% | No decision whether server owns JSON, SQLite, or another store. |
+| Authentication and permissions | Not started | 0% | No admin/editor/viewer model, token, user identity, or audit user mapping. |
+| Conflict handling | Not started | 0% | Existing local expected-version blocking exists, but no multi-client policy. |
+| UI LAN settings/status | Not started | 0% | UIShell has no LAN connection or status setup UI. |
+| Network failure tests | Not started | 0% | Current tests intentionally verify no network code is active. |
+
+## What Is Implemented
+
+### Boundary
+
+`docs/labtools/LabTools_Future_LAN_Cloud_Adapter_Boundary.md` defines that the
+current product has no LAN server, no cloud sync, no multi-user permissions, no
+automatic conflict merging, no public network service, no token/auth flow, and
+no port listener.
+
+It also defines the future rule: LAN/cloud must enter through
+`LabToolsDataSourceAdapter`, reuse local data contracts, preserve expected
+version checks, preserve audit log behavior, and keep UI away from direct server
+or database access.
+
+### Server Skeleton
+
+`labtools.lan_server` exposes:
+
+- `LabToolsLanServerConfig`
+- `LabToolsLanServerStatus`
+- `LabToolsLanServerSkeleton`
+- `build_lan_server_skeleton()`
+
+The skeleton returns disabled status:
+
+```text
+status = disabled_skeleton
+data_source_mode = future_lan
+enabled = false
+network_enabled = false
+listening = false
+```
+
+`start()` and `stop()` do not bind a port or start a service.
+
+### Client Adapter Skeleton
+
+`labtools.lan_client` exposes:
+
+- `LabToolsLanClientConfig`
+- `LabToolsLanClientStatus`
+- `LabToolsLanClientDataSourceAdapter`
+- `build_lan_client_adapter_skeleton()`
+
+The adapter reports `future_lan` disabled status, returns empty read results,
+and blocks write methods with a disabled reason. It does not perform network
+I/O.
+
+### Tests
+
+Current tests verify:
+
+- Server skeleton does not listen.
+- Server skeleton start/stop do not enable network.
+- Client skeleton does not connect.
+- Client skeleton read methods return empty results.
+- Client skeleton write methods block.
+- Skeleton source does not include network client/server imports or listener
+  calls.
+- Package smoke includes `labtools.lan_server` and `labtools.lan_client`.
+
+## What Is Not Implemented
+
+The following are not implemented and should not be described as available:
+
+- LAN server process.
+- LAN API endpoints.
+- LAN client network transport.
+- Device discovery.
+- Workspace pairing.
+- Authentication.
+- User roles.
+- Token storage.
+- Remote database.
+- Remote JSON or SQLite sharing.
+- Sync scheduling.
+- Push/pull conflict handling.
+- Automatic conflict merge.
+- LAN UI setup page.
+- LAN status page.
+- Network failure handling.
+- Multi-device test matrix.
+
+## Completion Assessment
+
+### Product Capability
+
+Current LAN product capability: 0%.
+
+Reason: no data can be shared across devices, no client can connect to a server,
+and no server can accept requests.
+
+### Engineering Foundation
+
+Current LAN engineering foundation: approximately 45-55%.
+
+Reason: local-first data contracts, adapter boundaries, disabled future modes,
+server skeleton, client adapter skeleton, and boundary tests are in place. These
+reduce future design risk but do not implement network behavior.
+
+### Recommended Overall Label
+
+Use this label in status reports:
+
+```text
+LAN: skeleton-ready / non-network / disabled
+```
+
+Avoid labels such as:
+
+```text
+LAN ready
+LAN sync available
+multi-user ready
+server available
+```
+
+## Key Risks Before Real LAN Work
+
+1. Server storage authority is undecided.
+
+   A future task must decide whether the LAN server wraps the existing JSON
+   store, migrates to SQLite, or owns a separate server-side persistence layer.
+
+2. Multi-client version semantics are undefined.
+
+   Local expected-version blocking exists, but LAN needs a policy for stale
+   remote clients, offline edits, retries, and conflict presentation.
+
+3. Auth and audit identity are missing.
+
+   Current audit uses local-user semantics. LAN needs user identity mapping
+   before multi-user writes can be trusted.
+
+4. UI behavior is not designed.
+
+   There is no connection setup, connection health, read-only fallback, sync
+   queue, or conflict display UI.
+
+5. Packaging impact is unknown.
+
+   A listening server or background process will affect desktop packaging,
+   firewall prompts, LaunchServices validation, and support expectations.
+
+## Recommended Next Steps
+
+### Next Safe Development Task
+
+Implement a LAN readiness spec, not real networking:
+
+```text
+LAN-LT3 LAN protocol and authority design
+```
+
+Expected output:
+
+- Server authority decision.
+- Endpoint or adapter method draft.
+- Read/write transaction rules.
+- Expected-version conflict policy.
+- Audit user mapping proposal.
+- Failure mode matrix.
+- UI state contract.
+- Explicit non-goals.
+
+### First Real Networking Task After That
+
+Only after the readiness spec is accepted:
+
+```text
+LAN-LT4 local loopback server prototype
+```
+
+That task should still avoid multi-user sync and should only expose a read-only
+health/status endpoint first.
+
+## Current Recommendation
+
+Do not implement LAN sync yet.
+
+The current codebase is ready for the next LAN design gate and a read-only
+loopback prototype plan. It is not ready for multi-user sync, automatic conflict
+handling, or networked writes.
