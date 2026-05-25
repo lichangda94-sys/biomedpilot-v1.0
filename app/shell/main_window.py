@@ -2991,6 +2991,8 @@ class MainWindow(QMainWindow):
         content.setProperty("moduleKey", ModuleKey.SETTINGS.value)
         content.setProperty("pageKey", "settings")
         content.setProperty("semanticKey", ModuleKey.SETTINGS.value)
+        content.setProperty("uiPrimitive", "workbench_shell_content")
+        content.setProperty("layoutPolishNoOverlap", True)
         root = QVBoxLayout(content)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
@@ -3009,6 +3011,8 @@ class MainWindow(QMainWindow):
         body.setSpacing(16)
         nav = QListWidget()
         nav.setObjectName("settingsSecondaryNav")
+        nav.setProperty("uiPrimitive", "workbench_secondary_nav")
+        nav.setProperty("layoutPolishNoOverlap", True)
         nav.setFixedWidth(230)
         for label, page_key, semantic_key in (
             ("通用偏好", "general", PageKey.SETTINGS_GENERAL.value),
@@ -3024,6 +3028,8 @@ class MainWindow(QMainWindow):
 
         stack = QStackedWidget()
         stack.setObjectName("settingsContentStack")
+        stack.setProperty("uiPrimitive", "workbench_content_stack")
+        stack.setProperty("layoutPolishNoOverlap", True)
         stack.addWidget(self._build_settings_general_page(profile))
         stack.addWidget(self._build_settings_external_capabilities_page())
         stack.addWidget(self._build_settings_analysis_resources_page())
@@ -3061,7 +3067,7 @@ class MainWindow(QMainWindow):
                 ],
             )
         )
-        root.addWidget(self._icon_asset_status_card(detailed=True))
+        root.addWidget(self._icon_asset_status_card(detailed=False))
         root.addStretch(1)
         return page
 
@@ -3224,6 +3230,9 @@ class MainWindow(QMainWindow):
         )
         panel.setObjectName("developerDiagnosticsPanel")
         panel.setVisible(False)
+        panel_layout = panel.layout()
+        if isinstance(panel_layout, QVBoxLayout):
+            panel_layout.addWidget(self._icon_asset_status_card(detailed=True))
         toggle.toggled.connect(panel.setVisible)
         root.addWidget(panel)
         root.addStretch(1)

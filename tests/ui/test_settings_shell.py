@@ -51,6 +51,8 @@ def test_settings_shell_exposes_secondary_navigation(settings_window) -> None:
     assert page.property("usabilityRole") == "scrollable_shell_page"
     assert page.accessibleName() == "Settings shell page"
     assert nav is not None
+    assert nav.property("uiPrimitive") == "workbench_secondary_nav"
+    assert nav.property("layoutPolishNoOverlap") is True
     assert [nav.item(index).data(Qt.UserRole + 1) for index in range(nav.count())] == [
         PageKey.SETTINGS_GENERAL.value,
         PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
@@ -59,6 +61,8 @@ def test_settings_shell_exposes_secondary_navigation(settings_window) -> None:
         PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value,
     ]
     assert stack is not None
+    assert stack.property("uiPrimitive") == "workbench_content_stack"
+    assert stack.property("layoutPolishNoOverlap") is True
     assert [stack.widget(index).property("moduleKey") for index in range(stack.count())] == [ModuleKey.SETTINGS.value] * 5
     assert [stack.widget(index).property("semanticKey") for index in range(stack.count())] == [
         PageKey.SETTINGS_GENERAL.value,
