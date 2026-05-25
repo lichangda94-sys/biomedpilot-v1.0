@@ -21,6 +21,7 @@ from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO
 from app.bioinformatics.reports.renderer_runtime_policy import (
     DEFAULT_RENDERER_SEARCH_PATHS,
     FULL_INTEGRATED_RENDERER_RUNTIME_POLICY_ID,
+    USER_RENDERER_SEARCH_PATHS,
     build_full_integrated_renderer_runtime_packaging_policy,
 )
 
@@ -322,7 +323,7 @@ def _bundle_identifier(app_name: str) -> str:
 
 
 def _write_launcher(path: Path, *, app_name: str, python_executable: str) -> None:
-    renderer_search_paths = ":".join(DEFAULT_RENDERER_SEARCH_PATHS)
+    renderer_search_paths = ":".join(_shell_search_path(part) for part in (*USER_RENDERER_SEARCH_PATHS, *DEFAULT_RENDERER_SEARCH_PATHS))
     script = f"""#!/bin/sh
 set -eu
 APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
@@ -370,6 +371,12 @@ exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+
+
+def _shell_search_path(path: str) -> str:
+    if path.startswith("~/"):
+        return "${HOME}/" + path[2:]
+    return path
 
 
 def _ad_hoc_sign_app(app_path: Path) -> str:

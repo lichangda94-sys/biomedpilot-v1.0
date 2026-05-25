@@ -56,6 +56,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert renderer_policy["policy_id"] == "b24_3_system_path_no_bundled_renderers"
     assert renderer_policy["releasebuild_policy"]["bundles_external_renderers"] is False
     assert renderer_policy["docx"]["runtime_provider"] == "user_system_pandoc_on_search_path"
+    assert "~/Library/TinyTeX/bin/universal-darwin" in renderer_policy["startup_path_policy"]["user_level_search_paths"]
 
     with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
@@ -178,6 +179,7 @@ def test_package_app_keeps_display_name_separate_from_executable_name(tmp_path) 
     launcher_text = result.launcher_path.read_text(encoding="utf-8")
     assert "export PYTHONDONTWRITEBYTECODE=\"1\"" in launcher_text
     assert "export BIOMEDPILOT_EXTERNAL_RENDERER_POLICY=\"b24_3_system_path_no_bundled_renderers\"" in launcher_text
+    assert "${HOME}/Library/TinyTeX/bin/universal-darwin" in launcher_text
     assert "export BIOMEDPILOT_RENDERER_SEARCH_PATHS=\"$RENDERER_SEARCH_PATHS\"" in launcher_text
     assert "export PATH=\"$RENDERER_SEARCH_PATHS${PATH:+:$PATH}\"" in launcher_text
     assert "PYTHON_ARCH=\"arm64\"" in launcher_text

@@ -145,10 +145,15 @@ def _renderer_search_path() -> str:
     policy = build_full_integrated_renderer_runtime_packaging_policy()
     startup = policy.get("startup_path_policy") if isinstance(policy.get("startup_path_policy"), dict) else {}
     env_name = str(startup.get("environment_variable") or "BIOMEDPILOT_RENDERER_SEARCH_PATHS")
-    configured = [part for part in os.environ.get(env_name, "").split(os.pathsep) if part]
-    defaults = [str(part) for part in startup.get("default_search_paths", []) or []]
-    existing = [part for part in os.environ.get("PATH", "").split(os.pathsep) if part]
-    return os.pathsep.join(dict.fromkeys([*configured, *defaults, *existing]))
+    configured = [_expand_search_path(part) for part in os.environ.get(env_name, "").split(os.pathsep) if part]
+    user_level = [_expand_search_path(str(part)) for part in startup.get("user_level_search_paths", []) or []]
+    defaults = [_expand_search_path(str(part)) for part in startup.get("default_search_paths", []) or []]
+    existing = [_expand_search_path(part) for part in os.environ.get("PATH", "").split(os.pathsep) if part]
+    return os.pathsep.join(dict.fromkeys([*configured, *user_level, *defaults, *existing]))
+
+
+def _expand_search_path(path: str) -> str:
+    return os.path.expandvars(os.path.expanduser(path))
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:

@@ -12,6 +12,7 @@ from app.bioinformatics.reports.integrated import (
     build_full_integrated_report_package_plan,
     create_full_integrated_docx_rendered_export,
     create_full_integrated_docx_rendered_export_skeleton,
+    create_full_integrated_pdf_rendered_export,
     create_full_integrated_pdf_rendered_export_skeleton,
     create_full_integrated_report_package,
     evaluate_full_integrated_docx_preflight_gate,
@@ -469,6 +470,119 @@ def test_pdf_rendered_export_skeleton_keeps_existing_docx_exports(tmp_path: Path
     assert package_manifest["rendered_exports_summary"]["pdf_conversion_enabled"] is False
 
 
+def test_pdf_rendered_export_blocks_when_xelatex_missing_without_pdf(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    result = create_full_integrated_pdf_rendered_export(
+        package["package_path"],
+        command_finder=lambda command: "/usr/local/bin/pandoc" if command == "pandoc" else None,
+        runner=_runner_should_not_convert,
+    )
+
+    package_path = Path(package["package_path"])
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "blocked"
+    assert "renderer_dependency_missing:xelatex" in result["blockers"]
+    assert result["output_path"] == ""
+    assert rendered["exports"] == []
+    assert rendered["attempts"][0]["validation_status"] == "blocked"
+    assert rendered["attempts"][0]["conversion_invoked"] is False
+    assert log_payload["conversion_invoked"] is False
+    assert not list((package_path / "exports").glob("*.pdf"))
+
+
+def test_pdf_rendered_export_creates_pdf_and_registers_package_export_when_xelatex_available(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    result = create_full_integrated_pdf_rendered_export(
+        package["package_path"],
+        command_finder=lambda command: f"/usr/local/bin/{command}",
+        runner=_pandoc_runner_writes_pdf,
+    )
+
+    package_path = Path(package["package_path"])
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
+    output = Path(result["output_path"])
+
+    assert result["status"] == "full_integrated_pdf_rendered_export_created"
+    assert output.is_file()
+    assert output.read_bytes().startswith(b"%PDF")
+    assert rendered["exports"][0]["artifact_type"] == "full_integrated_report_rendered_export"
+    assert rendered["exports"][0]["export_format"] == "pdf"
+    assert rendered["exports"][0]["selected_backend"] == "pandoc_xelatex"
+    assert rendered["exports"][0]["validation_status"] == "passed"
+    assert rendered["attempts"][0]["validation_status"] == "passed"
+    assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
+    assert rendered["policy"]["do_not_write_formal_computed_result"] is True
+    assert log_payload["conversion_invoked"] is True
+    assert log_payload["exit_code"] == 0
+    assert log_payload["selected_backend"] == "pandoc_xelatex"
+    assert package_manifest["rendered_exports_summary"]["exports_count"] == 1
+    assert package_manifest["rendered_exports_summary"]["pdf_conversion_enabled"] is True
+
+
+def test_pdf_rendered_export_real_xelatex_environment_acceptance(tmp_path: Path, monkeypatch) -> None:
+    if not shutil.which("pandoc") or not shutil.which("xelatex", path=_renderer_search_path_for_test()):
+        pytest.skip("user/system Pandoc and XeLaTeX are not both installed on the renderer search path")
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    result = create_full_integrated_pdf_rendered_export(package["package_path"], timeout_seconds=60)
+
+    package_path = Path(package["package_path"])
+    output = Path(result["output_path"])
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "full_integrated_pdf_rendered_export_created"
+    assert result["blockers"] == []
+    assert output.suffix == ".pdf"
+    assert output.is_file()
+    assert output.stat().st_size > 0
+    assert output.read_bytes()[:4] == b"%PDF"
+    assert rendered["exports"][0]["export_format"] == "pdf"
+    assert rendered["exports"][0]["validation_status"] == "passed"
+    assert rendered["policy"]["pdf_conversion_enabled"] is True
+    assert log_payload["conversion_invoked"] is True
+    assert log_payload["exit_code"] == 0
+    assert log_payload["markdown_package_preserved"] is True
+
+
+def test_pdf_rendered_export_failure_rolls_back_temp_and_preserves_markdown(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+    package_path = Path(package["package_path"])
+
+    result = create_full_integrated_pdf_rendered_export(
+        package_path,
+        command_finder=lambda command: f"/usr/local/bin/{command}",
+        runner=_pandoc_runner_fails,
+    )
+
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    log_payload = json.loads(Path(result["conversion_log_path"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "failed"
+    assert "pdf_pandoc_conversion_failed" in result["blockers"]
+    assert rendered["exports"] == []
+    assert rendered["attempts"][0]["validation_status"] == "failed"
+    assert log_payload["conversion_invoked"] is True
+    assert log_payload["exit_code"] == 2
+    assert (package_path / "integrated_report.md").is_file()
+    assert not list((package_path / "exports" / ".tmp").glob("*.pdf"))
+    assert not list((package_path / "exports").glob("*.pdf"))
+
+
 def _write_entries(root: Path) -> None:
     entries = []
     for result_id, task_type, artifact_type in (
@@ -634,10 +748,30 @@ def _pandoc_runner_writes_docx(args, **kwargs):
     return subprocess.CompletedProcess(args, 0, stdout="pandoc ok\n", stderr="")
 
 
+def _pandoc_runner_writes_pdf(args, **kwargs):
+    if "--version" in args or "-version" in args:
+        return subprocess.CompletedProcess(args, 0, stdout="pandoc 3.2\n", stderr="")
+    output = Path(args[args.index("-o") + 1])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(b"%PDF-1.7\n% fixture\n")
+    return subprocess.CompletedProcess(args, 0, stdout="pandoc ok\n", stderr="")
+
+
 def _pandoc_runner_fails(args, **kwargs):
     if "--version" in args or "-version" in args:
         return subprocess.CompletedProcess(args, 0, stdout="pandoc 3.2\n", stderr="")
     return subprocess.CompletedProcess(args, 2, stdout="", stderr="pandoc failed\n")
+
+
+def _renderer_search_path_for_test() -> str:
+    home = Path.home()
+    parts = [
+        str(home / "Library" / "TinyTeX" / "bin" / "universal-darwin"),
+        str(home / ".TinyTeX" / "bin" / "universal-darwin"),
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+    ]
+    return ":".join(parts)
 
 
 def _passed_gate() -> dict:

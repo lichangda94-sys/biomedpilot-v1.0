@@ -54,6 +54,22 @@ def test_renderer_capability_detection_can_use_injected_packaged_search_path() -
     assert snapshot["runtime_packaging_policy"]["docx"]["runtime_provider"] == "user_system_pandoc_on_search_path"
 
 
+def test_renderer_capability_search_path_includes_user_tinytex(monkeypatch) -> None:
+    captured_paths: list[str] = []
+
+    def fake_which(_command: str, path: str | None = None) -> None:
+        captured_paths.append(path or "")
+        return None
+
+    monkeypatch.setattr(renderer_capability.shutil, "which", fake_which)
+
+    detect_renderer_dependency("xelatex")
+
+    assert captured_paths
+    assert "/Library/TinyTeX/bin/universal-darwin" in captured_paths[0]
+    assert "~/" not in captured_paths[0]
+
+
 def test_renderer_capability_snapshot_can_be_written_to_json(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(renderer_capability.shutil, "which", lambda _command, path=None: None)
     output = tmp_path / "renderer_snapshot.json"

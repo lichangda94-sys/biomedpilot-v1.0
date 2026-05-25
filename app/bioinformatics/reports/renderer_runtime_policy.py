@@ -5,6 +5,7 @@ from typing import Any
 
 FULL_INTEGRATED_RENDERER_RUNTIME_PACKAGING_POLICY_SCHEMA_VERSION = "biomedpilot.full_integrated_renderer_runtime_packaging_policy.v1"
 FULL_INTEGRATED_RENDERER_RUNTIME_POLICY_ID = "b24_3_system_path_no_bundled_renderers"
+USER_RENDERER_SEARCH_PATHS = ("~/Library/TinyTeX/bin/universal-darwin", "~/.TinyTeX/bin/universal-darwin")
 DEFAULT_RENDERER_SEARCH_PATHS = ("/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin")
 
 
@@ -22,8 +23,9 @@ def build_full_integrated_renderer_runtime_packaging_policy() -> dict[str, Any]:
         },
         "startup_path_policy": {
             "environment_variable": "BIOMEDPILOT_RENDERER_SEARCH_PATHS",
+            "user_level_search_paths": list(USER_RENDERER_SEARCH_PATHS),
             "default_search_paths": list(DEFAULT_RENDERER_SEARCH_PATHS),
-            "open_w_policy": "Launcher exports stable Homebrew/system command search paths so Finder/open -W uses the same detect-first policy as source runs.",
+            "open_w_policy": "Launcher exports stable user-level TinyTeX, Homebrew, and system command search paths so Finder/open -W uses the same detect-first policy as source runs.",
             "override_policy": "Users may still provide commands through PATH; BioMedPilot does not install or download missing renderer tools.",
         },
         "docx": {
