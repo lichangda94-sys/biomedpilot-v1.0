@@ -4909,6 +4909,39 @@ def test_results_browser_pdf_rendered_export_runs_only_after_gate_passes(qt_app,
     assert "risk score" in widget.status_message()
 
 
+def test_results_browser_pdf_rendered_export_real_environment_registers_package_artifact(qt_app, project_summary) -> None:
+    renderer_gate = workflow_pages.evaluate_full_integrated_report_renderer_gate("pdf", allow_pdf_activation=True)
+    if renderer_gate.get("status") != "passed":
+        pytest.skip(f"PDF renderer runtime unavailable: {renderer_gate.get('blockers', [])}")
+
+    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    pdf_button = widget.findChild(QPushButton, "fullIntegratedPdfRenderedExportButton")
+    assert pdf_button is not None
+    assert pdf_button.isEnabled() is True
+
+    result = widget.generate_full_integrated_pdf_rendered_export()
+
+    assert result is not None
+    assert result["status"] == "full_integrated_pdf_rendered_export_created"
+    output_path = Path(str(result["output_path"]))
+    assert output_path.is_file()
+    assert output_path.read_bytes()[:4] == b"%PDF"
+    assert package_path in output_path.parents
+    assert "输出位置：" in widget.status_message()
+    assert "不写入 result index" in widget.status_message()
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    assert rendered["exports"][-1]["export_format"] == "pdf"
+    assert rendered["exports"][-1]["selected_backend"] == "pandoc_xelatex"
+    assert rendered["exports"][-1]["validation_status"] == "passed"
+    assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
+    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
+    assert package_manifest["rendered_exports_summary"]["pdf_conversion_enabled"] is True
+    assert not list((package_path / "exports" / ".tmp").glob("*.pdf"))
+
+
 def _full_integrated_ui_gate() -> dict[str, object]:
     rows = [
         _full_integrated_ui_section("formal_deg", "deg-ui", "deg", package_status="not_required"),
