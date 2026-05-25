@@ -461,7 +461,7 @@ def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataRead
                 write_enabled=False,
                 history_enabled=False,
                 export_enabled=False,
-                reason="请输入手动 LAN loopback server URL；不会自动发现或自动连接。",
+                reason="请输入手动 LAN read-only server URL；不会自动发现或自动连接。",
             )
         )
     try:
@@ -493,7 +493,7 @@ def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataRead
             write_enabled=False,
             history_enabled=True,
             export_enabled=False,
-            reason="LAN read-only summaries connected; writes, sync, auth, and auto-discovery are disabled.",
+            reason="LAN read-only summaries connected; writes, sync, auth, pairing, and auto-discovery are disabled.",
             reagent_count=len(reagents),
             sample_count=len(samples),
             cell_count=len(cells),

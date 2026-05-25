@@ -46,6 +46,7 @@ def test_lan_runtime_bridge_requires_manual_connection() -> None:
     assert model.status.read_enabled is False
     assert model.status.write_enabled is False
     assert "不会自动发现" in model.status.reason
+    assert "read-only server URL" in model.status.reason
 
 
 def test_lan_runtime_bridge_reads_loopback_summaries_without_writes(tmp_path: Path) -> None:
@@ -65,6 +66,7 @@ def test_lan_runtime_bridge_reads_loopback_summaries_without_writes(tmp_path: Pa
     assert model.status.data_source_mode == "future_lan"
     assert model.status.read_enabled is True
     assert model.status.write_enabled is False
+    assert "pairing" in model.status.reason
     assert model.status.reagent_count == 1
     assert model.status.sample_count == 1
     assert model.status.cell_count == 1

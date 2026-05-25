@@ -75,6 +75,7 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         assert note is not None
         assert status.property("status") == "manual_connection_required"
         assert "自动发现" in note.text()
+        assert "私有 LAN URL" in note.text()
 
         with build_lan_health_server(LabToolsLanHealthServerConfig(health_only=False, local_data_root=tmp_path)) as server:
             url_input.setText(server.url(""))
@@ -89,6 +90,7 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         assert counts.property("recordCount") == 1
         assert "不同步" in note.text()
         assert "不写入" in note.text()
+        assert "pairing/auth/token" in note.text()
     finally:
         window.close()
         window.deleteLater()
