@@ -64,12 +64,16 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
     try:
         url_input = window.findChild(QLineEdit, "labtoolsLanServerUrlInput")
         connect = window.findChild(QPushButton, "labtoolsLanConnectButton")
+        pair_code = window.findChild(QLineEdit, "labtoolsLanPairingCodeInput")
+        pair = window.findChild(QPushButton, "labtoolsLanPairButton")
         status = window.findChild(QLabel, "labtoolsLanStatusText")
         counts = window.findChild(QLabel, "labtoolsLanCountRow")
         note = window.findChild(QLabel, "labtoolsLanBoundaryNote")
 
         assert url_input is not None
         assert connect is not None
+        assert pair_code is not None
+        assert pair is not None
         assert status is not None
         assert counts is not None
         assert note is not None
@@ -90,7 +94,61 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         assert counts.property("recordCount") == 1
         assert "不同步" in note.text()
         assert "不写入" in note.text()
-        assert "pairing/auth/token" in note.text()
+        assert "paired viewer token" in note.text()
+    finally:
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_labtools_home_pairs_and_uses_saved_lan_token(qt_app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    labtools_runtime._ensure_labtools_importable()
+    from labtools.lan_server import LabToolsLanHealthServerConfig, build_lan_health_server
+
+    monkeypatch.setenv("BIOMEDPILOT_LABTOOLS_LAN_CREDENTIALS_PATH", str(tmp_path / "settings" / "lan_credentials.json"))
+    store_root = tmp_path / "store"
+    _seed_lan_store(store_root)
+    window = MainWindow()
+    window._welcome_page.enter_workspace()
+    window.show_labtools()
+    window._show_labtools_home()
+    try:
+        url_input = window.findChild(QLineEdit, "labtoolsLanServerUrlInput")
+        connect = window.findChild(QPushButton, "labtoolsLanConnectButton")
+        pair_code = window.findChild(QLineEdit, "labtoolsLanPairingCodeInput")
+        pair = window.findChild(QPushButton, "labtoolsLanPairButton")
+        status = window.findChild(QLabel, "labtoolsLanStatusText")
+        counts = window.findChild(QLabel, "labtoolsLanCountRow")
+
+        assert url_input is not None
+        assert connect is not None
+        assert pair_code is not None
+        assert pair is not None
+        assert status is not None
+        assert counts is not None
+
+        with build_lan_health_server(
+            LabToolsLanHealthServerConfig(
+                health_only=False,
+                local_data_root=store_root,
+                auth_required=True,
+                allow_unauthenticated_readonly=False,
+            )
+        ) as server:
+            url_input.setText(server.url(""))
+            connect.click()
+            qt_app.processEvents()
+            assert status.property("status") == "blocked_read_disabled"
+
+            pairing = server.create_pairing_session(client_label="UIShell manual LAN client")
+            pair_code.setText(pairing.pairing_code)
+            pair.click()
+            qt_app.processEvents()
+
+        assert status.property("status") == "ready_readonly"
+        assert counts.property("sampleCount") == 1
+        assert counts.property("recordCount") == 1
+        assert pair_code.text() == ""
     finally:
         window.close()
         window.deleteLater()

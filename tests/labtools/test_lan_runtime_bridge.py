@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from app import labtools_runtime
@@ -80,6 +81,66 @@ def test_lan_runtime_bridge_reads_loopback_summaries_without_writes(tmp_path: Pa
     assert model.records[0].record_type == "wb_loading"
     assert len(adapter.store.load_store().audit_log) == audit_count
     assert after_sample.volume == before_sample.volume == "25"
+
+
+def test_lan_runtime_bridge_claims_pairing_and_uses_saved_token(tmp_path: Path, monkeypatch) -> None:
+    labtools_runtime._ensure_labtools_importable()
+    from labtools.lan_server import LabToolsLanHealthServerConfig, build_lan_health_server
+
+    credentials_path = tmp_path / "settings" / "labtools_lan_credentials.json"
+    monkeypatch.setenv("BIOMEDPILOT_LABTOOLS_LAN_CREDENTIALS_PATH", str(credentials_path))
+    _seed_lan_store(tmp_path / "store")
+
+    with build_lan_health_server(
+        LabToolsLanHealthServerConfig(
+            health_only=False,
+            local_data_root=tmp_path / "store",
+            auth_required=True,
+            allow_unauthenticated_readonly=False,
+        )
+    ) as server:
+        blocked = labtools_runtime.get_labtools_lan_read_model(server.url(""))
+        pairing = server.create_pairing_session(client_label="UIShell test client")
+        paired = labtools_runtime.claim_labtools_lan_pairing(server.url(""), pairing.pairing_code, client_label="UIShell test client")
+        model = labtools_runtime.get_labtools_lan_read_model(server.url(""))
+
+    payload = json.loads(credentials_path.read_text(encoding="utf-8"))
+
+    assert blocked.status.read_enabled is False
+    assert blocked.status.status == "blocked_read_disabled"
+    assert paired.success is True
+    assert paired.status == "paired"
+    assert paired.credential is not None
+    assert paired.credential.role == "viewer"
+    assert payload["schema_version"] == labtools_runtime.LAN_CREDENTIAL_SCHEMA_VERSION
+    assert payload["credentials"][0]["server_url"].startswith("http://127.0.0.1:")
+    assert payload["credentials"][0]["token"]
+    assert model.status.status == "ready_readonly"
+    assert model.status.read_enabled is True
+    assert model.wb_samples[0].concentration == "2.0"
+
+
+def test_lan_runtime_bridge_blocks_bad_pairing_without_credentials(tmp_path: Path, monkeypatch) -> None:
+    labtools_runtime._ensure_labtools_importable()
+    from labtools.lan_server import LabToolsLanHealthServerConfig, build_lan_health_server
+
+    credentials_path = tmp_path / "settings" / "labtools_lan_credentials.json"
+    monkeypatch.setenv("BIOMEDPILOT_LABTOOLS_LAN_CREDENTIALS_PATH", str(credentials_path))
+    _seed_lan_store(tmp_path / "store")
+
+    with build_lan_health_server(
+        LabToolsLanHealthServerConfig(
+            health_only=False,
+            local_data_root=tmp_path / "store",
+            auth_required=True,
+            allow_unauthenticated_readonly=False,
+        )
+    ) as server:
+        result = labtools_runtime.claim_labtools_lan_pairing(server.url(""), "00000000", client_label="UIShell test client")
+
+    assert result.success is False
+    assert result.status == "pairing_required"
+    assert not credentials_path.exists()
 
 
 def test_lan_runtime_bridge_blocks_unavailable_server_gracefully() -> None:

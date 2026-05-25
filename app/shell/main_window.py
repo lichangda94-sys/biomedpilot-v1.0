@@ -496,6 +496,20 @@ class MainWindow(QMainWindow):
         row.addWidget(self._labtools_lan_url_input, 1)
         row.addWidget(connect)
         layout.addLayout(row)
+        pair_row = QHBoxLayout()
+        pair_row.setSpacing(8)
+        self._labtools_lan_pairing_code_input = QLineEdit()
+        self._labtools_lan_pairing_code_input.setObjectName("labtoolsLanPairingCodeInput")
+        self._labtools_lan_pairing_code_input.setPlaceholderText("Pairing code")
+        self._labtools_lan_pairing_code_input.setMaxLength(8)
+        self._labtools_lan_pairing_code_input.setProperty("dataSourceMode", "future_lan")
+        pair = make_button("保存本机只读 token", role="secondary")
+        pair.setObjectName("labtoolsLanPairButton")
+        pair.setProperty("dataSourceMode", "future_lan")
+        pair.clicked.connect(self._pair_labtools_lan_readonly)
+        pair_row.addWidget(self._labtools_lan_pairing_code_input, 1)
+        pair_row.addWidget(pair)
+        layout.addLayout(pair_row)
         self._labtools_lan_status_label = QLabel("未连接；请输入 LAN read-only URL 后手动连接。不自动发现、不同步、不写入。")
         self._labtools_lan_status_label.setObjectName("labtoolsLanStatusText")
         self._labtools_lan_status_label.setProperty("status", "manual_connection_required")
@@ -509,11 +523,29 @@ class MainWindow(QMainWindow):
         self._labtools_lan_count_label.setProperty("cellCount", 0)
         self._labtools_lan_count_label.setProperty("recordCount", 0)
         layout.addWidget(self._labtools_lan_count_label)
-        note = QLabel("LAN 只读摘要不是同步功能；可手动连接私有 LAN URL，但不同步、不写入，pairing/auth/token、自动发现和云端同步均保持禁用。")
+        note = QLabel("LAN 只读摘要不是同步功能；可手动连接私有 LAN URL，并将 paired viewer token 保存到本机设置文件。不同步、不写入、不自动发现、不启用云端同步。")
         note.setObjectName("labtoolsLanBoundaryNote")
         note.setWordWrap(True)
         layout.addWidget(note)
         return frame
+
+    def _pair_labtools_lan_readonly(self) -> None:
+        url_input = getattr(self, "_labtools_lan_url_input", None)
+        code_input = getattr(self, "_labtools_lan_pairing_code_input", None)
+        status_label = getattr(self, "_labtools_lan_status_label", None)
+        if not isinstance(url_input, QLineEdit) or not isinstance(code_input, QLineEdit) or not isinstance(status_label, QLabel):
+            return
+        result = labtools_runtime.claim_labtools_lan_pairing(
+            url_input.text(),
+            code_input.text(),
+            client_label="UIShell manual LAN client",
+        )
+        status_label.setText(f"LAN pairing：{result.status} · {result.message}")
+        status_label.setProperty("status", result.status)
+        status_label.setProperty("dataSourceMode", "future_lan")
+        if result.success:
+            code_input.clear()
+            self._connect_labtools_lan_readonly()
 
     def _connect_labtools_lan_readonly(self) -> None:
         url_input = getattr(self, "_labtools_lan_url_input", None)

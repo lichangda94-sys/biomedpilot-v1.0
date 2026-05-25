@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from app.labtools_storage_adapter import BioMedPilotLabToolsStorageAdapter, LabT
 
 LABTOOLS_SIBLING_ROOT = Path(__file__).resolve().parents[2] / "LabTools"
 REVIEW_NOTICE = "实验计算结果需由用户复核后使用。"
+LAN_CREDENTIAL_SCHEMA_VERSION = "biomedpilot_labtools_lan_credentials.v1"
 
 
 @dataclass(frozen=True)
@@ -258,6 +260,26 @@ class LabToolsLanManualConnection:
 
 
 @dataclass(frozen=True)
+class LabToolsLanCredential:
+    server_url: str
+    token: str
+    token_id: str
+    client_label: str
+    role: str
+    expires_at: str
+    saved_at: str
+
+
+@dataclass(frozen=True)
+class LabToolsLanPairingResult:
+    success: bool
+    status: str
+    message: str
+    credential: LabToolsLanCredential | None = None
+    blocker: str = ""
+
+
+@dataclass(frozen=True)
 class LabToolsLocalWriteResult:
     success: bool
     status: str
@@ -450,6 +472,93 @@ def get_labtools_local_data_status(
         )
 
 
+def get_labtools_lan_credentials_path() -> Path:
+    override = os.environ.get("BIOMEDPILOT_LABTOOLS_LAN_CREDENTIALS_PATH", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / ".biomedpilot" / "labtools_lan_credentials.json"
+
+
+def load_labtools_lan_credentials() -> tuple[LabToolsLanCredential, ...]:
+    path = get_labtools_lan_credentials_path()
+    if not path.exists():
+        return ()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return ()
+    if not isinstance(payload, Mapping) or payload.get("schema_version") != LAN_CREDENTIAL_SCHEMA_VERSION:
+        return ()
+    credentials = payload.get("credentials")
+    if not isinstance(credentials, list):
+        return ()
+    loaded: list[LabToolsLanCredential] = []
+    for item in credentials:
+        if not isinstance(item, Mapping):
+            continue
+        credential = LabToolsLanCredential(
+            server_url=_lan_server_key(item.get("server_url")),
+            token=str(item.get("token") or "").strip(),
+            token_id=str(item.get("token_id") or "").strip(),
+            client_label=str(item.get("client_label") or "").strip(),
+            role=str(item.get("role") or "").strip(),
+            expires_at=str(item.get("expires_at") or "").strip(),
+            saved_at=str(item.get("saved_at") or "").strip(),
+        )
+        if credential.server_url and credential.token:
+            loaded.append(credential)
+    return tuple(loaded)
+
+
+def get_labtools_lan_credential(server_url: str | None) -> LabToolsLanCredential | None:
+    key = _lan_server_key(server_url)
+    if not key:
+        return None
+    for credential in load_labtools_lan_credentials():
+        if credential.server_url == key:
+            return credential
+    return None
+
+
+def claim_labtools_lan_pairing(
+    server_url: str | None,
+    pairing_code: str | None,
+    *,
+    client_label: str = "manual-client",
+) -> LabToolsLanPairingResult:
+    url = _lan_server_key(server_url)
+    code = str(pairing_code or "").strip()
+    if not url:
+        return LabToolsLanPairingResult(False, "manual_connection_required", "请输入 LAN read-only server URL。", blocker="missing_server_url")
+    if not code:
+        return LabToolsLanPairingResult(False, "pairing_required", "请输入主机显示的 pairing code。", blocker="missing_pairing_code")
+    try:
+        _ensure_labtools_importable()
+        from labtools.lan_client import LabToolsLanReadonlyClientConfig, build_lan_readonly_client_adapter
+
+        client = build_lan_readonly_client_adapter(LabToolsLanReadonlyClientConfig(url, timeout_seconds=1.5))
+        result = client.claim_pairing(pairing_code=code, client_label=client_label)
+    except Exception as exc:
+        return LabToolsLanPairingResult(False, "blocked_lan_connection", f"LAN pairing failed: {exc}", blocker="connection_unavailable")
+    if not bool(result.get("ok")):
+        status = str(result.get("status") or "pairing_required")
+        return LabToolsLanPairingResult(False, status, str(result.get("reason") or "LAN pairing failed."), blocker=status)
+    token = str(result.get("token") or "").strip()
+    if not token:
+        return LabToolsLanPairingResult(False, "blocked_invalid_response", "LAN pairing did not return a token.", blocker="missing_token")
+    credential = LabToolsLanCredential(
+        server_url=url,
+        token=token,
+        token_id=str(result.get("token_id") or "").strip(),
+        client_label=str(result.get("client_label") or client_label).strip(),
+        role=str(result.get("role") or "viewer").strip(),
+        expires_at=str(result.get("expires_at") or "").strip(),
+        saved_at=datetime.now(timezone.utc).isoformat(),
+    )
+    _save_labtools_lan_credential(credential)
+    return LabToolsLanPairingResult(True, str(result.get("status") or "paired"), "已保存本机 LAN 只读 token；不会同步到其他设备。", credential=credential)
+
+
 def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataReadModel:
     url = str(server_url or "").strip()
     if not url:
@@ -468,7 +577,10 @@ def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataRead
         _ensure_labtools_importable()
         from labtools.lan_client import LabToolsLanReadonlyClientConfig, build_lan_readonly_client_adapter
 
-        client = build_lan_readonly_client_adapter(LabToolsLanReadonlyClientConfig(url, timeout_seconds=1.5))
+        credential = get_labtools_lan_credential(url)
+        client = build_lan_readonly_client_adapter(
+            LabToolsLanReadonlyClientConfig(url, timeout_seconds=1.5, bearer_token=credential.token if credential else "")
+        )
         model = client.read_model()
         status = LabToolsLocalDataStatus(
             status=model.status.status,
@@ -493,7 +605,7 @@ def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataRead
             write_enabled=False,
             history_enabled=True,
             export_enabled=False,
-            reason="LAN read-only summaries connected; writes, sync, auth, pairing, and auto-discovery are disabled.",
+            reason="LAN read-only summaries connected; pairing/token supported when required; writes, sync, and automatic discovery are disabled.",
             reagent_count=len(reagents),
             sample_count=len(samples),
             cell_count=len(cells),
@@ -522,6 +634,35 @@ def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataRead
                 reason=f"LAN read-only connection unavailable: {exc}",
             )
         )
+
+
+def _save_labtools_lan_credential(credential: LabToolsLanCredential) -> None:
+    path = get_labtools_lan_credentials_path()
+    existing = [item for item in load_labtools_lan_credentials() if item.server_url != credential.server_url]
+    payload = {
+        "schema_version": LAN_CREDENTIAL_SCHEMA_VERSION,
+        "credentials": [_lan_credential_payload(item) for item in (*existing, credential)],
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(f".{path.name}.tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def _lan_credential_payload(credential: LabToolsLanCredential) -> dict[str, str]:
+    return {
+        "server_url": credential.server_url,
+        "token": credential.token,
+        "token_id": credential.token_id,
+        "client_label": credential.client_label,
+        "role": credential.role,
+        "expires_at": credential.expires_at,
+        "saved_at": credential.saved_at,
+    }
+
+
+def _lan_server_key(server_url: object) -> str:
+    return str(server_url or "").strip().rstrip("/")
 
 
 def list_local_reagent_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalReagentSummary, ...]:
