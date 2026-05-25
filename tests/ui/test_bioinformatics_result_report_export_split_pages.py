@@ -81,6 +81,8 @@ def test_result_report_page_is_preflight_and_draft_only(qt_app, bio_project) -> 
         result_preview = widget.findChild(QTextEdit, "bioinformaticsResultGatePreview")
         add_to_report = widget.findChild(QPushButton, "bioinformaticsAddToReportDisabledButton")
         generate_report = widget.findChild(QPushButton, "bioinformaticsResultReportGenerateReportDisabledButton")
+        open_results = widget.findChild(QPushButton, "bioinformaticsOpenResultFolderGatedButton")
+        open_params = widget.findChild(QPushButton, "bioinformaticsOpenResultParamsGatedButton")
         table_text = _table_text(gate_table)
         preflight_text = preflight_log.toPlainText()
 
@@ -102,6 +104,10 @@ def test_result_report_page_is_preflight_and_draft_only(qt_app, bio_project) -> 
         assert add_to_report.property("formalActionEnabled") is False
         assert generate_report.isEnabled() is False
         assert generate_report.property("reportReadyPackageAllowed") is False
+        assert open_results.isEnabled() is False
+        assert open_results.property("disabledState") == "formal_result_missing"
+        assert open_params.isEnabled() is False
+        assert open_params.property("disabledState") == "formal_result_missing"
         assert "暂无 formal result" in widget.status_message()
     finally:
         widget.close()
@@ -118,6 +124,8 @@ def test_report_export_page_keeps_all_formats_disabled_and_writes_no_files(qt_ap
         export_preview = widget.findChild(QTextEdit, "bioinformaticsReportExportGatePreview")
         format_gate = widget.findChild(QTableWidget, "bioinformaticsReportExportFormatGateTable")
         generate_report = widget.findChild(QPushButton, "bioinformaticsGenerateReportDisabledButton")
+        open_report = widget.findChild(QPushButton, "bioinformaticsOpenReportFileGatedButton")
+        open_folder = widget.findChild(QPushButton, "bioinformaticsOpenReportFolderGatedButton")
         legacy_export_buttons = widget.findChildren(QPushButton, "bioinformaticsReportExportDisabledButton")
         format_export_buttons = widget.findChildren(QPushButton, "bioinformaticsReportExportFormatDisabledButton")
         format_text = _table_text(format_gate)
@@ -132,6 +140,10 @@ def test_report_export_page_keeps_all_formats_disabled_and_writes_no_files(qt_ap
         assert format_gate.property("exportGate") == "disabled_missing_report_ready"
         assert generate_report.isEnabled() is False
         assert generate_report.property("reportReadyPackageAllowed") is False
+        assert open_report.isEnabled() is False
+        assert open_report.property("disabledState") == "report_not_ready"
+        assert open_folder.isEnabled() is False
+        assert open_folder.property("disabledState") == "report_not_ready"
         assert legacy_export_buttons
         assert format_export_buttons
         assert all(button.isEnabled() is False for button in legacy_export_buttons)

@@ -49,6 +49,9 @@ def test_analysis_tasks_page_shows_gated_task_matrix(qt_app, bio_project) -> Non
     text = _table_text(matrix)
 
     assert widget.objectName() == "bioinformaticsAnalysisTaskCenterPage"
+    assert widget.property("uiPrimitive") == "workbench_gated_page"
+    assert widget.property("layoutPolishNoOverlap") is True
+    assert widget.property("formalActionEnabled") is False
     assert "DEG" in text
     assert "preflight / parameter review" in text
     assert "ORA" in text and "requires DEG result" in text
