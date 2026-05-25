@@ -8,7 +8,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QFrame, QPushButton, QTableWidget, QTextEdit
 
     from app.bioinformatics.analysis_ui.state import build_analysis_center_state
     from app.bioinformatics.project_workspace import create_bioinformatics_project
@@ -46,6 +46,7 @@ def test_analysis_tasks_page_shows_gated_task_matrix(qt_app, bio_project) -> Non
     widget.refresh_project(bio_project)
 
     matrix = widget.findChild(QTableWidget, "bioinformaticsAnalysisTaskGatedMatrix")
+    plot_placeholder = widget.findChild(QFrame, "bioinformaticsDegPlotPlaceholder")
     text = _table_text(matrix)
 
     assert widget.objectName() == "bioinformaticsAnalysisTaskCenterPage"
@@ -60,6 +61,11 @@ def test_analysis_tasks_page_shows_gated_task_matrix(qt_app, bio_project) -> Non
     assert "Cox" in text and "planned / disabled" in text
     assert "Clinical Association" in text and "audit required / disabled" in text
     assert "formal DEG executor" in text
+    assert matrix.property("horizontalOverflow") is True
+    assert plot_placeholder is not None
+    assert plot_placeholder.property("uiPrimitive") == "plot_placeholder"
+    assert plot_placeholder.property("formalPlot") is False
+    assert plot_placeholder.property("fakePlotData") is False
 
 
 def test_deg_parameter_review_and_preflight_checklist_are_preflight_only(qt_app, bio_project) -> None:

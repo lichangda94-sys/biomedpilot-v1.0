@@ -7,6 +7,7 @@ from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
 from app.shared.semantic_keys import AnalysisStatusKey, ModuleKey, PageKey, ReportStatusKey, ResultSemanticKey
+from app.shared.ui_components.common import WorkflowStep, make_workflow_stepper
 from app.shared.ui_components.primitives import make_status_chip
 
 
@@ -264,7 +265,7 @@ def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
 
 try:
     from PySide6.QtCore import QSize
-    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
     from app.app_identity import BIOINFORMATICS_PAGE_ICON_PATHS, load_bioinformatics_page_icon
 except Exception:  # pragma: no cover - non-GUI environments import feature registry only.
     QSize = None
@@ -493,12 +494,27 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             main_title.setObjectName("bioinformaticsIAMainFlowTitle")
             main_title.setStyleSheet("font-weight: 700;")
             main_layout.addWidget(main_title)
-            flow_grid = QGridLayout()
-            flow_grid.setHorizontalSpacing(10)
-            flow_grid.setVerticalSpacing(10)
-            for index, page in enumerate(bioinformatics_main_flow_pages()):
-                item = QPushButton(_bio_flow_button_text(page))
+            flow_stepper = make_workflow_stepper(
+                [
+                    WorkflowStep(
+                        key=page.key,
+                        label=_compact_flow_label(page.label),
+                        status_key=page.status_key,
+                        semantic_state=page.status_key,
+                        enabled=False,
+                        current=page.key == self._current_target_flow_page_key,
+                    )
+                    for page in bioinformatics_main_flow_pages()
+                ],
+                title="Bioinformatics workflow",
+                object_name="bioinformaticsWorkflowStepper",
+            )
+            flow_stepper.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
+            flow_stepper.setProperty("pageGroup", "main_flow")
+            flow_stepper.setProperty("formalActionEnabled", False)
+            for page, item in zip(bioinformatics_main_flow_pages(), flow_stepper.findChildren(QPushButton, "workflowStepperButton"), strict=True):
                 item.setObjectName("bioinformaticsIANavItem")
+                item.setText(_bio_flow_button_text(page))
                 item.setCheckable(True)
                 item.setMinimumHeight(76)
                 item.setMinimumWidth(132)
@@ -517,8 +533,7 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 _apply_bio_page_icon(item, _BIO_PAGE_SEMANTIC_KEYS[page.key], size=22)
                 item.setEnabled(False)
                 self._target_ia_buttons[page.key] = item
-                flow_grid.addWidget(item, index // 4, index % 4)
-            main_layout.addLayout(flow_grid)
+            main_layout.addWidget(flow_stepper)
             layout.addWidget(main_card)
 
             auxiliary_card = QFrame()
@@ -600,6 +615,7 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 button.setChecked(is_current)
                 button.setProperty("currentStep", is_current)
                 _refresh_dynamic_style(button)
+                button.setMinimumHeight(76 if button.property("pageGroup") == "main_flow" else 54)
             if hasattr(self, "_result_report_panel"):
                 self._result_report_panel.setVisible(self._current_target_flow_page_key == "result_report")
 

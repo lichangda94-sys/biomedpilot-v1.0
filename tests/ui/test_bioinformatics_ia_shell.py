@@ -83,12 +83,18 @@ def test_bioinformatics_target_ia_pages_are_consolidated() -> None:
 def test_bioinformatics_workspace_renders_target_ia_shell(bio_workspace) -> None:
     title = bio_workspace.findChild(QLabel, "bioinformaticsIATitle")
     subtitle = bio_workspace.findChild(QLabel, "bioinformaticsIASubtitle")
+    stepper = bio_workspace.findChild(QFrame, "bioinformaticsWorkflowStepper")
     nav_items = bio_workspace.findChildren(QPushButton, "bioinformaticsIANavItem")
 
     assert title is not None
     assert title.text() == "生信分析 / Bioinformatics"
     assert subtitle is not None
     assert "一站式分析与可视化" in subtitle.text()
+    assert stepper is not None
+    assert stepper.property("uiPrimitive") == "workflow_stepper"
+    assert stepper.property("orientation") == "vertical"
+    assert stepper.property("moduleKey") == ModuleKey.BIOINFORMATICS.value
+    assert stepper.property("formalActionEnabled") is False
     assert len(nav_items) == 9
     assert tuple(item.property("pageKey") for item in nav_items) == bio_workspace.target_ia_page_keys()
     assert tuple(item.property("pageKey") for item in nav_items if item.property("pageGroup") == "main_flow") == (

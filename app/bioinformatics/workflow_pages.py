@@ -13,6 +13,7 @@ from typing import Any, Iterable
 from PySide6.QtCore import Signal, Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QApplication,
     QCheckBox,
@@ -37,6 +38,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from app.shared.ui_components.specialized import ExportFormatAction, ExportGateCheck, make_export_gate_panel, make_plot_placeholder
+from app.shared.ui_components.dense_workbench import make_preview_card
 
 from app.bioinformatics.analysis_task_runs import create_deg_task_run, list_analysis_task_runs, task_run_status_label
 from app.bioinformatics.analysis_ui.labels import label_status
@@ -4681,6 +4684,16 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             action_row.addWidget(button)
         action_row.addStretch(1)
         layout.addLayout(action_row)
+        layout.addWidget(
+            make_plot_placeholder(
+                title="DEG plot placeholder / 图表占位",
+                plot_type="deg_volcano_heatmap",
+                message="Formal DEG plots are disabled in UI-D4; this surface only marks the gated plot area.",
+                status_key="blocked",
+                semantic_state="blocked",
+                object_name="bioinformaticsDegPlotPlaceholder",
+            )
+        )
         self._analysis_task_gate_summary = _read_only_report_view(86)
         self._analysis_task_gate_summary.setObjectName("bioinformaticsAnalysisTaskGateSummary")
         self._analysis_task_gate_summary.setProperty("formalActionEnabled", False)
@@ -4919,10 +4932,28 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._preflight_log_preview.setProperty("reportStatusKey", "report.status.draft")
         self._preflight_log_preview.setProperty("exportGate", "disabled_missing_report_ready")
         self._preflight_log_preview.setProperty("formalActionEnabled", False)
-        root.addWidget(self._preflight_log_preview)
+        root.addWidget(
+            make_preview_card(
+                title="Preflight log preview / 预检日志预览",
+                preview_widget=self._preflight_log_preview,
+                status_key="preflight_only",
+                semantic_state="preflight_only",
+                caption="Read-only gate preview; not a computed result.",
+                object_name="bioinformaticsPreflightPreviewCard",
+            )
+        )
         self._result_gate_preview = _read_only_report_view(96)
         self._result_gate_preview.setObjectName("bioinformaticsResultGatePreview")
-        root.addWidget(self._result_gate_preview)
+        root.addWidget(
+            make_preview_card(
+                title="Result gate preview / 结果门控预览",
+                preview_widget=self._result_gate_preview,
+                status_key="testing",
+                semantic_state="testing",
+                caption="Testing/imported/preflight states must not become formal_computed_result.",
+                object_name="bioinformaticsResultGatePreviewCard",
+            )
+        )
         comparison_row = QHBoxLayout()
         comparison_row.addWidget(_muted("已有 DEG 比较："))
         self._imported_deg_selector = QComboBox()
@@ -5162,9 +5193,35 @@ class BioinformaticsReportViewerWidget(QWidget):
         root.addLayout(actions)
         self._status_label = _status_label("Report Export gate disabled：formal result missing，report not ready，export adapter not connected。")
         root.addWidget(self._status_label)
+        root.addWidget(
+            make_export_gate_panel(
+                title="Shared export gate / 共享导出门控",
+                checks=[
+                    ExportGateCheck("formal_result", "Formal result", False, "Formal computed result is missing.", "blocked"),
+                    ExportGateCheck("report_ready", "Report-ready package", False, "Report-ready package generation is not enabled.", "report_disabled"),
+                    ExportGateCheck("export_adapter", "Export adapter", False, "Export adapter remains disconnected in this UI stage.", "adapter_needed"),
+                ],
+                formats=[
+                    ExportFormatAction("export.format.docx", "DOCX disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                    ExportFormatAction("export.format.html", "HTML disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                    ExportFormatAction("export.format.pdf", "PDF disabled / future", "PDF is future-only and report-ready gate is not satisfied.", "export_disabled"),
+                ],
+                artifact_exists=False,
+                object_name="bioinformaticsSharedExportGatePanel",
+            )
+        )
         self._export_gate_preview = _read_only_report_view(110)
         self._export_gate_preview.setObjectName("bioinformaticsReportExportGatePreview")
-        root.addWidget(self._export_gate_preview)
+        root.addWidget(
+            make_preview_card(
+                title="Export gate preview / 导出门控预览",
+                preview_widget=self._export_gate_preview,
+                status_key="export_disabled",
+                semantic_state="export_disabled",
+                caption="Read-only gate preview; no export file is written.",
+                object_name="bioinformaticsExportGatePreviewCard",
+            )
+        )
         self._export_format_gate_table = _table(["Format", "Gate", "Reason", "Action"])
         self._export_format_gate_table.setObjectName("bioinformaticsReportExportFormatGateTable")
         self._export_format_gate_table.setProperty("exportGate", "disabled_missing_report_ready")
@@ -5553,12 +5610,21 @@ def _read_only_report_view(height: int = 150) -> QTextEdit:
 
 def _table(headers: list[str]) -> QTableWidget:
     table = QTableWidget()
+    table.setProperty("uiPrimitive", "bioinformatics_runtime_table")
+    table.setProperty("horizontalOverflow", True)
+    table.setProperty("readOnly", True)
     table.setColumnCount(len(headers))
     table.setHorizontalHeaderLabels(headers)
     table.setMinimumHeight(190)
     table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    table.setSelectionBehavior(QAbstractItemView.SelectRows)
+    table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
     table.verticalHeader().setDefaultSectionSize(34)
     table.horizontalHeader().setMinimumHeight(36)
+    table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+    table.horizontalHeader().setMinimumSectionSize(96)
     return table
 
 

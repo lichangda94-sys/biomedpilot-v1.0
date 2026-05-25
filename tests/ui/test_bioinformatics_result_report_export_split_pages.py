@@ -8,7 +8,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QFrame, QPushButton, QTableWidget, QTextEdit
 
     from app.bioinformatics.analysis_ui.state import build_analysis_center_state
     from app.bioinformatics.project_workspace import create_bioinformatics_project
@@ -77,6 +77,8 @@ def test_result_report_page_is_preflight_and_draft_only(qt_app, bio_project) -> 
         widget.refresh_project(bio_project)
 
         gate_table = widget.findChild(QTableWidget, "bioinformaticsResultReportGateTable")
+        preflight_card = widget.findChild(QFrame, "bioinformaticsPreflightPreviewCard")
+        result_card = widget.findChild(QFrame, "bioinformaticsResultGatePreviewCard")
         preflight_log = widget.findChild(QTextEdit, "bioinformaticsPreflightLogPreview")
         result_preview = widget.findChild(QTextEdit, "bioinformaticsResultGatePreview")
         add_to_report = widget.findChild(QPushButton, "bioinformaticsAddToReportDisabledButton")
@@ -90,9 +92,15 @@ def test_result_report_page_is_preflight_and_draft_only(qt_app, bio_project) -> 
         assert "report draft gate" in table_text
         assert "formal result missing" in table_text
         assert "generate report" in table_text
+        assert gate_table.property("horizontalOverflow") is True
         assert gate_table.property("resultSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
         assert gate_table.property("reportStatusKey") == ReportStatusKey.DRAFT.value
         assert gate_table.property("exportGate") == "disabled_missing_report_ready"
+        assert preflight_card.property("uiPrimitive") == "preview_card"
+        assert preflight_card.property("formalResult") is False
+        assert result_card.property("uiPrimitive") == "preview_card"
+        assert result_card.property("requiresNonFormalStatusChip") is True
+        assert result_card.property("formalResult") is False
         assert preflight_log.property("resultSemanticKey") == "preflight_only"
         assert '"formal_computed_result": false' in preflight_text
         assert '"fake_deg_table_allowed": false' in preflight_text
@@ -122,6 +130,8 @@ def test_report_export_page_keeps_all_formats_disabled_and_writes_no_files(qt_ap
         widget.refresh_project(bio_project)
 
         export_preview = widget.findChild(QTextEdit, "bioinformaticsReportExportGatePreview")
+        shared_export_gate = widget.findChild(QFrame, "bioinformaticsSharedExportGatePanel")
+        export_preview_card = widget.findChild(QFrame, "bioinformaticsExportGatePreviewCard")
         format_gate = widget.findChild(QTableWidget, "bioinformaticsReportExportFormatGateTable")
         generate_report = widget.findChild(QPushButton, "bioinformaticsGenerateReportDisabledButton")
         open_report = widget.findChild(QPushButton, "bioinformaticsOpenReportFileGatedButton")
@@ -130,6 +140,12 @@ def test_report_export_page_keeps_all_formats_disabled_and_writes_no_files(qt_ap
         format_export_buttons = widget.findChildren(QPushButton, "bioinformaticsReportExportFormatDisabledButton")
         format_text = _table_text(format_gate)
 
+        assert shared_export_gate.property("uiPrimitive") == "export_gate_panel"
+        assert shared_export_gate.property("exportAllowed") is False
+        assert shared_export_gate.property("reportGenerationAllowed") is False
+        assert shared_export_gate.property("fileWriteAllowed") is False
+        assert export_preview_card.property("uiPrimitive") == "preview_card"
+        assert export_preview_card.property("formalResult") is False
         assert export_preview.property("exportGate") == "disabled_missing_report_ready"
         assert export_preview.property("reportReadyPackageAllowed") is False
         assert "formal result missing" in export_preview.toPlainText()
@@ -137,6 +153,7 @@ def test_report_export_page_keeps_all_formats_disabled_and_writes_no_files(qt_ap
         assert "split_report_export_page_no_report_generation_no_file_export" in export_preview.toPlainText()
         assert "DOCX" in format_text and "HTML" in format_text and "PDF" in format_text
         assert "CSV" in format_text and "XLSX" in format_text
+        assert format_gate.property("horizontalOverflow") is True
         assert format_gate.property("exportGate") == "disabled_missing_report_ready"
         assert generate_report.isEnabled() is False
         assert generate_report.property("reportReadyPackageAllowed") is False
