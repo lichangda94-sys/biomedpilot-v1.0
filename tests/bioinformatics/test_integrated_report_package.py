@@ -12,8 +12,10 @@ from app.bioinformatics.reports.integrated import (
     build_full_integrated_report_package_plan,
     create_full_integrated_docx_rendered_export,
     create_full_integrated_docx_rendered_export_skeleton,
+    create_full_integrated_pdf_rendered_export_skeleton,
     create_full_integrated_report_package,
     evaluate_full_integrated_docx_preflight_gate,
+    evaluate_full_integrated_pdf_preflight_gate,
     evaluate_full_integrated_report_renderer_gate,
 )
 from app.bioinformatics.reports.renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
@@ -369,6 +371,104 @@ def test_docx_rendered_export_failure_rolls_back_temp_and_preserves_markdown(tmp
     assert not list((package_path / "exports").glob("*.docx"))
 
 
+def test_pdf_preflight_validates_markdown_package_but_keeps_activation_blocked(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    gate = evaluate_full_integrated_pdf_preflight_gate(package["package_path"], renderer_gate=_pdf_renderer_gate_without_activation_blocker())
+
+    assert gate["status"] == "blocked"
+    assert gate["preflight_status"] == "passed_pending_activation"
+    assert gate["renderer_id"] == "pandoc_pdf"
+    assert gate["selected_backend"] == "pandoc_xelatex"
+    assert gate["checks"]["source_package_full_integrated_markdown"] is True
+    assert gate["checks"]["source_markdown_nonempty"] is True
+    assert gate["checks"]["pandoc_detected"] is True
+    assert gate["checks"]["xelatex_detected"] is True
+    assert gate["checks"]["wkhtmltopdf_detect_only_not_selected"] is True
+    assert gate["checks"]["no_conversion_invoked"] is True
+    assert gate["artifact_manifest_preview"]["export_format"] == "pdf"
+    assert gate["artifact_manifest_preview"]["validation_status"] == "not_created_preflight_only"
+    assert "full_integrated_pdf_export_activation_required_b30_1" in gate["blockers"]
+    assert not (Path(package["package_path"]) / "exports" / "integrated_report.pdf").exists()
+
+
+def test_pdf_preflight_blocks_missing_local_markdown_references(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+    package_path = Path(package["package_path"])
+    markdown = package_path / "integrated_report.md"
+    markdown.write_text(markdown.read_text(encoding="utf-8") + "\n\n![missing](plots/missing.svg)\n", encoding="utf-8")
+
+    gate = evaluate_full_integrated_pdf_preflight_gate(package_path, renderer_gate=_pdf_renderer_gate_without_activation_blocker())
+
+    assert gate["preflight_status"] == "blocked"
+    assert "pdf_markdown_local_reference_missing:plots/missing.svg" in gate["blockers"]
+
+
+def test_pdf_rendered_export_skeleton_writes_blocked_attempt_without_pdf(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    skeleton = create_full_integrated_pdf_rendered_export_skeleton(package["package_path"], renderer_gate=_pdf_renderer_gate_without_activation_blocker())
+
+    package_path = Path(package["package_path"])
+    manifest_path = package_path / "manifests" / "rendered_exports.json"
+    log_path = Path(skeleton["conversion_log_path"])
+    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
+    rendered = json.loads(manifest_path.read_text(encoding="utf-8"))
+    log_payload = json.loads(log_path.read_text(encoding="utf-8"))
+
+    assert skeleton["status"] == "blocked"
+    assert manifest_path.is_file()
+    assert log_path.is_file()
+    assert rendered["exports"] == []
+    assert rendered["attempts"][0]["export_format"] == "pdf"
+    assert rendered["attempts"][0]["selected_backend"] == "pandoc_xelatex"
+    assert rendered["attempts"][0]["validation_status"] == "blocked"
+    assert rendered["attempts"][0]["conversion_invoked"] is False
+    assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
+    assert rendered["policy"]["do_not_write_formal_computed_result"] is True
+    assert "full_integrated_pdf_conversion_not_enabled_b30_1" in rendered["attempts"][0]["blockers"]
+    assert log_payload["requested_export_format"] == "pdf"
+    assert log_payload["selected_backend"] == "pandoc_xelatex"
+    assert log_payload["conversion_invoked"] is False
+    assert log_payload["markdown_package_preserved"] is True
+    assert package_manifest["rendered_exports_manifest"] == "manifests/rendered_exports.json"
+    assert package_manifest["rendered_exports_summary"]["exports_count"] == 0
+    assert package_manifest["rendered_exports_summary"]["pdf_conversion_enabled"] is False
+    assert not list((package_path / "exports").glob("*.pdf"))
+
+
+def test_pdf_rendered_export_skeleton_keeps_existing_docx_exports(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+    package_path = Path(package["package_path"])
+    existing = {
+        "schema_version": "biomedpilot.full_integrated_rendered_exports.v1",
+        "package_scope": "full_integrated_report",
+        "source_package_id": package_path.name,
+        "source_package_path": str(package_path),
+        "exports": [{"artifact_id": "docx_previous", "export_format": "docx", "validation_status": "passed"}],
+        "attempts": [],
+    }
+    (package_path / "manifests" / "rendered_exports.json").write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
+
+    create_full_integrated_pdf_rendered_export_skeleton(package["package_path"], renderer_gate=_pdf_renderer_gate_without_activation_blocker())
+
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
+    assert rendered["exports"] == existing["exports"]
+    assert len(rendered["attempts"]) == 1
+    assert rendered["latest_attempt_status"] == "blocked"
+    assert package_manifest["rendered_exports_summary"]["docx_conversion_enabled"] is True
+    assert package_manifest["rendered_exports_summary"]["pdf_conversion_enabled"] is False
+
+
 def _write_entries(root: Path) -> None:
     entries = []
     for result_id, task_type, artifact_type in (
@@ -474,6 +574,50 @@ def _docx_renderer_gate_without_activation_blocker() -> dict:
         "checks": {"dependencies_detected": True, "implementation_enabled": False, "detect_first_no_install_action": True},
         "blockers": [],
         "warnings": [],
+    }
+
+
+def _pdf_renderer_gate_without_activation_blocker() -> dict:
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_renderer_gate.v1",
+        "status": "blocked",
+        "export_format": "pdf",
+        "renderer_id": "pandoc_pdf",
+        "required_dependencies": ["pandoc", "xelatex"],
+        "detected_dependencies": {
+            "pandoc": {
+                "command": "pandoc",
+                "available": True,
+                "path": "/usr/local/bin/pandoc",
+                "version": "pandoc 3.2",
+                "missing_reason": "",
+                "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled",
+            },
+            "xelatex": {
+                "command": "xelatex",
+                "available": True,
+                "path": "/Library/TeX/texbin/xelatex",
+                "version": "XeTeX 3.141592653",
+                "missing_reason": "",
+                "packaging_impact": "external_binary_required_for_pandoc_pdf_backend_not_bundled",
+            },
+            "wkhtmltopdf": {
+                "command": "wkhtmltopdf",
+                "available": True,
+                "path": "/usr/local/bin/wkhtmltopdf",
+                "version": "wkhtmltopdf 0.12",
+                "missing_reason": "",
+                "packaging_impact": "external_binary_alternative_pdf_backend_not_bundled",
+            },
+        },
+        "checks": {
+            "dependencies_detected": True,
+            "implementation_enabled": False,
+            "detect_first_no_install_action": True,
+            "external_renderers_bundled": False,
+        },
+        "blockers": [],
+        "warnings": ["wkhtmltopdf_detected_but_not_selected_for_formal_full_integrated_pdf"],
     }
 
 

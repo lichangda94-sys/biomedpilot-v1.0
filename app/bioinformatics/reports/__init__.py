@@ -5,9 +5,11 @@ from .gsea import create_gsea_report_ready_package, evaluate_gsea_report_ready_g
 from .integrated import (
     build_full_integrated_report_package_plan,
     create_full_integrated_docx_rendered_export,
-    create_full_integrated_report_package,
     create_full_integrated_docx_rendered_export_skeleton,
+    create_full_integrated_pdf_rendered_export_skeleton,
+    create_full_integrated_report_package,
     evaluate_full_integrated_docx_preflight_gate,
+    evaluate_full_integrated_pdf_preflight_gate,
     evaluate_full_integrated_report_gate,
     evaluate_full_integrated_report_renderer_gate,
 )
@@ -25,6 +27,7 @@ __all__ = [
     "create_formal_deg_report_ready_package",
     "create_full_integrated_docx_rendered_export",
     "create_full_integrated_docx_rendered_export_skeleton",
+    "create_full_integrated_pdf_rendered_export_skeleton",
     "create_full_integrated_report_package",
     "create_gsea_report_ready_package",
     "create_cox_report_ready_package",
@@ -33,6 +36,7 @@ __all__ = [
     "build_full_integrated_report_package_plan",
     "evaluate_formal_deg_report_ready_gate",
     "evaluate_full_integrated_docx_preflight_gate",
+    "evaluate_full_integrated_pdf_preflight_gate",
     "evaluate_full_integrated_report_gate",
     "evaluate_full_integrated_report_renderer_gate",
     "evaluate_gsea_report_ready_gate",
