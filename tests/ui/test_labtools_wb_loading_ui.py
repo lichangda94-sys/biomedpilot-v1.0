@@ -8,7 +8,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QScrollArea, QWidget
+    from PySide6.QtWidgets import QApplication, QLabel, QFrame, QLineEdit, QPlainTextEdit, QPushButton, QScrollArea, QSplitter, QWidget
 
     from app import labtools_runtime
     from app.shell.main_window import MainWindow
@@ -70,9 +70,22 @@ def test_wb_loading_page_opens_with_focused_structure(labtools_wb_window) -> Non
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
     substeps = content.findChildren(QLabel, "labtoolsWbSubstepTitle")
     left_column = content.findChild(QWidget, "labtoolsWbLeftColumn")
+    workbench = content.findChild(QSplitter, "labtoolsWbWorkbenchColumns")
+    preview = content.findChild(QFrame, "labtoolsWbLanePreviewPanel")
 
     assert content.property("pageKey") == "wb_loading"
     assert content.property("semanticKey") == PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value
+    assert workbench is not None
+    assert workbench.property("uiPrimitive") == "three_column_workbench"
+    assert workbench.property("rightPanelMinWidth") == 280
+    assert workbench.property("rightPanelMaxWidth") == 360
+    assert workbench.count() == 3
+    assert preview is not None
+    assert preview.property("uiPrimitive") == "preview_card"
+    assert preview.property("requiresNonFormalStatusChip") is True
+    assert preview.property("formalResult") is False
+    assert preview.property("fakeGelBands") is False
+    assert preview.property("imageAnalysisEnabled") is False
     assert left_column is not None
     assert left_column.property("uiPrimitive") == "workbench_secondary_column"
     assert left_column.property("layoutPolishNoOverlap") is True

@@ -49,6 +49,13 @@ from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.semantic_keys import ModuleKey, PageKey
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
+from app.shared.ui_components import (
+    make_left_list_middle_form_right_preview,
+    make_preview_card,
+    make_section_title,
+    make_three_column_workbench,
+    make_workbench_card,
+)
 from app.shared.ui_components.primitives import diagnostic_disclosure_title, make_button, make_empty_state, make_status_chip
 
 
@@ -342,6 +349,8 @@ class MainWindow(QMainWindow):
         content.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         content.setProperty("pageKey", page_key)
         content.setProperty("semanticKey", semantic_key)
+        content.setProperty("uiPrimitive", "page_shell")
+        content.setProperty("layoutPolishNoOverlap", True)
         root = QVBoxLayout(content)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
@@ -441,18 +450,18 @@ class MainWindow(QMainWindow):
 
     def _labtools_local_data_status_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
         model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
-        frame = QFrame()
+        frame = make_workbench_card(object_name="labtoolsLocalDataStatusPanel", semantic_state="testing")
         frame.setObjectName("labtoolsLocalDataStatusPanel")
         frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         frame.setProperty("pageKey", page_key)
         frame.setProperty("semanticKey", semantic_key)
-        frame.setStyleSheet("QFrame#labtoolsLocalDataStatusPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setProperty("uiPrimitive", "labtools_local_data_status_panel")
+        frame.setProperty("readOnly", True)
+        frame.setProperty("cloudSyncAllowed", False)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(8)
-        header = QLabel("本地数据 / Local Data")
-        header.setStyleSheet("font-weight: 700;")
-        layout.addWidget(header)
+        layout.addWidget(make_section_title("本地数据 / Local Data"))
         status = QLabel(f"数据源：本地模式 · 状态：{model.status.status} · {model.status.reason}")
         status.setObjectName("labtoolsLocalDataStatusText")
         status.setProperty("status", model.status.status)
@@ -473,18 +482,19 @@ class MainWindow(QMainWindow):
         return frame
 
     def _labtools_lan_manual_connection_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
-        frame = QFrame()
+        frame = make_workbench_card(object_name="labtoolsLanManualConnectionPanel", semantic_state="preflight_only")
         frame.setObjectName("labtoolsLanManualConnectionPanel")
         frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         frame.setProperty("pageKey", page_key)
         frame.setProperty("semanticKey", semantic_key)
-        frame.setStyleSheet("QFrame#labtoolsLanManualConnectionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setProperty("uiPrimitive", "labtools_lan_manual_connection_panel")
+        frame.setProperty("readOnly", True)
+        frame.setProperty("autoDiscoveryAllowed", False)
+        frame.setProperty("cloudSyncAllowed", False)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(8)
-        header = QLabel("局域网只读连接 / LAN Read-only")
-        header.setStyleSheet("font-weight: 700;")
-        layout.addWidget(header)
+        layout.addWidget(make_section_title("局域网只读连接 / LAN Read-only", "Manual read-only connection; no sync or auto-discovery."))
         row = QHBoxLayout()
         row.setSpacing(8)
         self._labtools_lan_url_input = QLineEdit("http://127.0.0.1:8787")
@@ -834,18 +844,20 @@ class MainWindow(QMainWindow):
         return row
 
     def _labtools_result_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
-        frame = QFrame()
+        frame = make_workbench_card(object_name="labtoolsResultPanel", semantic_state="draft")
         frame.setObjectName("labtoolsResultPanel")
         frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         frame.setProperty("pageKey", page_key)
         frame.setProperty("semanticKey", semantic_key)
-        frame.setStyleSheet("QFrame#labtoolsResultPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setProperty("uiPrimitive", "result_panel")
+        frame.setProperty("formalResult", False)
+        frame.setProperty("reportGenerationAllowed", False)
+        frame.setProperty("exportAllowed", False)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
-        title = QLabel("结果预览")
-        title.setStyleSheet("font-weight: 700;")
-        layout.addWidget(title)
+        layout.addWidget(make_section_title("结果预览", "Draft calculation output; not a formal report."))
+        layout.addWidget(make_status_chip(status_key="draft", semantic_state="draft"))
         result_primary = QLabel("暂无结果")
         result_primary.setObjectName("labtoolsResultPrimary")
         result_primary.setProperty("pageKey", page_key)
@@ -1055,9 +1067,6 @@ class MainWindow(QMainWindow):
         self._labtools_reagent_selected_template_id = templates[0].template_id if templates else ""
         self._labtools_local_data_read_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
         self._labtools_selected_local_reagent_id = ""
-        body = QHBoxLayout()
-        body.setSpacing(12)
-        body.setObjectName("labtoolsReagentWorkbenchColumns")
         left_column = QWidget()
         left_column.setObjectName("labtoolsReagentLeftColumn")
         left_column.setProperty("uiPrimitive", "workbench_secondary_column")
@@ -1074,10 +1083,15 @@ class MainWindow(QMainWindow):
         detail_panel = self._labtools_reagent_detail_panel()
         detail_panel.setMinimumWidth(280)
         detail_panel.setMaximumWidth(380)
-        body.addWidget(left_column, 1)
-        body.addWidget(run_panel, 2)
-        body.addWidget(detail_panel, 1)
-        root.addLayout(body)
+        root.addWidget(
+            make_left_list_middle_form_right_preview(
+                list_widget=left_column,
+                form_widget=run_panel,
+                preview_widget=detail_panel,
+                object_name="labtoolsReagentWorkbenchColumns",
+                sizes=(320, 620, 320),
+            )
+        )
         root.addWidget(self._labtools_reagent_history_panel())
         root.addStretch(1)
         self._set_labtools_content(content)
@@ -1735,9 +1749,6 @@ class MainWindow(QMainWindow):
         self._labtools_selected_local_sample_id = ""
         self._labtools_selected_local_sample_version = 0
 
-        body = QHBoxLayout()
-        body.setSpacing(12)
-        body.setObjectName("labtoolsWbWorkbenchColumns")
         left_column = QWidget()
         left_column.setObjectName("labtoolsWbLeftColumn")
         left_column.setProperty("uiPrimitive", "workbench_secondary_column")
@@ -1753,10 +1764,15 @@ class MainWindow(QMainWindow):
         results_panel.setMinimumWidth(460)
         lane_panel = self._labtools_wb_lane_panel()
         lane_panel.setMinimumWidth(440)
-        body.addWidget(left_column, 1)
-        body.addWidget(results_panel, 2)
-        body.addWidget(lane_panel, 2)
-        root.addLayout(body)
+        root.addWidget(
+            make_three_column_workbench(
+                left_widget=left_column,
+                middle_widget=results_panel,
+                right_widget=lane_panel,
+                object_name="labtoolsWbWorkbenchColumns",
+                sizes=(320, 560, 340),
+            )
+        )
 
         boundary = self._labtools_notice_card(
             "边界：此页不提供 SDS-PAGE 配胶、图像分析、自动条带识别、抗体推荐或完整 WB 协议；泳道布局仅作为 layout helper，不代表真实凝胶图或伪凝胶条带。",
@@ -2072,18 +2088,20 @@ class MainWindow(QMainWindow):
         return row
 
     def _labtools_wb_results_panel(self) -> QFrame:
-        frame = QFrame()
+        frame = make_workbench_card(object_name="labtoolsWbSampleResultPanel", semantic_state="draft")
         frame.setObjectName("labtoolsWbSampleResultPanel")
         frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         frame.setProperty("pageKey", "wb_loading")
         frame.setProperty("semanticKey", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value)
-        frame.setStyleSheet("QFrame#labtoolsWbSampleResultPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setProperty("uiPrimitive", "result_panel")
+        frame.setProperty("formalResult", False)
+        frame.setProperty("fakeGelOutput", False)
+        frame.setProperty("reportGenerationAllowed", False)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
-        header = QLabel("样本列表与上样计算结果")
-        header.setStyleSheet("font-weight: 700;")
-        layout.addWidget(header)
+        layout.addWidget(make_section_title("样本列表与上样计算结果", "Calculation preview; no gel image or formal report."))
+        layout.addWidget(make_status_chip(status_key="testing", semantic_state="testing"))
         self._labtools_wb_sample_rows = QVBoxLayout()
         sample_frame = QFrame()
         sample_frame.setObjectName("labtoolsWbSampleTable")
@@ -2108,38 +2126,32 @@ class MainWindow(QMainWindow):
         return frame
 
     def _labtools_wb_lane_panel(self) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("labtoolsWbLanePreviewPanel")
+        lane_frame = QFrame()
+        lane_frame.setObjectName("labtoolsWbLaneGrid")
+        lane_frame.setStyleSheet("QFrame#labtoolsWbLaneGrid { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
+        self._labtools_wb_lane_grid = QGridLayout()
+        self._labtools_wb_lane_grid.setSpacing(8)
+        lane_frame.setLayout(self._labtools_wb_lane_grid)
+        frame = make_preview_card(
+            title="泳道布局预览（示意图）",
+            preview_widget=lane_frame,
+            status_key="testing",
+            semantic_state="testing",
+            caption="Legend：Marker / Sample / Empty；预览不显示伪凝胶条带。",
+            object_name="labtoolsWbLanePreviewPanel",
+        )
         frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         frame.setProperty("pageKey", "wb_loading")
         frame.setProperty("semanticKey", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value)
-        frame.setStyleSheet("QFrame#labtoolsWbLanePreviewPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(10)
-        header = QHBoxLayout()
-        title = QLabel("泳道布局预览（示意图）")
-        title.setStyleSheet("font-weight: 700;")
+        frame.setProperty("fakeGelBands", False)
+        frame.setProperty("imageAnalysisEnabled", False)
+        layout = frame.layout()
         edit = make_button("编辑布局 - 仅预览", role="secondary")
         edit.setObjectName("labtoolsWbEditLayoutButton")
         edit.setEnabled(False)
         edit.setProperty("disabledState", "preview_only")
-        header.addWidget(title)
-        header.addStretch(1)
-        header.addWidget(edit)
-        layout.addLayout(header)
-        self._labtools_wb_lane_grid = QGridLayout()
-        self._labtools_wb_lane_grid.setSpacing(8)
-        lane_frame = QFrame()
-        lane_frame.setObjectName("labtoolsWbLaneGrid")
-        lane_frame.setStyleSheet("QFrame#labtoolsWbLaneGrid { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
-        lane_frame.setLayout(self._labtools_wb_lane_grid)
-        layout.addWidget(lane_frame)
-        legend = QLabel("Legend：Marker / Sample / Empty；预览不显示伪凝胶条带。")
-        legend.setObjectName("labtoolsWbLaneLegend")
-        legend.setWordWrap(True)
-        layout.addWidget(legend)
-        layout.addStretch(1)
+        if isinstance(layout, QVBoxLayout):
+            layout.addWidget(edit)
         return frame
 
     def _labtools_wb_input_row(self, label: str, field_id: str, default_value: str, unit: str) -> QHBoxLayout:
@@ -2888,13 +2900,14 @@ class MainWindow(QMainWindow):
         self._set_labtools_content(content)
 
     def _labtools_primary_entry_card(self, *, title: str, page_key: str, semantic_key: str, status_key: str, rows: list[str], callback) -> QFrame:
-        frame = QFrame()
+        frame = make_workbench_card(object_name="labtoolsPrimaryEntryCard", semantic_state=status_key)
         frame.setObjectName("labtoolsPrimaryEntryCard")
         frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         frame.setProperty("pageKey", page_key)
         frame.setProperty("semanticKey", semantic_key)
         frame.setProperty("statusKey", status_key)
-        frame.setStyleSheet("QFrame#labtoolsPrimaryEntryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setProperty("uiPrimitive", "module_entry_card")
+        frame.setProperty("formalActionEnabled", False)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
@@ -2917,7 +2930,7 @@ class MainWindow(QMainWindow):
             label.setObjectName("labtoolsEntryDetail")
             label.setWordWrap(True)
             layout.addWidget(label)
-        button = make_button("查看壳层", role="secondary")
+        button = make_button("查看壳层", role="secondary", semantic_state=status_key, action_key=page_key)
         button.setObjectName("labtoolsEntryButton")
         button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         button.setProperty("pageKey", page_key)

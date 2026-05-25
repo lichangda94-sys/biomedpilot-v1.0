@@ -102,8 +102,18 @@ def test_labtools_statuses_and_quick_access_are_explicit(labtools_window) -> Non
     quick_buttons = content.findChildren(QPushButton, "quickAccessButton")
     local_status = content.findChild(QLabel, "labtoolsLocalDataStatusText")
     local_counts = content.findChild(QLabel, "labtoolsLocalDataCountRow")
+    local_panel = content.findChild(QFrame, "labtoolsLocalDataStatusPanel")
+    lan_panel = content.findChild(QFrame, "labtoolsLanManualConnectionPanel")
 
     assert {"planned", "testing", "shell_only", "developer_preview"} <= status_keys
+    assert local_panel is not None
+    assert local_panel.property("uiPrimitive") == "labtools_local_data_status_panel"
+    assert local_panel.property("readOnly") is True
+    assert local_panel.property("cloudSyncAllowed") is False
+    assert lan_panel is not None
+    assert lan_panel.property("uiPrimitive") == "labtools_lan_manual_connection_panel"
+    assert lan_panel.property("autoDiscoveryAllowed") is False
+    assert lan_panel.property("cloudSyncAllowed") is False
     assert [button.property("quickAccessKey") for button in quick_buttons] == ["使用指南", "常见问题", "意见反馈", "最近使用"]
     assert local_status is not None
     assert local_status.property("dataSourceMode") == "local"
