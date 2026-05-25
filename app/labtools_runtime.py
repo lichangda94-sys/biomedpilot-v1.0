@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 from uuid import uuid4
 
 from app.labtools_storage_adapter import BioMedPilotLabToolsStorageAdapter, LabToolsStorageAdapterState
@@ -252,6 +252,12 @@ class LabToolsLocalDataReadModel:
 
 
 @dataclass(frozen=True)
+class LabToolsLanManualConnection:
+    server_url: str
+    read_model: LabToolsLocalDataReadModel
+
+
+@dataclass(frozen=True)
 class LabToolsLocalWriteResult:
     success: bool
     status: str
@@ -441,6 +447,80 @@ def get_labtools_local_data_status(
             history_enabled=False,
             export_enabled=False,
             reason=f"local_data adapter unavailable: {exc}",
+        )
+
+
+def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataReadModel:
+    url = str(server_url or "").strip()
+    if not url:
+        return LabToolsLocalDataReadModel(
+            status=LabToolsLocalDataStatus(
+                status="manual_connection_required",
+                data_source_mode="future_lan",
+                read_enabled=False,
+                write_enabled=False,
+                history_enabled=False,
+                export_enabled=False,
+                reason="请输入手动 LAN loopback server URL；不会自动发现或自动连接。",
+            )
+        )
+    try:
+        _ensure_labtools_importable()
+        from labtools.lan_client import LabToolsLanReadonlyClientConfig, build_lan_readonly_client_adapter
+
+        client = build_lan_readonly_client_adapter(LabToolsLanReadonlyClientConfig(url, timeout_seconds=1.5))
+        model = client.read_model()
+        status = LabToolsLocalDataStatus(
+            status=model.status.status,
+            data_source_mode=model.status.data_source_mode,
+            read_enabled=model.status.read_enabled,
+            write_enabled=False,
+            history_enabled=model.status.history_enabled,
+            export_enabled=False,
+            reason=model.status.reason,
+        )
+        if not model.status.read_enabled:
+            return LabToolsLocalDataReadModel(status=status)
+        reagents = tuple(_lan_reagent_summary(item) for item in model.reagents)
+        samples = tuple(_lan_sample_summary(item) for item in model.samples)
+        cells = tuple(_lan_cell_summary(item) for item in model.cells)
+        freeze_vials = tuple(_lan_freeze_vial_summary(item) for item in model.freeze_vials)
+        records = tuple(_lan_record_summary(item) for item in model.records)
+        status = LabToolsLocalDataStatus(
+            status=status.status,
+            data_source_mode=status.data_source_mode,
+            read_enabled=True,
+            write_enabled=False,
+            history_enabled=True,
+            export_enabled=False,
+            reason="LAN read-only summaries connected; writes, sync, auth, and auto-discovery are disabled.",
+            reagent_count=len(reagents),
+            sample_count=len(samples),
+            cell_count=len(cells),
+            freeze_vial_count=len(freeze_vials),
+            record_count=len(records),
+        )
+        return LabToolsLocalDataReadModel(
+            status=status,
+            reagents=reagents,
+            samples=samples,
+            wb_samples=tuple(sample for sample in samples if sample.wb_compatible),
+            cells=cells,
+            freeze_vials=freeze_vials,
+            freeze_vial_status_rows=_freeze_vial_status_rows(freeze_vials),
+            records=records,
+        )
+    except Exception as exc:
+        return LabToolsLocalDataReadModel(
+            status=LabToolsLocalDataStatus(
+                status="blocked_lan_connection",
+                data_source_mode="future_lan",
+                read_enabled=False,
+                write_enabled=False,
+                history_enabled=False,
+                export_enabled=False,
+                reason=f"LAN read-only connection unavailable: {exc}",
+            )
         )
 
 
@@ -1529,6 +1609,94 @@ def _local_record_summary_from_entry(item: Any) -> LabToolsLocalRecordSummary:
         updated_at=item.updated_at,
         version=item.version,
     )
+
+
+def _lan_reagent_summary(item: Mapping[str, Any]) -> LabToolsLocalReagentSummary:
+    return LabToolsLocalReagentSummary(
+        reagent_id=str(item.get("id", "")),
+        name=str(item.get("name", "")),
+        category=str(item.get("category", "")),
+        concentration=str(item.get("concentration", "")),
+        storage_location=str(item.get("storage_location", "")),
+        status=str(item.get("status", "")),
+        version=_int_payload(item.get("version")),
+    )
+
+
+def _lan_sample_summary(item: Mapping[str, Any]) -> LabToolsLocalSampleSummary:
+    sample_type = str(item.get("sample_type", ""))
+    return LabToolsLocalSampleSummary(
+        sample_id=str(item.get("id", "")),
+        sample_name=str(item.get("sample_name", "")),
+        sample_type=sample_type,
+        concentration=str(item.get("concentration", "")),
+        concentration_unit=str(item.get("concentration_unit", "")),
+        volume=str(item.get("volume", "")),
+        volume_unit=str(item.get("volume_unit", "")),
+        storage_location=str(item.get("storage_location", "")),
+        status=str(item.get("status", "")),
+        version=_int_payload(item.get("version")),
+        wb_compatible=_is_wb_compatible_sample(sample_type),
+    )
+
+
+def _lan_cell_summary(item: Mapping[str, Any]) -> LabToolsLocalCellSummary:
+    return LabToolsLocalCellSummary(
+        cell_id=str(item.get("id", "")),
+        cell_name=str(item.get("cell_name", "")),
+        passage=_int_payload(item.get("passage"), default=0),
+        species=str(item.get("species", "")),
+        storage_status=str(item.get("storage_status", "")),
+        status=str(item.get("status", "")),
+        version=_int_payload(item.get("version")),
+    )
+
+
+def _lan_freeze_vial_summary(item: Mapping[str, Any]) -> LabToolsLocalFreezeVialSummary:
+    return LabToolsLocalFreezeVialSummary(
+        vial_id=str(item.get("id", "")),
+        freeze_batch_id=str(item.get("freeze_batch_id", "")),
+        vial_label=str(item.get("vial_label", "")),
+        location=str(item.get("location", "")),
+        status=str(item.get("status", "")),
+        version=_int_payload(item.get("version")),
+    )
+
+
+def _lan_record_summary(item: Mapping[str, Any]) -> LabToolsLocalRecordSummary:
+    linked_reagents = _tuple_payload(item.get("linked_reagents"))
+    linked_samples = _tuple_payload(item.get("linked_samples"))
+    linked_cells = _tuple_payload(item.get("linked_cells"))
+    return LabToolsLocalRecordSummary(
+        record_id=str(item.get("id", "")),
+        record_type=str(item.get("record_type", "")),
+        title=str(item.get("title", "")),
+        summary=str(item.get("summary", "")),
+        linked_reagents=linked_reagents,
+        linked_samples=linked_samples,
+        linked_cells=linked_cells,
+        artifact_refs=_tuple_payload(item.get("artifact_refs")),
+        status=str(item.get("status", "")),
+        linked_reagent_count=len(linked_reagents),
+        linked_sample_count=len(linked_samples),
+        linked_cell_count=len(linked_cells),
+        created_at=str(item.get("created_at", "")),
+        updated_at=str(item.get("updated_at", "")),
+        version=_int_payload(item.get("version")),
+    )
+
+
+def _tuple_payload(value: object) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    return tuple(str(item) for item in value if str(item))
+
+
+def _int_payload(value: object, *, default: int = 0) -> int:
+    try:
+        return int(value) if value not in (None, "") else default
+    except (TypeError, ValueError):
+        return default
 
 
 def _wb_sample_inputs_from_local_samples(local_samples: tuple[LabToolsLocalSampleSummary, ...]) -> tuple[Any, ...]:

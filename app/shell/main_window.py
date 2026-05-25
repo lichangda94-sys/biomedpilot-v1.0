@@ -366,6 +366,7 @@ class MainWindow(QMainWindow):
         )
         root = content.layout()
         root.addWidget(self._labtools_local_data_status_panel(page_key="home", semantic_key=PageKey.LABTOOLS_HOME.value))
+        root.addWidget(self._labtools_lan_manual_connection_panel(page_key="home", semantic_key=PageKey.LABTOOLS_HOME.value))
 
         entry_row = QHBoxLayout()
         entry_row.setSpacing(14)
@@ -469,6 +470,70 @@ class MainWindow(QMainWindow):
         counts.setWordWrap(True)
         layout.addWidget(counts)
         return frame
+
+    def _labtools_lan_manual_connection_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsLanManualConnectionPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", page_key)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setStyleSheet("QFrame#labtoolsLanManualConnectionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(8)
+        header = QLabel("局域网只读连接 / LAN Read-only")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        self._labtools_lan_url_input = QLineEdit("http://127.0.0.1:8787")
+        self._labtools_lan_url_input.setObjectName("labtoolsLanServerUrlInput")
+        self._labtools_lan_url_input.setProperty("dataSourceMode", "future_lan")
+        connect = make_button("手动连接只读 LAN", role="secondary")
+        connect.setObjectName("labtoolsLanConnectButton")
+        connect.setProperty("dataSourceMode", "future_lan")
+        connect.clicked.connect(self._connect_labtools_lan_readonly)
+        row.addWidget(self._labtools_lan_url_input, 1)
+        row.addWidget(connect)
+        layout.addLayout(row)
+        self._labtools_lan_status_label = QLabel("未连接；请输入 loopback URL 后手动连接。不自动发现、不同步、不写入。")
+        self._labtools_lan_status_label.setObjectName("labtoolsLanStatusText")
+        self._labtools_lan_status_label.setProperty("status", "manual_connection_required")
+        self._labtools_lan_status_label.setProperty("dataSourceMode", "future_lan")
+        self._labtools_lan_status_label.setWordWrap(True)
+        layout.addWidget(self._labtools_lan_status_label)
+        self._labtools_lan_count_label = QLabel("reagent 0 · sample 0 · cell 0 · freeze vial 0 · record 0")
+        self._labtools_lan_count_label.setObjectName("labtoolsLanCountRow")
+        self._labtools_lan_count_label.setProperty("reagentCount", 0)
+        self._labtools_lan_count_label.setProperty("sampleCount", 0)
+        self._labtools_lan_count_label.setProperty("cellCount", 0)
+        self._labtools_lan_count_label.setProperty("recordCount", 0)
+        layout.addWidget(self._labtools_lan_count_label)
+        note = QLabel("LAN 只读摘要不是同步功能；不同步、不写入，权限、多用户、自动发现和云端同步均保持禁用。")
+        note.setObjectName("labtoolsLanBoundaryNote")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+        return frame
+
+    def _connect_labtools_lan_readonly(self) -> None:
+        url_input = getattr(self, "_labtools_lan_url_input", None)
+        status_label = getattr(self, "_labtools_lan_status_label", None)
+        count_label = getattr(self, "_labtools_lan_count_label", None)
+        if not isinstance(url_input, QLineEdit) or not isinstance(status_label, QLabel) or not isinstance(count_label, QLabel):
+            return
+        model = labtools_runtime.get_labtools_lan_read_model(url_input.text())
+        self._labtools_lan_read_model = model
+        status_label.setText(f"LAN：{model.status.status} · {model.status.reason}")
+        status_label.setProperty("status", model.status.status)
+        status_label.setProperty("dataSourceMode", model.status.data_source_mode)
+        count_label.setText(
+            f"reagent {model.status.reagent_count} · sample {model.status.sample_count} · "
+            f"cell {model.status.cell_count} · freeze vial {model.status.freeze_vial_count} · record {model.status.record_count}"
+        )
+        count_label.setProperty("reagentCount", model.status.reagent_count)
+        count_label.setProperty("sampleCount", model.status.sample_count)
+        count_label.setProperty("cellCount", model.status.cell_count)
+        count_label.setProperty("recordCount", model.status.record_count)
 
     def _show_labtools_general_calculator_shell(self) -> None:
         status = labtools_runtime.runtime_status()
