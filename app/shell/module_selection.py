@@ -5,10 +5,8 @@ from collections.abc import Callable
 from PySide6.QtCore import QSize, Signal, Qt
 from PySide6.QtWidgets import (
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -19,6 +17,7 @@ from app.app_identity import MODULE_ICON_PATHS, load_module_pixmap, load_ui02_mo
 from app.shell.dashboard import DashboardModel
 from app.shell.login import LocalSession
 from app.shared.semantic_keys import BrandKey, ModuleKey, NavKey
+from app.shared.ui_components import ProjectRecentItem, make_action_button, make_project_recent_table, make_section_title, make_status_chip, make_workbench_card
 from app.ui_style_tokens import SPACING, module_selection_stylesheet
 
 
@@ -203,6 +202,7 @@ class ModuleSelectionWidget(QWidget):
     ) -> QFrame:
         frame = ModuleEntryCard()
         frame.setObjectName("moduleCard")
+        frame.setProperty("uiPrimitive", "module_entry_card")
         frame.setProperty("moduleKey", module_key)
         frame.setProperty("navKey", nav_key)
         frame.setProperty("semanticKey", module_key)
@@ -245,7 +245,7 @@ class ModuleSelectionWidget(QWidget):
         description_label.setObjectName("moduleDescription")
         description_label.setWordWrap(True)
 
-        button = QPushButton(button_text)
+        button = make_action_button(button_text, role="secondary", action_key=nav_key, semantic_state="testing")
         button.setObjectName(object_name)
         button.setProperty("moduleKey", module_key)
         button.setProperty("navKey", nav_key)
@@ -262,57 +262,54 @@ class ModuleSelectionWidget(QWidget):
         layout.addWidget(title_label)
         layout.addWidget(english)
         layout.addWidget(accent)
+        layout.addWidget(make_status_chip(status_key=_module_status_key(module_key)))
         layout.addSpacing(SPACING["sm"])
         layout.addWidget(description_label)
         layout.addWidget(button, alignment=Qt.AlignLeft)
         return frame
 
     def _build_recent_projects_card(self) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("dashboardRecentProjectsCard")
+        frame = make_workbench_card(object_name="dashboardRecentProjectsCard")
+        frame.setProperty("uiPrimitive", "dashboard_recent_projects")
+        frame.setProperty("projectCenter", False)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(SPACING["xl"], SPACING["lg"], SPACING["xl"], SPACING["lg"])
         layout.setSpacing(SPACING["md"])
-        title_row = self._title_row("最近项目 / Recent Projects", "recent_projects")
-        open_more = QPushButton("打开更多项目...")
+        title_row = QHBoxLayout()
+        title_row.setSpacing(SPACING["sm"])
+        title_row.addWidget(self._ui02_icon_label("recent_projects", 22))
+        title_row.addWidget(make_section_title("最近项目 / Recent Projects", "Dashboard only lists recent project records; it is not a Project Center."), 1)
+        open_more = make_action_button(
+            "打开更多项目...",
+            role="secondary",
+            semantic_state="disabled",
+            action_key="open_more_projects",
+            enabled=False,
+            disabled_reason="Project Center is not part of the UI-D2 Dashboard rebuild.",
+        )
         open_more.setObjectName("dashboardOpenMoreProjectsButton")
         open_more.setIcon(load_ui02_module_selection_icon("project_entry"))
         open_more.setIconSize(QSize(18, 18))
-        open_more.setEnabled(False)
-        title_row.insertWidget(title_row.count() - 1, open_more)
+        title_row.addWidget(open_more)
         layout.addLayout(title_row)
 
-        table = QGridLayout()
-        table.setObjectName("dashboardRecentProjectsTable")
-        table.setHorizontalSpacing(SPACING["lg"])
-        table.setVerticalSpacing(SPACING["sm"])
-        headers = ("项目名称", "模块类型", "最近修改时间", "状态", "操作")
-        for column, header in enumerate(headers):
-            label = QLabel(header)
-            label.setObjectName("dashboardRecentProjectsHeader")
-            label.setStyleSheet("font-weight: 700; color: #64748B;")
-            table.addWidget(label, 0, column)
-
         projects = list(self._dashboard.recent_projects[:5])
-        if not projects:
-            empty = QLabel("暂无最近项目")
-            empty.setObjectName("dashboardRecentProjectsEmpty")
-            table.addWidget(empty, 1, 0, 1, len(headers))
-        for row, project in enumerate(projects, start=1):
-            module_label = "生信分析" if project.project_type == "bioinformatics" else "Meta 分析"
-            for column, value in enumerate((project.project_name, module_label, project.updated_at)):
-                label = QLabel(value)
-                label.setObjectName("dashboardRecentProjectsCell")
-                table.addWidget(label, row, column)
-            status = QLabel("测试中")
-            status.setObjectName("dashboardRecentProjectsStatus")
-            status.setStyleSheet("color: #0E6F66; background: #E7F7F5; border: 1px solid #BCE7E2; border-radius: 6px; padding: 4px 8px;")
-            table.addWidget(status, row, 3)
-            open_button = QPushButton("打开")
-            open_button.setObjectName("dashboardRecentProjectOpenButton")
-            open_button.setEnabled(False)
-            table.addWidget(open_button, row, 4)
-        layout.addLayout(table)
+        table = make_project_recent_table(
+            [
+                ProjectRecentItem(
+                    key=project.project_id,
+                    name=project.project_name,
+                    module="生信分析" if project.project_type == "bioinformatics" else "Meta 分析",
+                    last_opened=project.updated_at,
+                    path=project.project_dir,
+                    status_key="testing",
+                )
+                for project in projects
+            ],
+            object_name="dashboardRecentProjectsTable",
+        )
+        table.setProperty("dashboardOnly", True)
+        layout.addWidget(table)
         return frame
 
     def _support_line(self, text: str) -> QLabel:
@@ -349,3 +346,9 @@ class ModuleSelectionWidget(QWidget):
         row.addWidget(self._ui02_icon_label(icon_key, 18))
         row.addWidget(self._support_line(text), 1)
         return row
+
+
+def _module_status_key(module_key: str) -> str:
+    if module_key == ModuleKey.META_ANALYSIS.value:
+        return "shell_only"
+    return "testing"

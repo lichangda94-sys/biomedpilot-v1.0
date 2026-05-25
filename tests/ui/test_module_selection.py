@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtCore import Qt
     from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QScrollArea
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QScrollArea, QTableView
 
     from app.shell.dashboard import build_dashboard_model
     from app.shell.login import LocalSession
@@ -90,10 +90,15 @@ def test_module_selection_displays_recent_projects_table_without_status_footer(q
 
     labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
     recent = widget.findChild(QFrame, "dashboardRecentProjectsCard")
-    headers = [label.text() for label in widget.findChildren(QLabel, "dashboardRecentProjectsHeader")]
+    table = widget.findChild(QTableView, "dashboardRecentProjectsTable")
 
     assert recent is not None
-    assert headers == ["项目名称", "模块类型", "最近修改时间", "状态", "操作"]
+    assert recent.property("uiPrimitive") == "dashboard_recent_projects"
+    assert recent.property("projectCenter") is False
+    assert table is not None
+    assert table.property("uiPrimitive") == "project_recent_table"
+    assert table.property("dashboardOnly") is True
+    assert table.property("horizontalOverflow") is True
     assert "最近项目 / Recent Projects" in labels
     assert "本地环境可用" not in labels
     assert "外部引擎可选配置" not in labels
@@ -115,6 +120,7 @@ def test_three_module_cards_are_visible(qt_app, local_session: LocalSession) -> 
         ModuleKey.LABTOOLS.value,
     ]
     assert all(card.property("usabilityRole") == "module_entry_card" for card in module_cards)
+    assert all(card.property("uiPrimitive") == "module_entry_card" for card in module_cards)
     assert all(card.accessibleName() for card in module_cards)
     assert [label.property("semanticKey") for label in module_titles] == [card.property("moduleKey") for card in module_cards]
     assert len(icons) == 3

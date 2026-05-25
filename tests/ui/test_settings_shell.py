@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QListWidget, QPushButton, QScrollArea, QStackedWidget, QToolButton
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QScrollArea, QStackedWidget, QTabBar, QToolButton
 
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import ModuleKey, PageKey
@@ -41,7 +41,7 @@ def settings_window(qt_app):
 
 
 def test_settings_shell_exposes_secondary_navigation(settings_window) -> None:
-    nav = settings_window.findChild(QListWidget, "settingsSecondaryNav")
+    nav = settings_window.findChild(QTabBar, "settingsSecondaryNav")
     stack = settings_window.findChild(QStackedWidget, "settingsContentStack")
     page = settings_window.findChild(QScrollArea, "settingsPage")
 
@@ -51,14 +51,13 @@ def test_settings_shell_exposes_secondary_navigation(settings_window) -> None:
     assert page.property("usabilityRole") == "scrollable_shell_page"
     assert page.accessibleName() == "Settings shell page"
     assert nav is not None
-    assert nav.property("uiPrimitive") == "workbench_secondary_nav"
-    assert nav.property("layoutPolishNoOverlap") is True
-    assert [nav.item(index).data(Qt.UserRole + 1) for index in range(nav.count())] == [
-        PageKey.SETTINGS_GENERAL.value,
-        PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
-        PageKey.SETTINGS_ANALYSIS_RESOURCES.value,
-        PageKey.SETTINGS_MODEL_ENGINE.value,
-        PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value,
+    assert nav.property("uiPrimitive") == "secondary_nav_tabs"
+    assert [nav.tabData(index) for index in range(nav.count())] == [
+        "general",
+        "external_capabilities",
+        "analysis_resources",
+        "model_engine",
+        "developer_diagnostics",
     ]
     assert stack is not None
     assert stack.property("uiPrimitive") == "workbench_content_stack"
@@ -79,19 +78,21 @@ def test_settings_shell_exposes_secondary_navigation(settings_window) -> None:
         "settingsDeveloperDiagnosticsPage",
     ]
 
-    nav.setCurrentRow(1)
+    nav.setCurrentIndex(1)
     assert stack.currentWidget().objectName() == "settingsExternalCapabilitiesPage"
 
 
 def test_settings_external_capabilities_are_detect_first(settings_window) -> None:
-    nav = settings_window.findChild(QListWidget, "settingsSecondaryNav")
-    nav.setCurrentRow(1)
+    nav = settings_window.findChild(QTabBar, "settingsSecondaryNav")
+    stack = settings_window.findChild(QStackedWidget, "settingsContentStack")
+    nav.setCurrentIndex(1)
+    current_page = stack.currentWidget()
 
-    cards = settings_window.findChildren(QFrame, "settingsCapabilityCard")
-    detect_buttons = settings_window.findChildren(QPushButton, "settingsDetectButton")
-    install_buttons = settings_window.findChildren(QPushButton, "settingsInstallButton")
-    cloud_buttons = settings_window.findChildren(QPushButton, "settingsCloudConfigButton")
-    labels = "\n".join(label.text() for label in settings_window.findChildren(QLabel))
+    cards = current_page.findChildren(QFrame, "settingsCapabilityCard")
+    detect_buttons = current_page.findChildren(QPushButton, "settingsDetectButton")
+    install_buttons = current_page.findChildren(QPushButton, "settingsInstallButton")
+    cloud_buttons = current_page.findChildren(QPushButton, "settingsCloudConfigButton")
+    labels = "\n".join(label.text() for label in current_page.findChildren(QLabel))
 
     assert len(cards) >= 4
     assert "Python 环境" in labels
@@ -126,8 +127,8 @@ def test_settings_status_chips_cover_external_resource_states(settings_window) -
 
 
 def test_settings_developer_diagnostics_are_collapsed_by_default(settings_window) -> None:
-    nav = settings_window.findChild(QListWidget, "settingsSecondaryNav")
-    nav.setCurrentRow(4)
+    nav = settings_window.findChild(QTabBar, "settingsSecondaryNav")
+    nav.setCurrentIndex(4)
 
     toggle = settings_window.findChild(QToolButton, "developerDiagnosticsToggle")
     panel = settings_window.findChild(QFrame, "developerDiagnosticsPanel")

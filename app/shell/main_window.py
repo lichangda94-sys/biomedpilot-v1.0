@@ -42,6 +42,7 @@ from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.dashboard import DashboardModel, build_dashboard_model
 from app.shell.login import BioMedPilotLoginWidget, LocalSession
 from app.shell.module_selection import ModuleSelectionWidget
+from app.shell.settings_page import build_settings_page
 from app.shell.sidebar import SidebarWidget
 from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
@@ -3074,73 +3075,10 @@ class MainWindow(QMainWindow):
         return frame
 
     def _build_settings_page(self) -> QWidget:
-        profile = SettingsProfile()
-        page = QScrollArea()
-        page.setObjectName("settingsPage")
-        page.setWidgetResizable(True)
-        page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
-        page.setProperty("pageKey", "settings")
-        page.setProperty("semanticKey", ModuleKey.SETTINGS.value)
-        page.setProperty("usabilityRole", "scrollable_shell_page")
-        page.setAccessibleName("Settings shell page")
-        content = QWidget()
-        content.setObjectName("settingsContent")
-        content.setProperty("moduleKey", ModuleKey.SETTINGS.value)
-        content.setProperty("pageKey", "settings")
-        content.setProperty("semanticKey", ModuleKey.SETTINGS.value)
-        content.setProperty("uiPrimitive", "workbench_shell_content")
-        content.setProperty("layoutPolishNoOverlap", True)
-        root = QVBoxLayout(content)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(14)
-        title = QLabel("Settings / 设置中心")
-        title.setObjectName("settingsTitle")
-        title.setProperty("moduleKey", ModuleKey.SETTINGS.value)
-        title.setProperty("semanticKey", ModuleKey.SETTINGS.value)
-        title.setStyleSheet("font-size: 24px; font-weight: 700;")
-        root.addWidget(title)
-        note = QLabel("低保真 Settings 壳层：集中呈现外部能力、模型与分析资源状态。所有外部能力遵循 detect-first，安装、更新和云端配置仅保留禁用入口。")
-        note.setObjectName("settingsScopeNote")
-        note.setWordWrap(True)
-        root.addWidget(note)
-
-        body = QHBoxLayout()
-        body.setSpacing(16)
-        nav = QListWidget()
-        nav.setObjectName("settingsSecondaryNav")
-        nav.setProperty("uiPrimitive", "workbench_secondary_nav")
-        nav.setProperty("layoutPolishNoOverlap", True)
-        nav.setFixedWidth(230)
-        for label, page_key, semantic_key in (
-            ("通用偏好", "general", PageKey.SETTINGS_GENERAL.value),
-            ("外部能力", "external_capabilities", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value),
-            ("分析资源", "analysis_resources", PageKey.SETTINGS_ANALYSIS_RESOURCES.value),
-            ("模型与引擎", "model_engine", PageKey.SETTINGS_MODEL_ENGINE.value),
-            ("开发者诊断", "developer_diagnostics", PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value),
-        ):
-            nav_item = QListWidgetItem(label)
-            nav_item.setData(Qt.UserRole, page_key)
-            nav_item.setData(Qt.UserRole + 1, semantic_key)
-            nav.addItem(nav_item)
-
-        stack = QStackedWidget()
-        stack.setObjectName("settingsContentStack")
-        stack.setProperty("uiPrimitive", "workbench_content_stack")
-        stack.setProperty("layoutPolishNoOverlap", True)
-        stack.addWidget(self._build_settings_general_page(profile))
-        stack.addWidget(self._build_settings_external_capabilities_page())
-        stack.addWidget(self._build_settings_analysis_resources_page())
-        stack.addWidget(self._build_settings_model_engine_page(profile))
-        stack.addWidget(self._build_settings_developer_diagnostics_page())
-        nav.currentRowChanged.connect(stack.setCurrentIndex)
-        nav.setCurrentRow(0)
-
-        body.addWidget(nav)
-        body.addWidget(stack, 1)
-        root.addLayout(body, 1)
-        root.addStretch(1)
-        page.setWidget(content)
-        return page
+        return build_settings_page(
+            profile=SettingsProfile(),
+            settings_resource_pixmap_loader=load_settings_resource_pixmap,
+        )
 
     def _build_settings_general_page(self, profile: SettingsProfile) -> QWidget:
         page = QWidget()
