@@ -1136,13 +1136,14 @@ def _cox_multivariate_action(package: dict[str, Any] | None, dependency: dict[st
 
 
 def _risk_score_action(design: dict[str, Any]) -> dict[str, Any]:
-    blockers = _list(design.get("blockers")) or ["risk_score_execution_disabled_design_audit_only"]
+    blockers = _list(design.get("blockers")) or ["risk_score_execution_disabled_contract_gate_only"]
+    stage = "B32 source / contract gate" if design.get("schema_version") == "biomedpilot.risk_score_nomogram_contract_gate.v1" else "B21 design audit"
     return _disabled(
         "risk_score",
         "Generate risk score",
-        "design_audit_only" if design else "hidden_until_ready",
-        "; ".join(dict.fromkeys([*blockers, "B21 is design audit only; no risk score result, nomogram, high/low-risk group or clinical conclusion is generated."])),
-        "Review risk score prerequisites only: training/validation, variable source, model formula, coefficient source, cutoff, overfitting protection and provenance.",
+        "contract_gate_only" if design else "hidden_until_ready",
+        "; ".join(dict.fromkeys([*blockers, f"{stage} only; no risk score result, nomogram, high/low-risk group or clinical conclusion is generated."])),
+        "Review risk score prerequisites only: formal Cox multivariate source, clinical variable audit, coefficient provenance, training/validation, cutoff, missingness, scaling, calibration and nomogram policy.",
     )
 
 

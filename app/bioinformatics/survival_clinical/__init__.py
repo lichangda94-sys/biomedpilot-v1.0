@@ -35,6 +35,7 @@ from .km_parameter_gate import build_km_logrank_parameter_manifest
 from .km_result_schema import validate_km_result_index_entry, validate_km_result_tables
 from .km_review import build_km_result_review, export_km_review_table
 from .outcome_gate import build_survival_outcome_gate
+from .risk_score_contract_gate import build_risk_score_nomogram_contract_gate
 from .risk_score_design import audit_risk_score_design
 
 __all__ = [
@@ -52,6 +53,7 @@ __all__ = [
     "build_cox_univariate_parameter_manifest",
     "build_km_logrank_parameter_manifest",
     "build_km_result_review",
+    "build_risk_score_nomogram_contract_gate",
     "build_survival_outcome_gate",
     "confirm_cox_multivariate_parameters",
     "confirm_cox_univariate_parameters",

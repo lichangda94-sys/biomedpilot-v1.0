@@ -40,6 +40,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["limma_rscript_gate"]["formal_execution_enabled"] is False
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_design"]["result_semantics"] == "design_audit_only"
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_design"]["writes_result_index"] is False
+    assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_contract_gate"]["result_semantics"] == "contract_gate_only"
+    assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_contract_gate"]["writes_result_index"] is False
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
@@ -84,6 +86,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     survival_gate_text = "\n".join(str(row) for row in state["survival_clinical_report_gate_rows"])
     assert "KM/log-rank section report-ready" in survival_gate_text
     assert "missing_km_logrank_result" in survival_gate_text
+    survival_rows_text = "\n".join(str(row) for row in state["survival_clinical_rows"])
+    assert "Risk score / nomogram" in survival_rows_text
+    assert "contract_gate_only" in survival_rows_text
     gate_text = "\n".join(str(row) for row in state["gate_rows"])
     assert "DOCX rendered export" in gate_text
     assert "PDF rendered export" in gate_text

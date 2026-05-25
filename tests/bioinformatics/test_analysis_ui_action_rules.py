@@ -161,15 +161,15 @@ def test_risk_score_action_remains_design_audit_only() -> None:
         packages=[],
         deg_dependency={"status": "blocked"},
         survival_dependency={"status": "passed"},
-        risk_score_design={"status": "design_audit_ready", "blockers": [], "warnings": ["risk_score_design_audit_only"]},
+        risk_score_design={"schema_version": "biomedpilot.risk_score_nomogram_contract_gate.v1", "status": "ready_for_parameter_confirmation", "blockers": [], "warnings": ["risk_score_contract_gate_only"]},
         report_gate={"status": "blocked"},
     )
 
     risk = _row(rows, "risk_score")
     assert risk["enabled"] is False
-    assert risk["state"] == "design_audit_only"
+    assert risk["state"] == "contract_gate_only"
     assert "no risk score result" in risk["disabled_reason"]
-    assert "training/validation" in risk["next_action"]
+    assert "formal Cox multivariate source" in risk["next_action"]
 
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:

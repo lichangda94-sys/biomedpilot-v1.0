@@ -51,6 +51,7 @@ from app.bioinformatics.survival_clinical import (
     build_cox_multivariate_parameter_manifest,
     build_cox_univariate_parameter_manifest,
     build_km_logrank_parameter_manifest,
+    build_risk_score_nomogram_contract_gate,
     build_survival_outcome_gate,
     load_cox_multivariate_confirmation,
     load_cox_univariate_confirmation,
@@ -150,7 +151,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     ora_plot_gate = build_ora_plot_gate(root)
     gsea_plot_gate = build_gsea_plot_gate(root)
     gsea_gates = build_gsea_gate_state(project_root=root)
-    survival_clinical_state = build_survival_clinical_gate_state(project_root=root)
+    survival_clinical_state = build_survival_clinical_gate_state(project_root=root, result_entries=result_entries)
     km_real_plot_gate = build_survival_real_plot_gate(root, _latest_result_id(result_entries, {"survival_km_logrank"}))
     cox_real_plot_gate = build_survival_real_plot_gate(root, _latest_result_id(result_entries, {"cox_univariate", "cox_multivariate"}))
     km_report_gate = evaluate_km_logrank_report_ready_gate(root, result_id=_latest_result_id(result_entries, {"survival_km_logrank"}))
@@ -175,7 +176,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         cox_confirmation_gate=survival_clinical_state["cox_confirmation_gate"],
         cox_multivariate_parameter_gate=survival_clinical_state["cox_multivariate_parameter_gate"],
         cox_multivariate_confirmation_gate=survival_clinical_state["cox_multivariate_confirmation_gate"],
-        risk_score_design=survival_clinical_state["risk_score_design"],
+        risk_score_design=survival_clinical_state["risk_score_contract_gate"],
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         ora_input_gate=ora_gates["input_gate"],
@@ -1030,7 +1031,7 @@ def build_gsea_gate_state(*, project_root: str | Path) -> dict[str, Any]:
     }
 
 
-def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str, Any]:
+def build_survival_clinical_gate_state(*, project_root: str | Path, result_entries: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     input_state = resolve_survival_clinical_inputs(project_root)
     outcome_gate = build_survival_outcome_gate(project_root, input_state) if input_state.get("clinical_asset") else {"status": "blocked", "blockers": ["missing_clinical_asset"], "warnings": []}
     variable_audit = audit_clinical_variables(project_root, input_state) if input_state.get("clinical_asset") else {"status": "blocked", "blockers": ["missing_clinical_asset"], "warnings": [], "variables": [], "summary": {}}
@@ -1071,7 +1072,13 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
     )
     cox_multivariate_confirmation = load_cox_multivariate_confirmation(project_root)
     cox_multivariate_confirmation_gate = validate_cox_multivariate_confirmation(cox_multivariate_confirmation, cox_multivariate_parameter_gate)
-    risk_score_design = audit_risk_score_design(runtime_package, runtime_variable_audit)
+    source_cox_multivariate = _latest_formal_result_entry(result_entries or [], {"cox_multivariate"})
+    risk_score_design = audit_risk_score_design(runtime_package, runtime_variable_audit, source_cox_result=source_cox_multivariate)
+    risk_score_contract_gate = build_risk_score_nomogram_contract_gate(
+        runtime_package,
+        runtime_variable_audit,
+        source_cox_result=source_cox_multivariate,
+    )
     gate_rows = [
         _formal_deg_gate_row(
             "Survival/clinical input resolver",
@@ -1132,11 +1139,11 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
             cox_multivariate_confirmation_gate.get("warnings", []),
         ),
         _formal_deg_gate_row(
-            "B21 Risk score design audit",
-            risk_score_design.get("status"),
-            risk_score_design.get("blockers", []),
-            risk_score_design.get("warnings", []),
-            basis="design audit only; no risk score, nomogram or clinical risk grouping",
+            "B32 Risk score source / contract gate",
+            risk_score_contract_gate.get("status"),
+            risk_score_contract_gate.get("blockers", []),
+            risk_score_contract_gate.get("warnings", []),
+            basis=f"source={risk_score_contract_gate.get('source_cox_multivariate_result_id', '')}; variables={len(risk_score_contract_gate.get('candidate_variables', []) or [])}; no execution",
         ),
         _formal_deg_gate_row(
             "Survival dependency",
@@ -1163,6 +1170,7 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
         "cox_multivariate_confirmation_gate": cox_multivariate_confirmation_gate,
         "cox_multivariate_parameter_confirmation": cox_multivariate_confirmation,
         "risk_score_design": risk_score_design,
+        "risk_score_contract_gate": risk_score_contract_gate,
         "gate_rows": gate_rows,
     }
 
@@ -1467,6 +1475,7 @@ def build_survival_clinical_rows(
     cox_multivariate_parameter_gate = survival_clinical_state.get("cox_multivariate_parameter_gate") if isinstance(survival_clinical_state.get("cox_multivariate_parameter_gate"), dict) else {}
     cox_multivariate_confirmation_gate = survival_clinical_state.get("cox_multivariate_confirmation_gate") if isinstance(survival_clinical_state.get("cox_multivariate_confirmation_gate"), dict) else {}
     risk_score_design = survival_clinical_state.get("risk_score_design") if isinstance(survival_clinical_state.get("risk_score_design"), dict) else {}
+    risk_score_contract_gate = survival_clinical_state.get("risk_score_contract_gate") if isinstance(survival_clinical_state.get("risk_score_contract_gate"), dict) else {}
     km_real_plot_gate = km_real_plot_gate or {}
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
@@ -1588,11 +1597,11 @@ def build_survival_clinical_rows(
         {
             "row_id": "risk_score",
             "label": "Risk score / nomogram",
-            "status": str(risk_score_design.get("status") or "blocked_design_audit"),
-            "asset_status": f"variables={len(risk_score_design.get('variables', []) or [])}; result_semantics={risk_score_design.get('result_semantics', 'design_audit_only')}",
-            "backend_status": "design audit only",
-            "disabled_reason": compact_list(_list(risk_score_design.get("blockers")) or ["risk_score_execution_disabled_design_audit_only"]),
-            "warnings": compact_list(_list(risk_score_design.get("warnings")) or ["No prognosis or treatment recommendation."]),
+            "status": str(risk_score_contract_gate.get("status") or risk_score_design.get("status") or "blocked_contract_gate"),
+            "asset_status": f"source={risk_score_contract_gate.get('source_cox_multivariate_result_id', '')}; variables={len(risk_score_contract_gate.get('candidate_variables', risk_score_design.get('variables', [])) or [])}; result_semantics={risk_score_contract_gate.get('result_semantics', risk_score_design.get('result_semantics', 'contract_gate_only'))}",
+            "backend_status": "B32 contract gate only; no execution",
+            "disabled_reason": compact_list(_list(risk_score_contract_gate.get("blockers")) or _list(risk_score_design.get("blockers")) or ["risk_score_execution_disabled_contract_gate_only"]),
+            "warnings": compact_list(_list(risk_score_contract_gate.get("warnings")) or _list(risk_score_design.get("warnings")) or ["No prognosis or treatment recommendation."]),
         },
         {
             "row_id": "clinical_association",
@@ -1723,6 +1732,15 @@ def _latest_result_id(entries: list[dict[str, Any]], task_types: set[str]) -> st
         if str(entry.get("task_type") or "") in task_types and normalize_result_semantics(entry.get("result_semantics")) == "formal_computed_result":
             return str(entry.get("result_id") or "")
     return ""
+
+
+def _latest_formal_result_entry(entries: list[dict[str, Any]], task_types: set[str]) -> dict[str, Any]:
+    for entry in reversed(entries):
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("task_type") or "") in task_types and normalize_result_semantics(entry.get("result_semantics")) == "formal_computed_result":
+            return entry
+    return {}
 
 
 def _list(value: object) -> list[str]:
