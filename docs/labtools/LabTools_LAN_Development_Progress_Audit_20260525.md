@@ -4,20 +4,22 @@ Date: 2026-05-25
 
 ## Executive Summary
 
-LabTools LAN development is currently in a loopback read-only summary prototype
-stage.
+LabTools LAN development is currently in a manual loopback read-only connection
+prototype stage.
 
 Usable cross-device LAN product capability is still effectively 0%: there is no
 LAN client network connection, no public-network binding, no sync protocol, no
 authentication, no multi-user permission model, and no conflict merge behavior.
 The runtime service is manually started on loopback and can expose read-only
-summary endpoints for local validation.
+summary endpoints for local validation. A manual read-only client contract now
+exists, but it is still loopback-only and does not create cross-device sharing.
 
-LAN architecture readiness is approximately 60-70%. The local-first data
+LAN architecture readiness is approximately 65-75%. The local-first data
 contract, adapter boundary, disabled future adapters, server skeleton contract,
 client adapter skeleton, protocol authority spec, loopback health server, and
-loopback read-only summary endpoints are in place. These are important
-prerequisites, but they do not yet move LabTools data across machines.
+loopback read-only summary endpoints are in place. The read-only client contract
+can consume those summaries manually. These are important prerequisites, but
+they do not yet move LabTools data across machines.
 
 ## Current Commits Reviewed
 
@@ -46,6 +48,8 @@ The audit also relies on the local-first data store line through:
 | Client adapter skeleton contract | Complete for skeleton | 100% | `labtools.lan_client` is importable and blocks reads/writes as disabled. |
 | Loopback health server runtime | Prototype complete | 100% | Manual `127.0.0.1` health/status server; no data endpoints. |
 | Loopback read-only summary runtime | Prototype complete | 100% | Manual `127.0.0.1` summary endpoints through read-only adapter; no writes. |
+| Manual read-only client contract | Prototype complete | 100% | Explicit loopback URL client; graceful unavailable/malformed handling; no writes. |
+| UIShell manual LAN status panel | Prototype complete | 100% | Manual URL entry and read-only counts; no data-source switch yet. |
 | Cross-device LAN data server runtime | Not started | 0% | No public bind, client connection flow, auth, or cross-device listener exists. |
 | Real LAN client network I/O | Not started | 0% | No requests, device discovery, or connection flow exists. |
 | Sync protocol | Not started | 0% | No pull/push/delta/full snapshot protocol exists. |
@@ -103,6 +107,19 @@ The adapter reports `future_lan` disabled status, returns empty read results,
 and blocks write methods with a disabled reason. It does not perform network
 I/O.
 
+### Manual Read-Only Client Contract
+
+`labtools.lan_client` exposes:
+
+- `LabToolsLanReadonlyClientConfig`
+- `LabToolsLanReadonlyClientDataSourceAdapter`
+- `LabToolsLanReadonlyReadModel`
+- `build_lan_readonly_client_adapter()`
+
+The client accepts only explicit loopback HTTP URLs, consumes the stable LAN
+envelope, returns graceful blocked statuses for server unavailable and malformed
+responses, and blocks all writes.
+
 ### Loopback Health And Read-Only Runtime
 
 `labtools.lan_server` also exposes:
@@ -159,6 +176,11 @@ Current tests verify:
 - Loopback read-only runtime does not write audit entries or deduct sample
   volume.
 - Loopback read-only runtime does not expose local filesystem paths.
+- Manual read-only client reads loopback summaries.
+- Manual read-only client blocks server unavailable and malformed responses
+  gracefully.
+- Manual read-only client blocks writes.
+- UIShell manual LAN panel displays read-only counts through runtime wrappers.
 - Skeleton source does not include network client/server imports or listener
   calls.
 - Package smoke includes `labtools.lan_server` and `labtools.lan_client`.
@@ -196,19 +218,20 @@ validation step, not a data-sharing capability.
 
 ### Engineering Foundation
 
-Current LAN engineering foundation: approximately 60-70%.
+Current LAN engineering foundation: approximately 65-75%.
 
 Reason: local-first data contracts, adapter boundaries, disabled future modes,
 server skeleton, client adapter skeleton, protocol authority spec, loopback
-health runtime, loopback read-only summary endpoints, and boundary tests are in
-place. These reduce future design risk but do not implement LAN data sharing.
+health runtime, loopback read-only summary endpoints, manual read-only client
+contract, and boundary tests are in place. These reduce future design risk but
+do not implement LAN data sharing.
 
 ### Recommended Overall Label
 
 Use this label in status reports:
 
 ```text
-LAN: loopback-readonly-ready / data-sharing-disabled
+LAN: manual-loopback-readonly-ready / data-sharing-disabled
 ```
 
 Avoid labels such as:
@@ -254,15 +277,17 @@ cross-device server available
 Stop for manual checkpoint, then implement:
 
 ```text
-LAN-LT6 manual LAN connection UI and client read contract
+LAN-LT7 manual LAN data-source switch or public-bind design gate
 ```
 
 Expected output:
 
-- UIShell manual LAN status panel or runtime wrapper design.
-- LAN client adapter transport contract for read-only summaries.
-- Server unavailable/malformed response graceful client states.
-- No automatic server discovery.
+- Decide whether LAN summaries can feed Reagent/WB/Cell pages, or remain
+  status-only.
+- If public bind is considered, design firewall, auth/token, pairing, and
+  privacy boundaries before implementation.
+- Preserve manual connection until automatic discovery has a separate approved
+  design.
 - No write endpoints.
 - No auth/token.
 - No sync.
@@ -273,6 +298,7 @@ Expected output:
 
 Do not implement LAN sync yet.
 
-The current codebase is ready for a manual checkpoint on the loopback read-only
-summary prototype. It is not ready for multi-user sync, automatic conflict
-handling, networked writes, or public-network exposure.
+The current codebase is ready for a manual checkpoint on the manual loopback
+read-only connection prototype. It is not ready for multi-user sync, automatic
+conflict handling, networked writes, automatic discovery, or public-network
+exposure.

@@ -8,7 +8,8 @@ This document defines the minimum LAN MVP protocol and authority boundary for
 LabTools. The original LAN-LT3 section is a design gate. LAN-LT4 added the
 first manual loopback health server prototype. LAN-LT5 adds loopback read-only
 summary endpoints while keeping writes, auth, sync, and public-network binding
-disabled.
+disabled. LAN-LT6 adds a manual read-only client contract and UIShell connection
+surface without automatic discovery or sync.
 
 This phase does not add LAN client network I/O, auth, token storage, sync jobs,
 write endpoints, public-network binding, or UI behavior.
@@ -346,6 +347,36 @@ Manual checkpoint before LAN-LT6:
 - Confirm whether UIShell should add a manual LAN connection/status panel next.
 - Confirm no public-network binding should be enabled yet.
 - Confirm auth/token/multi-user/sync/write behavior remains out of scope.
+
+## LAN-LT6 Manual Connection And Client Read Contract
+
+LAN-LT6 implements a manually configured read-only client adapter:
+
+```text
+LabToolsLanReadonlyClientDataSourceAdapter
+```
+
+Client constraints:
+
+- Accepts only explicit loopback HTTP server URLs.
+- Does not perform automatic server discovery.
+- Does not connect unless called by runtime/UI code.
+- Consumes the `labtools_lan_api.v1` envelope.
+- Maps server unavailable, malformed JSON, unsupported schema, missing store,
+  corrupted store, and read-disabled states to graceful blocked statuses.
+- Exposes read-only reagent, sample, cell, freeze vial, and record summaries.
+- Blocks all write methods.
+
+UIShell may show a manual LAN read-only status panel that calls runtime wrappers.
+UIShell must not import LAN client transport or local data store code directly.
+
+Manual checkpoint before LAN-LT7:
+
+- Confirm whether a manual LAN data-source switch should feed Reagent/WB/Cell
+  pages or remain status-only.
+- Confirm whether public LAN binding can be designed, still without auth/sync.
+- Confirm no automatic discovery, auth/token, multi-user permission, sync, or
+  write behavior should be enabled yet.
 
 ## Acceptance Criteria For LAN-LT3 Spec Gate
 
