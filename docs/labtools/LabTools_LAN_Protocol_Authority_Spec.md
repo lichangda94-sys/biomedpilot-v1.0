@@ -11,7 +11,8 @@ summary endpoints while keeping writes, auth, sync, and public-network binding
 disabled. LAN-LT6 adds a manual read-only client contract and UIShell connection
 surface without automatic discovery or sync. LAN-LT7 permits explicit private
 LAN read-only binding while leaving pairing/auth/token for the next design
-phase.
+phase. LAN-LT8 defines pairing/auth/token behavior as a design gate without
+runtime auth implementation.
 
 This phase does not add LAN client network I/O, auth, token storage, sync jobs,
 write endpoints, public-network binding, or UI behavior.
@@ -417,6 +418,37 @@ Manual checkpoint before LAN-LT8:
   auth exists.
 - Define pairing UX, token storage, revocation, and audit identity mapping.
 - Continue blocking LAN writes until a later write-specific design gate.
+
+## LAN-LT8 Pairing/Auth/Token Design Gate
+
+LAN-LT8 is documented in:
+
+```text
+docs/labtools/LabTools_LAN_Pairing_Auth_Token_Design.md
+```
+
+This gate defines:
+
+- pairing model.
+- token lifecycle.
+- token storage boundaries.
+- future `Authorization: Bearer` request shape.
+- auth failure response states.
+- audit identity mapping requirements.
+- UIShell pairing UX.
+- migration policy from unauthenticated read-only LAN.
+
+It does not implement token runtime, pairing endpoints, auth middleware, token
+storage, user accounts, sync, automatic discovery, or LAN writes.
+
+Manual checkpoint before LAN-LT9:
+
+- Confirm token expiry duration.
+- Confirm token storage location.
+- Confirm whether unauthenticated read-only compatibility remains available.
+- Confirm pairing code length and expiry.
+- Confirm device revocation UX.
+- Confirm first authenticated runtime remains read-only with `viewer` only.
 
 ## Acceptance Criteria For LAN-LT3 Spec Gate
 
