@@ -36,12 +36,20 @@ from .km_result_schema import validate_km_result_index_entry, validate_km_result
 from .km_review import build_km_result_review, export_km_review_table
 from .outcome_gate import build_survival_outcome_gate
 from .risk_score_contract_gate import build_risk_score_nomogram_contract_gate
+from .risk_score_confirmation import (
+    RISK_SCORE_CONFIRMATION_PATH,
+    confirm_risk_score_parameters,
+    load_risk_score_parameter_confirmation,
+    validate_risk_score_parameter_confirmation,
+)
 from .risk_score_design import audit_risk_score_design
+from .risk_score_result_schema import build_risk_score_result_schema_gate, validate_risk_score_result_index_entry, validate_risk_score_result_table
 
 __all__ = [
     "COX_CONFIRMATION_PATH",
     "COX_MULTIVARIATE_CONFIRMATION_PATH",
     "KM_CONFIRMATION_PATH",
+    "RISK_SCORE_CONFIRMATION_PATH",
     "audit_clinical_variables",
     "audit_cox_multivariate_design",
     "audit_cox_univariate_e2e_acceptance",
@@ -54,16 +62,19 @@ __all__ = [
     "build_km_logrank_parameter_manifest",
     "build_km_result_review",
     "build_risk_score_nomogram_contract_gate",
+    "build_risk_score_result_schema_gate",
     "build_survival_outcome_gate",
     "confirm_cox_multivariate_parameters",
     "confirm_cox_univariate_parameters",
     "confirm_km_logrank_parameters",
+    "confirm_risk_score_parameters",
     "export_cox_review_table",
     "export_cox_multivariate_review_table",
     "export_km_review_table",
     "load_cox_multivariate_confirmation",
     "load_cox_univariate_confirmation",
     "load_km_logrank_confirmation",
+    "load_risk_score_parameter_confirmation",
     "resolve_survival_clinical_inputs",
     "run_controlled_cox_multivariate",
     "run_controlled_cox_univariate",
@@ -77,4 +88,7 @@ __all__ = [
     "validate_km_logrank_confirmation",
     "validate_km_result_index_entry",
     "validate_km_result_tables",
+    "validate_risk_score_parameter_confirmation",
+    "validate_risk_score_result_index_entry",
+    "validate_risk_score_result_table",
 ]

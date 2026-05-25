@@ -171,6 +171,21 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert "no risk score result" in risk["disabled_reason"]
     assert "formal Cox multivariate source" in risk["next_action"]
 
+    b33_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_design={"schema_version": "biomedpilot.risk_score_nomogram_contract_gate.v1", "status": "ready_for_parameter_confirmation", "blockers": [], "warnings": ["risk_score_contract_gate_only"]},
+        risk_score_confirmation_gate={"status": "passed", "blockers": []},
+        risk_score_result_schema_gate={"status": "blocked", "blockers": ["risk_score_result_bundle_missing"]},
+        report_gate={"status": "blocked"},
+    )
+    b33_risk = _row(b33_rows, "risk_score")
+    assert b33_risk["enabled"] is False
+    assert b33_risk["state"] == "confirmation_schema_gate_only"
+    assert "risk_score_result_bundle_missing" in b33_risk["disabled_reason"]
+    assert "B33 parameter confirmation / result schema gate only" in b33_risk["disabled_reason"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(
