@@ -45,6 +45,7 @@ def build_action_rows(
     gsea_report_gate: dict[str, Any] | None = None,
     full_integrated_report_gate: dict[str, Any] | None = None,
     full_integrated_docx_gate: dict[str, Any] | None = None,
+    full_integrated_pdf_gate: dict[str, Any] | None = None,
     gsea_input_gate: dict[str, Any] | None = None,
     gsea_rank_metric_gate: dict[str, Any] | None = None,
     gsea_gene_set_gate: dict[str, Any] | None = None,
@@ -89,6 +90,7 @@ def build_action_rows(
     gsea_report_gate = gsea_report_gate or {}
     full_integrated_report_gate = full_integrated_report_gate or {}
     full_integrated_docx_gate = full_integrated_docx_gate or {}
+    full_integrated_pdf_gate = full_integrated_pdf_gate or {}
     gsea_input_gate = gsea_input_gate or {}
     gsea_rank_metric_gate = gsea_rank_metric_gate or {}
     gsea_gene_set_gate = gsea_gene_set_gate or {}
@@ -127,6 +129,7 @@ def build_action_rows(
     rows.append(_gsea_report_ready_action(gsea_report_gate))
     rows.append(_full_integrated_report_action(full_integrated_report_gate))
     rows.append(_full_integrated_docx_rendered_export_action(full_integrated_docx_gate))
+    rows.append(_full_integrated_pdf_rendered_export_action(full_integrated_pdf_gate))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_clinical_input_readiness_action(survival_clinical_state))
     rows.append(_survival_outcome_preflight_action(survival_clinical_state))
@@ -848,6 +851,28 @@ def _full_integrated_docx_rendered_export_action(gate: dict[str, Any]) -> dict[s
         "blocked_docx_rendered_export_gate",
         "; ".join(dict.fromkeys(blockers)),
         "Generate a full integrated markdown package and install/configure user-system Pandoc on the renderer search path; no auto-install is available.",
+    )
+
+
+def _full_integrated_pdf_rendered_export_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed":
+        return {
+            "action_id": "full_integrated_pdf_rendered_export",
+            "label": "Export PDF rendered copy",
+            "state": "available",
+            "button_behavior": "enabled_pdf_rendered_export_package_artifact_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Render the existing full integrated markdown package to PDF with user/system Pandoc + XeLaTeX; do not write result_index_v2 or formal_computed_result.",
+        }
+    blockers = _list(gate.get("blockers")) or ["full_integrated_pdf_rendered_export_gate_not_passed"]
+    return _disabled(
+        "full_integrated_pdf_rendered_export",
+        "Export PDF rendered copy",
+        "blocked_pdf_rendered_export_gate",
+        "; ".join(dict.fromkeys(blockers)),
+        "Generate a full integrated markdown package and configure user-system Pandoc + XeLaTeX on the renderer search path; wkhtmltopdf remains detect-only.",
     )
 
 

@@ -98,6 +98,36 @@ def test_full_integrated_docx_rendered_export_action_is_package_artifact_only() 
     assert "renderer_dependency_missing:pandoc" in _row(blocked, "full_integrated_docx_rendered_export")["disabled_reason"]
 
 
+def test_full_integrated_pdf_rendered_export_action_is_package_artifact_only() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        full_integrated_pdf_gate={"status": "passed", "blockers": [], "warnings": []},
+    )
+
+    action = _row(rows, "full_integrated_pdf_rendered_export")
+    assert action["enabled"] is True
+    assert action["button_behavior"] == "enabled_pdf_rendered_export_package_artifact_only"
+    assert "Pandoc + XeLaTeX" in action["next_action"]
+    assert "do not write result_index_v2" in action["next_action"]
+    assert "formal_computed_result" in action["next_action"]
+
+    blocked = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        full_integrated_pdf_gate={"status": "blocked", "blockers": ["renderer_dependency_missing:xelatex"]},
+    )
+    blocked_action = _row(blocked, "full_integrated_pdf_rendered_export")
+    assert blocked_action["enabled"] is False
+    assert blocked_action["state"] == "blocked_pdf_rendered_export_gate"
+    assert "renderer_dependency_missing:xelatex" in blocked_action["disabled_reason"]
+    assert "wkhtmltopdf remains detect-only" in blocked_action["next_action"]
+
+
 def test_cox_multivariate_action_is_enabled_only_after_b20_gates_pass() -> None:
     rows = build_action_rows(
         packages=[{"package_type": "tcga_clinical_survival_preflight", "blockers": []}],

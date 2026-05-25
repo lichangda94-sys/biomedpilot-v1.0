@@ -4758,7 +4758,9 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
     status = widget.findChild(QLabel, "fullIntegratedReportStatus")
     assert status is not None
     assert "markdown-only package can be created" in status.text()
-    assert "PDF/DOCX disabled" in status.text()
+    assert "DOCX rendered export=" in status.text()
+    assert "PDF rendered export=" in status.text()
+    assert "rendered exports are package artifacts only" in status.text()
     button = widget.findChild(QPushButton, "fullIntegratedReportButton")
     assert button is not None and button.isEnabled()
     plan_table = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
@@ -4836,6 +4838,75 @@ def test_results_browser_docx_rendered_export_runs_only_after_gate_passes(qt_app
     assert "DOCX rendered export" in widget.status_message()
     assert "不写入 result index" in widget.status_message()
     assert "不生成 PDF" in widget.status_message()
+
+
+def test_results_browser_pdf_rendered_export_gate_surfaces_missing_xelatex(qt_app, project_summary, monkeypatch) -> None:
+    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
+
+    def renderer_gate(export_format: str, **kwargs) -> dict[str, object]:
+        if export_format == "pdf":
+            return _pdf_renderer_gate(available=False)
+        return _docx_renderer_gate(available=True)
+
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", renderer_gate)
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    pdf_button = widget.findChild(QPushButton, "fullIntegratedPdfRenderedExportButton")
+    assert pdf_button is not None
+    assert pdf_button.isEnabled() is False
+    plan = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
+    assert plan is not None
+    plan_text = _table_text(plan)
+    assert "pdf_rendered_export_status" in plan_text
+    assert str(package_path) in plan_text
+    assert "renderer_dependency_missing:xelatex" in plan_text
+    assert "wkhtmltopdf detect-only" in plan_text
+    assert "no result_index_v2 write" in plan_text
+
+
+def test_results_browser_pdf_rendered_export_runs_only_after_gate_passes(qt_app, project_summary, monkeypatch) -> None:
+    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
+    output_path = package_path / "exports" / "integrated_report_ui.pdf"
+
+    def renderer_gate(export_format: str, **kwargs) -> dict[str, object]:
+        if export_format == "pdf":
+            return _pdf_renderer_gate(available=True)
+        return _docx_renderer_gate(available=True)
+
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", renderer_gate)
+    monkeypatch.setattr(
+        workflow_pages,
+        "create_full_integrated_pdf_rendered_export",
+        lambda _package_path: {
+            "status": "full_integrated_pdf_rendered_export_created",
+            "output_path": str(output_path),
+            "blockers": [],
+            "warnings": [],
+            "export_artifact": {
+                "artifact_type": "full_integrated_report_rendered_export",
+                "validation_status": "passed",
+                "export_format": "pdf",
+            },
+        },
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    pdf_button = widget.findChild(QPushButton, "fullIntegratedPdfRenderedExportButton")
+    assert pdf_button is not None
+    assert pdf_button.isEnabled() is True
+    result = widget.generate_full_integrated_pdf_rendered_export()
+
+    assert result is not None
+    assert result["status"] == "full_integrated_pdf_rendered_export_created"
+    assert "PDF rendered export" in widget.status_message()
+    assert "不写入 result index" in widget.status_message()
+    assert "不标记 formal_computed_result" in widget.status_message()
+    assert "临床诊断" in widget.status_message()
+    assert "risk score" in widget.status_message()
 
 
 def _full_integrated_ui_gate() -> dict[str, object]:
@@ -4921,6 +4992,53 @@ def _docx_renderer_gate(*, available: bool) -> dict[str, object]:
             "docx_activation_requested": True,
             "detect_first_no_install_action": True,
             "external_renderers_bundled": False,
+        },
+        "blockers": blockers,
+        "warnings": [],
+    }
+
+
+def _pdf_renderer_gate(*, available: bool) -> dict[str, object]:
+    blockers = [] if available else ["renderer_dependency_missing:xelatex"]
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_renderer_gate.v1",
+        "status": "passed" if available else "blocked",
+        "export_format": "pdf",
+        "renderer_id": "pandoc_pdf",
+        "required_dependencies": ["pandoc", "xelatex"],
+        "detected_dependencies": {
+            "pandoc": {
+                "command": "pandoc",
+                "available": True,
+                "path": "/opt/homebrew/bin/pandoc",
+                "version": "pandoc 3.9.0.2",
+                "missing_reason": "",
+                "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled",
+            },
+            "xelatex": {
+                "command": "xelatex",
+                "available": available,
+                "path": "/Users/changdali/Library/TinyTeX/bin/universal-darwin/xelatex" if available else "",
+                "version": "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)" if available else "",
+                "missing_reason": "" if available else "xelatex_not_found_on_renderer_search_paths",
+                "packaging_impact": "external_binary_required_for_pandoc_pdf_backend_not_bundled",
+            },
+            "wkhtmltopdf": {
+                "command": "wkhtmltopdf",
+                "available": False,
+                "path": "",
+                "version": "",
+                "missing_reason": "wkhtmltopdf_detect_only_not_selected",
+                "packaging_impact": "detect_only_alternative_pdf_backend_not_selected",
+            },
+        },
+        "checks": {
+            "dependencies_detected": available,
+            "implementation_enabled": available,
+            "pdf_activation_requested": True,
+            "detect_first_no_install_action": True,
+            "external_renderers_bundled": False,
+            "wkhtmltopdf_detect_only_not_selected": True,
         },
         "blockers": blockers,
         "warnings": [],

@@ -58,6 +58,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert _action(state, "report_ready_export")["state"] == "blocked_report_ready_gate"
     assert _action(state, "full_integrated_docx_rendered_export")["enabled"] is False
     assert "full_integrated_markdown_package_missing" in _action(state, "full_integrated_docx_rendered_export")["disabled_reason"]
+    assert _action(state, "full_integrated_pdf_rendered_export")["enabled"] is False
+    assert "full_integrated_markdown_package_missing" in _action(state, "full_integrated_pdf_rendered_export")["disabled_reason"]
     formal_gate_text = "\n".join(str(row) for row in state["formal_deg_gate_rows"])
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
@@ -84,8 +86,12 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "missing_km_logrank_result" in survival_gate_text
     gate_text = "\n".join(str(row) for row in state["gate_rows"])
     assert "DOCX rendered export" in gate_text
+    assert "PDF rendered export" in gate_text
+    assert "Pandoc + XeLaTeX" in gate_text
     assert "no result_index_v2 write" in gate_text
     assert state["developer_diagnostics"]["full_integrated_docx_rendered_export_gate"]["checks"]["writes_result_index_v2"] is False
+    assert state["developer_diagnostics"]["full_integrated_pdf_rendered_export_gate"]["checks"]["writes_result_index_v2"] is False
+    assert state["developer_diagnostics"]["full_integrated_pdf_rendered_export_gate"]["selected_backend"] == "pandoc_xelatex"
     assert state["legacy_asset_pipeline"]["formal_analysis_enabled"] is False
     assert state["legacy_asset_pipeline"]["writes_result_index"] is False
     assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False
