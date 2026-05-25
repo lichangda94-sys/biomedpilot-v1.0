@@ -4,25 +4,23 @@ Date: 2026-05-25
 
 ## Executive Summary
 
-LabTools LAN development is currently in a pairing/auth/token design-gate
-stage.
+LabTools LAN development has moved from the pairing/auth/token design gate into
+an LT9 read-only auth runtime prototype.
 
-Usable cross-device LAN product capability is still effectively 0%: there is no
-LAN client network connection, no public-network binding, no sync protocol, no
-authentication, no multi-user permission model, and no conflict merge behavior.
-The runtime service is manually started and can expose read-only summary
-endpoints on loopback or an explicitly allowed private LAN bind. A manual
-read-only client contract can connect to explicit private LAN URLs. This is
-still read-only and unauthenticated. Pairing/auth/token is now defined as a
-design, but not implemented as runtime auth.
+Usable cross-device LAN product capability is now an authenticated read-only
+prototype: a manually started host can bind to loopback or an explicitly
+allowed private LAN address, issue a short-lived pairing code, and require a
+viewer bearer token for summary reads. There is still no sync protocol, LAN
+write endpoint, automatic discovery, multi-user permission model, or conflict
+merge behavior.
 
 LAN architecture readiness is approximately 75-85%. The local-first data
 contract, adapter boundary, disabled future adapters, server skeleton contract,
 client adapter skeleton, protocol authority spec, loopback health server,
 read-only summary endpoints, explicit private LAN bind, and read-only client
-contract are in place. Pairing/auth/token requirements are documented. These are
-important prerequisites, but runtime auth, pairing endpoints, sync, and writes
-are still not implemented.
+contract are in place. Pairing/auth/token requirements are documented and the
+first runtime token gate is implemented. These are important prerequisites, but
+sync and LAN writes are still not implemented.
 
 ## Current Commits Reviewed
 
@@ -55,11 +53,12 @@ The audit also relies on the local-first data store line through:
 | Manual read-only client contract | Prototype complete | 100% | Explicit loopback URL client; graceful unavailable/malformed handling; no writes. |
 | UIShell manual LAN status panel | Prototype complete | 100% | Manual URL entry and read-only counts; no data-source switch yet. |
 | Pairing/auth/token design | Complete for design gate | 100% | Pairing flow, token lifecycle, auth envelope, audit identity, and migration policy documented. |
-| Cross-device LAN data server runtime | Not started | 0% | No public bind, client connection flow, auth, or cross-device listener exists. |
-| Real LAN client network I/O | Not started | 0% | No requests, device discovery, or connection flow exists. |
+| Pairing/auth/token runtime | Prototype complete | 100% | Read-only bearer token auth, 8-digit single-use pairing, 30-day token expiry, hash-only token store. |
+| Cross-device LAN data server runtime | Prototype complete | 40% | Explicit private LAN read-only bind exists; no writes, sync, discovery, or user accounts. |
+| Real LAN client network I/O | Prototype complete | 40% | Manual URL read-only HTTP client exists; no discovery, sync, or write flow. |
 | Sync protocol | Not started | 0% | No pull/push/delta/full snapshot protocol exists. |
 | Server storage authority | Not started | 0% | No decision whether server owns JSON, SQLite, or another store. |
-| Authentication and permissions | Not started | 0% | No admin/editor/viewer model, token, user identity, or audit user mapping. |
+| Authentication and permissions | Prototype complete | 30% | Viewer token auth exists for read-only summaries; no editor/admin/user identity mapping. |
 | Conflict handling | Not started | 0% | Existing local expected-version blocking exists, but no multi-client policy. |
 | UI LAN settings/status | Not started | 0% | UIShell has no LAN connection or status setup UI. |
 | Network failure tests | Not started | 0% | Current tests intentionally verify no network code is active. |
@@ -125,7 +124,7 @@ The client accepts explicit loopback/private/link-local/`.local` HTTP URLs,
 consumes the stable LAN envelope, returns graceful blocked statuses for server
 unavailable and malformed responses, and blocks all writes.
 
-### Pairing/Auth/Token Design
+### Pairing/Auth/Token Runtime
 
 `docs/labtools/LabTools_LAN_Pairing_Auth_Token_Design.md` defines:
 
@@ -137,8 +136,17 @@ unavailable and malformed responses, and blocks all writes.
 - UIShell pairing UX.
 - migration policy from unauthenticated read-only LAN.
 
-The design does not add runtime token checks, token files, pairing endpoints,
-or `Authorization` handling.
+LT9 adds:
+
+- `LabToolsLanAuthManager`
+- in-memory single-use pairing sessions.
+- 8-digit pairing codes with 10-minute expiry.
+- 30-day viewer tokens.
+- host-side `lan_auth/paired_clients.json` token metadata.
+- `token_hash` storage instead of plaintext tokens.
+- `POST /pairing/claim`.
+- `Authorization: Bearer <opaque-token>` handling for read-only endpoints.
+- explicit unauthenticated read-only compatibility mode.
 
 ### Loopback Health And Read-Only Runtime
 
@@ -211,8 +219,11 @@ Current tests verify:
 - Manual read-only client blocks writes.
 - UIShell manual LAN panel displays read-only counts through runtime wrappers.
 - Pairing/auth/token design gate exists.
-- Runtime/client code still does not implement token storage or Authorization
-  headers.
+- Runtime/client code implements read-only pairing, token storage, and
+  `Authorization` headers.
+- Pairing codes are single-use.
+- Token revocation and unknown-token states block gracefully.
+- Authenticated reads do not write audit entries or deduct sample volume.
 - Skeleton source does not include network client/server imports or listener
   calls.
 - Package smoke includes `labtools.lan_server` and `labtools.lan_client`.
@@ -221,13 +232,10 @@ Current tests verify:
 
 The following are not implemented and should not be described as available:
 
-- Cross-device LAN server process.
-- LAN client network transport.
 - Device discovery.
-- Workspace pairing runtime.
-- Authentication runtime.
-- User roles.
-- Token storage.
+- Workspace pairing runtime in UIShell.
+- Editor/admin user roles.
+- UI paired-device management.
 - Remote database.
 - Remote JSON or SQLite sharing.
 - Sync scheduling.
@@ -244,27 +252,27 @@ The following are not implemented and should not be described as available:
 
 Current cross-device LAN product capability: 0%.
 
-Reason: no LabTools data can be shared across devices and no client can connect
-to a server for summaries. The local-only loopback summary server is a runtime
-validation step, not a data-sharing capability.
+Reason: LabTools summaries can be read through a manually configured,
+authenticated read-only LAN path, but there is no sync, write, discovery, or
+multi-user workflow.
 
 ### Engineering Foundation
 
-Current LAN engineering foundation: approximately 75-85%.
+Current LAN engineering foundation: approximately 80-90%.
 
 Reason: local-first data contracts, adapter boundaries, disabled future modes,
 server skeleton, client adapter skeleton, protocol authority spec, loopback
 health runtime, read-only summary endpoints, explicit private LAN bind, manual
-read-only client contract, pairing/auth/token design, and boundary tests are in
-place. These reduce future design risk but do not implement runtime auth,
-pairing, sync, or writes.
+read-only client contract, pairing/auth/token design, pairing runtime, token
+gate, and boundary tests are in place. These reduce future design risk but do
+not implement sync or writes.
 
 ### Recommended Overall Label
 
 Use this label in status reports:
 
 ```text
-LAN: pairing-auth-designed / runtime-auth-sync-write-disabled
+LAN: pairing-auth-readonly-prototype / sync-write-disabled
 ```
 
 Avoid labels such as:
@@ -310,15 +318,17 @@ cross-device server available
 Stop for manual checkpoint, then implement:
 
 ```text
-LAN-LT9 pairing/auth/token runtime prototype
+LAN-LT10 UIShell pairing credential UX prototype
 ```
 
 Expected output:
 
-- Implement pairing behind an explicit manual host action.
-- Implement token-required read-only mode.
-- Preserve unauthenticated read-only only if explicitly approved.
-- Add token revocation and expiry handling.
+- Add UIShell runtime wrappers for claiming a pairing code.
+- Store client token in a local settings credential file, with OS keychain
+  deferred.
+- Feed stored bearer token into the manual read-only LAN client.
+- Show clear read-only/auth/expiry status.
+- Keep unauthenticated read-only as an explicit compatibility state only.
 - No write endpoints.
 - No sync.
 - No automatic inventory/sample deduction.
@@ -328,6 +338,6 @@ Expected output:
 
 Do not implement LAN sync yet.
 
-The current codebase is ready for a manual checkpoint before pairing/auth/token
-runtime implementation. It is not ready for multi-user sync, automatic conflict
-handling, networked writes, or automatic discovery.
+The current codebase is ready for a manual checkpoint before UIShell pairing
+credential UX and paired-device management. It is not ready for multi-user
+sync, automatic conflict handling, networked writes, or automatic discovery.

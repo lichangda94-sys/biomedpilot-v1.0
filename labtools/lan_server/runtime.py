@@ -18,6 +18,7 @@ from labtools.local_data.models import (
     ReagentRecord,
     SampleRecord,
 )
+from labtools.lan_server.auth import LabToolsLanAuthManager, LabToolsLanAuthResult, LabToolsLanPairingSession, LabToolsLanTokenIssueResult
 
 
 LAN_API_SCHEMA_VERSION = "labtools_lan_api.v1"
@@ -46,6 +47,8 @@ class LabToolsLanHealthServerConfig:
     health_only: bool = True
     local_data_root: str | Path | None = None
     allow_lan_bind: bool = False
+    auth_required: bool = False
+    allow_unauthenticated_readonly: bool = True
 
     def normalized(self) -> "LabToolsLanHealthServerConfig":
         host = str(self.host or "127.0.0.1").strip()
@@ -64,6 +67,8 @@ class LabToolsLanHealthServerConfig:
             health_only=bool(self.health_only),
             local_data_root=self.local_data_root,
             allow_lan_bind=allow_lan_bind,
+            auth_required=bool(self.auth_required) and not bool(self.health_only),
+            allow_unauthenticated_readonly=bool(self.allow_unauthenticated_readonly) and not bool(self.auth_required),
         )
 
 
@@ -105,6 +110,7 @@ class LabToolsLanHealthServer:
     def __init__(self, config: LabToolsLanHealthServerConfig | None = None) -> None:
         self.config = (config or LabToolsLanHealthServerConfig()).normalized()
         self.adapter = ReadOnlyLabToolsDataSourceAdapter(self.config.local_data_root)
+        self.auth_manager = LabToolsLanAuthManager(self.config.local_data_root)
         self._server: _LabToolsLanThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
         self._last_host = self.config.host
@@ -132,7 +138,7 @@ class LabToolsLanHealthServer:
             listening=self.is_listening,
             data_access_enabled=not self.config.health_only,
             sync_enabled=False,
-            auth_enabled=False,
+            auth_enabled=self.config.auth_required,
             reason=self._runtime_reason(),
         )
 
@@ -178,9 +184,21 @@ class LabToolsLanHealthServer:
     def _runtime_reason(self) -> str:
         if self.config.health_only:
             return "Loopback health/status only; LabTools data endpoints are disabled."
+        if self.config.auth_required:
+            return "LAN read-only summaries require paired viewer tokens; writes, sync, and automatic discovery are disabled."
         if self.config.host not in LOOPBACK_HOSTS:
             return "LAN read-only summaries; writes, sync, auth, pairing, and automatic discovery are disabled."
         return "Loopback read-only summaries; writes, sync, auth, and public-network access are disabled."
+
+    def create_pairing_session(self, *, client_label: str = "manual-client") -> LabToolsLanPairingSession:
+        if self.config.health_only or not self.config.auth_required:
+            raise RuntimeError("Pairing sessions are only available when LAN read-only auth is required.")
+        return self.auth_manager.create_pairing_session(client_label=client_label)
+
+    def claim_pairing(self, *, pairing_code: str, client_label: str = "manual-client") -> LabToolsLanTokenIssueResult:
+        if self.config.health_only or not self.config.auth_required:
+            return LabToolsLanTokenIssueResult(False, "auth_not_implemented", "LAN auth is not enabled for this server.")
+        return self.auth_manager.claim_pairing(pairing_code=pairing_code, client_label=client_label)
 
     def __enter__(self) -> "LabToolsLanHealthServer":
         self.start()
@@ -222,6 +240,17 @@ def _build_handler():
             if path == "/status":
                 self._write_status()
                 return
+            if path == "/pairing/claim":
+                self._write_json(
+                    405,
+                    lan_response_envelope(
+                        ok=False,
+                        status="disabled_or_not_implemented",
+                        reason="Pairing claim requires POST.",
+                        data=None,
+                    ),
+                )
+                return
             if path in READONLY_ENDPOINTS and self._runtime().config.health_only:
                 self._write_json(
                     404,
@@ -232,6 +261,9 @@ def _build_handler():
                         data=None,
                     ),
                 )
+                return
+            if path in READONLY_ENDPOINTS and not self._request_auth_result().ok:
+                self._write_auth_block(self._request_auth_result())
                 return
             if path == "/records/summary":
                 self._write_readonly_payload(lambda: self._records_summary_payload())
@@ -272,6 +304,10 @@ def _build_handler():
             )
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
+            path = urlparse(self.path).path
+            if path == "/pairing/claim":
+                self._handle_pairing_claim()
+                return
             self._write_method_not_allowed()
 
         def do_PUT(self) -> None:  # noqa: N802 - stdlib handler API
@@ -307,11 +343,13 @@ def _build_handler():
 
         def _write_status(self) -> None:
             runtime = self._runtime()
+            auth_result = self._request_auth_result()
             data = {
                 **self._runtime_payload(),
                 "runtime": asdict(runtime.status()),
+                "auth": self._auth_payload(auth_result),
             }
-            if not runtime.config.health_only:
+            if not runtime.config.health_only and (not runtime.config.auth_required or auth_result.ok):
                 data["adapter_status"] = safe_adapter_status(runtime.adapter)
             self._write_json(
                 200,
@@ -388,12 +426,89 @@ def _build_handler():
                 "lan_runtime_mode": runtime.lan_runtime_mode,
                 "data_access_enabled": not runtime.config.health_only,
                 "sync_enabled": False,
-                "auth_enabled": False,
+                "auth_enabled": runtime.config.auth_required,
                 "write_enabled": False,
             }
 
         def _runtime(self) -> LabToolsLanHealthServer:
             return self.server.runtime
+
+        def _request_auth_result(self) -> LabToolsLanAuthResult:
+            runtime = self._runtime()
+            if runtime.config.health_only or not runtime.config.auth_required:
+                return LabToolsLanAuthResult(True, "auth_not_required", "LAN auth is not required for this request.")
+            return runtime.auth_manager.validate_authorization_header(self.headers.get("Authorization"))
+
+        def _auth_payload(self, auth_result: LabToolsLanAuthResult) -> dict[str, Any]:
+            runtime = self._runtime()
+            return {
+                "required": runtime.config.auth_required,
+                "authenticated": auth_result.ok,
+                "status": auth_result.status,
+                "reason": auth_result.reason,
+                "role": auth_result.role if auth_result.ok else "",
+                "client_label": auth_result.client_label if auth_result.ok else "",
+            }
+
+        def _write_auth_block(self, auth_result: LabToolsLanAuthResult) -> None:
+            self._write_json(
+                401,
+                lan_response_envelope(
+                    ok=False,
+                    status=auth_result.status,
+                    reason=auth_result.reason,
+                    data={"auth": self._auth_payload(auth_result)},
+                ),
+            )
+
+        def _handle_pairing_claim(self) -> None:
+            runtime = self._runtime()
+            if runtime.config.health_only or not runtime.config.auth_required:
+                self._write_json(
+                    404,
+                    lan_response_envelope(
+                        ok=False,
+                        status="auth_not_implemented",
+                        reason="LAN auth is not enabled for this server.",
+                        data=None,
+                    ),
+                )
+                return
+            try:
+                length = int(self.headers.get("Content-Length") or "0")
+                payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            except Exception:
+                self._write_json(
+                    400,
+                    lan_response_envelope(
+                        ok=False,
+                        status="blocked_invalid_response",
+                        reason="Pairing claim payload must be valid JSON.",
+                        data=None,
+                    ),
+                )
+                return
+            result = runtime.claim_pairing(
+                pairing_code=str(payload.get("pairing_code", "")),
+                client_label=str(payload.get("client_label", "manual-client")),
+            )
+            self._write_json(
+                200 if result.ok else 403,
+                lan_response_envelope(
+                    ok=result.ok,
+                    status=result.status,
+                    reason=result.reason,
+                    data={
+                        "token": result.token,
+                        "token_id": result.token_id,
+                        "client_label": result.client_label,
+                        "role": result.role,
+                        "expires_at": result.expires_at,
+                    }
+                    if result.ok
+                    else None,
+                ),
+            )
 
     return LabToolsLanHealthRequestHandler
 

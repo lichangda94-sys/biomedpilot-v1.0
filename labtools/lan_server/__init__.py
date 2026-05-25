@@ -18,6 +18,15 @@ from labtools.lan_server.runtime import (
     build_lan_health_server,
     lan_response_envelope,
 )
+from labtools.lan_server.auth import (
+    PAIRING_CODE_DIGITS,
+    PAIRING_EXPIRY_MINUTES,
+    TOKEN_EXPIRY_DAYS,
+    LabToolsLanAuthManager,
+    LabToolsLanAuthResult,
+    LabToolsLanPairingSession,
+    LabToolsLanTokenIssueResult,
+)
 
 __all__ = [
     "LAN_API_SCHEMA_VERSION",
@@ -25,12 +34,19 @@ __all__ = [
     "LAN_SERVER_DISABLED_REASON",
     "LOOPBACK_HEALTH_RUNTIME_MODE",
     "LOOPBACK_READONLY_RUNTIME_MODE",
+    "PAIRING_CODE_DIGITS",
+    "PAIRING_EXPIRY_MINUTES",
+    "TOKEN_EXPIRY_DAYS",
+    "LabToolsLanAuthManager",
+    "LabToolsLanAuthResult",
     "LabToolsLanHealthServer",
     "LabToolsLanHealthServerConfig",
     "LabToolsLanHealthServerRuntimeStatus",
+    "LabToolsLanPairingSession",
     "LabToolsLanServerConfig",
     "LabToolsLanServerSkeleton",
     "LabToolsLanServerStatus",
+    "LabToolsLanTokenIssueResult",
     "build_lan_health_server",
     "build_lan_server_skeleton",
     "lan_response_envelope",

@@ -11,11 +11,11 @@ summary endpoints while keeping writes, auth, sync, and public-network binding
 disabled. LAN-LT6 adds a manual read-only client contract and UIShell connection
 surface without automatic discovery or sync. LAN-LT7 permits explicit private
 LAN read-only binding while leaving pairing/auth/token for the next design
-phase. LAN-LT8 defines pairing/auth/token behavior as a design gate without
-runtime auth implementation.
+phase. LAN-LT8 defines pairing/auth/token behavior as a design gate. LAN-LT9
+adds the first read-only pairing/auth/token runtime prototype.
 
-This phase does not add LAN client network I/O, auth, token storage, sync jobs,
-write endpoints, public-network binding, or UI behavior.
+This phase does not add sync jobs, LAN write endpoints, automatic discovery,
+public-network binding, user accounts, or multi-user permissions.
 
 ## MVP Mode
 
@@ -160,7 +160,15 @@ Required semantic states:
 | `blocked_write_disabled` | Write attempted before LAN write phase. |
 | `blocked_version_conflict` | Future write expected-version mismatch. |
 | `disabled_future_option` | LAN/cloud feature remains disabled. |
-| `auth_not_implemented` | Auth is required by a future phase but not active now. |
+| `auth_not_implemented` | Auth is not active for this runtime mode. |
+| `auth_required` | Read endpoint requires a paired viewer token. |
+| `auth_invalid` | Token is malformed or unknown. |
+| `auth_expired` | Token exists but is expired. |
+| `auth_revoked` | Token was revoked by the host. |
+| `pairing_required` | Client has not supplied a valid pairing code. |
+| `pairing_expired` | Pairing code is expired or already used. |
+| `permission_denied` | Token is valid but not allowed for the endpoint. |
+| `auth_store_unavailable` | Token metadata cannot be read safely. |
 
 ## Read Model Requirements
 
@@ -215,12 +223,13 @@ Required graceful error behavior:
 
 The first LAN runtime must be local-lab oriented, not public-network oriented.
 
-Until a dedicated auth phase exists:
+Auth boundary:
 
 - Do not expose public network service.
-- Do not store tokens.
+- Store only token hashes on the host.
+- Do not expose token files through LAN endpoints.
 - Do not implement user accounts.
-- Do not map audit users over LAN.
+- Do not map audit users over LAN writes because LAN writes remain disabled.
 - Do not expose raw store files.
 - Do not expose backup files.
 
@@ -449,6 +458,46 @@ Manual checkpoint before LAN-LT9:
 - Confirm pairing code length and expiry.
 - Confirm device revocation UX.
 - Confirm first authenticated runtime remains read-only with `viewer` only.
+
+## LAN-LT9 Pairing/Auth/Token Runtime Prototype
+
+LAN-LT9 implements the first authenticated read-only runtime:
+
+```text
+python3 -m labtools.lan_server --host 0.0.0.0 --port 8787 --read-only-summaries --allow-lan-bind --pairing-on-start
+```
+
+Runtime defaults:
+
+- Read-only summary mode requires bearer token auth unless
+  `--allow-unauthenticated-readonly` is explicitly passed.
+- Pairing sessions issue 8-digit codes.
+- Pairing codes expire after 10 minutes.
+- Pairing codes are single-use.
+- Issued tokens expire after 30 days.
+- First role is `viewer` only.
+- Server token metadata is stored under
+  `local_data_root/lan_auth/paired_clients.json`.
+- Server stores `token_hash`, never plaintext tokens.
+
+Auth endpoints:
+
+```text
+POST /pairing/claim
+```
+
+Read endpoints continue to be summary-only and still block all write methods
+with `blocked_write_disabled`. Authenticated reads must not write audit entries,
+deduct reagent inventory, deduct sample volume, change sample status, generate
+reports, or expose raw store files.
+
+Manual checkpoint before LAN-LT10:
+
+- Confirm host-side paired-device management UX.
+- Confirm client token storage and pairing UX in UIShell.
+- Confirm revocation UI behavior.
+- Confirm whether compatibility mode should remain visible.
+- Continue blocking LAN writes and sync until separate design gates.
 
 ## Acceptance Criteria For LAN-LT3 Spec Gate
 

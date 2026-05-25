@@ -23,6 +23,7 @@ class LabToolsLanReadonlyClientConfig:
     workspace_id: str = ""
     timeout_seconds: float = 3.0
     data_source_mode: str = "future_lan"
+    bearer_token: str = ""
 
     def normalized(self) -> "LabToolsLanReadonlyClientConfig":
         url = str(self.server_url or "").strip().rstrip("/")
@@ -42,6 +43,7 @@ class LabToolsLanReadonlyClientConfig:
             workspace_id=str(self.workspace_id or "").strip(),
             timeout_seconds=timeout,
             data_source_mode="future_lan",
+            bearer_token=str(self.bearer_token or "").strip(),
         )
 
 
@@ -152,6 +154,23 @@ class LabToolsLanReadonlyClientDataSourceAdapter:
             path = f"{path}?{urlencode({'record_type': record_type})}"
         return self._list_endpoint(path)
 
+    def claim_pairing(self, *, pairing_code: str, client_label: str = "manual-client") -> Mapping[str, Any]:
+        envelope = self._post_envelope(
+            "/pairing/claim",
+            {
+                "pairing_code": str(pairing_code or "").strip(),
+                "client_label": str(client_label or "manual-client").strip(),
+            },
+        )
+        data = envelope.get("data")
+        if not envelope.get("ok") or not isinstance(data, Mapping):
+            return {
+                "ok": False,
+                "status": str(envelope.get("status") or "pairing_required"),
+                "reason": str(envelope.get("reason") or "Pairing failed."),
+            }
+        return {"ok": True, "status": envelope.get("status"), "reason": envelope.get("reason"), **dict(data)}
+
     def create_reagent(self, payload: Mapping[str, object]) -> Mapping[str, Any]:
         raise PermissionError(LAN_CLIENT_READONLY_DISABLED_REASON)
 
@@ -188,6 +207,8 @@ class LabToolsLanReadonlyClientDataSourceAdapter:
     def _get_envelope(self, path: str) -> Mapping[str, Any]:
         url = f"{self.config.server_url}{path}"
         request = Request(url, method="GET")
+        if self.config.bearer_token:
+            request.add_header("Authorization", f"Bearer {self.config.bearer_token}")
         try:
             with urlopen(request, timeout=self.config.timeout_seconds) as response:  # noqa: S310 - loopback-only prototype.
                 payload = json.loads(response.read().decode("utf-8"))
@@ -209,6 +230,35 @@ class LabToolsLanReadonlyClientDataSourceAdapter:
         if payload.get("schema_version") != LAN_CLIENT_SCHEMA_VERSION:
             return _blocked_envelope("blocked_invalid_response", "LAN server response schema is unsupported.")
         return payload
+
+    def _post_envelope(self, path: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+        url = f"{self.config.server_url}{path}"
+        body = json.dumps(dict(payload)).encode("utf-8")
+        request = Request(url, data=body, method="POST")
+        request.add_header("Content-Type", "application/json")
+        if self.config.bearer_token:
+            request.add_header("Authorization", f"Bearer {self.config.bearer_token}")
+        try:
+            with urlopen(request, timeout=self.config.timeout_seconds) as response:  # noqa: S310 - LAN prototype URL allowlist.
+                response_payload = json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            try:
+                response_payload = json.loads(exc.read().decode("utf-8"))
+            except Exception:
+                return _blocked_envelope("blocked_invalid_response", "LAN server returned a malformed error response.")
+        except URLError:
+            return _blocked_envelope("blocked_server_unavailable", "LAN server is unavailable.")
+        except TimeoutError:
+            return _blocked_envelope("blocked_server_unavailable", "LAN server request timed out.")
+        except json.JSONDecodeError:
+            return _blocked_envelope("blocked_invalid_response", "LAN server returned malformed JSON.")
+        except OSError:
+            return _blocked_envelope("blocked_server_unavailable", "LAN server request failed.")
+        if not isinstance(response_payload, Mapping):
+            return _blocked_envelope("blocked_invalid_response", "LAN server response must be a JSON object.")
+        if response_payload.get("schema_version") != LAN_CLIENT_SCHEMA_VERSION:
+            return _blocked_envelope("blocked_invalid_response", "LAN server response schema is unsupported.")
+        return response_payload
 
 
 def build_lan_readonly_client_adapter(config: LabToolsLanReadonlyClientConfig) -> LabToolsLanReadonlyClientDataSourceAdapter:

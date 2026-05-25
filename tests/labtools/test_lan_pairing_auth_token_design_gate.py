@@ -18,7 +18,7 @@ def test_pairing_auth_token_design_gate_exists_and_covers_required_decisions() -
         "## Audit Identity Mapping",
         "## UIShell Pairing UX",
         "## Migration Policy",
-        "## Manual Checkpoint Before Runtime Auth",
+        "## LT9 Runtime Prototype",
     ]
     for section in required_sections:
         assert section in text
@@ -38,19 +38,22 @@ def test_pairing_auth_token_design_gate_exists_and_covers_required_decisions() -
     assert "UI pages must not import" in text
 
 
-def test_pairing_auth_token_design_gate_does_not_implement_runtime_auth_yet() -> None:
+def test_pairing_auth_token_runtime_prototype_implements_controlled_readonly_auth() -> None:
     source_paths = [
+        Path("labtools/lan_server/auth.py"),
         Path("labtools/lan_server/runtime.py"),
         Path("labtools/lan_client/readonly.py"),
         Path("labtools/lan_server/__main__.py"),
     ]
     combined = "\n".join(path.read_text(encoding="utf-8") for path in source_paths)
 
-    assert "Authorization" not in combined
-    assert "Bearer" not in combined
-    assert "token_hash" not in combined
-    assert "secrets." not in combined
-    assert "pairing_code" not in combined
+    assert "Authorization" in combined
+    assert "Bearer" in combined
+    assert "token_hash" in combined
+    assert "secrets." in combined
+    assert "pairing_code" in combined
+    assert "allow_unauthenticated_readonly" in combined
+    assert "viewer" in combined
 
 
 def test_pairing_auth_token_design_keeps_lan_writes_out_of_scope() -> None:

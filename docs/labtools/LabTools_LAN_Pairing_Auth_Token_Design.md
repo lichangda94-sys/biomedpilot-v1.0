@@ -4,9 +4,10 @@ Date: 2026-05-25
 
 ## Purpose
 
-LAN-LT8 is a design gate for pairing, authentication, and token handling. It
-does not implement pairing endpoints, token storage, authorization headers,
-user accounts, LAN writes, sync, or automatic discovery.
+LAN-LT8 is the design gate for pairing, authentication, and token handling.
+LAN-LT9 implements the first runtime prototype for read-only pairing and bearer
+token auth. It does not implement user accounts, LAN writes, sync, automatic
+discovery, or multi-user permissions.
 
 This design protects the existing explicit private LAN read-only prototype
 before it becomes a normal multi-device feature.
@@ -22,7 +23,7 @@ Implemented before this design gate:
 - No writes.
 - No sync.
 - No automatic discovery.
-- No pairing/auth/token runtime.
+- Pairing/auth/token runtime starts in LT9 and remains read-only.
 
 ## Design Goals
 
@@ -223,23 +224,39 @@ summaries. When auth is implemented:
 - Compatibility mode must not enable writes.
 - Compatibility mode should be removable after pairing UX is stable.
 
-## Manual Checkpoint Before Runtime Auth
+## LT9 Runtime Prototype
 
-Stop before implementing runtime auth and confirm:
+Confirmed LT9 defaults:
 
-- Token expiry duration.
-- Token storage location.
-- Whether unauthenticated read-only compatibility remains available.
-- Pairing code length and expiry.
-- Device revocation UX.
-- Whether `viewer` is the only role for the first auth runtime.
+- Token expiry duration: 30 days.
+- Server token storage: `local_data_root/lan_auth/paired_clients.json`.
+- Server stores only `token_hash`, not plaintext tokens.
+- Client token transport: `Authorization: Bearer <opaque-token>`.
+- Pairing code length: 8 digits.
+- Pairing expiry: 10 minutes.
+- Pairing usage: single-use.
+- Initial role: `viewer` only.
+- Unauthenticated read-only remains available only through an explicit
+  compatibility flag.
+- Revocation is supported by token id in the runtime manager.
+
+LT9 available runtime surfaces:
+
+- Host creates a pairing session through `create_pairing_session()`.
+- Client claims the pairing code through `POST /pairing/claim`.
+- Read-only endpoints require a valid paired viewer token when auth is enabled.
+- `GET /health` stays minimal and unauthenticated.
+- `GET /status` reports auth state, and withholds adapter status unless the
+  request is authenticated or compatibility mode is enabled.
 
 ## Acceptance Criteria
 
 - This design file exists.
-- No token runtime is implemented.
-- No `Authorization` header is required or sent.
-- No token files are created.
-- No pairing endpoint is exposed.
+- Token runtime is implemented only for read-only LAN summaries.
+- New read-only LAN CLI mode defaults to token-required auth.
+- Unauthenticated read-only is available only through an explicit compatibility
+  flag.
+- Token files store hashes only.
+- Pairing endpoint issues a token once for a short-lived pairing code.
 - No LAN write endpoint is exposed.
 - Existing read-only LAN tests still pass.

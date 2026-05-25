@@ -18,8 +18,16 @@ from labtools.lan_server import (
 from labtools.local_data.datasource_adapter import LocalLabToolsDataSourceAdapter
 
 
-def _request_json(url: str, *, method: str = "GET", payload: bytes | None = None) -> tuple[int, dict[str, object]]:
+def _request_json(
+    url: str,
+    *,
+    method: str = "GET",
+    payload: bytes | None = None,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, dict[str, object]]:
     request = Request(url, data=payload, method=method)
+    for key, value in (headers or {}).items():
+        request.add_header(key, value)
     try:
         with urlopen(request, timeout=5) as response:  # noqa: S310 - loopback-only test server
             return response.status, json.loads(response.read().decode("utf-8"))
