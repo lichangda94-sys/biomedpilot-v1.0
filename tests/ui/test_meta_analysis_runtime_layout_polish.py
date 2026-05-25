@@ -35,13 +35,20 @@ def meta_workspace(qt_app):
 
 
 def test_meta_runtime_layout_uses_single_stacked_content_area(meta_workspace) -> None:
+    shell = meta_workspace.findChild(QFrame, "metaTargetIAShell")
     nav_panel = meta_workspace.findChild(QFrame, "metaWorkflowNavigationPanel")
     content_panel = meta_workspace.findChild(QFrame, "metaRuntimeContentPanel")
     stack = meta_workspace.findChild(QStackedWidget, "metaTargetRuntimeStack")
 
+    assert shell is not None
+    assert shell.property("uiPrimitive") == "workbench_shell"
+    assert shell.property("moduleKey") == "module.meta_analysis"
+    assert shell.property("layoutPolishNoOverlap") is True
     assert nav_panel is not None
+    assert nav_panel.property("uiPrimitive") == "workbench_secondary_nav"
     assert nav_panel.property("layoutPolishNoOverlap") is True
     assert content_panel is not None
+    assert content_panel.property("uiPrimitive") == "workbench_content_panel"
     assert content_panel.property("layoutPolishNoOverlap") is True
     assert stack is not None
     assert stack.property("layoutPolishNoOverlap") is True

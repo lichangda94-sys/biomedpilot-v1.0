@@ -8,7 +8,12 @@ from app.shared.feature_availability import FeatureAvailability, FeatureAvailabi
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
 from app.shared.semantic_keys import FeatureStatusKey, ModuleKey, PageKey
-from app.shared.ui_components.primitives import make_status_chip
+from app.shared.ui_components.primitives import make_card, make_status_chip
+from app.shared.ui_components.workbench import (
+    WorkbenchNavItem,
+    make_workbench_secondary_nav,
+    make_workbench_shell,
+)
 from app.version import APP_VERSION
 
 from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_analysis_project
@@ -379,74 +384,52 @@ if QWidget is not None:
             return tuple(meta_type.type_id for meta_type in meta_active_types_v1())
 
         def _build_target_ia_shell(self) -> QFrame:
-            frame = QFrame()
-            frame.setObjectName("metaTargetIAShell")
-            frame.setStyleSheet("QFrame#metaTargetIAShell { border: 1px solid #D8DEE9; border-radius: 8px; background: #F8FAFC; }")
-            layout = QVBoxLayout(frame)
-            layout.setContentsMargins(16, 14, 16, 14)
-            layout.setSpacing(10)
-
-            title = QLabel("Meta Analysis / Meta 分析目标 IA shell")
-            title.setObjectName("metaTargetIATitle")
-            title.setStyleSheet("font-weight: 750;")
-            layout.addWidget(title)
-
-            boundary = QLabel(
-                "定义研究问题，选择适合的 Meta 分析类型，并按流程进入检索、筛选、全文管理、质量评价与报告草稿。"
-            )
-            boundary.setObjectName("metaTargetIABoundary")
-            boundary.setWordWrap(True)
-            layout.addWidget(boundary)
             preview = make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview")
             preview.setObjectName("metaDeveloperPreviewChip")
-            layout.addWidget(preview)
 
-            runtime_body = QHBoxLayout()
-            runtime_body.setSpacing(14)
-            layout.addLayout(runtime_body, 1)
-
-            nav_frame = QFrame()
-            nav_frame.setObjectName("metaWorkflowNavigationPanel")
+            nav_frame = make_workbench_secondary_nav(
+                [
+                    WorkbenchNavItem(
+                        page.key,
+                        _meta_flow_button_text(page),
+                        status_key=page.status_key,
+                        semantic_key=_META_PAGE_SEMANTIC_KEYS[page.key],
+                        current=page.key == self._current_target_page_key,
+                        tooltip=page.boundary,
+                    )
+                    for page in meta_target_ia_pages()
+                ],
+                object_name="metaWorkflowNavigationPanel",
+                title="Workflow / 流程导航",
+            )
             nav_frame.setProperty("layoutPolishNoOverlap", True)
             nav_frame.setMinimumWidth(280)
             nav_frame.setMaximumWidth(320)
-            nav_frame.setStyleSheet("QFrame#metaWorkflowNavigationPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
-            nav_layout = QVBoxLayout(nav_frame)
-            nav_layout.setContentsMargins(10, 10, 10, 10)
-            nav_layout.setSpacing(8)
-            nav_title = QLabel("Workflow / 流程导航")
-            nav_title.setObjectName("metaWorkflowNavigationTitle")
-            nav_title.setStyleSheet("font-weight: 750;")
-            nav_layout.addWidget(nav_title)
-            for index, page in enumerate(meta_target_ia_pages()):
-                item = QPushButton(_meta_flow_button_text(page))
+            nav_title = nav_frame.findChild(QLabel, "workbenchSecondaryNavTitle")
+            if nav_title is not None:
+                nav_title.setObjectName("metaWorkflowNavigationTitle")
+            nav_buttons = nav_frame.findChildren(QPushButton, "workbenchSecondaryNavItem")
+            for page, item in zip(meta_target_ia_pages(), nav_buttons, strict=False):
                 item.setObjectName("metaTargetIANavItem")
+                item.setText(_meta_flow_button_text(page))
                 item.setCheckable(True)
                 item.setMinimumHeight(74)
+                item.setMinimumSize(0, 74)
                 item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
                 item.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
-                item.setProperty("statusKey", page.status_key)
-                item.setProperty("semanticKey", _META_PAGE_SEMANTIC_KEYS[page.key])
                 item.setProperty("statusSemanticKey", _META_STATUS_SEMANTIC_KEYS[page.status_key])
-                item.setProperty("currentStep", False)
                 item.setProperty("interactionMode", "select_only")
-                item.setProperty("formalActionEnabled", False)
-                item.setToolTip(page.boundary)
                 item.setStyleSheet(_META_FLOW_BUTTON_STYLESHEET)
                 _apply_meta_page_icon(item, _META_PAGE_SEMANTIC_KEYS[page.key], size=22)
                 item.clicked.connect(lambda _checked=False, key=page.key: self.show_target_ia_page(key))
                 self._target_ia_buttons[page.key] = item
-                nav_layout.addWidget(item)
-            nav_layout.addStretch(1)
-            runtime_body.addWidget(nav_frame, 0)
 
-            runtime_main = QFrame()
+            runtime_main = make_card(object_name="metaRuntimeContentPanel")
             runtime_main.setObjectName("metaRuntimeContentPanel")
+            runtime_main.setProperty("uiPrimitive", "workbench_content_panel")
             runtime_main.setProperty("layoutPolishNoOverlap", True)
-            runtime_main.setStyleSheet("QFrame#metaRuntimeContentPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
             runtime_main_layout = QVBoxLayout(runtime_main)
             runtime_main_layout.setContentsMargins(12, 12, 12, 12)
             runtime_main_layout.setSpacing(10)
@@ -462,13 +445,30 @@ if QWidget is not None:
             self._target_runtime_stack.setProperty("layoutPolishNoOverlap", True)
             self._target_runtime_page_indices: dict[str, int] = {}
             runtime_main_layout.addWidget(self._target_runtime_stack, 1)
-            runtime_body.addWidget(runtime_main, 1)
 
             self._result_export_panel = make_result_report_export_adoption_panel(module="meta_analysis")
             self._result_export_panel.setObjectName("resultReportExportAdoptionPanel")
             self._result_export_panel.setMinimumWidth(300)
             self._result_export_panel.setMaximumWidth(360)
-            runtime_body.addWidget(self._result_export_panel, 0)
+            self._result_export_panel.setProperty("uiPrimitive", "workbench_right_gate_panel")
+
+            frame = make_workbench_shell(
+                title="Meta Analysis / Meta 分析目标 IA shell",
+                subtitle="定义研究问题，选择适合的 Meta 分析类型，并按流程进入检索、筛选、全文管理、质量评价与报告草稿。",
+                object_name="metaTargetIAShell",
+                module_key=ModuleKey.META_ANALYSIS.value,
+                page_key="meta_target_ia",
+                status_widgets=[preview],
+                secondary_nav=nav_frame,
+                main_content=runtime_main,
+                right_panel=self._result_export_panel,
+            )
+            title = frame.findChild(QLabel, "workbenchPageTitle")
+            if title is not None:
+                title.setObjectName("metaTargetIATitle")
+            boundary = frame.findChild(QLabel, "workbenchPageSubtitle")
+            if boundary is not None:
+                boundary.setObjectName("metaTargetIABoundary")
 
             self._project_home_panel = self._build_project_home_runtime_panel()
             self._add_target_runtime_page("project_home", self._project_home_panel)
@@ -1533,6 +1533,8 @@ if QWidget is not None:
                 button.setChecked(is_current)
                 button.setProperty("currentStep", is_current)
                 _refresh_dynamic_style(button)
+                button.setMinimumHeight(74)
+                button.setMinimumSize(0, 74)
             if hasattr(self, "_target_interaction_status"):
                 self._target_interaction_status.setText(
                     f"当前页面：{current.label} · {current.status_key}"
