@@ -99,6 +99,7 @@ from app.bioinformatics.reports.survival_clinical import (
     evaluate_km_logrank_report_ready_gate,
 )
 from app.bioinformatics.survival_clinical import run_controlled_risk_score
+from app.bioinformatics.survival_clinical.risk_score_review import build_risk_score_result_review, export_risk_score_review_table
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -6812,6 +6813,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._formal_deg_review: dict[str, object] = {}
         self._ora_review: dict[str, object] = {}
         self._gsea_review: dict[str, object] = {}
+        self._risk_score_review: dict[str, object] = {}
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -6868,6 +6870,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
 
     def export_gsea_review_csv(self) -> dict[str, object] | None:
         return self._export_gsea_review("csv")
+
+    def export_risk_score_review_tsv(self) -> dict[str, object] | None:
+        return self._export_risk_score_review("tsv")
+
+    def export_risk_score_review_csv(self) -> dict[str, object] | None:
+        return self._export_risk_score_review("csv")
 
     def generate_gsea_plot_artifact(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -7163,6 +7171,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._status_label.setText(f"GSEA 表格未导出：{blockers}")
         return result
 
+    def _export_risk_score_review(self, file_format: str) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._risk_score_review.get("selected_result_id") or "")
+        result = export_risk_score_review_table(self._project_root, result_id=result_id, file_format=file_format)
+        if result.get("status") == "passed":
+            self._status_label.setText(f"已导出 risk score {file_format.upper()} 表格；未生成 risk group、nomogram、plot、report-ready 或临床结论。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "没有可导出的 risk score result"
+            self._status_label.setText(f"Risk score 表格未导出：{blockers}")
+        return result
+
     def status_message(self) -> str:
         return self._status_label.text()
 
@@ -7394,6 +7415,45 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._gsea_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         root.addWidget(gsea_card)
 
+        risk_card, risk_layout = _card("Controlled risk score result review")
+        self._risk_score_guard_label = _muted("Risk score review shows statistical model scores only; it is not prognosis, diagnosis, treatment advice, validated risk stratification, nomogram, or report-ready output.")
+        self._risk_score_guard_label.setObjectName("riskScoreReviewGuard")
+        risk_layout.addWidget(self._risk_score_guard_label)
+        risk_controls = QHBoxLayout()
+        self._risk_score_sort_input = QComboBox()
+        self._risk_score_sort_input.setObjectName("riskScoreReviewSort")
+        self._risk_score_sort_input.addItems(["risk_score", "sample_id", "input_order"])
+        self._risk_score_sort_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        self._risk_score_filter_input = QComboBox()
+        self._risk_score_filter_input.setObjectName("riskScoreReviewFilter")
+        self._risk_score_filter_input.addItems(["all", "positive_score", "negative_score"])
+        self._risk_score_filter_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        risk_controls.addWidget(QLabel("Sort"))
+        risk_controls.addWidget(self._risk_score_sort_input)
+        risk_controls.addWidget(QLabel("Filter"))
+        risk_controls.addWidget(self._risk_score_filter_input)
+        risk_controls.addWidget(_button("导出 risk score TSV", "secondaryButton", self.export_risk_score_review_tsv))
+        risk_controls.addWidget(_button("导出 risk score CSV", "secondaryButton", self.export_risk_score_review_csv))
+        risk_controls.addStretch(1)
+        risk_layout.addLayout(risk_controls)
+        self._risk_score_summary_label = _muted("Risk score summary：暂无 controlled risk score result。")
+        self._risk_score_summary_label.setObjectName("riskScoreReviewSummary")
+        self._risk_score_downstream_label = _muted("Risk group / nomogram / plot / report-ready disabled。")
+        self._risk_score_downstream_label.setObjectName("riskScoreReviewDownstream")
+        risk_layout.addWidget(self._risk_score_summary_label)
+        risk_layout.addWidget(self._risk_score_downstream_label)
+        self._risk_score_table = _table(["sample_id", "case_id", "risk_score", "source Cox", "formula", "coefficient source", "warnings"])
+        self._risk_score_table.setObjectName("riskScoreReviewTable")
+        risk_layout.addWidget(self._risk_score_table)
+        _set_table_widths(self._risk_score_table, [130, 130, 120, 150, 260, 170, 260])
+        self._risk_score_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self._risk_score_provenance = _table(["Provenance", "Value"])
+        self._risk_score_provenance.setObjectName("riskScoreReviewProvenanceTable")
+        risk_layout.addWidget(self._risk_score_provenance)
+        _set_table_widths(self._risk_score_provenance, [210, 620])
+        self._risk_score_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        root.addWidget(risk_card)
+
         survival_report_card, survival_report_layout = _card("Survival / clinical section packages")
         survival_report_layout.addWidget(_muted("KM/log-rank 和 Cox 只允许生成 section-only package；这不是 full integrated report，也不包含临床诊断、预后、risk score 或治疗建议。"))
         survival_report_controls = QHBoxLayout()
@@ -7523,6 +7583,13 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._gsea_review = gsea_review
         self._render_gsea_review(gsea_review)
+        risk_score_review = build_risk_score_result_review(
+            self._project_root,
+            sort_by=self._risk_score_sort_input.currentText(),
+            filter_mode=self._risk_score_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._risk_score_review = risk_score_review
+        self._render_risk_score_review(risk_score_review)
         gsea_plot_gate = build_gsea_plot_gate(
             self._project_root,
             result_id=str(gsea_review.get("selected_result_id") or "") or None,
@@ -7581,7 +7648,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._render_full_integrated_report_preview(integrated_gate, integrated_plan, docx_gate, pdf_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("survival_clinical_report_gate_rows", []) or [])]))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan, "full_integrated_docx_rendered_export_gate": docx_gate, "full_integrated_pdf_rendered_export_gate": pdf_gate}))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "risk_score_review": risk_score_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan, "full_integrated_docx_rendered_export_gate": docx_gate, "full_integrated_pdf_rendered_export_gate": pdf_gate}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -7674,6 +7741,62 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._formal_deg_report_status.setText(f"Formal DEG report-ready disabled：{reason}")
+
+    def _render_risk_score_review(self, review: dict[str, object]) -> None:
+        if not hasattr(self, "_risk_score_summary_label"):
+            return
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._risk_score_summary_label.setText("Risk score summary：暂无 formal_computed_result risk score；imported/testing/exploratory/preflight 不会混入此审阅区。")
+            _fill_table(self._risk_score_table, [])
+            _fill_table(self._risk_score_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        engine = summary.get("engine") if isinstance(summary.get("engine"), dict) else {}
+        self._risk_score_summary_label.setText(
+            "Risk score summary："
+            f"samples={summary.get('sample_count', 0)}；covariates={summary.get('covariate_count', 0)}；"
+            f"min={summary.get('min_risk_score', 0.0)}；mean={summary.get('mean_risk_score', 0.0)}；max={summary.get('max_risk_score', 0.0)}；"
+            f"source Cox={summary.get('source_cox_multivariate_result_id', '')}；engine={engine.get('name', '')} {engine.get('version', '')}."
+        )
+        self._risk_score_downstream_label.setText(
+            "；".join(str(value) for value in downstream.values())
+            if downstream
+            else "Risk group / nomogram / plot / report-ready disabled."
+        )
+        _fill_table(
+            self._risk_score_table,
+            [
+                [
+                    row.get("sample_id", ""),
+                    row.get("case_id", ""),
+                    row.get("risk_score", ""),
+                    row.get("source_cox_multivariate_result_id", ""),
+                    row.get("model_formula", ""),
+                    row.get("coefficient_source", ""),
+                    row.get("warnings", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._risk_score_provenance,
+            [
+                ["input_package_id", provenance.get("input_package_id", "")],
+                ["source_cox_multivariate_result_id", provenance.get("source_cox_multivariate_result_id", "")],
+                ["parameter_confirmation_schema", provenance.get("parameter_confirmation_schema", "")],
+                ["parameter_confirmation_created_at", provenance.get("parameter_confirmation_created_at", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
 
     def _render_survival_clinical_report_gates(self, km_gate: dict[str, object], cox_gate: dict[str, object]) -> None:
         if not hasattr(self, "_survival_clinical_report_gate"):

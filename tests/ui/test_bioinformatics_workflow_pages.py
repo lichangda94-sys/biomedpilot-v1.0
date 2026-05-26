@@ -4288,6 +4288,80 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
     assert "未生成 report-ready" in widget.status_message()
 
 
+def test_results_browser_risk_score_review_table_summary_and_exports(qt_app, project_summary) -> None:
+    table_path = project_summary.project_root / "results" / "tables" / "risk_score.tsv"
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    table_path.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-ui\tformula\tcox-mv-ui\tblock\tas_is\tstatistical_result_only\n"
+        "S2\tC2\t-0.5\tcox-mv-ui\tformula\tcox-mv-ui\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    entry = ResultIndexEntry(
+        result_id="risk-ui",
+        task_run_id="task-risk-ui",
+        task_type="risk_score",
+        result_semantics="formal_computed_result",
+        input_package_id="surv-ui",
+        source_dataset_id="surv-ui",
+        source_repository_manifest="B12 survival input package / B32 risk score contract gate",
+        parameters_manifest={"status": "ready_for_parameter_confirmation"},
+        engine_name="biomedpilot_controlled_risk_score",
+        engine_version="0.1.0",
+        dependency_snapshot={"status": "passed"},
+        output_artifacts=({"artifact_type": "risk_score_result_table", "path": str(table_path.relative_to(project_summary.project_root))},),
+        plot_artifacts=(),
+        report_artifacts=(),
+        validation_status="passed",
+        warnings=("risk_score_statistical_result_only",),
+        log_artifacts=({"artifact_type": "task_run_log", "path": "analysis/risk/log.json"},),
+        report_ready_eligible=False,
+    ).to_dict()
+    entry["source_cox_multivariate_result_id"] = "cox-mv-ui"
+    entry["risk_score_parameter_confirmation"] = {
+        "schema_version": "biomedpilot.risk_score_parameter_confirmation.v1",
+        "created_at": "now",
+        "candidate_variables": ["age", "marker"],
+        "source_cox_multivariate_result_id": "cox-mv-ui",
+    }
+    register_result(project_summary.project_root, entry)
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.findChild(QLabel, "riskScoreReviewSummary")
+    assert summary is not None
+    assert "samples=2" in summary.text()
+    assert "source Cox=cox-mv-ui" in summary.text()
+    review_table = widget.findChild(QTableWidget, "riskScoreReviewTable")
+    assert review_table is not None
+    review_text = _table_text(review_table)
+    assert "S1" in review_text
+    assert "risk_group" not in review_text
+    assert "clinical_conclusion" not in review_text
+    provenance = widget.findChild(QTableWidget, "riskScoreReviewProvenanceTable")
+    assert provenance is not None
+    provenance_text = _table_text(provenance)
+    assert "surv-ui" in provenance_text
+    assert "cox-mv-ui" in provenance_text
+    assert "results/summaries/result_index.json" in provenance_text
+    assert "False" in provenance_text
+    downstream = widget.findChild(QLabel, "riskScoreReviewDownstream")
+    assert downstream is not None
+    assert "Risk group/cutpoint labels remain disabled" in downstream.text()
+    assert "not report-ready" in downstream.text()
+
+    exported = widget.export_risk_score_review_csv()
+
+    assert exported is not None
+    assert exported["status"] == "passed"
+    assert exported["report_ready_eligible"] is False
+    assert exported["plot_artifacts"] == []
+    assert exported["report_artifacts"] == []
+    assert Path(str(exported["export_path"])).is_file()
+    assert "未生成 risk group" in widget.status_message()
+
+
 def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_summary) -> None:
     table_path = project_summary.project_root / "results" / "tables" / "ora_ui.tsv"
     table_path.parent.mkdir(parents=True, exist_ok=True)

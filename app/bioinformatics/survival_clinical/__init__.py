@@ -45,6 +45,7 @@ from .risk_score_confirmation import (
 from .risk_score_design import audit_risk_score_design
 from .risk_score_executor import run_controlled_risk_score
 from .risk_score_result_schema import build_risk_score_result_schema_gate, validate_risk_score_result_index_entry, validate_risk_score_result_table
+from .risk_score_review import build_risk_score_result_review, export_risk_score_review_table
 
 __all__ = [
     "COX_CONFIRMATION_PATH",
@@ -63,6 +64,7 @@ __all__ = [
     "build_km_logrank_parameter_manifest",
     "build_km_result_review",
     "build_risk_score_nomogram_contract_gate",
+    "build_risk_score_result_review",
     "build_risk_score_result_schema_gate",
     "build_survival_outcome_gate",
     "confirm_cox_multivariate_parameters",
@@ -72,6 +74,7 @@ __all__ = [
     "export_cox_review_table",
     "export_cox_multivariate_review_table",
     "export_km_review_table",
+    "export_risk_score_review_table",
     "load_cox_multivariate_confirmation",
     "load_cox_univariate_confirmation",
     "load_km_logrank_confirmation",
