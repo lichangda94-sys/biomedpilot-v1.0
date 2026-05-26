@@ -301,6 +301,40 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert preflight_passed["button_behavior"] == "enabled_preflight_review_only_no_artifact"
     assert "does not generate nomogram" in preflight_passed["next_action"]
 
+    artifact_blocked_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_advanced_artifact_gate={
+            "status": "blocked",
+            "blockers": ["risk_score_advanced_visualization_preflight_not_passed"],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    artifact_blocked = _row(artifact_blocked_rows, "risk_score_advanced_artifact")
+    assert artifact_blocked["enabled"] is False
+    assert "risk_score_advanced_visualization_preflight_not_passed" in artifact_blocked["disabled_reason"]
+    assert "no calibration" in artifact_blocked["disabled_reason"]
+
+    artifact_enabled_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_advanced_artifact_gate={
+            "status": "passed",
+            "blockers": [],
+            "creates_plot_artifact": True,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    artifact_enabled = _row(artifact_enabled_rows, "risk_score_advanced_artifact")
+    assert artifact_enabled["enabled"] is True
+    assert artifact_enabled["button_behavior"] == "enabled_nomogram_scale_svg_artifact_only"
+    assert "does not generate calibration" in artifact_enabled["next_action"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(

@@ -22,16 +22,19 @@ RISK_SCORE_PLOT_ARTIFACT_SCHEMA_VERSION = "biomedpilot.risk_score_plot_artifact.
 RISK_SCORE_ADVANCED_VISUALIZATION_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_planning_gate.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_RUNTIME_PLAN_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_runtime_plan.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_PREFLIGHT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_preflight_gate.v1"
+RISK_SCORE_ADVANCED_VISUALIZATION_ARTIFACT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_artifact_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCOPE = "formal_risk_score_plot_artifact"
 RISK_SCORE_PLOT_ENGINE_NAME = "biomedpilot_risk_score_visualization_renderer"
 RISK_SCORE_PLOT_ENGINE_VERSION = "0.1.0"
 RISK_SCORE_REAL_PLOT_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_real_plot_manifest.v1"
+RISK_SCORE_ADVANCED_VISUALIZATION_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_manifest.v1"
 SUPPORTED_RISK_SCORE_PLOT_TYPES = (
     "risk_score_distribution_plot",
     "risk_score_nomogram",
     "risk_score_calibration_curve",
     "risk_score_decision_curve",
 )
+B42_ENABLED_ADVANCED_RISK_SCORE_PLOT_TYPES = {"risk_score_nomogram"}
 FORBIDDEN_RISK_SCORE_PLOT_FIELDS = (
     "risk_group",
     "high_risk_group",
@@ -469,6 +472,151 @@ def build_risk_score_advanced_visualization_preflight_gate(
     }
 
 
+def build_risk_score_advanced_visualization_artifact_gate(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    plot_type: str = "risk_score_nomogram",
+    renderer: str = "builtin_svg",
+    preflight_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_source(root, result_id)
+    preflight = build_risk_score_advanced_visualization_preflight_gate(root, result_id=result_id, preflight_config=preflight_config)
+    dependency = check_risk_score_plot_renderer_dependencies(renderer=renderer)
+    blockers: list[str] = []
+    warnings = [
+        "risk_score_advanced_visualization_artifact_statistical_only",
+        "b42_nomogram_scale_svg_only",
+        "calibration_curve_not_enabled_in_b42",
+        "decision_curve_not_enabled_in_b42",
+        "no_risk_group_generation",
+        "no_report_ready_unlock",
+        "no_clinical_interpretation",
+    ]
+    if preflight.get("status") != "passed_preflight_only":
+        blockers.extend(str(item) for item in preflight.get("blockers", []) or [])
+        blockers.append("risk_score_advanced_visualization_preflight_not_passed")
+    if plot_type not in SUPPORTED_RISK_SCORE_PLOT_TYPES:
+        blockers.append(f"unsupported_risk_score_plot_type:{plot_type}")
+    elif plot_type not in B42_ENABLED_ADVANCED_RISK_SCORE_PLOT_TYPES:
+        blockers.append(f"risk_score_advanced_plot_type_not_enabled_in_b42:{plot_type}")
+    if renderer != "builtin_svg":
+        blockers.append(f"risk_score_advanced_renderer_not_enabled_in_b42:{renderer}")
+    if dependency.get("status") != "passed":
+        blockers.extend(str(item) for item in dependency.get("blockers", []) or ["risk_score_plot_renderer_dependency_not_passed"])
+    table_path = _risk_score_table_path(root, source) if source else root / ""
+    rows = _risk_score_rows(table_path) if source and table_path.exists() else []
+    if source and not rows:
+        blockers.append("risk_score_plot_source_table_empty")
+    schema_candidate = _advanced_plot_artifact(
+        source or {},
+        _plot_id(str((source or {}).get("result_id") or result_id or "missing"), plot_type),
+        plot_type,
+        renderer,
+        dependency,
+        table_path,
+        root / "results" / "plots" / "risk_score" / "advanced" / "candidate.svg",
+        preflight,
+    )
+    validation = validate_risk_score_plot_artifact_schema(schema_candidate)
+    blockers.extend(str(item) for item in validation.get("blockers", []) or [] if item != "missing_source_result_id")
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema_version": RISK_SCORE_ADVANCED_VISUALIZATION_ARTIFACT_GATE_SCHEMA_VERSION,
+        "status": "passed" if not blockers else "blocked",
+        "selected_result_id": str((source or {}).get("result_id") or result_id or ""),
+        "source_result_semantics": normalize_result_semantics((source or {}).get("result_semantics"), default="blocked"),
+        "plot_type": plot_type,
+        "renderer": renderer,
+        "preflight_gate": preflight,
+        "renderer_dependency_snapshot": dependency,
+        "artifact_schema_candidate": schema_candidate,
+        "artifact_schema_validation": validation,
+        "formal_execution_enabled": False,
+        "writes_result_index": not blockers,
+        "creates_plot_artifact": not blockers,
+        "creates_report_artifact": False,
+        "report_ready_eligible": False,
+        "enabled_plot_types": sorted(B42_ENABLED_ADVANCED_RISK_SCORE_PLOT_TYPES),
+        "blocked_future_plot_types": ["risk_score_calibration_curve", "risk_score_decision_curve"],
+        "blockers": blockers,
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def create_risk_score_advanced_visualization_artifact(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    plot_type: str = "risk_score_nomogram",
+    renderer: str = "builtin_svg",
+    preflight_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    gate = build_risk_score_advanced_visualization_artifact_gate(root, result_id=result_id, plot_type=plot_type, renderer=renderer, preflight_config=preflight_config)
+    source = _select_source(root, result_id)
+    if gate.get("status") != "passed" or source is None:
+        return _blocked_artifact(str(result_id or gate.get("selected_result_id") or ""), {**gate, "plot_type": plot_type, "renderer": renderer})
+    table_path = _risk_score_table_path(root, source)
+    rows = _risk_score_rows(table_path)
+    if not rows:
+        blocked_gate = {**gate, "status": "blocked", "blockers": [*gate.get("blockers", []), "risk_score_plot_source_table_empty"]}
+        return _blocked_artifact(str(source.get("result_id") or ""), blocked_gate)
+
+    plot_id = _plot_id(str(source.get("result_id") or ""), plot_type)
+    out_dir = root / "results" / "plots" / "risk_score" / "advanced"
+    image_path = out_dir / f"{plot_id}.svg"
+    manifest_path = out_dir / f"{plot_id}_manifest.json"
+    dependency = gate.get("renderer_dependency_snapshot") if isinstance(gate.get("renderer_dependency_snapshot"), dict) else {}
+    preflight = gate.get("preflight_gate") if isinstance(gate.get("preflight_gate"), dict) else {}
+    artifact = _advanced_plot_artifact(source, plot_id, plot_type, renderer, dependency, table_path, image_path, preflight)
+    validation = validate_risk_score_plot_artifact_schema(artifact)
+    artifact["blockers"] = list(dict.fromkeys([*artifact.get("blockers", []), *validation.get("blockers", [])]))
+    artifact["warnings"] = list(dict.fromkeys([*artifact.get("warnings", []), *validation.get("warnings", [])]))
+    if artifact["blockers"]:
+        return {"status": "blocked", "plot_artifact": artifact, "report_ready_eligible": False, "warnings": artifact["warnings"], "blockers": artifact["blockers"]}
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    image_path.write_text(_nomogram_svg(rows, source, preflight), encoding="utf-8")
+    artifact["plot_spec_artifact"]["plot_manifest_path"] = str(manifest_path)
+    manifest = {
+        "schema_version": RISK_SCORE_ADVANCED_VISUALIZATION_MANIFEST_SCHEMA_VERSION,
+        "plot_artifact": artifact,
+        "gate_snapshot": gate,
+        "source_row_count": len(rows),
+        "report_ready_eligible": False,
+        "limitations": [
+            "statistical_visualization_only",
+            "nomogram_scale_svg_only",
+            "no_calibration_curve",
+            "no_decision_curve",
+            "no_risk_group_generation",
+            "no_clinical_conclusion",
+            "no_report_ready_unlock",
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    registry = load_registry(root)
+    entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
+    for entry in entries:
+        if entry.get("result_id") == source.get("result_id"):
+            existing = [item for item in entry.get("plot_artifacts", []) or [] if isinstance(item, dict) and item.get("plot_id") != plot_id]
+            entry["plot_artifacts"] = [*existing, artifact]
+            entry["report_ready_eligible"] = False
+            break
+    save_registry(root, entries)
+    return {
+        "status": "passed",
+        "plot_artifact": artifact,
+        "plot_manifest_path": str(manifest_path),
+        "report_ready_eligible": False,
+        "warnings": artifact["warnings"],
+        "blockers": [],
+    }
+
+
 def build_risk_score_plot_artifact_schema_candidate(
     source: dict[str, Any],
     *,
@@ -719,6 +867,72 @@ def _plot_artifact(
     ).to_dict()
 
 
+def _advanced_plot_artifact(
+    source: dict[str, Any],
+    plot_id: str,
+    plot_type: str,
+    renderer: str,
+    dependency: dict[str, Any],
+    table_path: Path,
+    image_path: Path,
+    preflight_gate: dict[str, Any],
+) -> dict[str, Any]:
+    semantics = normalize_result_semantics(source.get("canonical_result_semantics") or source.get("result_semantics"), default="blocked")
+    parameters = source.get("parameters_manifest") if isinstance(source.get("parameters_manifest"), dict) else {}
+    preflight_config = preflight_gate.get("preflight_config") if isinstance(preflight_gate.get("preflight_config"), dict) else {}
+    return PlotArtifact(
+        plot_id=plot_id,
+        plot_type=plot_type,
+        source_result_id=str(source.get("result_id") or ""),
+        source_result_semantics=semantics,
+        source_task_type=str(source.get("task_type") or ""),
+        plot_semantics=semantics,
+        plot_artifact_scope=RISK_SCORE_PLOT_ARTIFACT_SCOPE,
+        input_package_id=str(source.get("input_package_id") or ""),
+        task_run_id=str(source.get("task_run_id") or ""),
+        parameters_manifest=parameters,
+        plot_parameters={
+            "renderer": renderer,
+            "format": "svg",
+            "advanced_visualization_mode": "nomogram_scale_audit_only",
+            "risk_group_generation": "forbidden",
+            "clinical_interpretation": "forbidden",
+            "report_ready_unlock": False,
+            "time_horizon": preflight_config.get("time_horizon", ""),
+            "time_unit": preflight_config.get("time_unit", ""),
+        },
+        plot_spec_artifact={
+            "schema_version": RISK_SCORE_PLOT_ARTIFACT_SCHEMA_VERSION,
+            "plot_type": plot_type,
+            "renderer": renderer,
+            "format": "svg",
+            "source_result_id": str(source.get("result_id") or ""),
+            "source_task_type": str(source.get("task_type") or ""),
+            "rendering": "real_svg_artifact_no_report_ready",
+            "b42_scope": "risk_score_nomogram_scale_only",
+            "allowed_data_columns": ["sample_id", "case_id", "risk_score"],
+            "forbidden_outputs": list(FORBIDDEN_RISK_SCORE_PLOT_FIELDS),
+            "preflight_gate_schema": preflight_gate.get("schema_version", ""),
+            "preflight_status": preflight_gate.get("status", ""),
+        },
+        image_artifacts=(
+            {
+                "artifact_type": f"{plot_type}_svg",
+                "path": str(image_path),
+                "format": "svg",
+                "source_result_id": str(source.get("result_id") or ""),
+                "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            },
+        ),
+        table_artifacts=({"artifact_type": "risk_score_result_table", "path": str(table_path)},),
+        engine_name=RISK_SCORE_PLOT_ENGINE_NAME,
+        engine_version=RISK_SCORE_PLOT_ENGINE_VERSION,
+        dependency_snapshot=dependency,
+        warnings=("Statistical risk score nomogram-scale visualization only; no risk groups, clinical conclusion, or report-ready export.",),
+        blockers=(),
+    ).to_dict()
+
+
 def _blocked_artifact(source_result_id: str, gate: dict[str, Any]) -> dict[str, Any]:
     plot_type = str(gate.get("plot_type") or "risk_score_distribution_plot")
     artifact = PlotArtifact(
@@ -786,6 +1000,41 @@ def _distribution_svg(rows: list[dict[str, Any]], source: dict[str, Any]) -> str
         f'<text x="16" y="{top + 125}" font-size="13">Risk score</text>',
         f'<text x="{left}" y="{height - 52}" font-size="12" fill="#444">{summary}</text>',
         f'<text x="{left}" y="{height - 26}" font-size="12" fill="#555">Statistical visualization only; no risk group, prognosis label, clinical conclusion, or treatment recommendation.</text>',
+    ]
+    return "<svg xmlns=\"http://www.w3.org/2000/svg\" " f"width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">\n" + "\n".join([*frame, *parts]) + "\n</svg>\n"
+
+
+def _nomogram_svg(rows: list[dict[str, Any]], source: dict[str, Any], preflight_gate: dict[str, Any]) -> str:
+    width, height = 820, 360
+    left, axis_y, plot_w = 90, 150, 620
+    scores = [float(row["risk_score"]) for row in rows]
+    min_score = min(scores)
+    max_score = max(scores)
+    span = max(max_score - min_score, 1.0)
+    ticks = [min_score + span * fraction for fraction in (0.0, 0.25, 0.5, 0.75, 1.0)]
+    parts: list[str] = []
+    for value in ticks:
+        x = left + ((value - min_score) / span) * plot_w
+        label = html.escape(f"{value:.3g}")
+        parts.append(f'<line x1="{x:.1f}" y1="{axis_y - 9}" x2="{x:.1f}" y2="{axis_y + 9}" stroke="#202124" />')
+        parts.append(f'<text x="{x - 18:.1f}" y="{axis_y + 30}" font-size="12">{label}</text>')
+    for row in rows[:40]:
+        x = left + ((float(row["risk_score"]) - min_score) / span) * plot_w
+        parts.append(f'<circle cx="{x:.1f}" cy="{axis_y}" r="4" fill="#315f9f" opacity="0.72" />')
+    config = preflight_gate.get("preflight_config") if isinstance(preflight_gate.get("preflight_config"), dict) else {}
+    horizon = html.escape(str(config.get("time_horizon") or ""))
+    unit = html.escape(str(config.get("time_unit") or ""))
+    event_count = html.escape(str(config.get("event_count") or ""))
+    title = html.escape(f"{source.get('result_id') or 'risk score'} nomogram scale audit")
+    frame = [
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff" />',
+        f'<text x="{left}" y="34" font-size="17" font-weight="600">{title}</text>',
+        f'<text x="{left}" y="62" font-size="12" fill="#444">Controlled B42 SVG artifact from formal risk score values; calibration and decision curve artifacts are not generated.</text>',
+        f'<line x1="{left}" y1="{axis_y}" x2="{left + plot_w}" y2="{axis_y}" stroke="#202124" stroke-width="1.4" />',
+        f'<text x="{left}" y="{axis_y - 22}" font-size="13">Risk score scale</text>',
+        f'<text x="{left}" y="238" font-size="12" fill="#444">samples={len(scores)}; min={min_score:.3g}; max={max_score:.3g}; horizon={horizon} {unit}; events={event_count}</text>',
+        f'<text x="{left}" y="264" font-size="12" fill="#555">Statistical visualization only. No high/low-risk group, prognosis label, clinical conclusion, treatment recommendation, or report-ready unlock.</text>',
+        f'<text x="{left}" y="290" font-size="12" fill="#555">This is not a clinical nomogram interpretation and must remain attached to the source formal risk score result provenance.</text>',
     ]
     return "<svg xmlns=\"http://www.w3.org/2000/svg\" " f"width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">\n" + "\n".join([*frame, *parts]) + "\n</svg>\n"
 

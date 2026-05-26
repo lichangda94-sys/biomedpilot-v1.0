@@ -5,6 +5,7 @@ from pathlib import Path
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 from app.bioinformatics.survival_clinical import (
+    build_risk_score_advanced_visualization_artifact_gate,
     build_risk_score_advanced_visualization_planning_gate,
     build_risk_score_advanced_visualization_preflight_gate,
     build_risk_score_advanced_visualization_runtime_plan,
@@ -12,6 +13,7 @@ from app.bioinformatics.survival_clinical import (
     build_risk_score_plot_artifact_schema_candidate,
     build_risk_score_plot_nomogram_gate,
     check_risk_score_plot_renderer_dependencies,
+    create_risk_score_advanced_visualization_artifact,
     create_risk_score_plot_artifact,
     validate_risk_score_plot_artifact_schema,
 )
@@ -267,6 +269,64 @@ def test_risk_score_advanced_visualization_preflight_blocks_invalid_inputs(tmp_p
     assert "clinical_boundary_acknowledgement_missing" in gate["blockers"]
 
 
+def test_risk_score_advanced_visualization_artifact_gate_allows_nomogram_only_after_preflight(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n"
+        "S2\tC2\t-0.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    config = _advanced_preflight_config()
+    gate = build_risk_score_advanced_visualization_artifact_gate(tmp_path, preflight_config=config)
+
+    assert gate["schema_version"] == "biomedpilot.risk_score_advanced_visualization_artifact_gate.v1"
+    assert gate["status"] == "passed"
+    assert gate["plot_type"] == "risk_score_nomogram"
+    assert gate["creates_plot_artifact"] is True
+    assert gate["writes_result_index"] is True
+    assert gate["report_ready_eligible"] is False
+    assert gate["blocked_future_plot_types"] == ["risk_score_calibration_curve", "risk_score_decision_curve"]
+
+    blocked = build_risk_score_advanced_visualization_artifact_gate(tmp_path, plot_type="risk_score_calibration_curve", preflight_config=config)
+    assert blocked["status"] == "blocked"
+    assert "risk_score_advanced_plot_type_not_enabled_in_b42:risk_score_calibration_curve" in blocked["blockers"]
+
+
+def test_risk_score_advanced_visualization_artifact_execution_registers_nomogram_svg_only(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n"
+        "S2\tC2\t-0.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    output = create_risk_score_advanced_visualization_artifact(tmp_path, preflight_config=_advanced_preflight_config())
+
+    assert output["status"] == "passed"
+    assert output["report_ready_eligible"] is False
+    artifact = output["plot_artifact"]
+    assert artifact["plot_type"] == "risk_score_nomogram"
+    assert artifact["plot_semantics"] == "formal_computed_result"
+    assert artifact["plot_artifact_scope"] == "formal_risk_score_plot_artifact"
+    svg_path = Path(artifact["image_artifacts"][0]["path"])
+    assert svg_path.is_file()
+    svg = svg_path.read_text(encoding="utf-8")
+    assert svg.startswith("<svg")
+    assert "nomogram scale audit" in svg
+    assert "No high/low-risk group" in svg
+    registry_text = (tmp_path / "results" / "summaries" / "result_index.json").read_text(encoding="utf-8")
+    assert "risk_score_nomogram" in registry_text
+    assert '"report_ready_eligible": false' in registry_text
+    assert '"clinical_conclusion":' not in registry_text
+
+
 def test_risk_score_plot_artifact_schema_blocks_nonformal_and_clinical_fields(tmp_path: Path) -> None:
     dependency = check_risk_score_plot_renderer_dependencies()
     artifact = build_risk_score_plot_artifact_schema_candidate(
@@ -328,3 +388,14 @@ def _register_risk_score(root: Path, table: Path, *, dependency_status: str = "p
     entry["source_cox_multivariate_result_id"] = "cox-mv-1"
     entry["risk_score_parameter_confirmation"] = {"schema_version": "biomedpilot.risk_score_parameter_confirmation.v1"}
     register_result(root, entry)
+
+
+def _advanced_preflight_config() -> dict[str, object]:
+    return {
+        "time_horizon_days": 365,
+        "outcome_mapping": {"time_field": "OS_time", "event_field": "OS_event", "event_positive_value": "1"},
+        "event_count": 12,
+        "minimum_event_count": 10,
+        "threshold_probability_grid": [0.1, 0.2, 0.3],
+        "clinical_boundary_acknowledged": True,
+    }

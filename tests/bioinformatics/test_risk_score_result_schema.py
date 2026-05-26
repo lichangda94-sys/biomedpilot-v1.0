@@ -57,8 +57,11 @@ def test_risk_score_result_index_schema_allows_only_formal_statistical_result_wi
     clinical = validate_risk_score_result_index_entry({**_valid_entry(), "clinical_conclusion": "poor prognosis"})
     assert "forbidden_clinical_field:clinical_conclusion" in clinical["blockers"]
 
-    plot = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [{"plot_artifact_scope": "formal_risk_score_plot_artifact", "plot_type": "risk_score_nomogram", "plot_semantics": "formal_computed_result"}]})
-    assert "risk_score_plot_artifact_0:unsupported_plot_type:risk_score_nomogram" in plot["blockers"]
+    nomogram = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [_valid_plot_artifact("risk_score_nomogram")]})
+    assert nomogram["status"] == "passed"
+
+    plot = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [_valid_plot_artifact("risk_score_calibration_curve")]})
+    assert "risk_score_plot_artifact_0:unsupported_plot_type:risk_score_calibration_curve" in plot["blockers"]
 
 
 def _valid_entry() -> dict[str, object]:
@@ -92,15 +95,15 @@ def _valid_entry() -> dict[str, object]:
     }
 
 
-def _valid_plot_artifact() -> dict[str, object]:
+def _valid_plot_artifact(plot_type: str = "risk_score_distribution_plot") -> dict[str, object]:
     return {
         "plot_id": "plot-risk-score-1",
-        "plot_type": "risk_score_distribution_plot",
+        "plot_type": plot_type,
         "source_result_id": "risk-1",
         "source_result_semantics": "formal_computed_result",
         "source_task_type": "risk_score",
         "plot_semantics": "formal_computed_result",
         "plot_artifact_scope": "formal_risk_score_plot_artifact",
-        "image_artifacts": [{"artifact_type": "risk_score_distribution_plot_svg", "path": "results/plots/risk.svg", "format": "svg"}],
+        "image_artifacts": [{"artifact_type": f"{plot_type}_svg", "path": "results/plots/risk.svg", "format": "svg"}],
         "table_artifacts": [{"artifact_type": "risk_score_result_table", "path": "results/tables/risk.tsv"}],
     }

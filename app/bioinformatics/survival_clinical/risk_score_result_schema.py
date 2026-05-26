@@ -28,6 +28,7 @@ FORBIDDEN_RISK_SCORE_FIELDS = (
     "treatment_recommendation",
     "nomogram_score",
 )
+ALLOWED_RISK_SCORE_PLOT_TYPES = {"risk_score_distribution_plot", "risk_score_nomogram"}
 
 
 def build_risk_score_result_schema_gate(
@@ -122,7 +123,7 @@ def _validate_plot_artifacts(entry: dict[str, Any]) -> list[str]:
             continue
         if artifact.get("plot_artifact_scope") != "formal_risk_score_plot_artifact":
             blockers.append(f"risk_score_plot_artifact_{index}:invalid_scope")
-        if artifact.get("plot_type") not in {"risk_score_distribution_plot"}:
+        if artifact.get("plot_type") not in ALLOWED_RISK_SCORE_PLOT_TYPES:
             blockers.append(f"risk_score_plot_artifact_{index}:unsupported_plot_type:{artifact.get('plot_type')}")
         semantics = normalize_result_semantics(artifact.get("plot_semantics") or artifact.get("source_result_semantics"), default="")
         if semantics != "formal_computed_result":

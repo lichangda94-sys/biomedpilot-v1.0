@@ -48,6 +48,7 @@ from app.bioinformatics.survival_clinical import (
     audit_clinical_variables,
     audit_cox_multivariate_design,
     audit_risk_score_design,
+    build_risk_score_advanced_visualization_artifact_gate,
     build_cox_multivariate_parameter_manifest,
     build_cox_univariate_parameter_manifest,
     build_km_logrank_parameter_manifest,
@@ -192,6 +193,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         risk_score_advanced_visualization_gate=survival_clinical_state["risk_score_advanced_visualization_gate"],
         risk_score_advanced_runtime_plan=survival_clinical_state["risk_score_advanced_runtime_plan"],
         risk_score_advanced_preflight_gate=survival_clinical_state["risk_score_advanced_preflight_gate"],
+        risk_score_advanced_artifact_gate=survival_clinical_state["risk_score_advanced_artifact_gate"],
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         ora_input_gate=ora_gates["input_gate"],
@@ -1120,6 +1122,10 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
         project_root,
         result_id=_latest_result_id(result_entries or [], {"risk_score"}),
     )
+    risk_score_advanced_artifact_gate = build_risk_score_advanced_visualization_artifact_gate(
+        project_root,
+        result_id=_latest_result_id(result_entries or [], {"risk_score"}),
+    )
     gate_rows = [
         _formal_deg_gate_row(
             "Survival/clinical input resolver",
@@ -1236,6 +1242,13 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
             basis=f"source={risk_score_advanced_preflight_gate.get('selected_result_id', '')}; horizon={risk_score_advanced_preflight_gate.get('preflight_config', {}).get('time_horizon', '')}; no artifact write",
         ),
         _formal_deg_gate_row(
+            "B42 Risk score advanced visualization artifact gate",
+            risk_score_advanced_artifact_gate.get("status"),
+            risk_score_advanced_artifact_gate.get("blockers", []),
+            risk_score_advanced_artifact_gate.get("warnings", []),
+            basis=f"source={risk_score_advanced_artifact_gate.get('selected_result_id', '')}; plot={risk_score_advanced_artifact_gate.get('plot_type', '')}; report_ready={risk_score_advanced_artifact_gate.get('report_ready_eligible', False)}",
+        ),
+        _formal_deg_gate_row(
             "Survival dependency",
             dependency.get("status"),
             dependency.get("blockers", []),
@@ -1269,6 +1282,7 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
         "risk_score_advanced_visualization_gate": risk_score_advanced_visualization_gate,
         "risk_score_advanced_runtime_plan": risk_score_advanced_runtime_plan,
         "risk_score_advanced_preflight_gate": risk_score_advanced_preflight_gate,
+        "risk_score_advanced_artifact_gate": risk_score_advanced_artifact_gate,
         "gate_rows": gate_rows,
     }
 
@@ -1581,6 +1595,7 @@ def build_survival_clinical_rows(
     risk_score_advanced_visualization_gate = survival_clinical_state.get("risk_score_advanced_visualization_gate") if isinstance(survival_clinical_state.get("risk_score_advanced_visualization_gate"), dict) else {}
     risk_score_advanced_runtime_plan = survival_clinical_state.get("risk_score_advanced_runtime_plan") if isinstance(survival_clinical_state.get("risk_score_advanced_runtime_plan"), dict) else {}
     risk_score_advanced_preflight_gate = survival_clinical_state.get("risk_score_advanced_preflight_gate") if isinstance(survival_clinical_state.get("risk_score_advanced_preflight_gate"), dict) else {}
+    risk_score_advanced_artifact_gate = survival_clinical_state.get("risk_score_advanced_artifact_gate") if isinstance(survival_clinical_state.get("risk_score_advanced_artifact_gate"), dict) else {}
     km_real_plot_gate = km_real_plot_gate or {}
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
@@ -1752,6 +1767,15 @@ def build_survival_clinical_rows(
             "backend_status": f"creates_plot_artifact={risk_score_advanced_preflight_gate.get('creates_plot_artifact', False)}; report_ready={risk_score_advanced_preflight_gate.get('report_ready_eligible', False)}",
             "disabled_reason": compact_list(_list(risk_score_advanced_preflight_gate.get("blockers")) or ["advanced_visualization_preflight_not_passed"]),
             "warnings": compact_list(_list(risk_score_advanced_preflight_gate.get("warnings")) or ["Preflight only; no clinical interpretation."]),
+        },
+        {
+            "row_id": "risk_score_advanced_artifact",
+            "label": "Risk score advanced visualization artifact",
+            "status": str(risk_score_advanced_artifact_gate.get("status") or "blocked"),
+            "asset_status": f"source={risk_score_advanced_artifact_gate.get('selected_result_id', '')}; plot={risk_score_advanced_artifact_gate.get('plot_type', '')}",
+            "backend_status": f"creates_plot_artifact={risk_score_advanced_artifact_gate.get('creates_plot_artifact', False)}; report_ready={risk_score_advanced_artifact_gate.get('report_ready_eligible', False)}",
+            "disabled_reason": compact_list(_list(risk_score_advanced_artifact_gate.get("blockers")) or ["risk_score_advanced_visualization_artifact_gate_not_passed"]),
+            "warnings": compact_list(_list(risk_score_advanced_artifact_gate.get("warnings")) or ["Nomogram scale SVG only; no clinical interpretation."]),
         },
         {
             "row_id": "clinical_association",
