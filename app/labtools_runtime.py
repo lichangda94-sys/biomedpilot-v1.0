@@ -272,6 +272,21 @@ class LabToolsLanCredential:
 
 
 @dataclass(frozen=True)
+class LabToolsLanClientCredentialStatus:
+    status: str
+    message: str
+    server_url: str = ""
+    has_saved_token: bool = False
+    token_id: str = ""
+    client_label: str = ""
+    role: str = ""
+    expires_at: str = ""
+    saved_at: str = ""
+    auth_failed: bool = False
+    compatibility_mode: bool = False
+
+
+@dataclass(frozen=True)
 class LabToolsLanPairingResult:
     success: bool
     status: str
@@ -561,6 +576,62 @@ def get_labtools_lan_credential(server_url: str | None) -> LabToolsLanCredential
         if credential.server_url == key:
             return credential
     return None
+
+
+def get_labtools_lan_client_credential_status(
+    server_url: str | None,
+    *,
+    read_model: LabToolsLocalDataReadModel | None = None,
+) -> LabToolsLanClientCredentialStatus:
+    key = _lan_server_key(server_url)
+    if not key:
+        return LabToolsLanClientCredentialStatus(
+            status="manual_connection_required",
+            message="请输入 LAN read-only server URL。",
+        )
+    credential = get_labtools_lan_credential(key)
+    if credential is None:
+        compatibility_mode = bool(read_model is not None and read_model.status.read_enabled)
+        return LabToolsLanClientCredentialStatus(
+            status="compatibility_mode" if compatibility_mode else "no_saved_token",
+            message="未保存 paired token；如果连接成功，说明 host 正在使用 compatibility read-only。",
+            server_url=key,
+            compatibility_mode=compatibility_mode,
+        )
+    auth_failed = bool(read_model is not None and not read_model.status.read_enabled and read_model.status.status != "manual_connection_required")
+    return LabToolsLanClientCredentialStatus(
+        status="auth_failed_repair_required" if auth_failed else "saved_token",
+        message="Saved token 无法读取当前 host，请重新 pairing。" if auth_failed else "已保存本机 paired viewer token。",
+        server_url=credential.server_url,
+        has_saved_token=True,
+        token_id=credential.token_id,
+        client_label=credential.client_label,
+        role=credential.role,
+        expires_at=credential.expires_at,
+        saved_at=credential.saved_at,
+        auth_failed=auth_failed,
+        compatibility_mode=False,
+    )
+
+
+def clear_labtools_lan_credential(server_url: str | None) -> LabToolsLanPairingResult:
+    key = _lan_server_key(server_url)
+    if not key:
+        return LabToolsLanPairingResult(False, "manual_connection_required", "请输入 LAN read-only server URL。", blocker="missing_server_url")
+    path = get_labtools_lan_credentials_path()
+    existing = load_labtools_lan_credentials()
+    kept = tuple(item for item in existing if item.server_url != key)
+    if len(kept) == len(existing):
+        return LabToolsLanPairingResult(False, "no_saved_token", "当前 URL 没有 saved token。", blocker="no_saved_token")
+    payload = {
+        "schema_version": LAN_CREDENTIAL_SCHEMA_VERSION,
+        "credentials": [_lan_credential_payload(item) for item in kept],
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(f".{path.name}.tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp_path.replace(path)
+    return LabToolsLanPairingResult(True, "cleared", "已清除本机 saved token；不会影响 host 上的 paired client。")
 
 
 def claim_labtools_lan_pairing(

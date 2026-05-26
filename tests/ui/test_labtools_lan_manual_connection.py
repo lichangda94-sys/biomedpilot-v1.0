@@ -66,6 +66,8 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         connect = window.findChild(QPushButton, "labtoolsLanConnectButton")
         pair_code = window.findChild(QLineEdit, "labtoolsLanPairingCodeInput")
         pair = window.findChild(QPushButton, "labtoolsLanPairButton")
+        token_status = window.findChild(QLabel, "labtoolsLanSavedTokenStatusText")
+        clear_token = window.findChild(QPushButton, "labtoolsLanClearTokenButton")
         status = window.findChild(QLabel, "labtoolsLanStatusText")
         counts = window.findChild(QLabel, "labtoolsLanCountRow")
         note = window.findChild(QLabel, "labtoolsLanBoundaryNote")
@@ -74,12 +76,15 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         assert connect is not None
         assert pair_code is not None
         assert pair is not None
+        assert token_status is not None
+        assert clear_token is not None
         assert status is not None
         assert counts is not None
         assert note is not None
         assert status.property("status") == "manual_connection_required"
         assert "自动发现" in note.text()
         assert "私有 LAN URL" in note.text()
+        assert token_status.property("hasSavedToken") is False
 
         with build_lan_health_server(LabToolsLanHealthServerConfig(health_only=False, local_data_root=tmp_path)) as server:
             url_input.setText(server.url(""))
@@ -92,6 +97,9 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         assert counts.property("sampleCount") == 1
         assert counts.property("cellCount") == 1
         assert counts.property("recordCount") == 1
+        assert status.property("compatibilityMode") is True
+        assert token_status.property("compatibilityMode") is True
+        assert "compatibility" in token_status.text()
         assert "不同步" in note.text()
         assert "不写入" in note.text()
         assert "paired viewer token" in note.text()
@@ -117,6 +125,8 @@ def test_labtools_home_pairs_and_uses_saved_lan_token(qt_app, tmp_path: Path, mo
         connect = window.findChild(QPushButton, "labtoolsLanConnectButton")
         pair_code = window.findChild(QLineEdit, "labtoolsLanPairingCodeInput")
         pair = window.findChild(QPushButton, "labtoolsLanPairButton")
+        token_status = window.findChild(QLabel, "labtoolsLanSavedTokenStatusText")
+        clear_token = window.findChild(QPushButton, "labtoolsLanClearTokenButton")
         status = window.findChild(QLabel, "labtoolsLanStatusText")
         counts = window.findChild(QLabel, "labtoolsLanCountRow")
 
@@ -124,6 +134,8 @@ def test_labtools_home_pairs_and_uses_saved_lan_token(qt_app, tmp_path: Path, mo
         assert connect is not None
         assert pair_code is not None
         assert pair is not None
+        assert token_status is not None
+        assert clear_token is not None
         assert status is not None
         assert counts is not None
 
@@ -144,12 +156,70 @@ def test_labtools_home_pairs_and_uses_saved_lan_token(qt_app, tmp_path: Path, mo
             pair_code.setText(pairing.pairing_code)
             pair.click()
             qt_app.processEvents()
+            assert token_status.property("hasSavedToken") is True
+            assert token_status.property("tokenRole") == "viewer"
+            assert token_status.property("tokenExpiresAt")
 
         assert status.property("status") == "ready_readonly"
         assert counts.property("sampleCount") == 1
         assert counts.property("recordCount") == 1
         assert pair_code.text() == ""
+        clear_token.click()
+        qt_app.processEvents()
+        assert token_status.property("hasSavedToken") is False
     finally:
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_labtools_home_client_saved_token_failure_prompts_repairing(qt_app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    labtools_runtime._ensure_labtools_importable()
+
+    monkeypatch.setenv("BIOMEDPILOT_LABTOOLS_LAN_CREDENTIALS_PATH", str(tmp_path / "settings" / "lan_credentials.json"))
+    store_root = tmp_path / "store"
+    _seed_lan_store(store_root)
+    window = MainWindow()
+    window.set_labtools_project_root(store_root)
+    window._welcome_page.enter_workspace()
+    window.show_labtools()
+    window._show_labtools_home()
+    try:
+        url_input = window.findChild(QLineEdit, "labtoolsLanServerUrlInput")
+        pair_code = window.findChild(QLineEdit, "labtoolsLanPairingCodeInput")
+        pair = window.findChild(QPushButton, "labtoolsLanPairButton")
+        connect = window.findChild(QPushButton, "labtoolsLanConnectButton")
+        token_status = window.findChild(QLabel, "labtoolsLanSavedTokenStatusText")
+        status = window.findChild(QLabel, "labtoolsLanStatusText")
+
+        assert url_input is not None
+        assert pair_code is not None
+        assert pair is not None
+        assert connect is not None
+        assert token_status is not None
+        assert status is not None
+
+        start = labtools_runtime.start_labtools_lan_host(store_root, compatibility_mode=False)
+        pairing = labtools_runtime.create_labtools_lan_host_pairing(store_root, client_label="UIShell manual LAN client")
+        url_input.setText(start.host_status.server_url)
+        pair_code.setText(pairing.pairing_code)
+        pair.click()
+        qt_app.processEvents()
+        assert token_status.property("hasSavedToken") is True
+
+        credential = labtools_runtime.get_labtools_lan_credential(start.host_status.server_url)
+        assert credential is not None
+        revoked = labtools_runtime.revoke_labtools_lan_host_client(store_root, credential.token_id)
+        assert revoked.success is True
+        connect.click()
+        qt_app.processEvents()
+
+        assert status.property("authFailed") is True
+        assert token_status.property("authFailed") is True
+        assert "重新 pairing" in status.text()
+        assert "重新 pairing" in token_status.text()
+    finally:
+        labtools_runtime.stop_labtools_lan_host(store_root)
         window.close()
         window.deleteLater()
         qt_app.processEvents()

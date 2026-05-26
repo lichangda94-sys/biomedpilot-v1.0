@@ -102,22 +102,36 @@ def test_lan_runtime_bridge_claims_pairing_and_uses_saved_token(tmp_path: Path, 
         blocked = labtools_runtime.get_labtools_lan_read_model(server.url(""))
         pairing = server.create_pairing_session(client_label="UIShell test client")
         paired = labtools_runtime.claim_labtools_lan_pairing(server.url(""), pairing.pairing_code, client_label="UIShell test client")
+        credential_status = labtools_runtime.get_labtools_lan_client_credential_status(server.url(""))
         model = labtools_runtime.get_labtools_lan_read_model(server.url(""))
-
-    payload = json.loads(credentials_path.read_text(encoding="utf-8"))
-
+        saved_payload = json.loads(credentials_path.read_text(encoding="utf-8"))
+        revoked = server.revoke_paired_client(paired.credential.token_id if paired.credential else "")
+        blocked_after_revoke = labtools_runtime.get_labtools_lan_read_model(server.url(""))
+        failed_credential_status = labtools_runtime.get_labtools_lan_client_credential_status(server.url(""), read_model=blocked_after_revoke)
+        cleared = labtools_runtime.clear_labtools_lan_credential(server.url(""))
+        cleared_status = labtools_runtime.get_labtools_lan_client_credential_status(server.url(""))
     assert blocked.status.read_enabled is False
     assert blocked.status.status == "blocked_read_disabled"
     assert paired.success is True
     assert paired.status == "paired"
     assert paired.credential is not None
     assert paired.credential.role == "viewer"
-    assert payload["schema_version"] == labtools_runtime.LAN_CREDENTIAL_SCHEMA_VERSION
-    assert payload["credentials"][0]["server_url"].startswith("http://127.0.0.1:")
-    assert payload["credentials"][0]["token"]
+    assert credential_status.has_saved_token is True
+    assert credential_status.role == "viewer"
+    assert credential_status.expires_at
+    assert saved_payload["schema_version"] == labtools_runtime.LAN_CREDENTIAL_SCHEMA_VERSION
+    assert saved_payload["credentials"][0]["server_url"].startswith("http://127.0.0.1:")
+    assert saved_payload["credentials"][0]["token"]
     assert model.status.status == "ready_readonly"
     assert model.status.read_enabled is True
     assert model.wb_samples[0].concentration == "2.0"
+    assert revoked is True
+    assert blocked_after_revoke.status.read_enabled is False
+    assert failed_credential_status.auth_failed is True
+    assert failed_credential_status.status == "auth_failed_repair_required"
+    assert cleared.success is True
+    assert cleared.status == "cleared"
+    assert cleared_status.has_saved_token is False
 
 
 def test_lan_runtime_bridge_blocks_bad_pairing_without_credentials(tmp_path: Path, monkeypatch) -> None:
@@ -192,6 +206,7 @@ def test_lan_runtime_bridge_host_compatibility_mode_is_explicit_and_readonly(tmp
         started = labtools_runtime.start_labtools_lan_host(store_root, compatibility_mode=True)
         pairing = labtools_runtime.create_labtools_lan_host_pairing(store_root, client_label="UIShell test client")
         model = labtools_runtime.get_labtools_lan_read_model(started.host_status.server_url)
+        credential_status = labtools_runtime.get_labtools_lan_client_credential_status(started.host_status.server_url, read_model=model)
     finally:
         labtools_runtime.stop_labtools_lan_host(store_root)
 
@@ -204,6 +219,8 @@ def test_lan_runtime_bridge_host_compatibility_mode_is_explicit_and_readonly(tmp
     assert pairing.success is False
     assert pairing.status == "compatibility_mode"
     assert model.status.read_enabled is True
+    assert credential_status.compatibility_mode is True
+    assert credential_status.has_saved_token is False
 
 
 def test_lan_runtime_bridge_blocks_unavailable_server_gracefully() -> None:

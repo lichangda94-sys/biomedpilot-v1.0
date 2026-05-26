@@ -669,6 +669,21 @@ class MainWindow(QMainWindow):
         pair_row.addWidget(self._labtools_lan_pairing_code_input, 1)
         pair_row.addWidget(pair)
         layout.addLayout(pair_row)
+        token_row = QHBoxLayout()
+        token_row.setSpacing(8)
+        self._labtools_lan_token_status_label = QLabel("Saved token：none")
+        self._labtools_lan_token_status_label.setObjectName("labtoolsLanSavedTokenStatusText")
+        self._labtools_lan_token_status_label.setProperty("hasSavedToken", False)
+        self._labtools_lan_token_status_label.setProperty("authFailed", False)
+        self._labtools_lan_token_status_label.setProperty("compatibilityMode", False)
+        self._labtools_lan_token_status_label.setWordWrap(True)
+        clear_token = make_button("清除 saved token", role="secondary")
+        clear_token.setObjectName("labtoolsLanClearTokenButton")
+        clear_token.setProperty("dataSourceMode", "future_lan")
+        clear_token.clicked.connect(self._clear_labtools_lan_saved_token)
+        token_row.addWidget(self._labtools_lan_token_status_label, 1)
+        token_row.addWidget(clear_token)
+        layout.addLayout(token_row)
         self._labtools_lan_status_label = QLabel("未连接；请输入 LAN read-only URL 后手动连接。不自动发现、不同步、不写入。")
         self._labtools_lan_status_label.setObjectName("labtoolsLanStatusText")
         self._labtools_lan_status_label.setProperty("status", "manual_connection_required")
@@ -686,6 +701,7 @@ class MainWindow(QMainWindow):
         note.setObjectName("labtoolsLanBoundaryNote")
         note.setWordWrap(True)
         layout.addWidget(note)
+        self._refresh_labtools_lan_client_token_status()
         return frame
 
     def _pair_labtools_lan_readonly(self) -> None:
@@ -705,6 +721,42 @@ class MainWindow(QMainWindow):
         if result.success:
             code_input.clear()
             self._connect_labtools_lan_readonly()
+        else:
+            self._refresh_labtools_lan_client_token_status()
+
+    def _clear_labtools_lan_saved_token(self) -> None:
+        url_input = getattr(self, "_labtools_lan_url_input", None)
+        status_label = getattr(self, "_labtools_lan_status_label", None)
+        if not isinstance(url_input, QLineEdit):
+            return
+        result = labtools_runtime.clear_labtools_lan_credential(url_input.text())
+        if isinstance(status_label, QLabel):
+            status_label.setText(f"LAN token：{result.status} · {result.message}")
+            status_label.setProperty("status", result.status)
+            status_label.setProperty("dataSourceMode", "future_lan")
+        self._refresh_labtools_lan_client_token_status()
+
+    def _refresh_labtools_lan_client_token_status(self, model: labtools_runtime.LabToolsLocalDataReadModel | None = None) -> None:
+        url_input = getattr(self, "_labtools_lan_url_input", None)
+        token_label = getattr(self, "_labtools_lan_token_status_label", None)
+        if not isinstance(url_input, QLineEdit) or not isinstance(token_label, QLabel):
+            return
+        credential = labtools_runtime.get_labtools_lan_client_credential_status(url_input.text(), read_model=model)
+        if credential.has_saved_token:
+            token_label.setText(
+                f"Saved token：{credential.status} · role {credential.role or 'viewer'} · "
+                f"expires {credential.expires_at or 'unknown'} · {credential.message}"
+            )
+        elif credential.compatibility_mode:
+            token_label.setText("Saved token：none · compatibility read-only connected；当前 host 未要求 token。")
+        else:
+            token_label.setText(f"Saved token：none · {credential.message}")
+        token_label.setProperty("status", credential.status)
+        token_label.setProperty("hasSavedToken", credential.has_saved_token)
+        token_label.setProperty("tokenRole", credential.role)
+        token_label.setProperty("tokenExpiresAt", credential.expires_at)
+        token_label.setProperty("authFailed", credential.auth_failed)
+        token_label.setProperty("compatibilityMode", credential.compatibility_mode)
 
     def _connect_labtools_lan_readonly(self) -> None:
         url_input = getattr(self, "_labtools_lan_url_input", None)
@@ -714,9 +766,18 @@ class MainWindow(QMainWindow):
             return
         model = labtools_runtime.get_labtools_lan_read_model(url_input.text())
         self._labtools_lan_read_model = model
-        status_label.setText(f"LAN：{model.status.status} · {model.status.reason}")
+        credential = labtools_runtime.get_labtools_lan_client_credential_status(url_input.text(), read_model=model)
+        if credential.auth_failed:
+            status_text = f"LAN：{model.status.status} · saved token failed，请重新 pairing。{model.status.reason}"
+        elif credential.compatibility_mode:
+            status_text = f"LAN：{model.status.status} · compatibility read-only risk：host 未要求 token。{model.status.reason}"
+        else:
+            status_text = f"LAN：{model.status.status} · {model.status.reason}"
+        status_label.setText(status_text)
         status_label.setProperty("status", model.status.status)
         status_label.setProperty("dataSourceMode", model.status.data_source_mode)
+        status_label.setProperty("authFailed", credential.auth_failed)
+        status_label.setProperty("compatibilityMode", credential.compatibility_mode)
         count_label.setText(
             f"reagent {model.status.reagent_count} · sample {model.status.sample_count} · "
             f"cell {model.status.cell_count} · freeze vial {model.status.freeze_vial_count} · record {model.status.record_count}"
@@ -725,6 +786,7 @@ class MainWindow(QMainWindow):
         count_label.setProperty("sampleCount", model.status.sample_count)
         count_label.setProperty("cellCount", model.status.cell_count)
         count_label.setProperty("recordCount", model.status.record_count)
+        self._refresh_labtools_lan_client_token_status(model)
 
     def _show_labtools_general_calculator_shell(self) -> None:
         status = labtools_runtime.runtime_status()
