@@ -20,8 +20,10 @@ from .renderer_runtime_policy import build_full_integrated_renderer_runtime_pack
 from .survival_clinical import (
     create_cox_report_ready_package,
     create_km_logrank_report_ready_package,
+    create_risk_score_report_ready_package,
     evaluate_cox_report_ready_gate,
     evaluate_km_logrank_report_ready_gate,
+    evaluate_risk_score_report_ready_gate,
 )
 
 __all__ = [
@@ -34,6 +36,7 @@ __all__ = [
     "create_gsea_report_ready_package",
     "create_cox_report_ready_package",
     "create_km_logrank_report_ready_package",
+    "create_risk_score_report_ready_package",
     "create_ora_report_ready_package",
     "build_full_integrated_report_package_plan",
     "evaluate_formal_deg_report_ready_gate",
@@ -44,6 +47,7 @@ __all__ = [
     "evaluate_gsea_report_ready_gate",
     "evaluate_cox_report_ready_gate",
     "evaluate_km_logrank_report_ready_gate",
+    "evaluate_risk_score_report_ready_gate",
     "evaluate_ora_report_ready_gate",
     "build_report_renderer_capability_snapshot",
     "build_full_integrated_renderer_runtime_packaging_policy",

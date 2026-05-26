@@ -12,11 +12,13 @@ from app.bioinformatics.survival_clinical._io import read_table
 from app.bioinformatics.survival_clinical.cox_multivariate_result_schema import validate_cox_multivariate_result_index_entry, validate_cox_multivariate_result_table
 from app.bioinformatics.survival_clinical.cox_result_schema import validate_cox_result_index_entry, validate_cox_result_table
 from app.bioinformatics.survival_clinical.km_result_schema import validate_km_result_index_entry, validate_km_result_tables
+from app.bioinformatics.survival_clinical.risk_score_result_schema import validate_risk_score_result_index_entry, validate_risk_score_result_table
 
 
 KM_REPORT_READY_GATE_SCHEMA_VERSION = "biomedpilot.km_logrank_report_ready_gate.v1"
 COX_REPORT_READY_GATE_SCHEMA_VERSION = "biomedpilot.cox_univariate_report_ready_gate.v1"
 COX_MULTIVARIATE_REPORT_READY_GATE_SCHEMA_VERSION = "biomedpilot.cox_multivariate_report_ready_gate.v1"
+RISK_SCORE_REPORT_READY_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_report_ready_gate.v1"
 SURVIVAL_CLINICAL_REPORT_PACKAGE_SCHEMA_VERSION = "biomedpilot.survival_clinical_report_ready_package.v1"
 FORBIDDEN_CLINICAL_PHRASES = (
     "clinical_conclusion",
@@ -148,6 +150,84 @@ def evaluate_cox_report_ready_gate(
     )
 
 
+def evaluate_risk_score_report_ready_gate(
+    project_root: str | Path,
+    *,
+    result_id: str | None = None,
+    allow_table_only_report: bool = False,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    entry = _select_entry(root, "risk_score", result_id)
+    if entry is None:
+        return _gate(
+            RISK_SCORE_REPORT_READY_GATE_SCHEMA_VERSION,
+            "blocked",
+            result_id or "",
+            "risk_score",
+            allow_table_only_report,
+            ["missing_risk_score_result"],
+            [],
+            {},
+            section_scope="risk_score_validation_only",
+        )
+    blockers: list[str] = []
+    warnings: list[str] = [str(item) for item in entry.get("warnings", []) or []]
+    if normalize_result_semantics(entry.get("result_semantics"), default="") != "formal_computed_result":
+        blockers.append("risk_score_report_ready_requires_formal_computed_result")
+    if entry.get("task_type") != "risk_score":
+        blockers.append("risk_score_report_ready_requires_risk_score_task")
+    blockers.extend(
+        _base_entry_blockers(
+            root,
+            entry,
+            required_artifacts=(
+                "risk_score_result_table",
+                "risk_score_calibration_statistics_table",
+                "risk_score_decision_curve_statistics_table",
+            ),
+        )
+    )
+    schema_gate = validate_risk_score_result_index_entry(_schema_validation_view(entry))
+    blockers.extend(str(item) for item in schema_gate.get("blockers", []) or [])
+    table_paths = _artifact_paths(entry)
+    risk_rows = read_table(_resolve(root, table_paths.get("risk_score_result_table", "")))
+    risk_table_gate = validate_risk_score_result_table(risk_rows)
+    blockers.extend(str(item) for item in risk_table_gate.get("blockers", []) or [])
+    warnings.extend(str(item) for item in risk_table_gate.get("warnings", []) or [])
+    blockers.extend(_parameter_blockers(entry, ("status",)))
+    if not _has_formal_plot(entry, "risk_score_nomogram"):
+        blockers.append("risk_score_report_ready_requires_b42_nomogram_plot_artifact")
+    if not allow_table_only_report and not _has_formal_plot(entry, "risk_score_calibration_curve"):
+        blockers.append("risk_score_report_ready_requires_b45_calibration_plot_artifact_or_explicit_table_only_mode")
+    if not allow_table_only_report and not _has_formal_plot(entry, "risk_score_decision_curve"):
+        blockers.append("risk_score_report_ready_requires_b45_decision_curve_plot_artifact_or_explicit_table_only_mode")
+    if _clinical_text_detected(entry):
+        blockers.append("clinical_conclusion_text_forbidden")
+    status = "eligible_for_risk_score_report_ready" if not blockers else "blocked"
+    return _gate(
+        RISK_SCORE_REPORT_READY_GATE_SCHEMA_VERSION,
+        status,
+        str(entry.get("result_id") or ""),
+        "risk_score",
+        allow_table_only_report,
+        blockers,
+        warnings,
+        {
+            "result_index_path": str(root / RESULT_INDEX),
+            "risk_score_row_count": len(risk_rows),
+            "statistics_artifact_types": [
+                artifact_type
+                for artifact_type in ("risk_score_calibration_statistics_table", "risk_score_decision_curve_statistics_table")
+                if table_paths.get(artifact_type)
+            ],
+            "plot_artifact_types": [str(item.get("plot_type") or "") for item in entry.get("plot_artifacts", []) or [] if isinstance(item, dict)],
+            "table_validation": risk_table_gate,
+            "result_schema_validation": schema_gate,
+        },
+        section_scope="risk_score_validation_only",
+    )
+
+
 def create_km_logrank_report_ready_package(
     project_root: str | Path,
     *,
@@ -191,6 +271,31 @@ def create_cox_report_ready_package(
     )
 
 
+def create_risk_score_report_ready_package(
+    project_root: str | Path,
+    *,
+    result_id: str | None = None,
+    allow_table_only_report: bool = False,
+) -> dict[str, Any]:
+    return _create_section_package(
+        project_root,
+        result_id=result_id,
+        allow_table_only_report=allow_table_only_report,
+        gate_fn=evaluate_risk_score_report_ready_gate,
+        task_type="risk_score",
+        section_scope="risk_score_validation_only",
+        report_filename="risk_score_validation_report.md",
+        manifest_filename="risk_score_report_package_manifest.json",
+        artifact_type="risk_score_report_ready_package",
+        table_artifact_types=(
+            "risk_score_result_table",
+            "risk_score_calibration_statistics_table",
+            "risk_score_decision_curve_statistics_table",
+        ),
+        section_title="Risk Score Validation Section",
+    )
+
+
 def _evaluate_cox_multivariate_report_ready_gate(root: Path, entry: dict[str, Any], *, allow_table_only_report: bool) -> dict[str, Any]:
     blockers: list[str] = []
     warnings: list[str] = [str(item) for item in entry.get("warnings", []) or []]
@@ -231,14 +336,25 @@ def _evaluate_cox_multivariate_report_ready_gate(root: Path, entry: dict[str, An
     )
 
 
-def _gate(schema: str, status: str, selected_result_id: str, task_type: str, allow_table_only: bool, blockers: list[str], warnings: list[str], diagnostics: dict[str, Any]) -> dict[str, Any]:
-    eligible = status in {"eligible_for_km_logrank_report_ready", "eligible_for_cox_report_ready"}
+def _gate(
+    schema: str,
+    status: str,
+    selected_result_id: str,
+    task_type: str,
+    allow_table_only: bool,
+    blockers: list[str],
+    warnings: list[str],
+    diagnostics: dict[str, Any],
+    *,
+    section_scope: str | None = None,
+) -> dict[str, Any]:
+    eligible = status in {"eligible_for_km_logrank_report_ready", "eligible_for_cox_report_ready", "eligible_for_risk_score_report_ready"}
     return {
         "schema_version": schema,
         "status": status,
         "selected_result_id": selected_result_id,
         "task_type": task_type,
-        "section_scope": f"{task_type}_only",
+        "section_scope": section_scope or f"{task_type}_only",
         "package_creation_enabled": eligible,
         "allow_table_only_report": allow_table_only,
         "report_ready_eligible": False,
@@ -395,7 +511,7 @@ def _base_entry_blockers(root: Path, entry: dict[str, Any], *, required_artifact
         blockers.append("missing_task_run_log_artifact")
     if entry.get("report_artifacts"):
         scopes = _registered_report_scopes(entry)
-        invalid = [scope for scope in scopes if scope not in {"survival_km_logrank_only", "cox_univariate_only", "cox_multivariate_only"}]
+        invalid = [scope for scope in scopes if scope not in {"survival_km_logrank_only", "cox_univariate_only", "cox_multivariate_only", "risk_score_validation_only"}]
         blockers.extend(f"invalid_existing_report_artifact_scope:{scope}" for scope in invalid)
     return blockers
 
@@ -453,8 +569,36 @@ def _has_formal_plot(entry: dict[str, Any], plot_type: str) -> bool:
 
 
 def _clinical_text_detected(entry: dict[str, Any]) -> bool:
-    text = str({key: value for key, value in entry.items() if key not in {"warnings"}}).lower()
-    return any(phrase.lower() in text for phrase in FORBIDDEN_CLINICAL_PHRASES)
+    forbidden_keys = {
+        "clinical_conclusion",
+        "prognosis_conclusion",
+        "treatment_recommendation",
+        "validated_risk_score",
+        "diagnosis",
+        "prognosis_label",
+        "clinical_risk_group",
+    }
+    text_phrases = {"clinical advice", "medical advice", "治疗建议", "临床结论"}
+
+    def visit(value: Any, *, parent_key: str = "") -> bool:
+        if parent_key in {"warnings", "forbidden_outputs", "forbidden_fields", "minimum_conditions", "validation_gates"}:
+            return False
+        if isinstance(value, dict):
+            for key, item in value.items():
+                key_text = str(key)
+                if key_text in forbidden_keys and item not in (None, "", [], {}):
+                    return True
+                if visit(item, parent_key=key_text):
+                    return True
+            return False
+        if isinstance(value, list | tuple):
+            return any(visit(item, parent_key=parent_key) for item in value)
+        if isinstance(value, str):
+            lowered = value.lower()
+            return any(phrase in lowered for phrase in text_phrases)
+        return False
+
+    return visit(entry)
 
 
 def _resolve(root: Path, path: str | Path) -> Path:
@@ -551,7 +695,7 @@ def _section_report_markdown(title: str, entry: dict[str, Any], gate: dict[str, 
             "",
             "- No clinical conclusion is generated.",
             "- No full integrated report is generated.",
-            "- No risk score or treatment recommendation is generated.",
+            "- No new risk score model, risk group, clinical conclusion, or treatment recommendation is generated.",
             "",
         ]
     )

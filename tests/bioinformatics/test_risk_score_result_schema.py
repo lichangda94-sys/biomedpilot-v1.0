@@ -52,7 +52,22 @@ def test_risk_score_result_index_schema_allows_only_formal_statistical_result_wi
     assert "non_formal_semantics:imported_external_result" in imported["blockers"]
 
     report_ready = validate_risk_score_result_index_entry({**_valid_entry(), "report_ready_eligible": True})
-    assert "risk_score_report_ready_not_enabled" in report_ready["blockers"]
+    assert "risk_score_report_ready_requires_b46_report_package" in report_ready["blockers"]
+
+    with_report_package = validate_risk_score_result_index_entry(
+        {
+            **_valid_entry(),
+            "report_ready_eligible": True,
+            "report_artifacts": [
+                {
+                    "artifact_type": "risk_score_report_ready_package",
+                    "section_scope": "risk_score_validation_only",
+                    "path": "survival_clinical_report_package/risk_score_validation_only/package/risk_score_report_package_manifest.json",
+                }
+            ],
+        }
+    )
+    assert with_report_package["status"] == "passed"
 
     clinical = validate_risk_score_result_index_entry({**_valid_entry(), "clinical_conclusion": "poor prognosis"})
     assert "forbidden_clinical_field:clinical_conclusion" in clinical["blockers"]

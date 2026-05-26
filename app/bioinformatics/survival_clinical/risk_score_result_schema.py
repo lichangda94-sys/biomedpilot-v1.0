@@ -107,9 +107,9 @@ def validate_risk_score_result_index_entry(entry: dict[str, Any]) -> dict[str, A
         blockers.append("missing_risk_score_result_table_artifact")
     blockers.extend(_validate_plot_artifacts(entry))
     if entry.get("report_artifacts"):
-        blockers.append("risk_score_report_artifacts_not_enabled")
-    if entry.get("report_ready_eligible") is True:
-        blockers.append("risk_score_report_ready_not_enabled")
+        _validate_report_artifacts(entry, blockers)
+    if entry.get("report_ready_eligible") is True and not _has_risk_score_report_ready_artifact(entry):
+        blockers.append("risk_score_report_ready_requires_b46_report_package")
     for forbidden in ("clinical_conclusion", "diagnosis", "prognosis_label", "treatment_recommendation", "clinical_risk_group", "nomogram"):
         if entry.get(forbidden):
             blockers.append(f"forbidden_clinical_field:{forbidden}")
@@ -149,3 +149,26 @@ def _contains_key(value: Any, key_name: str) -> bool:
     if isinstance(value, list):
         return any(_contains_key(item, key_name) for item in value)
     return False
+
+
+def _validate_report_artifacts(entry: dict[str, Any], blockers: list[str]) -> None:
+    for index, artifact in enumerate(entry.get("report_artifacts", []) or []):
+        if not isinstance(artifact, dict):
+            blockers.append(f"risk_score_report_artifact_{index}:invalid")
+            continue
+        if artifact.get("artifact_type") != "risk_score_report_ready_package":
+            blockers.append(f"risk_score_report_artifact_{index}:unsupported_report_artifact:{artifact.get('artifact_type')}")
+        if artifact.get("section_scope") != "risk_score_validation_only":
+            blockers.append(f"risk_score_report_artifact_{index}:invalid_section_scope:{artifact.get('section_scope')}")
+        if not artifact.get("path"):
+            blockers.append(f"risk_score_report_artifact_{index}:missing_path")
+
+
+def _has_risk_score_report_ready_artifact(entry: dict[str, Any]) -> bool:
+    return any(
+        isinstance(artifact, dict)
+        and artifact.get("artifact_type") == "risk_score_report_ready_package"
+        and artifact.get("section_scope") == "risk_score_validation_only"
+        and bool(artifact.get("path"))
+        for artifact in entry.get("report_artifacts", []) or []
+    )

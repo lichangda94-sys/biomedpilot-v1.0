@@ -40,7 +40,7 @@ from app.bioinformatics.reports.integrated import evaluate_full_integrated_docx_
 from app.bioinformatics.reports.ora import evaluate_ora_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.reports.renderer_capability import build_report_renderer_capability_snapshot
-from app.bioinformatics.reports.survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
+from app.bioinformatics.reports.survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate, evaluate_risk_score_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
 from app.bioinformatics.plots import build_gsea_plot_gate, build_ora_plot_gate, build_survival_real_plot_gate, check_survival_plot_renderer_dependencies
@@ -168,6 +168,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     cox_real_plot_gate = build_survival_real_plot_gate(root, _latest_result_id(result_entries, {"cox_univariate", "cox_multivariate"}))
     km_report_gate = evaluate_km_logrank_report_ready_gate(root, result_id=_latest_result_id(result_entries, {"survival_km_logrank"}))
     cox_report_gate = evaluate_cox_report_ready_gate(root, result_id=_latest_result_id(result_entries, {"cox_univariate"}))
+    risk_score_report_gate = evaluate_risk_score_report_ready_gate(root, result_id=_latest_result_id(result_entries, {"risk_score"}))
     legacy_pipeline = build_legacy_asset_pipeline_state(root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
@@ -225,6 +226,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         cox_real_plot_gate=cox_real_plot_gate,
         km_report_gate=km_report_gate,
         cox_report_gate=cox_report_gate,
+        risk_score_report_gate=risk_score_report_gate,
         legacy_asset_pipeline=legacy_pipeline,
     )
     result_rows = build_result_gate_rows(result_entries)
@@ -238,6 +240,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         full_integrated_pdf_gate=full_integrated_pdf_gate,
         km_report_gate=km_report_gate,
         cox_report_gate=cox_report_gate,
+        risk_score_report_gate=risk_score_report_gate,
     )
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency, r_deseq2_runtime_detection=deseq2_runtime_detection, r_edger_runtime_detection=edger_runtime_detection)
     survival_rows = build_survival_clinical_rows(
@@ -248,6 +251,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         cox_real_plot_gate=cox_real_plot_gate,
         km_report_gate=km_report_gate,
         cox_report_gate=cox_report_gate,
+        risk_score_report_gate=risk_score_report_gate,
     )
     capability_map = build_analysis_capability_map(
         action_rows=action_rows,
@@ -276,7 +280,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for item in limma_rscript_gate.get("blockers", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
-        + [item for gate in (km_report_gate, cox_report_gate) for item in gate.get("blockers", []) or []]
+        + [item for gate in (km_report_gate, cox_report_gate, risk_score_report_gate) for item in gate.get("blockers", []) or []]
         + [item for item in full_integrated_docx_gate.get("blockers", []) or []]
         + [item for item in full_integrated_pdf_gate.get("blockers", []) or []]
     )
@@ -289,7 +293,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for item in limma_rscript_gate.get("warnings", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("warnings", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("warnings", []) or []]
-        + [item for gate in (km_report_gate, cox_report_gate) for item in gate.get("warnings", []) or []]
+        + [item for gate in (km_report_gate, cox_report_gate, risk_score_report_gate) for item in gate.get("warnings", []) or []]
     )
     return {
         "schema_version": "biomedpilot.analysis_center_ui_state.v1",
@@ -311,7 +315,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "limma_rscript_gate": limma_rscript_gate,
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
-        "survival_clinical_report_gate_rows": survival_clinical_report_gate_rows(km_report_gate=km_report_gate, cox_report_gate=cox_report_gate),
+        "survival_clinical_report_gate_rows": survival_clinical_report_gate_rows(km_report_gate=km_report_gate, cox_report_gate=cox_report_gate, risk_score_report_gate=risk_score_report_gate),
         "legacy_asset_pipeline": legacy_pipeline,
         "analysis_capability_map": capability_map,
         "result_rows": result_rows,
@@ -342,6 +346,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "full_integrated_pdf_rendered_export_gate": full_integrated_pdf_gate,
             "km_logrank_report_ready_gate": km_report_gate,
             "cox_report_ready_gate": cox_report_gate,
+            "risk_score_report_ready_gate": risk_score_report_gate,
             "gsea_gate_state": gsea_gates,
             "survival_clinical_state": survival_clinical_state,
             "km_real_plot_gate": km_real_plot_gate,
@@ -1501,6 +1506,7 @@ def build_gate_preview_rows(
     full_integrated_pdf_gate: dict[str, Any] | None = None,
     km_report_gate: dict[str, Any] | None = None,
     cox_report_gate: dict[str, Any] | None = None,
+    risk_score_report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     result_blockers = []
     if not result_entries:
@@ -1557,6 +1563,13 @@ def build_gate_preview_rows(
             "warnings": compact_list((cox_report_gate or {}).get("warnings", []) or []),
         },
         {
+            "gate": "Risk score validation section report-ready",
+            "status": "available" if (risk_score_report_gate or {}).get("status") == "eligible_for_risk_score_report_ready" else "blocked_risk_score_report_ready_gate",
+            "basis": str((risk_score_report_gate or {}).get("status") or "blocked"),
+            "blockers": compact_list((risk_score_report_gate or {}).get("blockers", []) or []),
+            "warnings": compact_list((risk_score_report_gate or {}).get("warnings", []) or []),
+        },
+        {
             "gate": "Full integrated report",
             "status": "available" if (full_integrated_report_gate or {}).get("status") == "eligible_for_full_integrated_report" else "blocked_full_integrated_report_gate",
             "basis": str((full_integrated_report_gate or {}).get("status") or "blocked"),
@@ -1587,7 +1600,7 @@ def build_gate_preview_rows(
     ]
 
 
-def survival_clinical_report_gate_rows(*, km_report_gate: dict[str, Any], cox_report_gate: dict[str, Any]) -> list[dict[str, Any]]:
+def survival_clinical_report_gate_rows(*, km_report_gate: dict[str, Any], cox_report_gate: dict[str, Any], risk_score_report_gate: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         {
             "gate": "KM/log-rank section report-ready",
@@ -1603,6 +1616,13 @@ def survival_clinical_report_gate_rows(*, km_report_gate: dict[str, Any], cox_re
             "blockers": compact_list(cox_report_gate.get("blockers", []) or []),
             "warnings": compact_list(cox_report_gate.get("warnings", []) or []),
         },
+        {
+            "gate": "Risk score validation section report-ready",
+            "status": "available" if risk_score_report_gate.get("status") == "eligible_for_risk_score_report_ready" else "blocked_risk_score_report_ready_gate",
+            "basis": str(risk_score_report_gate.get("status") or "blocked"),
+            "blockers": compact_list(risk_score_report_gate.get("blockers", []) or []),
+            "warnings": compact_list(risk_score_report_gate.get("warnings", []) or []),
+        },
     ]
 
 
@@ -1615,6 +1635,7 @@ def build_survival_clinical_rows(
     cox_real_plot_gate: dict[str, Any] | None = None,
     km_report_gate: dict[str, Any] | None = None,
     cox_report_gate: dict[str, Any] | None = None,
+    risk_score_report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package = next((item for item in packages if item.get("package_type") == "tcga_clinical_survival_preflight"), None)
     survival_clinical_state = survival_clinical_state or {}
@@ -1645,6 +1666,7 @@ def build_survival_clinical_rows(
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
     cox_report_gate = cox_report_gate or {}
+    risk_score_report_gate = risk_score_report_gate or {}
     blockers = _list(package.get("blockers")) if package else ["missing_survival_preflight_package"]
     warnings = _list(package.get("warnings")) if package else []
     dep_blockers = _list(survival_dependency.get("blockers"))
@@ -1749,6 +1771,15 @@ def build_survival_clinical_rows(
             "backend_status": "section-only package gate",
             "disabled_reason": compact_list(_list(cox_report_gate.get("blockers"))),
             "warnings": compact_list(_list(cox_report_gate.get("warnings")) or ["Section-only package is not a full integrated report."]),
+        },
+        {
+            "row_id": "risk_score_section_report_ready",
+            "label": "Risk score validation section package",
+            "status": str(risk_score_report_gate.get("status") or "blocked"),
+            "asset_status": f"source={risk_score_report_gate.get('selected_result_id') or 'missing'}; table_only={risk_score_report_gate.get('allow_table_only_report', False)}",
+            "backend_status": "section-only package gate",
+            "disabled_reason": compact_list(_list(risk_score_report_gate.get("blockers"))),
+            "warnings": compact_list(_list(risk_score_report_gate.get("warnings")) or ["Section-only risk score validation package is not a full integrated report or clinical risk score validation claim."]),
         },
         {
             "row_id": "cox_multivariate_design",

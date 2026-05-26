@@ -97,6 +97,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     survival_gate_text = "\n".join(str(row) for row in state["survival_clinical_report_gate_rows"])
     assert "KM/log-rank section report-ready" in survival_gate_text
     assert "missing_km_logrank_result" in survival_gate_text
+    assert "Risk score validation section report-ready" in survival_gate_text
+    assert "missing_risk_score_result" in survival_gate_text
     survival_rows_text = "\n".join(str(row) for row in state["survival_clinical_rows"])
     assert "Risk score / nomogram" in survival_rows_text
     assert "contract_gate_only" in survival_rows_text
@@ -120,6 +122,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "risk_score_calibration_decision_curve_input_gate_not_ready" in survival_rows_text
     assert "Risk score calibration / decision curve plot artifact" in survival_rows_text
     assert "risk_score_calibration_statistics_table_missing" in survival_rows_text
+    assert "Risk score validation section package" in survival_rows_text
+    assert "missing_risk_score_result" in survival_rows_text
     survival_diagnostics_text = "\n".join(str(row) for row in state["developer_diagnostics"]["survival_clinical_state"]["gate_rows"])
     assert "B33 Risk score parameter confirmation" in survival_diagnostics_text
     assert "B33 Risk score result schema gate" in survival_diagnostics_text
@@ -140,6 +144,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["full_integrated_docx_rendered_export_gate"]["checks"]["writes_result_index_v2"] is False
     assert state["developer_diagnostics"]["full_integrated_pdf_rendered_export_gate"]["checks"]["writes_result_index_v2"] is False
     assert state["developer_diagnostics"]["full_integrated_pdf_rendered_export_gate"]["selected_backend"] == "pandoc_xelatex"
+    assert state["developer_diagnostics"]["risk_score_report_ready_gate"]["status"] == "blocked"
     assert state["legacy_asset_pipeline"]["formal_analysis_enabled"] is False
     assert state["legacy_asset_pipeline"]["writes_result_index"] is False
     assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False

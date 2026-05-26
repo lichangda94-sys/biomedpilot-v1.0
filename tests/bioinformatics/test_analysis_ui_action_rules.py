@@ -62,6 +62,7 @@ def test_survival_report_ready_action_enables_section_only_when_km_or_cox_gate_p
         survival_dependency={"status": "passed"},
         km_report_gate={"status": "eligible_for_km_logrank_report_ready", "warnings": []},
         cox_report_gate={"status": "blocked", "blockers": ["missing_cox_univariate_result"]},
+        risk_score_report_gate={"status": "eligible_for_risk_score_report_ready", "warnings": ["section_only_not_full_integrated_report"]},
         report_gate={"status": "blocked"},
     )
 
@@ -70,6 +71,8 @@ def test_survival_report_ready_action_enables_section_only_when_km_or_cox_gate_p
     assert report["state"] == "available_section_only"
     assert "section-only" in report["next_action"]
     assert "full integrated report" in report["next_action"]
+    assert "Risk score validation" in report["next_action"]
+    assert "validated clinical risk score" in report["next_action"]
 
 
 def test_full_integrated_docx_rendered_export_action_is_package_artifact_only() -> None:

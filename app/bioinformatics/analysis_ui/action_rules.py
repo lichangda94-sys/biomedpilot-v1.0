@@ -43,6 +43,7 @@ def build_action_rows(
     cox_real_plot_gate: dict[str, Any] | None = None,
     km_report_gate: dict[str, Any] | None = None,
     cox_report_gate: dict[str, Any] | None = None,
+    risk_score_report_gate: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
     formal_deg_report_gate: dict[str, Any] | None = None,
     ora_input_gate: dict[str, Any] | None = None,
@@ -99,6 +100,7 @@ def build_action_rows(
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
     cox_report_gate = cox_report_gate or {}
+    risk_score_report_gate = risk_score_report_gate or {}
     report_gate = report_gate or {}
     formal_deg_report_gate = formal_deg_report_gate or {}
     ora_input_gate = ora_input_gate or {}
@@ -174,7 +176,7 @@ def build_action_rows(
     rows.append(_risk_score_calibration_decision_curve_plot_action(risk_score_calibration_decision_curve_plot_gate))
     rows.append(_survival_real_plot_action("generate_km_plot", "Generate KM plot", km_real_plot_gate))
     rows.append(_survival_real_plot_action("generate_cox_plot", "Generate Cox forest plot", cox_real_plot_gate))
-    rows.append(_survival_report_ready_action(km_report_gate, cox_report_gate))
+    rows.append(_survival_report_ready_action(km_report_gate, cox_report_gate, risk_score_report_gate))
     rows.append(_constant_disabled_action("clinical_association_statistics", "Run clinical association statistics", "disabled_b12_contract", "Clinical association p-values are disabled; input/variable audit only."))
     rows.append(_constant_disabled_action("survival_formal", "Survival full integrated report", "hidden_until_ready", "Full integrated survival/clinical report remains blocked; section-only KM/Cox packages do not unlock it."))
     rows.append(_plot_action(results))
@@ -1384,7 +1386,7 @@ def _survival_real_plot_action(action_id: str, label: str, gate: dict[str, Any])
     )
 
 
-def _survival_report_ready_action(km_gate: dict[str, Any], cox_gate: dict[str, Any]) -> dict[str, Any]:
+def _survival_report_ready_action(km_gate: dict[str, Any], cox_gate: dict[str, Any], risk_score_gate: dict[str, Any]) -> dict[str, Any]:
     eligible: list[str] = []
     blockers: list[str] = []
     warnings: list[str] = []
@@ -1398,27 +1400,32 @@ def _survival_report_ready_action(km_gate: dict[str, Any], cox_gate: dict[str, A
         warnings.extend(_list(cox_gate.get("warnings")))
     else:
         blockers.extend(_list(cox_gate.get("blockers")) or ["cox_report_ready_gate_not_passed"])
+    if risk_score_gate.get("status") == "eligible_for_risk_score_report_ready":
+        eligible.append("Risk score validation")
+        warnings.extend(_list(risk_score_gate.get("warnings")))
+    else:
+        blockers.extend(_list(risk_score_gate.get("blockers")) or ["risk_score_report_ready_gate_not_passed"])
     if eligible:
         return {
             "action_id": "survival_report_ready",
-            "label": "Export KM/Cox section package",
+            "label": "Export survival/risk score section package",
             "state": "available_section_only",
             "button_behavior": "enabled_survival_clinical_section_package_only",
             "enabled": True,
             "normal_user_visible": True,
             "disabled_reason": "",
             "next_action": (
-                "Export eligible KM/log-rank or Cox section-only report package; this does not create a full integrated report, risk score, prognosis label or treatment recommendation."
+                "Export eligible KM/log-rank, Cox, or risk score validation section-only report package; this does not create a full integrated report, prognosis label, treatment recommendation, or validated clinical risk score."
                 + (f" Eligible: {', '.join(eligible)}." if eligible else "")
                 + (f" Warnings: {'; '.join(dict.fromkeys(warnings))}" if warnings else "")
             ),
         }
     return _disabled(
         "survival_report_ready",
-        "Export KM/Cox section package",
+        "Export survival/risk score section package",
         "blocked_survival_clinical_report_ready_gate",
         "; ".join(dict.fromkeys(blockers)),
-        "Resolve KM/Cox result index, dependency, task log, result table, plot/table-only and provenance gates. Full integrated report remains blocked.",
+        "Resolve KM/Cox/risk-score result index, dependency, task log, result table, plot/table-only and provenance gates. Full integrated report remains blocked.",
     )
 
 
