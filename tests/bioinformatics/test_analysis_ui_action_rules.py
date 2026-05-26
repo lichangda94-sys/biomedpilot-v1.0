@@ -335,6 +335,40 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert artifact_enabled["button_behavior"] == "enabled_nomogram_scale_svg_artifact_only"
     assert "does not generate calibration" in artifact_enabled["next_action"]
 
+    calibration_input_blocked_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_calibration_decision_curve_input_gate={
+            "status": "blocked_planning_only",
+            "blockers": ["predicted_probability_source_missing"],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    calibration_input_blocked = _row(calibration_input_blocked_rows, "risk_score_calibration_decision_curve_input")
+    assert calibration_input_blocked["enabled"] is False
+    assert "predicted_probability_source_missing" in calibration_input_blocked["disabled_reason"]
+    assert "no calibration curve" in calibration_input_blocked["disabled_reason"]
+
+    calibration_input_ready_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_calibration_decision_curve_input_gate={
+            "status": "ready_for_future_artifact_gate",
+            "blockers": [],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    calibration_input_ready = _row(calibration_input_ready_rows, "risk_score_calibration_decision_curve_input")
+    assert calibration_input_ready["enabled"] is True
+    assert calibration_input_ready["button_behavior"] == "enabled_input_review_only_no_artifact"
+    assert "does not compute calibration statistics" in calibration_input_ready["next_action"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(

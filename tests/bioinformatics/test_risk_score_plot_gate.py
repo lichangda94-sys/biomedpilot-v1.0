@@ -9,6 +9,7 @@ from app.bioinformatics.survival_clinical import (
     build_risk_score_advanced_visualization_planning_gate,
     build_risk_score_advanced_visualization_preflight_gate,
     build_risk_score_advanced_visualization_runtime_plan,
+    build_risk_score_calibration_decision_curve_input_gate,
     build_risk_score_plot_artifact_activation_gate,
     build_risk_score_plot_artifact_schema_candidate,
     build_risk_score_plot_nomogram_gate,
@@ -327,6 +328,73 @@ def test_risk_score_advanced_visualization_artifact_execution_registers_nomogram
     assert '"clinical_conclusion":' not in registry_text
 
 
+def test_risk_score_calibration_decision_curve_input_gate_is_review_only_when_inputs_ready(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n"
+        "S2\tC2\t-0.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    gate = build_risk_score_calibration_decision_curve_input_gate(tmp_path, planning_config=_calibration_decision_curve_config())
+
+    assert gate["schema_version"] == "biomedpilot.risk_score_calibration_decision_curve_input_gate.v1"
+    assert gate["status"] == "ready_for_future_artifact_gate"
+    assert gate["checks"]["calibration_inputs_ready"] is True
+    assert gate["checks"]["decision_curve_inputs_ready"] is True
+    assert gate["future_artifact_types"] == ["risk_score_calibration_curve", "risk_score_decision_curve"]
+    assert gate["formal_execution_enabled"] is False
+    assert gate["writes_result_index"] is False
+    assert gate["creates_plot_artifact"] is False
+    assert gate["report_ready_eligible"] is False
+    assert not (tmp_path / "results" / "plots" / "risk_score" / "advanced").exists()
+
+
+def test_risk_score_calibration_decision_curve_input_gate_blocks_fake_or_missing_inputs(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    gate = build_risk_score_calibration_decision_curve_input_gate(
+        tmp_path,
+        planning_config={
+            **_advanced_preflight_config(),
+            "validation_cohort_id": "",
+            "validation_strategy": "",
+            "predicted_probability": {"source": "", "column": "", "scale": "percent"},
+            "observed_outcome_mapping": {"time_field": "", "event_field": ""},
+            "calibration_method": "",
+            "calibration_bins": 1,
+            "bootstrap_or_resampling_policy": "",
+            "net_benefit_formula_policy": "",
+            "treat_all_none_baselines": False,
+            "clinical_decision_boundary_acknowledged": False,
+        },
+    )
+
+    assert gate["status"] == "blocked_planning_only"
+    assert "validation_cohort_missing" in gate["blockers"]
+    assert "calibration_validation_strategy_missing" in gate["blockers"]
+    assert "predicted_probability_source_missing" in gate["blockers"]
+    assert "predicted_probability_column_missing" in gate["blockers"]
+    assert "predicted_probability_scale_invalid" in gate["blockers"]
+    assert "observed_outcome_mapping_missing" in gate["blockers"]
+    assert "calibration_method_missing" in gate["blockers"]
+    assert "calibration_bins_invalid" in gate["blockers"]
+    assert "calibration_resampling_policy_missing" in gate["blockers"]
+    assert "net_benefit_formula_policy_missing" in gate["blockers"]
+    assert "decision_curve_treat_all_none_baselines_missing" in gate["blockers"]
+    assert "clinical_decision_boundary_acknowledgement_missing" in gate["blockers"]
+
+
 def test_risk_score_plot_artifact_schema_blocks_nonformal_and_clinical_fields(tmp_path: Path) -> None:
     dependency = check_risk_score_plot_renderer_dependencies()
     artifact = build_risk_score_plot_artifact_schema_candidate(
@@ -398,4 +466,20 @@ def _advanced_preflight_config() -> dict[str, object]:
         "minimum_event_count": 10,
         "threshold_probability_grid": [0.1, 0.2, 0.3],
         "clinical_boundary_acknowledged": True,
+    }
+
+
+def _calibration_decision_curve_config() -> dict[str, object]:
+    return {
+        **_advanced_preflight_config(),
+        "validation_cohort_id": "validation-cohort-1",
+        "validation_strategy": "held_out_validation",
+        "predicted_probability": {"source": "risk_score_probability_table", "column": "predicted_probability", "scale": "0_to_1"},
+        "observed_outcome_mapping": {"time_field": "OS_time", "event_field": "OS_event", "event_positive_value": "1"},
+        "calibration_method": "grouped_observed_vs_predicted",
+        "calibration_bins": 4,
+        "bootstrap_or_resampling_policy": "none_controlled_fixture",
+        "net_benefit_formula_policy": "standard_binary_outcome_net_benefit",
+        "treat_all_none_baselines": True,
+        "clinical_decision_boundary_acknowledged": True,
     }

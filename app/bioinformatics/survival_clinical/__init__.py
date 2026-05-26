@@ -46,6 +46,7 @@ from .risk_score_design import audit_risk_score_design
 from .risk_score_executor import run_controlled_risk_score
 from .risk_score_plot_gate import build_risk_score_plot_nomogram_gate
 from .risk_score_plot_schema import (
+    build_risk_score_calibration_decision_curve_input_gate,
     build_risk_score_advanced_visualization_artifact_gate,
     build_risk_score_advanced_visualization_planning_gate,
     build_risk_score_advanced_visualization_preflight_gate,
@@ -77,6 +78,7 @@ __all__ = [
     "build_km_logrank_parameter_manifest",
     "build_km_result_review",
     "build_risk_score_nomogram_contract_gate",
+    "build_risk_score_calibration_decision_curve_input_gate",
     "build_risk_score_advanced_visualization_artifact_gate",
     "build_risk_score_advanced_visualization_planning_gate",
     "build_risk_score_advanced_visualization_preflight_gate",

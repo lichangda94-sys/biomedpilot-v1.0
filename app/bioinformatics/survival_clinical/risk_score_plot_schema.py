@@ -23,6 +23,7 @@ RISK_SCORE_ADVANCED_VISUALIZATION_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_
 RISK_SCORE_ADVANCED_VISUALIZATION_RUNTIME_PLAN_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_runtime_plan.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_PREFLIGHT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_preflight_gate.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_ARTIFACT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_artifact_gate.v1"
+RISK_SCORE_CALIBRATION_DECISION_CURVE_INPUT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_input_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCOPE = "formal_risk_score_plot_artifact"
 RISK_SCORE_PLOT_ENGINE_NAME = "biomedpilot_risk_score_visualization_renderer"
 RISK_SCORE_PLOT_ENGINE_VERSION = "0.1.0"
@@ -617,6 +618,59 @@ def create_risk_score_advanced_visualization_artifact(
     }
 
 
+def build_risk_score_calibration_decision_curve_input_gate(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    planning_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_source(root, result_id)
+    preflight = build_risk_score_advanced_visualization_preflight_gate(root, result_id=result_id, preflight_config=planning_config)
+    config = _calibration_decision_curve_config(source or {}, planning_config or {}, preflight)
+    blockers: list[str] = []
+    warnings = [
+        "risk_score_calibration_decision_curve_input_planning_only",
+        "no_calibration_curve_artifact_created",
+        "no_decision_curve_artifact_created",
+        "no_net_benefit_statistics_computed",
+        "no_report_ready_unlock",
+        "no_clinical_interpretation",
+    ]
+    if preflight.get("status") != "passed_preflight_only":
+        blockers.extend(str(item) for item in preflight.get("blockers", []) or [])
+        blockers.append("risk_score_advanced_visualization_preflight_not_passed")
+    blockers.extend(_calibration_input_blockers(config))
+    blockers.extend(_decision_curve_input_blockers(config))
+    if config.get("clinical_decision_boundary_acknowledged") is not True:
+        blockers.append("clinical_decision_boundary_acknowledgement_missing")
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema_version": RISK_SCORE_CALIBRATION_DECISION_CURVE_INPUT_GATE_SCHEMA_VERSION,
+        "status": "ready_for_future_artifact_gate" if not blockers else "blocked_planning_only",
+        "selected_result_id": str((source or {}).get("result_id") or result_id or ""),
+        "source_result_semantics": normalize_result_semantics((source or {}).get("result_semantics"), default="blocked"),
+        "source_task_type": str((source or {}).get("task_type") or ""),
+        "preflight_gate": preflight,
+        "planning_config": config,
+        "checks": {
+            "calibration_inputs_ready": not any(item.startswith("calibration_") or item in {"validation_cohort_missing", "predicted_probability_source_missing", "observed_outcome_mapping_missing"} for item in blockers),
+            "decision_curve_inputs_ready": not any(item.startswith("decision_curve_") or item.startswith("net_benefit_") or item.startswith("threshold_probability_grid") for item in blockers),
+            "minimum_event_count_met": "minimum_event_count_not_met_for_advanced_visualization" not in blockers,
+            "clinical_decision_boundary_acknowledged": "clinical_decision_boundary_acknowledgement_missing" not in blockers,
+        },
+        "future_artifact_types": ["risk_score_calibration_curve", "risk_score_decision_curve"],
+        "formal_execution_enabled": False,
+        "writes_result_index": False,
+        "creates_plot_artifact": False,
+        "creates_report_artifact": False,
+        "report_ready_eligible": False,
+        "next_required_stage": "b44_risk_score_calibration_decision_curve_statistics_execution_audit",
+        "blockers": blockers,
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
 def build_risk_score_plot_artifact_schema_candidate(
     source: dict[str, Any],
     *,
@@ -807,6 +861,94 @@ def _threshold_grid_blockers(config: dict[str, Any]) -> list[str]:
     if parsed != sorted(parsed) or len(set(parsed)) != len(parsed):
         return ["threshold_probability_grid_invalid"]
     return []
+
+
+def _calibration_decision_curve_config(source: dict[str, Any], override: dict[str, Any], preflight_gate: dict[str, Any]) -> dict[str, Any]:
+    preflight_config = preflight_gate.get("preflight_config") if isinstance(preflight_gate.get("preflight_config"), dict) else {}
+    confirmation = source.get("risk_score_parameter_confirmation") if isinstance(source.get("risk_score_parameter_confirmation"), dict) else {}
+    calibration_plan = confirmation.get("calibration_plan") if isinstance(confirmation.get("calibration_plan"), dict) else {}
+    validation_plan = confirmation.get("validation_plan") if isinstance(confirmation.get("validation_plan"), dict) else {}
+    decision_curve_plan = confirmation.get("decision_curve_plan") if isinstance(confirmation.get("decision_curve_plan"), dict) else {}
+    predicted_probability = override.get("predicted_probability") if isinstance(override.get("predicted_probability"), dict) else {}
+    observed_outcome_mapping = override.get("observed_outcome_mapping") if isinstance(override.get("observed_outcome_mapping"), dict) else {}
+    if not observed_outcome_mapping:
+        observed_outcome_mapping = preflight_config.get("outcome_mapping") if isinstance(preflight_config.get("outcome_mapping"), dict) else {}
+    predicted_probability_column = (
+        predicted_probability.get("column")
+        if "column" in predicted_probability
+        else override.get("predicted_probability_column", "predicted_probability")
+    )
+    if "clinical_decision_boundary_acknowledged" in override:
+        clinical_decision_boundary_acknowledged = override.get("clinical_decision_boundary_acknowledged") is True
+    elif "clinical_boundary_acknowledged" in override:
+        clinical_decision_boundary_acknowledged = override.get("clinical_boundary_acknowledged") is True
+    else:
+        clinical_decision_boundary_acknowledged = preflight_config.get("clinical_boundary_acknowledged") is True
+    return {
+        "time_horizon": override.get("time_horizon") or override.get("time_horizon_days") or preflight_config.get("time_horizon") or "",
+        "time_unit": str(override.get("time_unit") or preflight_config.get("time_unit") or "days"),
+        "validation_cohort_id": str(override.get("validation_cohort_id") or validation_plan.get("validation_cohort_id") or calibration_plan.get("validation_cohort_id") or ""),
+        "validation_strategy": str(override.get("validation_strategy") or validation_plan.get("strategy") or validation_plan.get("validation_strategy") or ""),
+        "predicted_probability": {
+            "source": str(predicted_probability.get("source") or override.get("predicted_probability_source") or calibration_plan.get("predicted_probability_source") or ""),
+            "column": str(predicted_probability_column or ""),
+            "scale": str(predicted_probability.get("scale") or override.get("predicted_probability_scale") or "0_to_1"),
+        },
+        "observed_outcome_mapping": {
+            "time_field": str(observed_outcome_mapping.get("time_field") or ""),
+            "event_field": str(observed_outcome_mapping.get("event_field") or ""),
+            "event_positive_value": str(observed_outcome_mapping.get("event_positive_value") or "1"),
+        },
+        "calibration_method": str(override.get("calibration_method") or calibration_plan.get("method") or calibration_plan.get("calibration_method") or ""),
+        "calibration_bins": override.get("calibration_bins", calibration_plan.get("bins", calibration_plan.get("calibration_bins", ""))),
+        "bootstrap_or_resampling_policy": str(override.get("bootstrap_or_resampling_policy") or calibration_plan.get("bootstrap_or_resampling_policy") or validation_plan.get("bootstrap_or_resampling_policy") or ""),
+        "event_count": override.get("event_count", preflight_config.get("event_count", validation_plan.get("event_count", ""))),
+        "minimum_event_count": override.get("minimum_event_count", preflight_config.get("minimum_event_count", calibration_plan.get("minimum_event_count", 10))),
+        "threshold_probability_grid": list(override.get("threshold_probability_grid") or preflight_config.get("threshold_probability_grid") or decision_curve_plan.get("threshold_probability_grid") or []),
+        "net_benefit_formula_policy": str(override.get("net_benefit_formula_policy") or decision_curve_plan.get("net_benefit_formula_policy") or ""),
+        "treat_all_none_baselines": override.get("treat_all_none_baselines", decision_curve_plan.get("treat_all_none_baselines", "")),
+        "clinical_decision_boundary_acknowledged": clinical_decision_boundary_acknowledged,
+    }
+
+
+def _calibration_input_blockers(config: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if not config.get("validation_cohort_id"):
+        blockers.append("validation_cohort_missing")
+    if not config.get("validation_strategy"):
+        blockers.append("calibration_validation_strategy_missing")
+    predicted = config.get("predicted_probability") if isinstance(config.get("predicted_probability"), dict) else {}
+    if not predicted.get("source"):
+        blockers.append("predicted_probability_source_missing")
+    if not predicted.get("column"):
+        blockers.append("predicted_probability_column_missing")
+    if predicted.get("scale") not in {"0_to_1", "probability"}:
+        blockers.append("predicted_probability_scale_invalid")
+    outcome = config.get("observed_outcome_mapping") if isinstance(config.get("observed_outcome_mapping"), dict) else {}
+    if not outcome.get("time_field") or not outcome.get("event_field"):
+        blockers.append("observed_outcome_mapping_missing")
+    if not config.get("calibration_method"):
+        blockers.append("calibration_method_missing")
+    bins = parse_float(config.get("calibration_bins"))
+    if bins is None:
+        blockers.append("calibration_bins_missing")
+    elif bins < 2:
+        blockers.append("calibration_bins_invalid")
+    if not config.get("bootstrap_or_resampling_policy"):
+        blockers.append("calibration_resampling_policy_missing")
+    blockers.extend(_event_count_blockers(config))
+    return blockers
+
+
+def _decision_curve_input_blockers(config: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    blockers.extend(_threshold_grid_blockers(config))
+    if not config.get("net_benefit_formula_policy"):
+        blockers.append("net_benefit_formula_policy_missing")
+    if config.get("treat_all_none_baselines") is not True:
+        blockers.append("decision_curve_treat_all_none_baselines_missing")
+    blockers.extend(_event_count_blockers(config))
+    return blockers
 
 
 def _plot_artifact(
