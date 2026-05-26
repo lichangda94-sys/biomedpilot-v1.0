@@ -17,6 +17,7 @@ from app.labtools_storage_adapter import BioMedPilotLabToolsStorageAdapter, LabT
 LABTOOLS_SIBLING_ROOT = Path(__file__).resolve().parents[2] / "LabTools"
 REVIEW_NOTICE = "实验计算结果需由用户复核后使用。"
 LAN_CREDENTIAL_SCHEMA_VERSION = "biomedpilot_labtools_lan_credentials.v1"
+_LABTOOLS_LAN_HOST_SERVER: Any | None = None
 
 
 @dataclass(frozen=True)
@@ -276,6 +277,48 @@ class LabToolsLanPairingResult:
     status: str
     message: str
     credential: LabToolsLanCredential | None = None
+    blocker: str = ""
+
+
+@dataclass(frozen=True)
+class LabToolsLanPairedClientView:
+    token_id: str
+    client_label: str
+    role: str
+    created_at: str
+    expires_at: str
+    revoked_at: str
+    state: str
+
+
+@dataclass(frozen=True)
+class LabToolsLanHostStatus:
+    status: str
+    message: str
+    server_url: str = ""
+    server_mode: str = "auth_required"
+    auth_required: bool = True
+    compatibility_mode: bool = False
+    read_only: bool = True
+    sync_enabled: bool = False
+    write_enabled: bool = False
+    paired_clients: tuple[LabToolsLanPairedClientView, ...] = ()
+    pairing_code: str = ""
+    pairing_expires_at: str = ""
+
+    @property
+    def listening(self) -> bool:
+        return self.status == "ready"
+
+
+@dataclass(frozen=True)
+class LabToolsLanHostActionResult:
+    success: bool
+    status: str
+    message: str
+    host_status: LabToolsLanHostStatus
+    pairing_code: str = ""
+    pairing_expires_at: str = ""
     blocker: str = ""
 
 
@@ -559,6 +602,142 @@ def claim_labtools_lan_pairing(
     return LabToolsLanPairingResult(True, str(result.get("status") or "paired"), "已保存本机 LAN 只读 token；不会同步到其他设备。", credential=credential)
 
 
+def get_labtools_lan_host_status(project_root: Path | str | None) -> LabToolsLanHostStatus:
+    if project_root is None:
+        return LabToolsLanHostStatus(
+            status="missing_project_context",
+            message="需要 LabTools 本地数据根目录后才能启动 LAN host。",
+        )
+    server = _current_lan_host_server()
+    if server is None:
+        return LabToolsLanHostStatus(
+            status="not_running",
+            message="LAN host 未启动；默认模式为 auth required，只读、不同步、不写入。",
+        )
+    try:
+        runtime_status = server.status()
+        server_url = server.url("")
+        auth_required = bool(runtime_status.auth_enabled)
+        compatibility_mode = not auth_required
+        return LabToolsLanHostStatus(
+            status="ready" if runtime_status.listening else "not_running",
+            message=runtime_status.reason,
+            server_url=server_url,
+            server_mode="auth_required" if auth_required else "compatibility",
+            auth_required=auth_required,
+            compatibility_mode=compatibility_mode,
+            read_only=True,
+            sync_enabled=False,
+            write_enabled=False,
+            paired_clients=_paired_client_views(server.list_paired_clients()),
+        )
+    except Exception as exc:
+        return LabToolsLanHostStatus(
+            status="blocked_lan_host",
+            message=f"LAN host status unavailable: {exc}",
+        )
+
+
+def start_labtools_lan_host(
+    project_root: Path | str | None,
+    *,
+    compatibility_mode: bool = False,
+    host: str = "127.0.0.1",
+    port: int = 0,
+) -> LabToolsLanHostActionResult:
+    if project_root is None:
+        status = get_labtools_lan_host_status(project_root)
+        return LabToolsLanHostActionResult(False, status.status, status.message, status, blocker="missing_project_context")
+    try:
+        _ensure_labtools_importable()
+        from labtools.lan_server import LabToolsLanHealthServerConfig, build_lan_health_server
+
+        stop_labtools_lan_host(project_root)
+        server = build_lan_health_server(
+            LabToolsLanHealthServerConfig(
+                host=host,
+                port=port,
+                health_only=False,
+                local_data_root=Path(project_root),
+                auth_required=not compatibility_mode,
+                allow_unauthenticated_readonly=compatibility_mode,
+            )
+        )
+        server.start()
+        _set_current_lan_host_server(server)
+        status = get_labtools_lan_host_status(project_root)
+        return LabToolsLanHostActionResult(True, "ready", "LAN host 已启动：只读、不同步、不写入。", status)
+    except Exception as exc:
+        status = LabToolsLanHostStatus(status="blocked_lan_host", message=f"LAN host start failed: {exc}")
+        return LabToolsLanHostActionResult(False, status.status, status.message, status, blocker="start_failed")
+
+
+def stop_labtools_lan_host(project_root: Path | str | None = None) -> LabToolsLanHostActionResult:
+    server = _current_lan_host_server()
+    if server is None:
+        status = get_labtools_lan_host_status(project_root)
+        return LabToolsLanHostActionResult(True, "not_running", "LAN host 未启动。", status)
+    try:
+        server.stop()
+    finally:
+        _set_current_lan_host_server(None)
+    status = get_labtools_lan_host_status(project_root)
+    return LabToolsLanHostActionResult(True, "stopped", "LAN host 已停止。", status)
+
+
+def create_labtools_lan_host_pairing(project_root: Path | str | None, *, client_label: str = "UIShell LAN client") -> LabToolsLanHostActionResult:
+    status = get_labtools_lan_host_status(project_root)
+    server = _current_lan_host_server()
+    if server is None or not status.listening:
+        return LabToolsLanHostActionResult(False, "not_running", "请先启动 LAN host。", status, blocker="host_not_running")
+    if status.compatibility_mode:
+        return LabToolsLanHostActionResult(False, "compatibility_mode", "Compatibility mode 不创建 pairing token。", status, blocker="compatibility_mode")
+    try:
+        pairing = server.create_pairing_session(client_label=client_label)
+        refreshed = LabToolsLanHostStatus(
+            status=status.status,
+            message=status.message,
+            server_url=status.server_url,
+            server_mode=status.server_mode,
+            auth_required=status.auth_required,
+            compatibility_mode=status.compatibility_mode,
+            read_only=status.read_only,
+            sync_enabled=status.sync_enabled,
+            write_enabled=status.write_enabled,
+            paired_clients=status.paired_clients,
+            pairing_code=pairing.pairing_code,
+            pairing_expires_at=pairing.expires_at,
+        )
+        return LabToolsLanHostActionResult(
+            True,
+            "pairing_created",
+            "已创建一次性 viewer pairing code；10 分钟内有效。",
+            refreshed,
+            pairing_code=pairing.pairing_code,
+            pairing_expires_at=pairing.expires_at,
+        )
+    except Exception as exc:
+        return LabToolsLanHostActionResult(False, "blocked_lan_host", f"Create pairing failed: {exc}", status, blocker="pairing_failed")
+
+
+def revoke_labtools_lan_host_client(project_root: Path | str | None, token_id: str) -> LabToolsLanHostActionResult:
+    status = get_labtools_lan_host_status(project_root)
+    server = _current_lan_host_server()
+    cleaned_token_id = str(token_id or "").strip()
+    if server is None or not status.listening:
+        return LabToolsLanHostActionResult(False, "not_running", "请先启动 LAN host。", status, blocker="host_not_running")
+    if not cleaned_token_id:
+        return LabToolsLanHostActionResult(False, "missing_token_id", "请选择要 revoke 的 paired client。", status, blocker="missing_token_id")
+    try:
+        revoked = bool(server.revoke_paired_client(cleaned_token_id))
+        refreshed = get_labtools_lan_host_status(project_root)
+        if not revoked:
+            return LabToolsLanHostActionResult(False, "not_found", "未找到可 revoke 的 paired client。", refreshed, blocker="not_found")
+        return LabToolsLanHostActionResult(True, "revoked", "已 revoke paired client token。", refreshed)
+    except Exception as exc:
+        return LabToolsLanHostActionResult(False, "blocked_lan_host", f"Revoke failed: {exc}", status, blocker="revoke_failed")
+
+
 def get_labtools_lan_read_model(server_url: str | None) -> LabToolsLocalDataReadModel:
     url = str(server_url or "").strip()
     if not url:
@@ -663,6 +842,35 @@ def _lan_credential_payload(credential: LabToolsLanCredential) -> dict[str, str]
 
 def _lan_server_key(server_url: object) -> str:
     return str(server_url or "").strip().rstrip("/")
+
+
+def _current_lan_host_server() -> Any | None:
+    return _LABTOOLS_LAN_HOST_SERVER
+
+
+def _set_current_lan_host_server(server: Any | None) -> None:
+    global _LABTOOLS_LAN_HOST_SERVER
+    _LABTOOLS_LAN_HOST_SERVER = server
+
+
+def _paired_client_views(clients: tuple[Any, ...]) -> tuple[LabToolsLanPairedClientView, ...]:
+    views: list[LabToolsLanPairedClientView] = []
+    for item in clients:
+        revoked_at = str(getattr(item, "revoked_at", "") or "")
+        expired = bool(getattr(item, "expired", False))
+        state = "revoked" if revoked_at else ("expired" if expired else "active")
+        views.append(
+            LabToolsLanPairedClientView(
+                token_id=str(getattr(item, "token_id", "") or ""),
+                client_label=str(getattr(item, "client_label", "") or ""),
+                role=str(getattr(item, "role", "") or ""),
+                created_at=str(getattr(item, "created_at", "") or ""),
+                expires_at=str(getattr(item, "expires_at", "") or ""),
+                revoked_at=revoked_at,
+                state=state,
+            )
+        )
+    return tuple(views)
 
 
 def list_local_reagent_summaries(project_root: Path | str | None) -> tuple[LabToolsLocalReagentSummary, ...]:

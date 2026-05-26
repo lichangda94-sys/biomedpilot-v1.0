@@ -376,6 +376,7 @@ class MainWindow(QMainWindow):
         )
         root = content.layout()
         root.addWidget(self._labtools_local_data_status_panel(page_key="home", semantic_key=PageKey.LABTOOLS_HOME.value))
+        root.addWidget(self._labtools_lan_host_management_panel(page_key="home", semantic_key=PageKey.LABTOOLS_HOME.value))
         root.addWidget(self._labtools_lan_manual_connection_panel(page_key="home", semantic_key=PageKey.LABTOOLS_HOME.value))
 
         entry_row = QHBoxLayout()
@@ -480,6 +481,153 @@ class MainWindow(QMainWindow):
         counts.setWordWrap(True)
         layout.addWidget(counts)
         return frame
+
+    def _labtools_lan_host_management_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
+        frame = make_workbench_card(object_name="labtoolsLanHostManagementPanel", semantic_state="preflight_only")
+        frame.setObjectName("labtoolsLanHostManagementPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", page_key)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setProperty("uiPrimitive", "labtools_lan_host_management_panel")
+        frame.setProperty("readOnly", True)
+        frame.setProperty("writeEnabled", False)
+        frame.setProperty("syncEnabled", False)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(8)
+        layout.addWidget(make_section_title("局域网 Host 管理 / LAN Host", "Read-only host controls; no sync or writes."))
+
+        mode_row = QHBoxLayout()
+        mode_row.setSpacing(12)
+        self._labtools_lan_host_auth_radio = QRadioButton("Auth required")
+        self._labtools_lan_host_auth_radio.setObjectName("labtoolsLanHostAuthRequiredRadio")
+        self._labtools_lan_host_auth_radio.setChecked(True)
+        self._labtools_lan_host_auth_radio.setProperty("serverMode", "auth_required")
+        self._labtools_lan_host_compat_radio = QRadioButton("Compatibility read-only")
+        self._labtools_lan_host_compat_radio.setObjectName("labtoolsLanHostCompatibilityRadio")
+        self._labtools_lan_host_compat_radio.setProperty("serverMode", "compatibility")
+        self._labtools_lan_host_mode_group = QButtonGroup(frame)
+        self._labtools_lan_host_mode_group.addButton(self._labtools_lan_host_auth_radio)
+        self._labtools_lan_host_mode_group.addButton(self._labtools_lan_host_compat_radio)
+        mode_row.addWidget(self._labtools_lan_host_auth_radio)
+        mode_row.addWidget(self._labtools_lan_host_compat_radio)
+        mode_row.addStretch(1)
+        layout.addLayout(mode_row)
+
+        action_row = QHBoxLayout()
+        action_row.setSpacing(8)
+        start = make_button("启动只读 Host", role="secondary")
+        start.setObjectName("labtoolsLanHostStartButton")
+        start.clicked.connect(self._start_labtools_lan_host)
+        stop = make_button("停止 Host", role="secondary")
+        stop.setObjectName("labtoolsLanHostStopButton")
+        stop.clicked.connect(self._stop_labtools_lan_host)
+        pairing = make_button("创建 Pairing Code", role="secondary")
+        pairing.setObjectName("labtoolsLanHostCreatePairingButton")
+        pairing.clicked.connect(self._create_labtools_lan_host_pairing)
+        refresh = make_button("刷新", role="secondary")
+        refresh.setObjectName("labtoolsLanHostRefreshButton")
+        refresh.clicked.connect(self._refresh_labtools_lan_host_panel)
+        action_row.addWidget(start)
+        action_row.addWidget(stop)
+        action_row.addWidget(pairing)
+        action_row.addWidget(refresh)
+        action_row.addStretch(1)
+        layout.addLayout(action_row)
+
+        self._labtools_lan_host_mode_label = QLabel("Server mode：auth required · host 未启动")
+        self._labtools_lan_host_mode_label.setObjectName("labtoolsLanHostModeText")
+        self._labtools_lan_host_mode_label.setProperty("serverMode", "auth_required")
+        self._labtools_lan_host_mode_label.setWordWrap(True)
+        layout.addWidget(self._labtools_lan_host_mode_label)
+
+        self._labtools_lan_host_pairing_label = QLabel("Pairing code：未创建")
+        self._labtools_lan_host_pairing_label.setObjectName("labtoolsLanHostPairingCodeText")
+        self._labtools_lan_host_pairing_label.setProperty("pairingActive", False)
+        self._labtools_lan_host_pairing_label.setWordWrap(True)
+        layout.addWidget(self._labtools_lan_host_pairing_label)
+
+        self._labtools_lan_host_clients = QListWidget()
+        self._labtools_lan_host_clients.setObjectName("labtoolsLanHostPairedClientList")
+        self._labtools_lan_host_clients.setProperty("tokenMaterialVisible", False)
+        self._labtools_lan_host_clients.setMinimumHeight(84)
+        layout.addWidget(self._labtools_lan_host_clients)
+
+        revoke_row = QHBoxLayout()
+        revoke = make_button("Revoke selected", role="secondary")
+        revoke.setObjectName("labtoolsLanHostRevokeButton")
+        revoke.clicked.connect(self._revoke_labtools_lan_host_client)
+        revoke_row.addWidget(revoke)
+        revoke_row.addStretch(1)
+        layout.addLayout(revoke_row)
+
+        note = QLabel("Host 只提供本地 LabTools 摘要读取；不同步、不启用 LAN 写入、不自动扣减库存或样本体积。Compatibility read-only 是显式兼容入口，不是默认安全路径。")
+        note.setObjectName("labtoolsLanHostBoundaryNote")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+        self._refresh_labtools_lan_host_panel()
+        return frame
+
+    def _start_labtools_lan_host(self) -> None:
+        compatibility = bool(getattr(self, "_labtools_lan_host_compat_radio", None) and self._labtools_lan_host_compat_radio.isChecked())
+        result = labtools_runtime.start_labtools_lan_host(self._labtools_project_root, compatibility_mode=compatibility)
+        self._apply_labtools_lan_host_status(result.host_status, message=result.message)
+
+    def _stop_labtools_lan_host(self) -> None:
+        result = labtools_runtime.stop_labtools_lan_host(self._labtools_project_root)
+        self._apply_labtools_lan_host_status(result.host_status, message=result.message)
+
+    def _create_labtools_lan_host_pairing(self) -> None:
+        result = labtools_runtime.create_labtools_lan_host_pairing(self._labtools_project_root, client_label="UIShell manual LAN client")
+        self._apply_labtools_lan_host_status(result.host_status, message=result.message)
+
+    def _revoke_labtools_lan_host_client(self) -> None:
+        clients = getattr(self, "_labtools_lan_host_clients", None)
+        if not isinstance(clients, QListWidget):
+            return
+        item = clients.currentItem()
+        token_id = item.data(Qt.UserRole) if item is not None else ""
+        result = labtools_runtime.revoke_labtools_lan_host_client(self._labtools_project_root, str(token_id or ""))
+        self._apply_labtools_lan_host_status(result.host_status, message=result.message)
+
+    def _refresh_labtools_lan_host_panel(self) -> None:
+        status = labtools_runtime.get_labtools_lan_host_status(self._labtools_project_root)
+        self._apply_labtools_lan_host_status(status)
+
+    def _apply_labtools_lan_host_status(self, status: labtools_runtime.LabToolsLanHostStatus, *, message: str | None = None) -> None:
+        mode_label = getattr(self, "_labtools_lan_host_mode_label", None)
+        pairing_label = getattr(self, "_labtools_lan_host_pairing_label", None)
+        clients = getattr(self, "_labtools_lan_host_clients", None)
+        if not isinstance(mode_label, QLabel) or not isinstance(pairing_label, QLabel) or not isinstance(clients, QListWidget):
+            return
+        mode_text = "auth required" if status.auth_required else "compatibility read-only"
+        url_text = status.server_url or "未启动"
+        mode_label.setText(f"Server mode：{mode_text} · {status.status} · {url_text} · {message or status.message}")
+        mode_label.setProperty("serverMode", status.server_mode)
+        mode_label.setProperty("status", status.status)
+        mode_label.setProperty("authRequired", status.auth_required)
+        mode_label.setProperty("compatibilityMode", status.compatibility_mode)
+        mode_label.setProperty("readOnly", status.read_only)
+        mode_label.setProperty("syncEnabled", status.sync_enabled)
+        mode_label.setProperty("writeEnabled", status.write_enabled)
+        if status.pairing_code:
+            pairing_label.setText(f"Pairing code：{status.pairing_code} · expires {status.pairing_expires_at}")
+            pairing_label.setProperty("pairingActive", True)
+            pairing_label.setProperty("pairingCode", status.pairing_code)
+        else:
+            pairing_label.setText("Pairing code：未创建")
+            pairing_label.setProperty("pairingActive", False)
+            pairing_label.setProperty("pairingCode", "")
+        clients.clear()
+        if not status.paired_clients:
+            empty = QListWidgetItem("No paired clients")
+            empty.setData(Qt.UserRole, "")
+            clients.addItem(empty)
+        for client in status.paired_clients:
+            item = QListWidgetItem(f"{client.client_label or 'Unnamed client'} · {client.role} · {client.state} · expires {client.expires_at}")
+            item.setData(Qt.UserRole, client.token_id)
+            item.setData(Qt.UserRole + 1, client.state)
+            clients.addItem(item)
 
     def _labtools_lan_manual_connection_panel(self, *, page_key: str, semantic_key: str) -> QFrame:
         frame = make_workbench_card(object_name="labtoolsLanManualConnectionPanel", semantic_state="preflight_only")

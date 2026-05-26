@@ -8,7 +8,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton, QRadioButton
 
     from app import labtools_runtime
     from app.shell.main_window import MainWindow
@@ -155,9 +155,127 @@ def test_labtools_home_pairs_and_uses_saved_lan_token(qt_app, tmp_path: Path, mo
         qt_app.processEvents()
 
 
+def test_labtools_home_host_management_creates_pairing_lists_and_revokes(qt_app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    labtools_runtime._ensure_labtools_importable()
+
+    monkeypatch.setenv("BIOMEDPILOT_LABTOOLS_LAN_CREDENTIALS_PATH", str(tmp_path / "settings" / "lan_credentials.json"))
+    store_root = tmp_path / "store"
+    _seed_lan_store(store_root)
+    window = MainWindow()
+    window.set_labtools_project_root(store_root)
+    window._welcome_page.enter_workspace()
+    window.show_labtools()
+    window._show_labtools_home()
+    try:
+        panel = window.findChild(QLabel, "labtoolsLanHostModeText")
+        auth_radio = window.findChild(QRadioButton, "labtoolsLanHostAuthRequiredRadio")
+        compat_radio = window.findChild(QRadioButton, "labtoolsLanHostCompatibilityRadio")
+        start = window.findChild(QPushButton, "labtoolsLanHostStartButton")
+        create_pairing = window.findChild(QPushButton, "labtoolsLanHostCreatePairingButton")
+        pairing_label = window.findChild(QLabel, "labtoolsLanHostPairingCodeText")
+        clients = window.findChild(QListWidget, "labtoolsLanHostPairedClientList")
+        refresh = window.findChild(QPushButton, "labtoolsLanHostRefreshButton")
+        revoke = window.findChild(QPushButton, "labtoolsLanHostRevokeButton")
+        note = window.findChild(QLabel, "labtoolsLanHostBoundaryNote")
+
+        assert panel is not None
+        assert auth_radio is not None
+        assert compat_radio is not None
+        assert start is not None
+        assert create_pairing is not None
+        assert pairing_label is not None
+        assert clients is not None
+        assert refresh is not None
+        assert revoke is not None
+        assert note is not None
+        assert auth_radio.isChecked()
+        assert "Compatibility read-only" in compat_radio.text()
+        assert "不同步" in note.text()
+        assert "不启用 LAN 写入" in note.text()
+
+        start.click()
+        qt_app.processEvents()
+        assert panel.property("status") == "ready"
+        assert panel.property("serverMode") == "auth_required"
+        assert panel.property("authRequired") is True
+        assert panel.property("writeEnabled") is False
+        assert panel.property("syncEnabled") is False
+
+        create_pairing.click()
+        qt_app.processEvents()
+        pairing_code = pairing_label.property("pairingCode")
+        assert isinstance(pairing_code, str)
+        assert len(pairing_code) == 8
+        assert pairing_label.property("pairingActive") is True
+
+        host_status = labtools_runtime.get_labtools_lan_host_status(store_root)
+        paired = labtools_runtime.claim_labtools_lan_pairing(
+            host_status.server_url,
+            pairing_code,
+            client_label="UIShell manual LAN client",
+        )
+        assert paired.success is True
+        refresh.click()
+        qt_app.processEvents()
+        assert clients.count() == 1
+        assert "active" in clients.item(0).text()
+        assert "token" not in clients.item(0).text().lower()
+
+        clients.setCurrentRow(0)
+        revoke.click()
+        qt_app.processEvents()
+        assert clients.count() == 1
+        assert "revoked" in clients.item(0).text()
+    finally:
+        labtools_runtime.stop_labtools_lan_host(store_root)
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_labtools_home_host_management_keeps_compatibility_mode_explicit(qt_app, tmp_path: Path) -> None:
+    labtools_runtime._ensure_labtools_importable()
+
+    store_root = tmp_path / "store"
+    _seed_lan_store(store_root)
+    window = MainWindow()
+    window.set_labtools_project_root(store_root)
+    window._welcome_page.enter_workspace()
+    window.show_labtools()
+    window._show_labtools_home()
+    try:
+        panel = window.findChild(QLabel, "labtoolsLanHostModeText")
+        compat_radio = window.findChild(QRadioButton, "labtoolsLanHostCompatibilityRadio")
+        start = window.findChild(QPushButton, "labtoolsLanHostStartButton")
+        create_pairing = window.findChild(QPushButton, "labtoolsLanHostCreatePairingButton")
+        pairing_label = window.findChild(QLabel, "labtoolsLanHostPairingCodeText")
+
+        assert panel is not None
+        assert compat_radio is not None
+        assert start is not None
+        assert create_pairing is not None
+        assert pairing_label is not None
+        compat_radio.setChecked(True)
+        start.click()
+        qt_app.processEvents()
+
+        assert panel.property("serverMode") == "compatibility"
+        assert panel.property("authRequired") is False
+        assert panel.property("compatibilityMode") is True
+        create_pairing.click()
+        qt_app.processEvents()
+        assert pairing_label.property("pairingActive") is False
+    finally:
+        labtools_runtime.stop_labtools_lan_host(store_root)
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_labtools_shell_does_not_import_lan_client_or_store_directly() -> None:
     source = Path("app/shell/main_window.py").read_text(encoding="utf-8")
 
     assert "labtools.lan_client" not in source
+    assert "labtools.lan_server" not in source
     assert "LocalLabToolsDataStore" not in source
     assert "labtools.local_data" not in source

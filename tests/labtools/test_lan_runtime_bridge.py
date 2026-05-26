@@ -143,6 +143,69 @@ def test_lan_runtime_bridge_blocks_bad_pairing_without_credentials(tmp_path: Pat
     assert not credentials_path.exists()
 
 
+def test_lan_runtime_bridge_host_management_creates_pairing_and_revokes_client(tmp_path: Path, monkeypatch) -> None:
+    labtools_runtime._ensure_labtools_importable()
+
+    credentials_path = tmp_path / "settings" / "labtools_lan_credentials.json"
+    monkeypatch.setenv("BIOMEDPILOT_LABTOOLS_LAN_CREDENTIALS_PATH", str(credentials_path))
+    store_root = tmp_path / "store"
+    _seed_lan_store(store_root)
+    try:
+        started = labtools_runtime.start_labtools_lan_host(store_root, compatibility_mode=False)
+        pairing = labtools_runtime.create_labtools_lan_host_pairing(store_root, client_label="UIShell test client")
+        paired = labtools_runtime.claim_labtools_lan_pairing(
+            started.host_status.server_url,
+            pairing.pairing_code,
+            client_label="UIShell test client",
+        )
+        model = labtools_runtime.get_labtools_lan_read_model(started.host_status.server_url)
+        host_status = labtools_runtime.get_labtools_lan_host_status(store_root)
+        revoked = labtools_runtime.revoke_labtools_lan_host_client(store_root, paired.credential.token_id if paired.credential else "")
+        blocked = labtools_runtime.get_labtools_lan_read_model(started.host_status.server_url)
+    finally:
+        labtools_runtime.stop_labtools_lan_host(store_root)
+
+    assert started.success is True
+    assert started.host_status.server_mode == "auth_required"
+    assert started.host_status.auth_required is True
+    assert started.host_status.write_enabled is False
+    assert started.host_status.sync_enabled is False
+    assert pairing.success is True
+    assert len(pairing.pairing_code) == 8
+    assert paired.success is True
+    assert paired.credential is not None
+    assert model.status.read_enabled is True
+    assert len(host_status.paired_clients) == 1
+    assert host_status.paired_clients[0].state == "active"
+    assert not hasattr(host_status.paired_clients[0], "token")
+    assert not hasattr(host_status.paired_clients[0], "token_hash")
+    assert revoked.success is True
+    assert revoked.host_status.paired_clients[0].state == "revoked"
+    assert blocked.status.read_enabled is False
+    assert blocked.status.status == "blocked_read_disabled"
+
+
+def test_lan_runtime_bridge_host_compatibility_mode_is_explicit_and_readonly(tmp_path: Path) -> None:
+    store_root = tmp_path / "store"
+    _seed_lan_store(store_root)
+    try:
+        started = labtools_runtime.start_labtools_lan_host(store_root, compatibility_mode=True)
+        pairing = labtools_runtime.create_labtools_lan_host_pairing(store_root, client_label="UIShell test client")
+        model = labtools_runtime.get_labtools_lan_read_model(started.host_status.server_url)
+    finally:
+        labtools_runtime.stop_labtools_lan_host(store_root)
+
+    assert started.success is True
+    assert started.host_status.server_mode == "compatibility"
+    assert started.host_status.auth_required is False
+    assert started.host_status.compatibility_mode is True
+    assert started.host_status.write_enabled is False
+    assert started.host_status.sync_enabled is False
+    assert pairing.success is False
+    assert pairing.status == "compatibility_mode"
+    assert model.status.read_enabled is True
+
+
 def test_lan_runtime_bridge_blocks_unavailable_server_gracefully() -> None:
     model = labtools_runtime.get_labtools_lan_read_model("http://127.0.0.1:1")
 
