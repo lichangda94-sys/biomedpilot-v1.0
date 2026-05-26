@@ -44,6 +44,11 @@ class UIStatusKey(StrEnum):
 
 COLORS: dict[str, str] = {
     "background": "#F8FAFC",
+    "dashboard_bg": "#F4F7FB",
+    "dashboard_panel": "#FFFFFF",
+    "dashboard_card": "#FFFFFF",
+    "dashboard_border": "#DCE6F2",
+    "dashboard_text_soft": "#6B7A90",
     "app_bg": "#F7F9FC",
     "surface": "#FFFFFF",
     "surface_muted": "#F1F5F9",
@@ -472,56 +477,99 @@ def login_stylesheet() -> str:
 def module_selection_stylesheet() -> str:
     return f"""
     QWidget#moduleSelectionPage, QWidget#moduleSelectionContent {{
-        background: {COLORS["background"]};
+        background: {COLORS["dashboard_bg"]};
         color: {COLORS["text"]};
         font-size: {FONT_SIZE["body"]}px;
     }}
     QScrollArea#moduleSelectionScrollArea {{
         border: 0;
-        background: {COLORS["background"]};
+        background: {COLORS["dashboard_bg"]};
     }}
-    QFrame#dashboardHeader, QFrame#moduleCard, QFrame#supportCard {{
-        background: {COLORS["surface"]};
-        border: 1px solid {COLORS["border"]};
+    QFrame#dashboardHeader,
+    QFrame#dashboardMetricCard,
+    QFrame#dashboardModulePanel,
+    QFrame#moduleCard,
+    QFrame#supportCard,
+    QFrame#dashboardActivityCard {{
+        background: {COLORS["dashboard_panel"]};
+        border: 1px solid {COLORS["dashboard_border"]};
         border-radius: {RADIUS["lg"]}px;
     }}
     QFrame#dashboardHeader {{
+        border-radius: 18px;
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #FFFFFF, stop:0.52 #F8FBFF, stop:1 #EEF6FF);
+    }}
+    QLabel#dashboardHeroIcon {{
+        background: #EAF2FF;
+        border: 1px solid #D7E7FF;
+        border-radius: 16px;
+    }}
+    QFrame#dashboardMetricStrip {{
         background: transparent;
         border: 0;
-        border-radius: 0;
     }}
-    QFrame#dashboardRecentProjectsCard {{
+    QFrame#dashboardMetricCard {{
         border-radius: 14px;
-        border: 1px solid {COLORS["border"]};
+    }}
+    QFrame#dashboardModulePanel,
+    QFrame#dashboardRecentProjectsCard,
+    QFrame#dashboardActivityCard {{
+        border-radius: 16px;
+        border: 1px solid {COLORS["dashboard_border"]};
     }}
     QFrame#moduleCard {{
-        border-radius: 16px;
+        border-radius: 14px;
         padding: 0;
     }}
     QFrame#moduleCard[moduleAccent="bio"] {{
+        background: #FCFFFD;
         border: 1px solid #BFE8D2;
     }}
     QFrame#moduleCard[moduleAccent="meta"] {{
+        background: #FEFCFF;
         border: 1px solid #D8CCFF;
     }}
     QFrame#moduleCard[moduleAccent="labtools"] {{
+        background: #FBFDFF;
         border: 1px solid #B9DCFF;
+    }}
+    QFrame#dashboardActivityItem {{
+        background: #F8FAFC;
+        border: 1px solid {COLORS["divider"]};
+        border-radius: {RADIUS["md"]}px;
+    }}
+    QFrame#dashboardInlineEmptyState {{
+        background: #F8FAFC;
+        border: 1px solid {COLORS["divider"]};
+        border-radius: {RADIUS["md"]}px;
+    }}
+    QLabel#dashboardEyebrow {{
+        color: {COLORS["bio"]};
+        font-size: {FONT_SIZE["caption"]}px;
+        font-weight: 800;
+        letter-spacing: 0px;
+        background: transparent;
     }}
     QLabel#dashboardTitle {{
         color: {COLORS["text"]};
-        font-size: 32px;
+        font-size: 30px;
         font-weight: 800;
         background: transparent;
     }}
-    QLabel#dashboardSubtitle, QLabel#sessionMetaLabel, QLabel#moduleDescription, QLabel#supportLine {{
-        color: {COLORS["muted"]};
+    QLabel#dashboardSubtitle,
+    QLabel#sessionMetaLabel,
+    QLabel#moduleDescription,
+    QLabel#supportLine,
+    QLabel#dashboardMetricCaption,
+    QLabel#dashboardActivityMeta {{
+        color: {COLORS["dashboard_text_soft"]};
         background: transparent;
     }}
     QLabel#sessionBadge {{
         color: {COLORS["text"]};
         background: {COLORS["surface"]};
         border: 1px solid {COLORS["border"]};
-        border-radius: 18px;
+        border-radius: 16px;
         padding: 9px 12px;
         font-weight: 600;
     }}
@@ -533,15 +581,27 @@ def module_selection_stylesheet() -> str:
         padding: 7px 10px;
         font-weight: 600;
     }}
+    QLabel#dashboardMetricLabel {{
+        color: {COLORS["dashboard_text_soft"]};
+        font-size: {FONT_SIZE["caption"]}px;
+        font-weight: 700;
+        background: transparent;
+    }}
+    QLabel#dashboardMetricValue {{
+        color: {COLORS["text"]};
+        font-size: 17px;
+        font-weight: 800;
+        background: transparent;
+    }}
     QLabel#moduleTitle {{
         color: {COLORS["text"]};
-        font-size: 25px;
+        font-size: 18px;
         font-weight: 800;
         background: transparent;
     }}
     QLabel#moduleEnglishTitle {{
         color: {COLORS["text_secondary"]};
-        font-size: 18px;
+        font-size: 13px;
         font-weight: 700;
         background: transparent;
     }}
@@ -563,10 +623,53 @@ def module_selection_stylesheet() -> str:
         background: transparent;
         border: 0;
     }}
+    QLabel#moduleIcon {{
+        border-radius: 14px;
+    }}
+    QFrame#moduleCard[moduleAccent="bio"] QLabel#moduleIcon {{
+        background: {COLORS["bio_green_soft"]};
+        border: 1px solid #D4F0DF;
+    }}
+    QFrame#moduleCard[moduleAccent="meta"] QLabel#moduleIcon {{
+        background: {COLORS["meta_soft"]};
+        border: 1px solid #E4DCFF;
+    }}
+    QFrame#moduleCard[moduleAccent="labtools"] QLabel#moduleIcon {{
+        background: {COLORS["labtools_soft"]};
+        border: 1px solid #D8ECFF;
+    }}
     QLabel#supportTitle {{
         color: {COLORS["bio"]};
         font-size: {FONT_SIZE["card_title"]}px;
         font-weight: 700;
+        background: transparent;
+    }}
+    QLabel#dashboardSectionTitle {{
+        color: {COLORS["text"]};
+        font-size: {FONT_SIZE["card_title"]}px;
+        font-weight: 800;
+        background: transparent;
+    }}
+    QLabel#dashboardSectionSubtitle {{
+        color: {COLORS["dashboard_text_soft"]};
+        font-size: {FONT_SIZE["secondary"]}px;
+        background: transparent;
+    }}
+    QLabel#dashboardActivityTitle {{
+        color: {COLORS["text"]};
+        font-size: {FONT_SIZE["body"]}px;
+        font-weight: 750;
+        background: transparent;
+    }}
+    QLabel#dashboardEmptyTitle {{
+        color: {COLORS["text"]};
+        font-size: {FONT_SIZE["body"]}px;
+        font-weight: 750;
+        background: transparent;
+    }}
+    QLabel#dashboardEmptyBody {{
+        color: {COLORS["dashboard_text_soft"]};
+        font-size: {FONT_SIZE["secondary"]}px;
         background: transparent;
     }}
     QPushButton {{
@@ -588,7 +691,7 @@ def module_selection_stylesheet() -> str:
         color: {COLORS["text"]};
         background: {COLORS["surface"]};
         border: 1px solid {COLORS["divider"]};
-        border-radius: 11px;
+        border-radius: 12px;
         padding: 0;
         font-weight: 750;
     }}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import json
 import plistlib
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +35,8 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert (result.resource_root / "reporting" / "bioinformatics_standard_report.py").exists()
     assert (result.resource_root / "project_storage" / "projects" / ".gitkeep").exists()
     assert not (result.resource_root / ".git").exists()
+    if shutil.which("codesign") is not None:
+        subprocess.run(["codesign", "-dv", str(result.app_path)], check=True, capture_output=True, text=True)
 
     build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
     assert build_info["version"] == "0.1.0-internal-beta"
