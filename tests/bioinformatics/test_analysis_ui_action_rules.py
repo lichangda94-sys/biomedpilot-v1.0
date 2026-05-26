@@ -199,6 +199,24 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert "b37_risk_score_renderer_activation_required" in plot_action["disabled_reason"]
     assert "no risk score plot" in plot_action["disabled_reason"]
 
+    artifact_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_plot_artifact_gate={
+            "status": "blocked_activation_required",
+            "blockers": ["b38_risk_score_plot_renderer_execution_required"],
+            "creates_plot_artifact": False,
+            "writes_result_index": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    artifact_action = _row(artifact_rows, "risk_score_plot_artifact")
+    assert artifact_action["enabled"] is False
+    assert artifact_action["state"] == "blocked_activation_required"
+    assert "b38_risk_score_plot_renderer_execution_required" in artifact_action["disabled_reason"]
+    assert "B37 schema/renderer gate only" in artifact_action["disabled_reason"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(

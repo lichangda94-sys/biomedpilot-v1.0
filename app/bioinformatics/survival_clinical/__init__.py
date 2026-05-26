@@ -45,6 +45,12 @@ from .risk_score_confirmation import (
 from .risk_score_design import audit_risk_score_design
 from .risk_score_executor import run_controlled_risk_score
 from .risk_score_plot_gate import build_risk_score_plot_nomogram_gate
+from .risk_score_plot_schema import (
+    build_risk_score_plot_artifact_activation_gate,
+    build_risk_score_plot_artifact_schema_candidate,
+    check_risk_score_plot_renderer_dependencies,
+    validate_risk_score_plot_artifact_schema,
+)
 from .risk_score_result_schema import build_risk_score_result_schema_gate, validate_risk_score_result_index_entry, validate_risk_score_result_table
 from .risk_score_review import build_risk_score_result_review, export_risk_score_review_table
 
@@ -67,8 +73,11 @@ __all__ = [
     "build_risk_score_nomogram_contract_gate",
     "build_risk_score_result_review",
     "build_risk_score_result_schema_gate",
+    "build_risk_score_plot_artifact_activation_gate",
+    "build_risk_score_plot_artifact_schema_candidate",
     "build_risk_score_plot_nomogram_gate",
     "build_survival_outcome_gate",
+    "check_risk_score_plot_renderer_dependencies",
     "confirm_cox_multivariate_parameters",
     "confirm_cox_univariate_parameters",
     "confirm_km_logrank_parameters",
@@ -96,6 +105,7 @@ __all__ = [
     "validate_km_result_index_entry",
     "validate_km_result_tables",
     "validate_risk_score_parameter_confirmation",
+    "validate_risk_score_plot_artifact_schema",
     "validate_risk_score_result_index_entry",
     "validate_risk_score_result_table",
 ]

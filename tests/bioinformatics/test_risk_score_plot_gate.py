@@ -4,7 +4,13 @@ from pathlib import Path
 
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
-from app.bioinformatics.survival_clinical import build_risk_score_plot_nomogram_gate
+from app.bioinformatics.survival_clinical import (
+    build_risk_score_plot_artifact_activation_gate,
+    build_risk_score_plot_artifact_schema_candidate,
+    build_risk_score_plot_nomogram_gate,
+    check_risk_score_plot_renderer_dependencies,
+    validate_risk_score_plot_artifact_schema,
+)
 
 
 def test_risk_score_plot_nomogram_gate_is_planning_only_for_valid_formal_source(tmp_path: Path) -> None:
@@ -48,6 +54,67 @@ def test_risk_score_plot_nomogram_gate_blocks_missing_or_invalid_source(tmp_path
     assert "dependency_snapshot_not_passed" in gate["blockers"]
     assert "risk_score_source_must_not_be_report_ready" in gate["blockers"]
     assert "b37_risk_score_renderer_activation_required" in gate["blockers"]
+
+
+def test_risk_score_plot_artifact_schema_gate_is_activation_blocked_for_valid_source(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    gate = build_risk_score_plot_artifact_activation_gate(tmp_path)
+
+    assert gate["schema_version"] == "biomedpilot.risk_score_plot_artifact_activation_gate.v1"
+    assert gate["status"] == "blocked_activation_required"
+    assert gate["source_ready_for_future_activation"] is True
+    assert gate["selected_result_id"] == "risk-1"
+    assert gate["artifact_schema_validation"]["status"] == "passed"
+    assert gate["renderer_dependency_snapshot"]["status"] == "passed"
+    assert "b38_risk_score_plot_renderer_execution_required" in gate["blockers"]
+    assert gate["creates_plot_artifact"] is False
+    assert gate["writes_result_index"] is False
+    assert gate["report_ready_eligible"] is False
+
+
+def test_risk_score_plot_artifact_schema_blocks_nonformal_and_clinical_fields(tmp_path: Path) -> None:
+    dependency = check_risk_score_plot_renderer_dependencies()
+    artifact = build_risk_score_plot_artifact_schema_candidate(
+        {
+            "result_id": "risk-2",
+            "task_type": "risk_score",
+            "result_semantics": "imported_external_result",
+            "input_package_id": "pkg",
+            "task_run_id": "task",
+            "parameters_manifest": {"status": "confirmed"},
+            "output_artifacts": [{"artifact_type": "risk_score_result_table", "path": "results/tables/risk.tsv"}],
+        },
+        plot_type="risk_score_distribution_plot",
+        renderer="builtin_svg",
+        dependency_snapshot=dependency,
+    )
+    artifact["plot_parameters"]["clinical_conclusion"] = "poor prognosis"
+
+    validation = validate_risk_score_plot_artifact_schema(artifact)
+
+    assert validation["status"] == "blocked"
+    assert "risk_score_plot_requires_formal_computed_result_source" in validation["blockers"]
+    assert "forbidden_risk_score_plot_field:plot_parameters.clinical_conclusion" in validation["blockers"]
+
+
+def test_risk_score_plot_renderer_detection_is_detect_first(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr("app.bioinformatics.survival_clinical.risk_score_plot_schema.importlib.util.find_spec", lambda name: None if name == "matplotlib" else object())
+
+    dependency = check_risk_score_plot_renderer_dependencies(renderer="matplotlib_png")
+    missing = build_risk_score_plot_artifact_activation_gate(tmp_path, renderer="matplotlib_png")
+
+    assert dependency["status"] == "blocked"
+    assert dependency["install_action"] == "none_detect_first_only"
+    assert "matplotlib_missing_for_risk_score_plot_renderer" in dependency["blockers"]
+    assert "matplotlib_missing_for_risk_score_plot_renderer" in missing["blockers"]
 
 
 def _register_risk_score(root: Path, table: Path, *, dependency_status: str = "passed", report_ready: bool = False) -> None:

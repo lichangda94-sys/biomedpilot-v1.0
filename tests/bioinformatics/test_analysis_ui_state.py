@@ -45,6 +45,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_confirmation_gate"]["formal_execution_enabled"] is False
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_result_schema_gate"]["writes_result_index"] is False
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_plot_nomogram_gate"]["creates_plot_artifact"] is False
+    assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_plot_artifact_gate"]["creates_plot_artifact"] is False
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
@@ -96,10 +97,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "risk_score_result_bundle_missing" in survival_rows_text
     assert "Risk score plot / nomogram planning" in survival_rows_text
     assert "b37_risk_score_renderer_activation_required" in survival_rows_text
+    assert "Risk score plot artifact schema / renderer gate" in survival_rows_text
+    assert "b38_risk_score_plot_renderer_execution_required" in survival_rows_text
     survival_diagnostics_text = "\n".join(str(row) for row in state["developer_diagnostics"]["survival_clinical_state"]["gate_rows"])
     assert "B33 Risk score parameter confirmation" in survival_diagnostics_text
     assert "B33 Risk score result schema gate" in survival_diagnostics_text
     assert "B36 Risk score plot / nomogram gate" in survival_diagnostics_text
+    assert "B37 Risk score plot artifact schema / renderer gate" in survival_diagnostics_text
     gate_text = "\n".join(str(row) for row in state["gate_rows"])
     assert "DOCX rendered export" in gate_text
     assert "PDF rendered export" in gate_text
