@@ -6,6 +6,7 @@ from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 from app.bioinformatics.survival_clinical import (
     build_risk_score_advanced_visualization_planning_gate,
+    build_risk_score_advanced_visualization_runtime_plan,
     build_risk_score_plot_artifact_activation_gate,
     build_risk_score_plot_artifact_schema_candidate,
     build_risk_score_plot_nomogram_gate,
@@ -162,6 +163,41 @@ def test_risk_score_advanced_visualization_gate_blocks_missing_source(tmp_path: 
     assert gate["status"] == "blocked_planning_only"
     assert "formal_risk_score_result_not_found" in gate["blockers"]
     assert "b40_risk_score_advanced_visualization_activation_required" in gate["blockers"]
+
+
+def test_risk_score_advanced_visualization_runtime_plan_is_non_executing(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    plan = build_risk_score_advanced_visualization_runtime_plan(tmp_path)
+
+    assert plan["schema_version"] == "biomedpilot.risk_score_advanced_visualization_runtime_plan.v1"
+    assert plan["status"] == "blocked_runtime_planning_only"
+    assert plan["selected_result_id"] == "risk-1"
+    assert plan["runtime_policy"]["renderer_detection"] == "detect_first_no_install_no_download"
+    assert plan["validation_gates"]["low_event_count"] == "must_block_before_calibration_or_decision_curve"
+    assert "b41_risk_score_advanced_visualization_execution_required" in plan["blockers"]
+    assert plan["formal_execution_enabled"] is False
+    assert plan["writes_result_index"] is False
+    assert plan["creates_plot_artifact"] is False
+    assert plan["report_ready_eligible"] is False
+    plans = {item["artifact_type"]: item for item in plan["artifact_runtime_plans"]}
+    assert plans["risk_score_nomogram"]["renderer_candidates"][0]["renderer"] == "r_rms_nomogram"
+    assert "clinical_decision_recommendation_forbidden" in plans["risk_score_decision_curve"]["required_runtime_inputs"]
+
+
+def test_risk_score_advanced_visualization_runtime_plan_blocks_missing_source(tmp_path: Path) -> None:
+    plan = build_risk_score_advanced_visualization_runtime_plan(tmp_path)
+
+    assert plan["status"] == "blocked_runtime_planning_only"
+    assert "formal_risk_score_result_not_found" in plan["blockers"]
+    assert "b41_risk_score_advanced_visualization_execution_required" in plan["blockers"]
 
 
 def test_risk_score_plot_artifact_schema_blocks_nonformal_and_clinical_fields(tmp_path: Path) -> None:

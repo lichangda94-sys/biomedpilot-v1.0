@@ -20,6 +20,7 @@ from ._io import parse_float, read_table
 RISK_SCORE_PLOT_ARTIFACT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_plot_artifact_activation_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCHEMA_VERSION = "biomedpilot.risk_score_plot_artifact.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_planning_gate.v1"
+RISK_SCORE_ADVANCED_VISUALIZATION_RUNTIME_PLAN_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_runtime_plan.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCOPE = "formal_risk_score_plot_artifact"
 RISK_SCORE_PLOT_ENGINE_NAME = "biomedpilot_risk_score_visualization_renderer"
 RISK_SCORE_PLOT_ENGINE_VERSION = "0.1.0"
@@ -308,6 +309,101 @@ def build_risk_score_advanced_visualization_planning_gate(project_root: str | Pa
             "decision_curve_policy": "required_before_activation",
             "clinical_boundary_acknowledgement": "required_before_activation",
             "report_ready_gate": "separate_future_stage",
+        },
+        "formal_execution_enabled": False,
+        "writes_result_index": False,
+        "creates_plot_artifact": False,
+        "creates_report_artifact": False,
+        "report_ready_eligible": False,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def build_risk_score_advanced_visualization_runtime_plan(project_root: str | Path, result_id: str | None = None) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_source(root, result_id)
+    blockers: list[str] = []
+    warnings = [
+        "risk_score_advanced_visualization_runtime_planning_only",
+        "no_nomogram_artifact_created",
+        "no_calibration_curve_artifact_created",
+        "no_decision_curve_artifact_created",
+        "no_report_ready_unlock",
+        "no_clinical_interpretation",
+    ]
+    if source is None:
+        blockers.append("formal_risk_score_result_not_found")
+    else:
+        blockers.extend(_source_blockers(source))
+    blockers.append("b41_risk_score_advanced_visualization_execution_required")
+    return {
+        "schema_version": RISK_SCORE_ADVANCED_VISUALIZATION_RUNTIME_PLAN_SCHEMA_VERSION,
+        "status": "blocked_runtime_planning_only",
+        "selected_result_id": str((source or {}).get("result_id") or result_id or ""),
+        "source_result_semantics": normalize_result_semantics((source or {}).get("result_semantics"), default="blocked"),
+        "source_task_type": str((source or {}).get("task_type") or ""),
+        "runtime_policy": {
+            "renderer_detection": "detect_first_no_install_no_download",
+            "external_r_policy": "system_Rscript_only_not_bundled",
+            "python_renderer_policy": "builtin_svg_or_existing_python_packages_only",
+            "result_index_policy": "future_artifacts_must_attach_to_formal_risk_score_source",
+            "report_ready_policy": "separate_future_gate",
+        },
+        "artifact_runtime_plans": [
+            {
+                "artifact_type": "risk_score_nomogram",
+                "status": "blocked_runtime_planning_only",
+                "renderer_candidates": [
+                    {"renderer": "r_rms_nomogram", "status": "blocked", "reason": "external_r_runtime_acceptance_required"},
+                    {"renderer": "builtin_svg_nomogram_spec", "status": "blocked", "reason": "nomogram_scale_mapping_not_validated"},
+                ],
+                "required_runtime_inputs": [
+                    "formal_risk_score_result",
+                    "source_cox_multivariate_coefficients",
+                    "coefficient_units",
+                    "nomogram_scale_policy",
+                    "axis_label_policy",
+                    "clinical_boundary_acknowledgement",
+                ],
+            },
+            {
+                "artifact_type": "risk_score_calibration_curve",
+                "status": "blocked_runtime_planning_only",
+                "renderer_candidates": [
+                    {"renderer": "builtin_svg_calibration", "status": "blocked", "reason": "calibration_statistics_not_activated"},
+                ],
+                "required_runtime_inputs": [
+                    "formal_risk_score_result",
+                    "time_horizon",
+                    "observed_event_mapping",
+                    "predicted_probability_policy",
+                    "bootstrap_or_validation_policy",
+                    "minimum_event_count_policy",
+                ],
+            },
+            {
+                "artifact_type": "risk_score_decision_curve",
+                "status": "blocked_runtime_planning_only",
+                "renderer_candidates": [
+                    {"renderer": "builtin_svg_decision_curve", "status": "blocked", "reason": "net_benefit_statistics_not_activated"},
+                ],
+                "required_runtime_inputs": [
+                    "formal_risk_score_result",
+                    "threshold_probability_grid",
+                    "net_benefit_formula_policy",
+                    "treat_all_none_baselines",
+                    "clinical_decision_recommendation_forbidden",
+                ],
+            },
+        ],
+        "validation_gates": {
+            "low_event_count": "must_block_before_calibration_or_decision_curve",
+            "missing_outcome_mapping": "must_block",
+            "missing_prediction_time_horizon": "must_block",
+            "invalid_threshold_grid": "must_block",
+            "source_has_clinical_conclusion": "must_block",
+            "report_ready_unlock": "forbidden",
         },
         "formal_execution_enabled": False,
         "writes_result_index": False,

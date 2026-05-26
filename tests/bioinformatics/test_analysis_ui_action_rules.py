@@ -247,6 +247,24 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert "b40_risk_score_advanced_visualization_activation_required" in advanced_action["disabled_reason"]
     assert "no nomogram" in advanced_action["disabled_reason"]
 
+    runtime_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_advanced_runtime_plan={
+            "status": "blocked_runtime_planning_only",
+            "blockers": ["b41_risk_score_advanced_visualization_execution_required"],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    runtime_action = _row(runtime_rows, "risk_score_advanced_runtime_plan")
+    assert runtime_action["enabled"] is False
+    assert runtime_action["state"] == "blocked_runtime_planning_only"
+    assert "b41_risk_score_advanced_visualization_execution_required" in runtime_action["disabled_reason"]
+    assert "no advanced visualization artifact" in runtime_action["disabled_reason"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(
