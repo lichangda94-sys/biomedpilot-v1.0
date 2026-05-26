@@ -229,6 +229,24 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert enabled_action["button_behavior"] == "enabled_risk_score_distribution_svg_artifact_only"
     assert "does not create risk groups" in enabled_action["next_action"]
 
+    advanced_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_advanced_visualization_gate={
+            "status": "blocked_planning_only",
+            "blockers": ["b40_risk_score_advanced_visualization_activation_required"],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    advanced_action = _row(advanced_rows, "risk_score_advanced_visualization")
+    assert advanced_action["enabled"] is False
+    assert advanced_action["state"] == "blocked_planning_only"
+    assert "b40_risk_score_advanced_visualization_activation_required" in advanced_action["disabled_reason"]
+    assert "no nomogram" in advanced_action["disabled_reason"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(

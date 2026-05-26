@@ -19,6 +19,7 @@ from ._io import parse_float, read_table
 
 RISK_SCORE_PLOT_ARTIFACT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_plot_artifact_activation_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCHEMA_VERSION = "biomedpilot.risk_score_plot_artifact.v1"
+RISK_SCORE_ADVANCED_VISUALIZATION_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_planning_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCOPE = "formal_risk_score_plot_artifact"
 RISK_SCORE_PLOT_ENGINE_NAME = "biomedpilot_risk_score_visualization_renderer"
 RISK_SCORE_PLOT_ENGINE_VERSION = "0.1.0"
@@ -232,6 +233,89 @@ def create_risk_score_plot_artifact(
         "report_ready_eligible": False,
         "warnings": artifact["warnings"],
         "blockers": [],
+    }
+
+
+def build_risk_score_advanced_visualization_planning_gate(project_root: str | Path, result_id: str | None = None) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_source(root, result_id)
+    blockers: list[str] = []
+    warnings = [
+        "risk_score_advanced_visualization_planning_only",
+        "nomogram_not_generated",
+        "calibration_curve_not_generated",
+        "decision_curve_not_generated",
+        "no_risk_group_generation",
+        "no_clinical_interpretation",
+        "no_report_ready_unlock",
+    ]
+    if source is None:
+        blockers.append("formal_risk_score_result_not_found")
+    else:
+        blockers.extend(_source_blockers(source))
+    blockers.append("b40_risk_score_advanced_visualization_activation_required")
+    return {
+        "schema_version": RISK_SCORE_ADVANCED_VISUALIZATION_GATE_SCHEMA_VERSION,
+        "status": "blocked_planning_only",
+        "selected_result_id": str((source or {}).get("result_id") or result_id or ""),
+        "source_result_semantics": normalize_result_semantics((source or {}).get("result_semantics"), default="blocked"),
+        "source_task_type": str((source or {}).get("task_type") or ""),
+        "planned_artifacts": [
+            {
+                "artifact_type": "risk_score_nomogram",
+                "activation_status": "planned_disabled",
+                "minimum_conditions": [
+                    "formal_risk_score_result",
+                    "source_cox_multivariate_coefficients",
+                    "coefficient_provenance",
+                    "nomogram_scale_policy",
+                    "external_renderer_runtime_acceptance",
+                    "clinical_boundary_acknowledgement",
+                ],
+                "forbidden_outputs": ["clinical_prognosis", "treatment_recommendation", "diagnosis"],
+            },
+            {
+                "artifact_type": "risk_score_calibration_curve",
+                "activation_status": "planned_disabled",
+                "minimum_conditions": [
+                    "formal_risk_score_result",
+                    "time_horizon_policy",
+                    "observed_outcome_mapping",
+                    "calibration_method_policy",
+                    "validation_or_bootstrap_policy",
+                    "low_event_count_blocker",
+                ],
+                "forbidden_outputs": ["model_claim_of_clinical_validity", "prognosis_label"],
+            },
+            {
+                "artifact_type": "risk_score_decision_curve",
+                "activation_status": "planned_disabled",
+                "minimum_conditions": [
+                    "formal_risk_score_result",
+                    "threshold_probability_grid",
+                    "net_benefit_formula_policy",
+                    "clinical_utility_boundary_acknowledgement",
+                    "decision_recommendation_forbidden",
+                ],
+                "forbidden_outputs": ["clinical_decision_recommendation", "treatment_recommendation"],
+            },
+        ],
+        "minimum_conditions": {
+            "source_formal_risk_score": "required",
+            "distribution_plot_artifact": "optional_input_not_sufficient",
+            "nomogram_renderer": "future_detect_first_external_runtime",
+            "calibration_validation_policy": "required_before_activation",
+            "decision_curve_policy": "required_before_activation",
+            "clinical_boundary_acknowledgement": "required_before_activation",
+            "report_ready_gate": "separate_future_stage",
+        },
+        "formal_execution_enabled": False,
+        "writes_result_index": False,
+        "creates_plot_artifact": False,
+        "creates_report_artifact": False,
+        "report_ready_eligible": False,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
     }
 
 

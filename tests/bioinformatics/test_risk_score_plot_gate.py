@@ -5,6 +5,7 @@ from pathlib import Path
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 from app.bioinformatics.survival_clinical import (
+    build_risk_score_advanced_visualization_planning_gate,
     build_risk_score_plot_artifact_activation_gate,
     build_risk_score_plot_artifact_schema_candidate,
     build_risk_score_plot_nomogram_gate,
@@ -127,6 +128,40 @@ def test_risk_score_plot_execution_blocks_nomogram_until_later_stage(tmp_path: P
     assert output["status"] == "blocked"
     assert "risk_score_plot_type_not_enabled_in_b38:risk_score_nomogram" in output["blockers"]
     assert output["plot_artifact"]["image_artifacts"] == []
+
+
+def test_risk_score_advanced_visualization_gate_is_planning_only(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    gate = build_risk_score_advanced_visualization_planning_gate(tmp_path)
+
+    assert gate["schema_version"] == "biomedpilot.risk_score_advanced_visualization_planning_gate.v1"
+    assert gate["status"] == "blocked_planning_only"
+    assert gate["selected_result_id"] == "risk-1"
+    assert "b40_risk_score_advanced_visualization_activation_required" in gate["blockers"]
+    assert gate["formal_execution_enabled"] is False
+    assert gate["writes_result_index"] is False
+    assert gate["creates_plot_artifact"] is False
+    assert gate["creates_report_artifact"] is False
+    assert gate["report_ready_eligible"] is False
+    planned = {item["artifact_type"] for item in gate["planned_artifacts"]}
+    assert planned == {"risk_score_nomogram", "risk_score_calibration_curve", "risk_score_decision_curve"}
+    assert "decision_recommendation_forbidden" in gate["planned_artifacts"][2]["minimum_conditions"]
+
+
+def test_risk_score_advanced_visualization_gate_blocks_missing_source(tmp_path: Path) -> None:
+    gate = build_risk_score_advanced_visualization_planning_gate(tmp_path)
+
+    assert gate["status"] == "blocked_planning_only"
+    assert "formal_risk_score_result_not_found" in gate["blockers"]
+    assert "b40_risk_score_advanced_visualization_activation_required" in gate["blockers"]
 
 
 def test_risk_score_plot_artifact_schema_blocks_nonformal_and_clinical_fields(tmp_path: Path) -> None:
