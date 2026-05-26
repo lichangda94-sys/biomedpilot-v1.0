@@ -36,7 +36,7 @@ def build_risk_score_result_schema_gate(
     confirmation_gate: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     blockers: list[str] = []
-    warnings: list[str] = ["risk_score_result_schema_only_no_execution"]
+    warnings: list[str] = ["risk_score_result_schema_validation_required"]
     confirmation = confirmation_gate if isinstance(confirmation_gate, dict) else {}
     if confirmation.get("status") != "passed":
         blockers.extend(str(item) for item in confirmation.get("blockers", []) or [])

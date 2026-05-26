@@ -35,10 +35,29 @@ def test_b17_capability_map_keeps_unimplemented_methods_blocked() -> None:
     assert "runtime.r.available" in rows["deg_deseq2"]["dependency_capability_keys"]
     assert "package.r.edger.available" in rows["deg_edger"]["dependency_capability_keys"]
     assert rows["cox_multivariate"]["implementation_status"] == "b20_gated_execution_contract"
-    assert rows["risk_score"]["ui_state"] == "disabled"
+    assert rows["risk_score"]["ui_state"] == "blocked"
     assert rows["full_integrated_report"]["implementation_status"] == "b23_gate_blocked"
     assert rows["legacy_formal_execution"]["implementation_status"] == "disabled"
     assert capability_map["summary"]["completed_claim_count"] == 0
+
+
+def test_risk_score_capability_reflects_b34_controlled_table_only_action() -> None:
+    capability_map = build_analysis_capability_map(
+        action_rows=[
+            {
+                "action_id": "risk_score",
+                "enabled": True,
+                "state": "enabled_controlled_risk_score_mvp",
+                "next_action": "Run B34 controlled risk score table generation only; no risk groups.",
+            }
+        ]
+    )
+    risk_score = next(row for row in capability_map["rows"] if row["capability_id"] == "risk_score")
+
+    assert risk_score["implementation_status"] == "b34_controlled_table_only_mvp"
+    assert risk_score["formal_execution_enabled"] is True
+    assert risk_score["can_display_as_completed"] is False
+    assert "no risk groups" in risk_score["reason"]
 
 
 def test_dependency_available_does_not_upgrade_r_method_to_completed() -> None:

@@ -57,6 +57,8 @@ def build_risk_score_nomogram_contract_gate(
         "source_result_validation_status": str(source.get("validation_status") or ""),
         "source_result_dependency_snapshot": source.get("dependency_snapshot") if isinstance(source.get("dependency_snapshot"), dict) else {},
         "source_result_parameters_manifest": source.get("parameters_manifest") if isinstance(source.get("parameters_manifest"), dict) else {},
+        "source_result_output_artifacts": [dict(item) for item in source.get("output_artifacts", []) or [] if isinstance(item, dict)],
+        "source_result_log_artifacts": [dict(item) for item in source.get("log_artifacts", []) or [] if isinstance(item, dict)],
         "candidate_variables": variables,
         "coefficient_source": coefficient_source,
         "training_validation_plan": spec.get("training_validation") if isinstance(spec.get("training_validation"), dict) else {},

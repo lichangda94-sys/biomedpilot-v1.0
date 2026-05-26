@@ -102,14 +102,14 @@ def build_analysis_capability_map(
             "B20 adds gated multivariate Cox execution with EPV, covariate, missingness, collinearity, model-formula, dependency and confirmation gates; risk score and clinical conclusions remain disabled.",
             capability_keys=[SURVIVAL_KEY],
         ),
-        _static_row(
+        _row_from_action(
             "risk_score",
             "Risk score / nomogram",
             "Survival",
-            "disabled_design_only",
-            _status_from_survival_row(survival_clinical_rows, "risk_score") or "disabled",
-            "B32 risk score source/contract gate can review formal Cox multivariate source, clinical variable audit, coefficient provenance, training/validation, cutoff, missingness, scaling, calibration and nomogram policy; no score, nomogram, risk group or clinical conclusion is generated.",
-            capability_keys=[GLMNET_KEY],
+            "b34_controlled_table_only_mvp",
+            action_by_id.get("risk_score"),
+            required_contracts=["B32 risk score source/contract gate", "B33 parameter confirmation", "B34 result_index_v2 schema gate"],
+            result_semantics="formal_computed_result only for controlled per-sample risk score table; no risk groups, nomogram, plot, report-ready package or clinical conclusion",
         ),
         _static_row(
             "km_cox_real_plot",

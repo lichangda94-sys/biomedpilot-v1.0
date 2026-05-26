@@ -1140,10 +1140,24 @@ def _cox_multivariate_action(package: dict[str, Any] | None, dependency: dict[st
 
 
 def _risk_score_action(design: dict[str, Any], confirmation_gate: dict[str, Any], result_schema_gate: dict[str, Any]) -> dict[str, Any]:
+    contract_ready = design.get("status") == "ready_for_parameter_confirmation"
+    confirmation_passed = confirmation_gate.get("status") == "passed"
+    schema_blockers = [item for item in _list(result_schema_gate.get("blockers")) if item != "risk_score_result_bundle_missing"]
+    if contract_ready and confirmation_passed and not schema_blockers:
+        return {
+            "action_id": "risk_score",
+            "label": "Generate risk score",
+            "state": "enabled_controlled_risk_score_mvp",
+            "button_behavior": "enabled_controlled_risk_score_table_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run B34 controlled risk score table generation from formal Cox multivariate coefficients only; no risk groups, nomogram, plot, report-ready package or clinical conclusion.",
+        }
     blockers = (
         _list(design.get("blockers"))
         + _list(confirmation_gate.get("blockers"))
-        + _list(result_schema_gate.get("blockers"))
+        + schema_blockers
         or ["risk_score_execution_disabled_contract_gate_only"]
     )
     stage = "B33 parameter confirmation / result schema gate" if confirmation_gate or result_schema_gate else ("B32 source / contract gate" if design.get("schema_version") == "biomedpilot.risk_score_nomogram_contract_gate.v1" else "B21 design audit")

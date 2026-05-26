@@ -18,6 +18,7 @@ def test_risk_score_contract_gate_ready_for_confirmation_but_non_executing(tmp_p
     assert gate["status"] == "ready_for_parameter_confirmation"
     assert gate["schema_version"] == "biomedpilot.risk_score_nomogram_contract_gate.v1"
     assert gate["source_cox_multivariate_result_id"] == "cox-mv-1"
+    assert gate["source_result_output_artifacts"][0]["artifact_type"] == "cox_multivariate_result_table"
     assert gate["candidate_variables"] == ["age", "marker"]
     assert gate["formal_execution_enabled"] is False
     assert gate["writes_result_index"] is False

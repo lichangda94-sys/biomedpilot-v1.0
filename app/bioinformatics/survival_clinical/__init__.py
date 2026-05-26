@@ -43,6 +43,7 @@ from .risk_score_confirmation import (
     validate_risk_score_parameter_confirmation,
 )
 from .risk_score_design import audit_risk_score_design
+from .risk_score_executor import run_controlled_risk_score
 from .risk_score_result_schema import build_risk_score_result_schema_gate, validate_risk_score_result_index_entry, validate_risk_score_result_table
 
 __all__ = [
@@ -79,6 +80,7 @@ __all__ = [
     "run_controlled_cox_multivariate",
     "run_controlled_cox_univariate",
     "run_controlled_km_logrank",
+    "run_controlled_risk_score",
     "validate_cox_multivariate_confirmation",
     "validate_cox_multivariate_result_index_entry",
     "validate_cox_multivariate_result_table",

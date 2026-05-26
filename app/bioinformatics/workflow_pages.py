@@ -98,6 +98,7 @@ from app.bioinformatics.reports.survival_clinical import (
     evaluate_cox_report_ready_gate,
     evaluate_km_logrank_report_ready_gate,
 )
+from app.bioinformatics.survival_clinical import run_controlled_risk_score
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -5767,6 +5768,23 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._status_label.setText(f"controlled preranked GSEA 未运行：{blockers}")
         return result
 
+    def run_controlled_risk_score_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        analysis_state = build_analysis_center_state(self._project_root)
+        survival_state = analysis_state.get("developer_diagnostics", {}).get("survival_clinical_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}
+        contract = survival_state.get("risk_score_contract_gate") if isinstance(survival_state.get("risk_score_contract_gate"), dict) else {}
+        confirmation = survival_state.get("risk_score_parameter_confirmation") if isinstance(survival_state.get("risk_score_parameter_confirmation"), dict) else {}
+        result = run_controlled_risk_score(self._project_root, contract, confirmation)
+        self.refresh_task_center()
+        if result.get("status") == "passed":
+            self._status_label.setText("已完成 controlled risk score MVP，并写入 result index v2。未生成 risk group、nomogram、plot、report-ready 或临床结论。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "Risk score gate 未通过"
+            self._status_label.setText(f"controlled risk score 未运行：{blockers}")
+        return result
+
     def confirm_formal_deg_parameters(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -5943,6 +5961,10 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._gsea_button.setEnabled(False)
         self._gsea_button.setObjectName("runControlledGseaButton")
         actions.addWidget(self._gsea_button)
+        self._risk_score_button = _button("运行 controlled risk score", "secondaryButton", self.run_controlled_risk_score_task)
+        self._risk_score_button.setEnabled(False)
+        self._risk_score_button.setObjectName("runControlledRiskScoreButton")
+        actions.addWidget(self._risk_score_button)
         actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
         actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
@@ -6116,6 +6138,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         edger_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_edger_rscript")
         ora_action = _analysis_ui_action(analysis_state.get("action_rows", []), "run_ora_enrichment")
         gsea_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_gsea")
+        risk_score_action = _analysis_ui_action(analysis_state.get("action_rows", []), "risk_score")
         self._formal_deg_confirm_button.setEnabled(bool(confirmation_action.get("enabled")))
         self._formal_deg_confirm_button.setToolTip(str(confirmation_action.get("disabled_reason") or confirmation_action.get("next_action") or "确认 formal DEG 参数"))
         self._formal_deg_button.setEnabled(bool(formal_action.get("enabled")))
@@ -6141,6 +6164,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._ora_button.setToolTip(str(ora_action.get("next_action") or ora_action.get("disabled_reason") or "controlled ORA gate 未通过"))
         self._gsea_button.setEnabled(bool(gsea_action.get("enabled")))
         self._gsea_button.setToolTip(str(gsea_action.get("next_action") or gsea_action.get("disabled_reason") or "controlled GSEA gate 未通过"))
+        self._risk_score_button.setEnabled(bool(risk_score_action.get("enabled")))
+        self._risk_score_button.setToolTip(str(risk_score_action.get("next_action") or risk_score_action.get("disabled_reason") or "controlled risk score gate 未通过"))
         _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
         self._sync_confirmation_controls(analysis_state)
         _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
