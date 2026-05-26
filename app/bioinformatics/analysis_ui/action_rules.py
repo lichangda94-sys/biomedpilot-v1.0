@@ -34,6 +34,7 @@ def build_action_rows(
     risk_score_plot_artifact_gate: dict[str, Any] | None = None,
     risk_score_advanced_visualization_gate: dict[str, Any] | None = None,
     risk_score_advanced_runtime_plan: dict[str, Any] | None = None,
+    risk_score_advanced_preflight_gate: dict[str, Any] | None = None,
     km_real_plot_gate: dict[str, Any] | None = None,
     cox_real_plot_gate: dict[str, Any] | None = None,
     km_report_gate: dict[str, Any] | None = None,
@@ -85,6 +86,7 @@ def build_action_rows(
     risk_score_plot_artifact_gate = risk_score_plot_artifact_gate or {}
     risk_score_advanced_visualization_gate = risk_score_advanced_visualization_gate or {}
     risk_score_advanced_runtime_plan = risk_score_advanced_runtime_plan or {}
+    risk_score_advanced_preflight_gate = risk_score_advanced_preflight_gate or {}
     km_real_plot_gate = km_real_plot_gate or {}
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
@@ -157,6 +159,7 @@ def build_action_rows(
     rows.append(_risk_score_plot_artifact_action(risk_score_plot_artifact_gate))
     rows.append(_risk_score_advanced_visualization_action(risk_score_advanced_visualization_gate))
     rows.append(_risk_score_advanced_runtime_plan_action(risk_score_advanced_runtime_plan))
+    rows.append(_risk_score_advanced_preflight_action(risk_score_advanced_preflight_gate))
     rows.append(_survival_real_plot_action("generate_km_plot", "Generate KM plot", km_real_plot_gate))
     rows.append(_survival_real_plot_action("generate_cox_plot", "Generate Cox forest plot", cox_real_plot_gate))
     rows.append(_survival_report_ready_action(km_report_gate, cox_report_gate))
@@ -1234,6 +1237,28 @@ def _risk_score_advanced_runtime_plan_action(gate: dict[str, Any]) -> dict[str, 
         str(gate.get("status") or "blocked_runtime_planning_only"),
         "; ".join(dict.fromkeys([*blockers, "B40 runtime planning only; no advanced visualization artifact, risk group, report-ready package or clinical conclusion is generated."])),
         "Review renderer/runtime policy, validation gates, low-event-count blockers and clinical-boundary requirements before any future advanced visualization execution.",
+    )
+
+
+def _risk_score_advanced_preflight_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed_preflight_only":
+        return {
+            "action_id": "risk_score_advanced_preflight",
+            "label": "Review advanced visualization preflight",
+            "state": "passed_preflight_only",
+            "button_behavior": "enabled_preflight_review_only_no_artifact",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review validated time horizon, outcome mapping, event count, threshold grid and clinical-boundary acknowledgement; this does not generate nomogram, calibration, decision-curve, report-ready output or clinical interpretation.",
+        }
+    blockers = _list(gate.get("blockers")) or ["advanced_visualization_preflight_not_passed"]
+    return _disabled(
+        "risk_score_advanced_preflight",
+        "Review advanced visualization preflight",
+        str(gate.get("status") or "blocked"),
+        "; ".join(dict.fromkeys([*blockers, "B41 preflight only; no advanced visualization artifact, report-ready package or clinical conclusion is generated."])),
+        "Provide time horizon, outcome mapping, minimum event count, threshold probability grid and clinical-boundary acknowledgement before future advanced visualization execution.",
     )
 
 

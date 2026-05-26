@@ -21,6 +21,7 @@ RISK_SCORE_PLOT_ARTIFACT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_plot_arti
 RISK_SCORE_PLOT_ARTIFACT_SCHEMA_VERSION = "biomedpilot.risk_score_plot_artifact.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_planning_gate.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_RUNTIME_PLAN_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_runtime_plan.v1"
+RISK_SCORE_ADVANCED_VISUALIZATION_PREFLIGHT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_preflight_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCOPE = "formal_risk_score_plot_artifact"
 RISK_SCORE_PLOT_ENGINE_NAME = "biomedpilot_risk_score_visualization_renderer"
 RISK_SCORE_PLOT_ENGINE_VERSION = "0.1.0"
@@ -415,6 +416,59 @@ def build_risk_score_advanced_visualization_runtime_plan(project_root: str | Pat
     }
 
 
+def build_risk_score_advanced_visualization_preflight_gate(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    preflight_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_source(root, result_id)
+    config = _advanced_preflight_config(source or {}, preflight_config or {})
+    blockers: list[str] = []
+    warnings = [
+        "risk_score_advanced_visualization_preflight_only",
+        "no_advanced_visualization_artifact_created",
+        "no_report_ready_unlock",
+        "no_clinical_interpretation",
+    ]
+    if source is None:
+        blockers.append("formal_risk_score_result_not_found")
+    else:
+        blockers.extend(_source_blockers(source))
+    blockers.extend(_time_horizon_blockers(config))
+    blockers.extend(_outcome_mapping_blockers(config))
+    blockers.extend(_event_count_blockers(config))
+    blockers.extend(_threshold_grid_blockers(config))
+    if config.get("clinical_boundary_acknowledged") is not True:
+        blockers.append("clinical_boundary_acknowledgement_missing")
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema_version": RISK_SCORE_ADVANCED_VISUALIZATION_PREFLIGHT_GATE_SCHEMA_VERSION,
+        "status": "blocked" if blockers else "passed_preflight_only",
+        "selected_result_id": str((source or {}).get("result_id") or result_id or ""),
+        "source_result_semantics": normalize_result_semantics((source or {}).get("result_semantics"), default="blocked"),
+        "source_task_type": str((source or {}).get("task_type") or ""),
+        "preflight_config": config,
+        "checks": {
+            "time_horizon_present": not any(item.startswith("time_horizon_") for item in blockers),
+            "outcome_mapping_present": not any(item.startswith("outcome_") for item in blockers),
+            "minimum_event_count_met": "minimum_event_count_not_met_for_advanced_visualization" not in blockers,
+            "threshold_grid_valid": not any(item.startswith("threshold_probability_grid") for item in blockers),
+            "clinical_boundary_acknowledged": "clinical_boundary_acknowledgement_missing" not in blockers,
+        },
+        "validated_future_artifacts": ["risk_score_nomogram", "risk_score_calibration_curve", "risk_score_decision_curve"],
+        "formal_execution_enabled": False,
+        "writes_result_index": False,
+        "creates_plot_artifact": False,
+        "creates_report_artifact": False,
+        "report_ready_eligible": False,
+        "next_required_stage": "b42_risk_score_advanced_visualization_artifact_execution_audit",
+        "blockers": blockers,
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
 def build_risk_score_plot_artifact_schema_candidate(
     source: dict[str, Any],
     *,
@@ -499,6 +553,112 @@ def validate_risk_score_plot_artifact_schema(artifact: dict[str, Any]) -> dict[s
     blockers.extend(str(item) for item in generic.get("blockers", []) or [])
     warnings.extend(str(item) for item in generic.get("warnings", []) or [])
     return {"status": "blocked" if blockers else "passed", "blockers": list(dict.fromkeys(blockers)), "warnings": list(dict.fromkeys(warnings))}
+
+
+def _advanced_preflight_config(source: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    confirmation = source.get("risk_score_parameter_confirmation") if isinstance(source.get("risk_score_parameter_confirmation"), dict) else {}
+    source_params = confirmation.get("source_parameters_manifest") if isinstance(confirmation.get("source_parameters_manifest"), dict) else {}
+    contract = confirmation.get("risk_score_contract_gate") if isinstance(confirmation.get("risk_score_contract_gate"), dict) else {}
+    calibration_plan = confirmation.get("calibration_plan") if isinstance(confirmation.get("calibration_plan"), dict) else {}
+    validation_plan = confirmation.get("validation_plan") if isinstance(confirmation.get("validation_plan"), dict) else {}
+    boundary = contract.get("interpretation_boundary") if isinstance(contract.get("interpretation_boundary"), dict) else {}
+    outcome_mapping = override.get("outcome_mapping") if isinstance(override.get("outcome_mapping"), dict) else {}
+    threshold_grid = override.get("threshold_probability_grid")
+    if threshold_grid is None:
+        threshold_grid = override.get("threshold_grid")
+    time_horizon = _first_present(
+        override,
+        ("time_horizon", "time_horizon_days"),
+        calibration_plan,
+        ("time_horizon", "time_horizon_days"),
+        validation_plan,
+        ("time_horizon",),
+        default="",
+    )
+    return {
+        "time_horizon": time_horizon,
+        "time_unit": str(override.get("time_unit") or source_params.get("time_unit") or "days"),
+        "outcome_mapping": {
+            "time_field": str(outcome_mapping.get("time_field") or override.get("time_field") or source_params.get("time_field") or ""),
+            "event_field": str(outcome_mapping.get("event_field") or override.get("event_field") or source_params.get("event_field") or ""),
+            "event_positive_value": str(outcome_mapping.get("event_positive_value") or override.get("event_positive_value") or "1"),
+            "censoring_policy": str(outcome_mapping.get("censoring_policy") or override.get("censoring_policy") or source_params.get("censoring_policy") or ""),
+        },
+        "event_count": override.get("event_count", source_params.get("event_count", validation_plan.get("event_count", ""))),
+        "minimum_event_count": override.get("minimum_event_count", calibration_plan.get("minimum_event_count", validation_plan.get("minimum_event_count", 10))),
+        "threshold_probability_grid": list(threshold_grid or []),
+        "clinical_boundary_acknowledged": bool(
+            override.get("clinical_boundary_acknowledged")
+            or (
+                boundary.get("clinical_conclusion_forbidden") is True
+                and boundary.get("prognosis_label_forbidden") is True
+                and boundary.get("treatment_recommendation_forbidden") is True
+            )
+        ),
+}
+
+
+def _first_present(
+    primary: dict[str, Any],
+    primary_keys: tuple[str, ...],
+    secondary: dict[str, Any],
+    secondary_keys: tuple[str, ...],
+    tertiary: dict[str, Any],
+    tertiary_keys: tuple[str, ...],
+    *,
+    default: Any,
+) -> Any:
+    for mapping, keys in ((primary, primary_keys), (secondary, secondary_keys), (tertiary, tertiary_keys)):
+        for key in keys:
+            if key in mapping and mapping.get(key) is not None and mapping.get(key) != "":
+                return mapping.get(key)
+    return default
+
+
+def _time_horizon_blockers(config: dict[str, Any]) -> list[str]:
+    horizon = parse_float(config.get("time_horizon"))
+    if horizon is None:
+        return ["time_horizon_missing"]
+    if horizon <= 0:
+        return ["time_horizon_invalid"]
+    return []
+
+
+def _outcome_mapping_blockers(config: dict[str, Any]) -> list[str]:
+    outcome = config.get("outcome_mapping") if isinstance(config.get("outcome_mapping"), dict) else {}
+    blockers: list[str] = []
+    if not outcome.get("time_field"):
+        blockers.append("outcome_time_field_missing")
+    if not outcome.get("event_field"):
+        blockers.append("outcome_event_field_missing")
+    if not outcome.get("event_positive_value"):
+        blockers.append("outcome_event_positive_value_missing")
+    return blockers
+
+
+def _event_count_blockers(config: dict[str, Any]) -> list[str]:
+    event_count = parse_float(config.get("event_count"))
+    minimum = parse_float(config.get("minimum_event_count"))
+    if event_count is None:
+        return ["event_count_missing"]
+    if event_count < max(minimum or 10.0, 1.0):
+        return ["minimum_event_count_not_met_for_advanced_visualization"]
+    return []
+
+
+def _threshold_grid_blockers(config: dict[str, Any]) -> list[str]:
+    raw_grid = config.get("threshold_probability_grid") if isinstance(config.get("threshold_probability_grid"), list) else []
+    if not raw_grid:
+        return ["threshold_probability_grid_missing"]
+    parsed: list[float] = []
+    for value in raw_grid:
+        probability = parse_float(value)
+        if probability is None or probability <= 0 or probability >= 1:
+            return ["threshold_probability_grid_invalid"]
+        parsed.append(float(probability))
+    if parsed != sorted(parsed) or len(set(parsed)) != len(parsed):
+        return ["threshold_probability_grid_invalid"]
+    return []
 
 
 def _plot_artifact(

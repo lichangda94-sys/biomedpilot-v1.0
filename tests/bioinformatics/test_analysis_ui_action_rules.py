@@ -265,6 +265,42 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert "b41_risk_score_advanced_visualization_execution_required" in runtime_action["disabled_reason"]
     assert "no advanced visualization artifact" in runtime_action["disabled_reason"]
 
+    preflight_blocked_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_advanced_preflight_gate={
+            "status": "blocked",
+            "blockers": ["time_horizon_missing"],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    preflight_blocked = _row(preflight_blocked_rows, "risk_score_advanced_preflight")
+    assert preflight_blocked["enabled"] is False
+    assert preflight_blocked["state"] == "blocked"
+    assert "time_horizon_missing" in preflight_blocked["disabled_reason"]
+    assert "no advanced visualization artifact" in preflight_blocked["disabled_reason"]
+
+    preflight_passed_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_advanced_preflight_gate={
+            "status": "passed_preflight_only",
+            "blockers": [],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    preflight_passed = _row(preflight_passed_rows, "risk_score_advanced_preflight")
+    assert preflight_passed["enabled"] is True
+    assert preflight_passed["state"] == "passed_preflight_only"
+    assert preflight_passed["button_behavior"] == "enabled_preflight_review_only_no_artifact"
+    assert "does not generate nomogram" in preflight_passed["next_action"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(

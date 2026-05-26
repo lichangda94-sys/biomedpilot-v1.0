@@ -6,6 +6,7 @@ from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 from app.bioinformatics.survival_clinical import (
     build_risk_score_advanced_visualization_planning_gate,
+    build_risk_score_advanced_visualization_preflight_gate,
     build_risk_score_advanced_visualization_runtime_plan,
     build_risk_score_plot_artifact_activation_gate,
     build_risk_score_plot_artifact_schema_candidate,
@@ -198,6 +199,72 @@ def test_risk_score_advanced_visualization_runtime_plan_blocks_missing_source(tm
     assert plan["status"] == "blocked_runtime_planning_only"
     assert "formal_risk_score_result_not_found" in plan["blockers"]
     assert "b41_risk_score_advanced_visualization_execution_required" in plan["blockers"]
+
+
+def test_risk_score_advanced_visualization_preflight_passes_without_execution(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    gate = build_risk_score_advanced_visualization_preflight_gate(
+        tmp_path,
+        preflight_config={
+            "time_horizon_days": 365,
+            "outcome_mapping": {"time_field": "OS_time", "event_field": "OS_event", "event_positive_value": "1"},
+            "event_count": 12,
+            "minimum_event_count": 10,
+            "threshold_probability_grid": [0.1, 0.2, 0.3],
+            "clinical_boundary_acknowledged": True,
+        },
+    )
+
+    assert gate["schema_version"] == "biomedpilot.risk_score_advanced_visualization_preflight_gate.v1"
+    assert gate["status"] == "passed_preflight_only"
+    assert gate["checks"]["time_horizon_present"] is True
+    assert gate["checks"]["outcome_mapping_present"] is True
+    assert gate["checks"]["minimum_event_count_met"] is True
+    assert gate["checks"]["threshold_grid_valid"] is True
+    assert gate["checks"]["clinical_boundary_acknowledged"] is True
+    assert gate["formal_execution_enabled"] is False
+    assert gate["writes_result_index"] is False
+    assert gate["creates_plot_artifact"] is False
+    assert gate["report_ready_eligible"] is False
+
+
+def test_risk_score_advanced_visualization_preflight_blocks_invalid_inputs(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    gate = build_risk_score_advanced_visualization_preflight_gate(
+        tmp_path,
+        preflight_config={
+            "time_horizon_days": 0,
+            "outcome_mapping": {"time_field": "", "event_field": ""},
+            "event_count": 2,
+            "minimum_event_count": 10,
+            "threshold_probability_grid": [0.5, 0.2, 1.1],
+            "clinical_boundary_acknowledged": False,
+        },
+    )
+
+    assert gate["status"] == "blocked"
+    assert "time_horizon_invalid" in gate["blockers"]
+    assert "outcome_time_field_missing" in gate["blockers"]
+    assert "outcome_event_field_missing" in gate["blockers"]
+    assert "minimum_event_count_not_met_for_advanced_visualization" in gate["blockers"]
+    assert "threshold_probability_grid_invalid" in gate["blockers"]
+    assert "clinical_boundary_acknowledgement_missing" in gate["blockers"]
 
 
 def test_risk_score_plot_artifact_schema_blocks_nonformal_and_clinical_fields(tmp_path: Path) -> None:
