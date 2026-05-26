@@ -17,7 +17,7 @@ from .gsea import evaluate_gsea_report_ready_gate
 from .ora import evaluate_ora_report_ready_gate
 from .renderer_capability import build_report_renderer_capability_snapshot
 from .renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
-from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
+from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate, evaluate_risk_score_report_ready_gate
 
 
 FULL_INTEGRATED_REPORT_READY_SCHEMA_VERSION = "biomedpilot.full_integrated_report_gate.v1"
@@ -29,6 +29,7 @@ FULL_INTEGRATED_RENDERED_EXPORTS_SCHEMA_VERSION = "biomedpilot.full_integrated_r
 FULL_INTEGRATED_DOCX_CONVERSION_LOG_SCHEMA_VERSION = "biomedpilot.full_integrated_docx_conversion_log.v1"
 FULL_INTEGRATED_PDF_CONVERSION_LOG_SCHEMA_VERSION = "biomedpilot.full_integrated_pdf_conversion_log.v1"
 REQUIRED_SECTION_IDS = ("formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox")
+OPTIONAL_SECTION_IDS = ("risk_score_validation",)
 PACKAGE_DIRECTORIES = ("sections", "tables", "plots", "manifests", "logs", "provenance")
 PACKAGE_REQUIRED_FILES = (
     "integrated_report.md",
@@ -47,6 +48,7 @@ SECTION_TASK_TYPES = {
     "gsea_preranked": ("gsea_preranked",),
     "survival_km_logrank": ("survival_km_logrank",),
     "cox": ("cox_univariate", "cox_multivariate"),
+    "risk_score_validation": ("risk_score",),
 }
 SECTION_LABELS = {
     "formal_deg": "Formal DEG",
@@ -54,6 +56,7 @@ SECTION_LABELS = {
     "gsea_preranked": "Preranked GSEA",
     "survival_km_logrank": "KM/log-rank survival",
     "cox": "Cox clinical association",
+    "risk_score_validation": "Risk score validation",
 }
 SECTION_PLOT_REQUIREMENTS = {
     "formal_deg": "formal_deg_plot_or_explicit_table_only_mode",
@@ -61,15 +64,18 @@ SECTION_PLOT_REQUIREMENTS = {
     "gsea_preranked": "gsea_plot_or_explicit_table_only_mode",
     "survival_km_logrank": "formal_km_plot_artifact_required_after_survival_report_ready_exists",
     "cox": "formal_cox_plot_artifact_required_after_survival_report_ready_exists",
+    "risk_score_validation": "risk_score_nomogram_calibration_decision_curve_or_explicit_table_only_mode",
 }
 SUPPORTED_EXPORT_FORMATS = ("markdown", "pdf", "docx")
 SURVIVAL_CLINICAL_SECTION_SCOPES = {
     "survival_km_logrank": ("survival_km_logrank_only",),
     "cox": ("cox_univariate_only", "cox_multivariate_only"),
+    "risk_score_validation": ("risk_score_validation_only",),
 }
 SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES = {
     "survival_km_logrank": {"survival_km_logrank_only": "km_logrank_report.md"},
     "cox": {"cox_univariate_only": "cox_univariate_report.md", "cox_multivariate_only": "cox_multivariate_report.md"},
+    "risk_score_validation": {"risk_score_validation_only": "risk_score_validation_report.md"},
 }
 SECTION_PACKAGE_REQUIRED_FILES = (
     "README_limitations.md",
@@ -866,14 +872,14 @@ def evaluate_full_integrated_report_gate(
     root = Path(project_root).expanduser().resolve()
     registry = load_registry(root)
     entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
-    section_ids = tuple(include_sections or REQUIRED_SECTION_IDS)
     explicit = section_result_ids or {}
+    section_ids = _requested_section_ids(include_sections=include_sections, explicit_result_ids=explicit)
     blockers: list[str] = []
     warnings: list[str] = []
     section_rows: list[dict[str, Any]] = []
     checks = {
         "result_index_exists": bool(entries),
-        "all_required_section_ids_requested": set(section_ids) == set(REQUIRED_SECTION_IDS),
+        "all_required_section_ids_requested": set(REQUIRED_SECTION_IDS).issubset(set(section_ids)),
         "required_sections_present": True,
         "all_sections_formal_computed": True,
         "all_sections_have_result_index_v2_fields": True,
@@ -928,11 +934,14 @@ def evaluate_full_integrated_report_gate(
         "allow_markdown_only": allow_markdown_only,
         "allow_missing_optional_sections": allow_missing_optional_sections,
         "required_sections": list(section_ids),
+        "required_section_ids": list(REQUIRED_SECTION_IDS),
+        "optional_section_ids": list(OPTIONAL_SECTION_IDS),
+        "included_optional_sections": [section_id for section_id in section_ids if section_id in OPTIONAL_SECTION_IDS],
         "section_rows": section_rows,
         "prerequisite_rows": prerequisite_rows,
         "prerequisite_summary": prerequisite_summary,
         "survival_clinical_report_ready_required": True,
-        "survival_clinical_section_package_policy": "KM/Cox section-only packages may satisfy section prerequisites only after package integrity validation passes; they do not enable full integrated export by themselves.",
+        "survival_clinical_section_package_policy": "KM/Cox/risk-score section-only packages may satisfy section prerequisites only after package integrity validation passes; they do not enable clinical conclusions by themselves.",
         "export_activation_status": "eligible_for_markdown_export" if status == "eligible_for_full_integrated_report" else "blocked_until_full_integrated_section_prerequisites_pass",
         "export_activation_blocker": export_activation_blocker,
         "enabled_export_formats": ["markdown"] if status == "eligible_for_full_integrated_report" else [],
@@ -957,6 +966,17 @@ def evaluate_full_integrated_report_gate(
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
+
+
+def _requested_section_ids(*, include_sections: list[str] | None, explicit_result_ids: dict[str, str]) -> tuple[str, ...]:
+    requested: list[str] = []
+    for section_id in include_sections or list(REQUIRED_SECTION_IDS):
+        if section_id and section_id not in requested:
+            requested.append(section_id)
+    for section_id, result_id in explicit_result_ids.items():
+        if section_id and result_id and section_id not in requested:
+            requested.append(section_id)
+    return tuple(requested)
 
 
 def _section_row(root: Path, entries: list[dict[str, Any]], section_id: str, explicit_result_id: str) -> dict[str, Any]:
@@ -1066,6 +1086,8 @@ def _section_report_gate(root: Path, section_id: str, result_id: str) -> dict[st
         return evaluate_km_logrank_report_ready_gate(root, result_id=result_id)
     if section_id == "cox":
         return evaluate_cox_report_ready_gate(root, result_id=result_id)
+    if section_id == "risk_score_validation":
+        return evaluate_risk_score_report_ready_gate(root, result_id=result_id)
     return {
         "schema_version": "biomedpilot.survival_clinical_report_ready_gate.placeholder.v1",
         "status": "blocked",
@@ -1082,6 +1104,7 @@ def _section_report_status(section_id: str, gate: dict[str, Any]) -> str:
         "gsea_preranked": "eligible_for_gsea_report_ready",
         "survival_km_logrank": "eligible_for_km_logrank_report_ready",
         "cox": "eligible_for_cox_report_ready",
+        "risk_score_validation": "eligible_for_risk_score_report_ready",
     }
     return "passed" if gate.get("status") == passing.get(section_id) else "blocked"
 
@@ -1105,7 +1128,7 @@ def _full_integrated_prerequisite_rows(section_rows: list[dict[str, Any]], *, se
             blockers.append(f"full_integrated_prerequisite_source_table_missing:{section_id}")
         if section.get("section_report_ready_status") != "passed":
             blockers.append(f"full_integrated_prerequisite_section_report_ready_not_passed:{section_id}")
-        if section_id in {"survival_km_logrank", "cox"}:
+        if section_id in SURVIVAL_CLINICAL_SECTION_SCOPES:
             package_validation = section.get("section_package_validation") if isinstance(section.get("section_package_validation"), dict) else {}
             if package_validation.get("status") != "passed":
                 blockers.append(f"full_integrated_prerequisite_survival_clinical_section_package_not_passed:{section_id}")
@@ -1821,6 +1844,8 @@ def _section_id_from_task(task_type: str) -> str:
         return "survival_km"
     if task_type in {"cox_univariate", "cox_multivariate"}:
         return "cox"
+    if task_type == "risk_score":
+        return "risk_score"
     return _safe_name(task_type or "section")
 
 

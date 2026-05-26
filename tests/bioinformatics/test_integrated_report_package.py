@@ -20,8 +20,9 @@ from app.bioinformatics.reports.integrated import (
     evaluate_full_integrated_report_renderer_gate,
 )
 from app.bioinformatics.reports.renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
-from app.bioinformatics.reports.survival_clinical import create_cox_report_ready_package, create_km_logrank_report_ready_package
+from app.bioinformatics.reports.survival_clinical import create_cox_report_ready_package, create_km_logrank_report_ready_package, create_risk_score_report_ready_package
 from app.bioinformatics.results.registry import save_registry
+from tests.bioinformatics.test_risk_score_report_ready_gate import _create_b42_b44_b45_artifacts, _register_risk_score
 from tests.bioinformatics.test_survival_clinical_report_ready_gate import _cox_entry, _km_entry
 
 
@@ -173,6 +174,85 @@ def test_integrated_report_markdown_export_activates_when_all_section_prerequisi
     assert (package_path / "sections" / "cox.md").is_file()
     assert package["renderer_gate"]["renderer_id"] == "builtin_markdown"
     assert "clinical diagnosis" in (package_path / "README_limitations.md").read_text(encoding="utf-8")
+
+
+def test_integrated_report_can_include_risk_score_validation_optional_section(tmp_path: Path, monkeypatch) -> None:
+    save_registry(
+        tmp_path,
+        [
+            _section_entry(tmp_path, "deg-formal", "deg", "deg_result_table"),
+            _section_entry(tmp_path, "ora-formal", "ora_enrichment", "ora_result_table"),
+            _section_entry(tmp_path, "gsea-formal", "gsea_preranked", "gsea_result_table"),
+            _km_entry(tmp_path),
+            _cox_entry(tmp_path),
+        ],
+    )
+    _register_risk_score(tmp_path)
+    _create_b42_b44_b45_artifacts(tmp_path)
+    assert create_km_logrank_report_ready_package(tmp_path, result_id="km-ready")["status"] == "survival_km_logrank_only_report_ready_package_created"
+    assert create_cox_report_ready_package(tmp_path, result_id="cox-ready")["status"] == "cox_univariate_only_report_ready_package_created"
+    risk_package = create_risk_score_report_ready_package(tmp_path, result_id="risk-1")
+    assert risk_package["status"] == "risk_score_validation_only_report_ready_package_created"
+    monkeypatch.setattr(integrated, "evaluate_formal_deg_report_ready_gate", lambda _root, result_id=None: _eligible_section_gate("eligible_for_formal_deg_report_ready", result_id or "deg-formal"))
+    monkeypatch.setattr(integrated, "evaluate_ora_report_ready_gate", lambda _root, result_id=None, **_kwargs: _eligible_section_gate("eligible_for_ora_report_ready", result_id or "ora-formal"))
+    monkeypatch.setattr(integrated, "evaluate_gsea_report_ready_gate", lambda _root, result_id=None, **_kwargs: _eligible_section_gate("eligible_for_gsea_report_ready", result_id or "gsea-formal"))
+
+    gate = integrated.evaluate_full_integrated_report_gate(
+        tmp_path,
+        include_sections=["formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox", "risk_score_validation"],
+        section_result_ids={"risk_score_validation": "risk-1"},
+    )
+
+    assert gate["status"] == "eligible_for_full_integrated_report"
+    assert gate["checks"]["all_required_section_ids_requested"] is True
+    assert gate["included_optional_sections"] == ["risk_score_validation"]
+    sections = {row["section_id"]: row for row in gate["prerequisite_rows"]}
+    assert sections["risk_score_validation"]["status"] == "passed"
+    assert sections["risk_score_validation"]["section_only_package_sufficient"] is True
+    assert sections["risk_score_validation"]["section_package_scope"] == "risk_score_validation_only"
+    assert sections["risk_score_validation"]["section_report_ready_gate_schema"] == "biomedpilot.risk_score_report_ready_gate.v1"
+
+    package = create_full_integrated_report_package(
+        tmp_path,
+        include_sections=["formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox", "risk_score_validation"],
+        section_result_ids={"risk_score_validation": "risk-1"},
+    )
+
+    assert package["status"] == "full_integrated_report_package_created"
+    package_path = Path(package["package_path"])
+    assert (package_path / "sections" / "risk_score.md").is_file()
+    manifest = json.loads((package_path / "manifests" / "section_manifest.json").read_text(encoding="utf-8"))
+    section_ids = {section["section_id"] for section in manifest["sections"]}
+    assert "risk_score_validation" in section_ids
+    limitations = (package_path / "README_limitations.md").read_text(encoding="utf-8")
+    assert "validated risk score interpretation" in limitations
+
+
+def test_integrated_report_blocks_explicit_risk_score_validation_without_b46_package(tmp_path: Path, monkeypatch) -> None:
+    save_registry(
+        tmp_path,
+        [
+            _section_entry(tmp_path, "deg-formal", "deg", "deg_result_table"),
+            _section_entry(tmp_path, "ora-formal", "ora_enrichment", "ora_result_table"),
+            _section_entry(tmp_path, "gsea-formal", "gsea_preranked", "gsea_result_table"),
+            _km_entry(tmp_path),
+            _cox_entry(tmp_path),
+        ],
+    )
+    _register_risk_score(tmp_path)
+    _create_b42_b44_b45_artifacts(tmp_path)
+    assert create_km_logrank_report_ready_package(tmp_path, result_id="km-ready")["status"] == "survival_km_logrank_only_report_ready_package_created"
+    assert create_cox_report_ready_package(tmp_path, result_id="cox-ready")["status"] == "cox_univariate_only_report_ready_package_created"
+    monkeypatch.setattr(integrated, "evaluate_formal_deg_report_ready_gate", lambda _root, result_id=None: _eligible_section_gate("eligible_for_formal_deg_report_ready", result_id or "deg-formal"))
+    monkeypatch.setattr(integrated, "evaluate_ora_report_ready_gate", lambda _root, result_id=None, **_kwargs: _eligible_section_gate("eligible_for_ora_report_ready", result_id or "ora-formal"))
+    monkeypatch.setattr(integrated, "evaluate_gsea_report_ready_gate", lambda _root, result_id=None, **_kwargs: _eligible_section_gate("eligible_for_gsea_report_ready", result_id or "gsea-formal"))
+
+    gate = integrated.evaluate_full_integrated_report_gate(tmp_path, section_result_ids={"risk_score_validation": "risk-1"})
+
+    assert gate["status"] == "blocked"
+    assert "risk_score_validation" in gate["included_optional_sections"]
+    assert "full_integrated_prerequisite_survival_clinical_section_package_not_passed:risk_score_validation" in gate["blockers"]
+    assert "section_package_artifact_missing:risk_score_validation:risk_score_validation_only" in gate["blockers"]
 
 
 def test_docx_preflight_validates_markdown_package_but_keeps_activation_blocked(tmp_path: Path, monkeypatch) -> None:
