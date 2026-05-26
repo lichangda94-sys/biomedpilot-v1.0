@@ -99,8 +99,7 @@ def validate_risk_score_result_index_entry(entry: dict[str, Any]) -> dict[str, A
     artifact_types = {str(item.get("artifact_type") or "") for item in entry.get("output_artifacts", []) or [] if isinstance(item, dict)}
     if "risk_score_result_table" not in artifact_types:
         blockers.append("missing_risk_score_result_table_artifact")
-    if entry.get("plot_artifacts"):
-        blockers.append("risk_score_plot_artifacts_not_enabled")
+    blockers.extend(_validate_plot_artifacts(entry))
     if entry.get("report_artifacts"):
         blockers.append("risk_score_report_artifacts_not_enabled")
     if entry.get("report_ready_eligible") is True:
@@ -112,3 +111,35 @@ def validate_risk_score_result_index_entry(entry: dict[str, Any]) -> dict[str, A
     blockers.extend(str(item) for item in base.get("blockers", []) or [])
     warnings.extend(str(item) for item in base.get("warnings", []) or [])
     return {"status": "blocked" if blockers else "passed", "blockers": list(dict.fromkeys(blockers)), "warnings": list(dict.fromkeys(warnings))}
+
+
+def _validate_plot_artifacts(entry: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    artifacts = entry.get("plot_artifacts") if isinstance(entry.get("plot_artifacts"), list) else []
+    for index, artifact in enumerate(artifacts):
+        if not isinstance(artifact, dict):
+            blockers.append(f"risk_score_plot_artifact_{index}:invalid")
+            continue
+        if artifact.get("plot_artifact_scope") != "formal_risk_score_plot_artifact":
+            blockers.append(f"risk_score_plot_artifact_{index}:invalid_scope")
+        if artifact.get("plot_type") not in {"risk_score_distribution_plot"}:
+            blockers.append(f"risk_score_plot_artifact_{index}:unsupported_plot_type:{artifact.get('plot_type')}")
+        semantics = normalize_result_semantics(artifact.get("plot_semantics") or artifact.get("source_result_semantics"), default="")
+        if semantics != "formal_computed_result":
+            blockers.append(f"risk_score_plot_artifact_{index}:non_formal_semantics:{semantics}")
+        if artifact.get("source_result_id") and artifact.get("source_result_id") != entry.get("result_id"):
+            blockers.append(f"risk_score_plot_artifact_{index}:source_result_mismatch")
+        if artifact.get("report_ready_eligible") is True:
+            blockers.append(f"risk_score_plot_artifact_{index}:report_ready_not_allowed")
+        for forbidden in ("risk_group", "high_risk_group", "low_risk_group", "clinical_risk_group", "clinical_conclusion", "diagnosis", "prognosis_label", "treatment_recommendation"):
+            if _contains_key(artifact, forbidden):
+                blockers.append(f"risk_score_plot_artifact_{index}:forbidden_field:{forbidden}")
+    return blockers
+
+
+def _contains_key(value: Any, key_name: str) -> bool:
+    if isinstance(value, dict):
+        return any(str(key) == key_name or _contains_key(item, key_name) for key, item in value.items())
+    if isinstance(value, list):
+        return any(_contains_key(item, key_name) for item in value)
+    return False

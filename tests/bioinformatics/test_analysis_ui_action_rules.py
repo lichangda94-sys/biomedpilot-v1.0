@@ -217,6 +217,18 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert "b38_risk_score_plot_renderer_execution_required" in artifact_action["disabled_reason"]
     assert "B37 schema/renderer gate only" in artifact_action["disabled_reason"]
 
+    enabled_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_plot_artifact_gate={"status": "passed", "blockers": [], "creates_plot_artifact": True, "writes_result_index": True},
+        report_gate={"status": "blocked"},
+    )
+    enabled_action = _row(enabled_rows, "risk_score_plot_artifact")
+    assert enabled_action["enabled"] is True
+    assert enabled_action["button_behavior"] == "enabled_risk_score_distribution_svg_artifact_only"
+    assert "does not create risk groups" in enabled_action["next_action"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(

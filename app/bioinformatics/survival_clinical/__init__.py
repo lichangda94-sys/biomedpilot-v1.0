@@ -49,6 +49,7 @@ from .risk_score_plot_schema import (
     build_risk_score_plot_artifact_activation_gate,
     build_risk_score_plot_artifact_schema_candidate,
     check_risk_score_plot_renderer_dependencies,
+    create_risk_score_plot_artifact,
     validate_risk_score_plot_artifact_schema,
 )
 from .risk_score_result_schema import build_risk_score_result_schema_gate, validate_risk_score_result_index_entry, validate_risk_score_result_table
@@ -78,6 +79,7 @@ __all__ = [
     "build_risk_score_plot_nomogram_gate",
     "build_survival_outcome_gate",
     "check_risk_score_plot_renderer_dependencies",
+    "create_risk_score_plot_artifact",
     "confirm_cox_multivariate_parameters",
     "confirm_cox_univariate_parameters",
     "confirm_km_logrank_parameters",

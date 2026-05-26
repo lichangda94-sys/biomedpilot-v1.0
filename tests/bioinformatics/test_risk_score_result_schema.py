@@ -46,6 +46,7 @@ def test_risk_score_result_table_requires_numeric_scores_and_forbids_groups() ->
 
 def test_risk_score_result_index_schema_allows_only_formal_statistical_result_without_report_ready() -> None:
     assert validate_risk_score_result_index_entry(_valid_entry())["status"] == "passed"
+    assert validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [_valid_plot_artifact()]})["status"] == "passed"
 
     imported = validate_risk_score_result_index_entry({**_valid_entry(), "result_semantics": "imported_external_result"})
     assert "non_formal_semantics:imported_external_result" in imported["blockers"]
@@ -56,8 +57,8 @@ def test_risk_score_result_index_schema_allows_only_formal_statistical_result_wi
     clinical = validate_risk_score_result_index_entry({**_valid_entry(), "clinical_conclusion": "poor prognosis"})
     assert "forbidden_clinical_field:clinical_conclusion" in clinical["blockers"]
 
-    plot = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [{"artifact_type": "nomogram"}]})
-    assert "risk_score_plot_artifacts_not_enabled" in plot["blockers"]
+    plot = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [{"plot_artifact_scope": "formal_risk_score_plot_artifact", "plot_type": "risk_score_nomogram", "plot_semantics": "formal_computed_result"}]})
+    assert "risk_score_plot_artifact_0:unsupported_plot_type:risk_score_nomogram" in plot["blockers"]
 
 
 def _valid_entry() -> dict[str, object]:
@@ -88,4 +89,18 @@ def _valid_entry() -> dict[str, object]:
         "schema_version": "biomedpilot.result_index_entry.v1",
         "report_ready_eligible": False,
         "migration_status": "native_v2",
+    }
+
+
+def _valid_plot_artifact() -> dict[str, object]:
+    return {
+        "plot_id": "plot-risk-score-1",
+        "plot_type": "risk_score_distribution_plot",
+        "source_result_id": "risk-1",
+        "source_result_semantics": "formal_computed_result",
+        "source_task_type": "risk_score",
+        "plot_semantics": "formal_computed_result",
+        "plot_artifact_scope": "formal_risk_score_plot_artifact",
+        "image_artifacts": [{"artifact_type": "risk_score_distribution_plot_svg", "path": "results/plots/risk.svg", "format": "svg"}],
+        "table_artifacts": [{"artifact_type": "risk_score_result_table", "path": "results/tables/risk.tsv"}],
     }

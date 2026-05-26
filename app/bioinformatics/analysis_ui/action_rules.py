@@ -1188,6 +1188,17 @@ def _risk_score_plot_nomogram_action(gate: dict[str, Any]) -> dict[str, Any]:
 
 
 def _risk_score_plot_artifact_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed":
+        return {
+            "action_id": "risk_score_plot_artifact",
+            "label": "Generate risk score plot artifact",
+            "state": "enabled_real_plot_artifact",
+            "button_behavior": "enabled_risk_score_distribution_svg_artifact_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Generate a real SVG risk score distribution artifact from a formal risk score result; this does not create risk groups, nomogram, report-ready output, or clinical interpretation.",
+        }
     blockers = _list(gate.get("blockers")) or ["b38_risk_score_plot_renderer_execution_required"]
     return _disabled(
         "risk_score_plot_artifact",
