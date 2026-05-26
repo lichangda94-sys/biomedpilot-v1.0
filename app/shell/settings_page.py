@@ -21,6 +21,7 @@ from app.shared.ui_components import (
     make_info_banner,
     make_key_value_panel,
     make_page_header,
+    make_section_title,
     make_secondary_nav_tabs,
     make_settings_resource_table,
     make_status_chip,
@@ -60,11 +61,11 @@ def build_settings_page(
 
     root.addWidget(
         make_page_header(
-            title="Settings / 设置中心",
-            subtitle="用户偏好、外部能力状态与本地资源概览。检测优先；安装、更新、云端配置和执行能力保持关闭。",
+            title="设置中心 / Settings",
+            subtitle="管理全局偏好、外部能力、分析资源与系统配置。",
             module_key=ModuleKey.SETTINGS.value,
             page_key="settings",
-            status_widgets=[make_status_chip("Developer Preview / detect-first", status_key="developer_preview")],
+            status_widgets=[make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview")],
         )
     )
 
@@ -116,29 +117,207 @@ def _base_page(*, object_name: str, page_key: str, semantic_key: str) -> QWidget
 def _build_settings_general_page(profile: SettingsProfile, _pixmap_loader: SettingsPixmapLoader) -> QWidget:
     page = _base_page(object_name="settingsGeneralPage", page_key="general", semantic_key=PageKey.SETTINGS_GENERAL.value)
     root = page.layout()
-    root.addWidget(
-        make_key_value_panel(
-            title="通用偏好",
-            items=[
-                KeyValueItem("default_project_path", "默认项目路径", profile.default_project_path, status_key="shell_only", semantic_state="shell_only"),
-                KeyValueItem("language", "语言", profile.language, status_key="shell_only", semantic_state="shell_only"),
-                KeyValueItem("chart_style", "图表样式", profile.chart_style, status_key="draft", semantic_state="draft"),
-                KeyValueItem("export_format", "导出格式", profile.export_format, status_key="export_disabled", semantic_state="export_disabled"),
-                KeyValueItem("cache_cleanup", "缓存清理", profile.cache_cleanup, status_key="planned", semantic_state="planned"),
-            ],
-            object_name="settingsGeneralPreferencesPanel",
-        )
-    )
-    root.addWidget(
-        make_info_banner(
-            "Settings 首屏只呈现用户可理解的偏好和状态；开发者诊断已移入单独页签并默认折叠。",
-            title="UI-D2 boundary",
-            severity="info",
-            semantic_state="shell_only",
-        )
-    )
+    grid = QGridLayout()
+    grid.setContentsMargins(0, 0, 0, 0)
+    grid.setHorizontalSpacing(SPACING["lg"])
+    grid.setVerticalSpacing(SPACING["lg"])
+    grid.addWidget(_settings_preferences_card(profile), 0, 0)
+    grid.addWidget(_settings_external_capability_overview_card(), 0, 1)
+    grid.addWidget(_settings_system_info_card(profile), 1, 0)
+    grid.setColumnStretch(0, 3)
+    grid.setColumnStretch(1, 2)
+    root.addLayout(grid)
+    root.addWidget(_settings_quick_actions_panel())
     root.addStretch(1)
     return page
+
+
+def _settings_preferences_card(profile: SettingsProfile) -> QFrame:
+    card = make_workbench_card(object_name="settingsGeneralPreferencesPanel", semantic_state="available")
+    card.setProperty("uiPrimitive", "settings_preferences_card")
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+    layout.setSpacing(SPACING["md"])
+    layout.addWidget(make_section_title("通用偏好", "用户可操作的全局偏好入口。"))
+    for title, body, value, status_key in (
+        ("界面与语言", "设置界面语言、主题和字体大小", f"{profile.language} · 浅色主题", "available"),
+        ("数据与存储", "设置默认路径、缓存与临时文件", profile.default_project_path, "testing"),
+        ("行为与启动", "设置启动行为、更新与通知偏好", "启动到工作台", "planned"),
+        ("隐私与安全", "日志级别、数据匿名化与隐私选项", "日志级别：信息", "available"),
+    ):
+        layout.addWidget(_settings_row(title, body, value, status_key=status_key))
+    return card
+
+
+def _settings_row(title: str, body: str, value: str, *, status_key: str) -> QFrame:
+    row = QFrame()
+    row.setObjectName("settingsPreferenceRow")
+    row.setProperty("uiPrimitive", "settings_row")
+    row.setProperty("statusKey", status_key)
+    row.setStyleSheet(
+        f"""
+        QFrame#settingsPreferenceRow {{
+            background: #FBFCFE;
+            border: 1px solid {COLORS["divider"]};
+            border-radius: 12px;
+        }}
+        """
+    )
+    layout = QHBoxLayout(row)
+    layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
+    layout.setSpacing(SPACING["md"])
+    icon = QLabel(title[:1])
+    icon.setObjectName("settingsRowIcon")
+    icon.setFixedSize(34, 34)
+    icon.setAlignment(Qt.AlignCenter)
+    icon.setStyleSheet(
+        f"background: {COLORS['bio_soft']}; color: {COLORS['bio']}; border-radius: 10px; font-weight: 800;"
+    )
+    layout.addWidget(icon)
+    text_col = QVBoxLayout()
+    text_col.setSpacing(2)
+    title_label = QLabel(title)
+    title_label.setObjectName("settingsRowTitle")
+    title_label.setStyleSheet(f"color: {COLORS['text']}; font-size: 15px; font-weight: 800;")
+    body_label = QLabel(body)
+    body_label.setObjectName("settingsRowDescription")
+    body_label.setWordWrap(True)
+    body_label.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['secondary']}px;")
+    text_col.addWidget(title_label)
+    text_col.addWidget(body_label)
+    layout.addLayout(text_col, 1)
+    value_label = QLabel(value)
+    value_label.setObjectName("settingsRowValue")
+    value_label.setWordWrap(True)
+    value_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: {FONT_SIZE['secondary']}px;")
+    layout.addWidget(value_label, 0)
+    layout.addWidget(make_status_chip(status_key=status_key), 0)
+    return row
+
+
+def _settings_external_capability_overview_card() -> QFrame:
+    card = make_workbench_card(object_name="settingsExternalCapabilityOverviewCard", semantic_state="testing")
+    card.setProperty("uiPrimitive", "external_capability_overview")
+    card.setProperty("installAllowed", False)
+    card.setProperty("downloadAllowed", False)
+    card.setProperty("engineExecutionAllowed", False)
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+    layout.setSpacing(SPACING["md"])
+    header = QHBoxLayout()
+    header.addWidget(make_section_title("外部能力检测总览", "仅显示状态与配置入口，不执行安装或引擎。"), 1)
+    refresh = make_action_button("重新检测", role="secondary", enabled=False, semantic_state="disabled", disabled_reason="检测动作在后续设置阶段开放。")
+    refresh.setObjectName("settingsOverviewRedetectButton")
+    header.addWidget(refresh)
+    layout.addLayout(header)
+    for name, status_key, detail in (
+        ("图像分析引擎 / Image Analysis", "available", "ImageJ/Fiji 已检测到或可配置；不在此页运行图像分析。"),
+        ("PDF OCR", "available", "OCR 能力作为外部资源状态展示。"),
+        ("本地语言模型 / Local LLM", "not_configured", "本地模型可选配置，未配置不影响基础工作台。"),
+        ("云端 AI 服务 / Cloud AI", "blocked", "云服务未配置，当前不连接云端。"),
+        ("GO / KEGG 分析资源", "planned", "资源检测与下载策略后续开放。"),
+        ("R / Bioconductor", "not_configured", "可选环境，检测后由用户主动配置。"),
+        ("Python / 包管理器", "available", "本地 Python runtime 可用于桌面壳层。"),
+    ):
+        layout.addWidget(_capability_overview_row(name, status_key, detail))
+    layout.addWidget(make_info_banner("绿色：可用；蓝色/灰色：可选或需配置；红色：不可用或当前关闭。", severity="info", semantic_state="testing"))
+    return card
+
+
+def _capability_overview_row(name: str, status_key: str, detail: str) -> QFrame:
+    row = QFrame()
+    row.setObjectName("settingsCapabilityOverviewRow")
+    row.setProperty("statusKey", status_key)
+    row.setStyleSheet(f"QFrame#settingsCapabilityOverviewRow {{ border-bottom: 1px solid {COLORS['divider']}; background: transparent; }}")
+    layout = QHBoxLayout(row)
+    layout.setContentsMargins(0, SPACING["xs"], 0, SPACING["xs"])
+    layout.setSpacing(SPACING["sm"])
+    text_col = QVBoxLayout()
+    title = QLabel(name)
+    title.setObjectName("settingsCapabilityOverviewTitle")
+    title.setStyleSheet(f"color: {COLORS['text']}; font-weight: 750;")
+    desc = QLabel(detail)
+    desc.setObjectName("settingsCapabilityOverviewDetail")
+    desc.setWordWrap(True)
+    desc.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['caption']}px;")
+    text_col.addWidget(title)
+    text_col.addWidget(desc)
+    layout.addLayout(text_col, 1)
+    layout.addWidget(make_status_chip(status_key=status_key), 0)
+    configure = make_action_button("配置", role="ghost", size="small", enabled=False, semantic_state="disabled", disabled_reason="配置入口保留，当前不执行外部能力配置。")
+    configure.setObjectName("settingsCapabilityConfigureButton")
+    layout.addWidget(configure, 0)
+    return row
+
+
+def _settings_system_info_card(profile: SettingsProfile) -> QFrame:
+    card = make_workbench_card(object_name="settingsSystemInfoCard", semantic_state="available")
+    card.setProperty("uiPrimitive", "system_info_card")
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+    layout.setSpacing(SPACING["md"])
+    layout.addWidget(make_section_title("系统信息", "本地测试版运行环境概览。"))
+    for label, value in (
+        ("应用版本", "0.1.0 internal beta (Developer Preview)"),
+        ("运行模式", "本地模式"),
+        ("操作系统", "macOS / 当前本机环境"),
+        ("内存使用", "暂不可用"),
+        ("磁盘使用", "暂不可用"),
+    ):
+        row = QHBoxLayout()
+        key = QLabel(label)
+        key.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['secondary']}px;")
+        val = QLabel(value)
+        val.setWordWrap(True)
+        val.setStyleSheet(f"color: {COLORS['text']}; font-weight: 650;")
+        row.addWidget(key)
+        row.addWidget(val, 1)
+        layout.addLayout(row)
+    copy = make_action_button("复制系统信息", role="secondary", enabled=False, semantic_state="disabled", disabled_reason="复制动作后续开放；当前只展示系统信息布局。")
+    copy.setObjectName("settingsCopySystemInfoButton")
+    layout.addWidget(copy, 0, Qt.AlignLeft)
+    return card
+
+
+def _settings_quick_actions_panel() -> QFrame:
+    panel = make_workbench_card(object_name="settingsQuickActionsPanel", semantic_state="planned")
+    panel.setProperty("uiPrimitive", "quick_actions_panel")
+    layout = QVBoxLayout(panel)
+    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+    layout.setSpacing(SPACING["md"])
+    layout.addWidget(make_section_title("快速操作", "常用设置入口；未开放动作保持禁用。"))
+    row = QHBoxLayout()
+    row.setSpacing(SPACING["md"])
+    for title, body, status_key in (
+        ("管理默认路径", "设置数据、结果与缓存路径", "testing"),
+        ("检查更新", "当前已是最新版本 0.1.0", "planned"),
+        ("清理缓存", "释放临时文件与缓存空间", "planned"),
+        ("导出日志", "导出系统与运行日志", "planned"),
+    ):
+        row.addWidget(_quick_action_card(title, body, status_key=status_key), 1)
+    layout.addLayout(row)
+    return panel
+
+
+def _quick_action_card(title: str, body: str, *, status_key: str) -> QFrame:
+    card = QFrame()
+    card.setObjectName("settingsQuickActionCard")
+    card.setProperty("statusKey", status_key)
+    card.setStyleSheet(
+        f"QFrame#settingsQuickActionCard {{ background: #FFFFFF; border: 1px solid {COLORS['border']}; border-radius: 12px; }}"
+    )
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(SPACING["md"], SPACING["md"], SPACING["md"], SPACING["md"])
+    layout.setSpacing(SPACING["xs"])
+    title_label = QLabel(title)
+    title_label.setStyleSheet(f"color: {COLORS['text']}; font-weight: 800;")
+    body_label = QLabel(body)
+    body_label.setWordWrap(True)
+    body_label.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['secondary']}px;")
+    layout.addWidget(title_label)
+    layout.addWidget(body_label)
+    layout.addWidget(make_status_chip(status_key=status_key), 0, Qt.AlignLeft)
+    return card
 
 
 def _build_settings_external_capabilities_page(_profile: SettingsProfile, pixmap_loader: SettingsPixmapLoader) -> QWidget:

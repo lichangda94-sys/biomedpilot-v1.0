@@ -11,6 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtWidgets import QApplication, QLabel, QListWidget, QPushButton
 
+    from app import labtools_runtime
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import PageKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
@@ -66,20 +67,22 @@ def test_reagent_pilot_saves_template_and_preparation_record(qt_app, tmp_path: P
         save_record.click()
 
         templates_file = project_root / "project_storage" / "labtools" / "templates" / "reagent_templates.json"
-        records_file = project_root / "project_storage" / "labtools" / "records" / "reagent_preparations.json"
+        legacy_records_file = project_root / "project_storage" / "labtools" / "records" / "reagent_preparations.json"
+        record_index_file = project_root / "project_storage" / "labtools" / "labtools_record_index.json"
         assert templates_file.exists()
-        assert records_file.exists()
+        assert record_index_file.exists()
         assert str(templates_file.resolve()).startswith(str((project_root / "project_storage" / "labtools").resolve()))
-        assert str(records_file.resolve()).startswith(str((project_root / "project_storage" / "labtools").resolve()))
+        assert str(record_index_file.resolve()).startswith(str((project_root / "project_storage" / "labtools").resolve()))
+        assert not legacy_records_file.exists()
         assert not (home / ".labtools").exists()
 
         templates_payload = json.loads(templates_file.read_text(encoding="utf-8"))
-        records_payload = json.loads(records_file.read_text(encoding="utf-8"))
+        records = labtools_runtime.list_local_record_summaries(project_root, record_type="reagent_preparation")
         assert templates_payload["templates"]
-        assert records_payload["records"]
+        assert records
 
         assert history_list.count() >= 1
-        assert "Saved to project storage" in status.text() or "已保存到项目存储" in status.text()
+        assert "本地实验记录摘要" in status.text()
     finally:
         window.close()
         window.deleteLater()
@@ -104,7 +107,7 @@ def test_reagent_pilot_missing_project_context_keeps_save_disabled(qt_app) -> No
         qt_app.processEvents()
 
 
-def test_reagent_pilot_corrupted_history_json_shows_error_state(qt_app, tmp_path: Path) -> None:
+def test_reagent_pilot_legacy_corrupted_history_json_is_ignored_after_record_index_migration(qt_app, tmp_path: Path) -> None:
     project_root = tmp_path / "project"
     records_dir = project_root / "project_storage" / "labtools" / "records"
     records_dir.mkdir(parents=True, exist_ok=True)
@@ -117,7 +120,8 @@ def test_reagent_pilot_corrupted_history_json_shows_error_state(qt_app, tmp_path
         _open_reagent(window)
 
         status = window.findChild(QLabel, "labtoolsReagentHistoryStatus")
-        assert "JSON" in status.text() or "读取失败" in status.text()
+        assert "JSON" not in status.text()
+        assert "暂无本地配制记录摘要" in status.text()
     finally:
         window.close()
         window.deleteLater()

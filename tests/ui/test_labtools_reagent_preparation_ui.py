@@ -77,10 +77,10 @@ def test_reagent_preparation_renders_three_panel_safe_ui(labtools_reagent_window
     assert content.findChild(QLabel, "labtoolsReagentResultPrimary") is not None
     assert content.findChild(QPushButton, "labtoolsReagentTemplateRow") is not None
     assert content.findChild(QLineEdit, "labtoolsReagentSearchInput") is not None
-    assert "试剂模板列表" in labels
-    assert "本次配制计算预览" in labels
-    assert "模板详情 / 编辑侧栏" in labels
-    assert "不默认写入 ~/.labtools" in labels
+    assert "试剂模板" in labels
+    assert "本次配制" in labels
+    assert "模板编辑：PBS 1x" in labels
+    assert "不默认写入个人目录" in labels
 
 
 def test_pbs_template_detail_and_validation_are_visible(labtools_reagent_window) -> None:
@@ -117,7 +117,7 @@ def test_reagent_preparation_calculates_preview_and_keeps_review_notice(labtools
     assert "NaCl: 4 g" in result_text
     assert any("ddH2O" in row.text() and "500 mL" in row.text() for row in result_rows)
     assert "实验计算结果需由用户复核后使用" in issue.text()
-    assert "不会写入 ~/.labtools" in issue.text()
+    assert "不会写入个人目录" in issue.text()
     assert issue.property("hasError") in (False, None)
 
 

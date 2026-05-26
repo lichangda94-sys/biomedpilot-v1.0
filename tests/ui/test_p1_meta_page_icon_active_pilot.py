@@ -125,11 +125,11 @@ def test_meta_page_icons_do_not_change_ia_or_execution_gates(meta_workspace) -> 
     assert meta_workspace.network_meta_enabled() is False
     assert all(item.property("interactionMode") == "select_only" for item in nav_items)
     assert all(item.property("formalActionEnabled") is False for item in nav_items)
-    assert {item.property("pageKey") for item in nav_items if item.property("statusKey") == "planned"} == {
+    assert {item.property("pageKey") for item in nav_items if item.property("semanticState") == "planned"} == {
         "quality_assessment",
         "analysis_tasks",
     }
-    assert {item.property("pageKey") for item in nav_items if item.property("statusKey") == "shell_only"} == {
+    assert {item.property("pageKey") for item in nav_items if item.property("semanticState") == "shell_only"} == {
         "project_home",
         "result_report",
         "report_export",

@@ -48,7 +48,7 @@ from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.semantic_keys import ModuleKey, PageKey
 from app.shared.settings import SettingsProfile
-from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
+from app.shared.testing_mode import generate_feedback_template, generate_lan_feedback_template, lan_real_world_feedback_summary, testing_mode_summary
 from app.shared.ui_components import (
     make_left_list_middle_form_right_preview,
     make_preview_card,
@@ -358,13 +358,14 @@ class MainWindow(QMainWindow):
         title_label.setObjectName("labtoolsShellTitle")
         title_label.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         title_label.setProperty("semanticKey", semantic_key)
-        title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        title_label.setStyleSheet("font-size: 30px; font-weight: 800; color: #0F172A;")
         root.addWidget(title_label)
         subtitle_label = QLabel(subtitle)
         subtitle_label.setObjectName("labtoolsShellSubtitle")
         subtitle_label.setWordWrap(True)
+        subtitle_label.setStyleSheet("font-size: 15px; color: #334155;")
         root.addWidget(subtitle_label)
-        root.addWidget(make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview"))
+        root.addWidget(make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview"), 0, Qt.AlignLeft)
         return content
 
     def _build_labtools_home_content(self) -> QWidget:
@@ -701,6 +702,16 @@ class MainWindow(QMainWindow):
         note.setObjectName("labtoolsLanBoundaryNote")
         note.setWordWrap(True)
         layout.addWidget(note)
+        feedback_row = QHBoxLayout()
+        feedback = make_button("生成 LAN 真实测试反馈报告", role="secondary")
+        feedback.setObjectName("labtoolsGenerateLanFeedbackButton")
+        feedback.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        feedback.setProperty("feedbackType", "labtools_lan_real_world")
+        feedback.setProperty("networkRequestAllowed", False)
+        feedback.clicked.connect(self.generate_lan_testing_feedback_template)
+        feedback_row.addWidget(feedback)
+        feedback_row.addStretch(1)
+        layout.addLayout(feedback_row)
         self._refresh_labtools_lan_client_token_status()
         return frame
 
@@ -795,15 +806,16 @@ class MainWindow(QMainWindow):
             page_key="general_calculators",
             semantic_key=PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
             title="通用计算器 / General Calculator",
-            subtitle="Quick Calculator 与 Dynamic Formula Solver 已接入后端计算/公式求解；保存历史与文件导出仍保持禁用。",
+            subtitle="快速计算与动态公式求解，结果需用户复核。",
         )
         root = content.layout()
         nav = QHBoxLayout()
-        back = make_button("返回 LabTools 首页", role="secondary")
+        back = make_button("← 返回 LabTools 首页", role="secondary")
         back.setObjectName("labtoolsBackButton")
         back.clicked.connect(self._show_labtools_home)
         nav.addWidget(back)
-        nav.addWidget(make_status_chip("backend_ready / ui_adapter_needed" if status.available else "backend unavailable", status_key="testing" if status.available else "blocked"))
+        nav.addWidget(make_status_chip("本地测试版", status_key="developer_preview"))
+        nav.addWidget(make_status_chip("需复核", status_key="testing" if status.available else "blocked"))
         nav.addStretch(1)
         root.addLayout(nav)
         if not status.available:
@@ -813,7 +825,7 @@ class MainWindow(QMainWindow):
             return
 
         mode_row = QHBoxLayout()
-        quick_button = make_button("快速计算", role="primary")
+        quick_button = make_button("快速计算", role="secondary")
         quick_button.setObjectName("labtoolsGeneralModeButton")
         quick_button.setProperty("modeKey", "quick_calculator")
         formula_button = make_button("动态公式求解", role="secondary")
@@ -833,6 +845,13 @@ class MainWindow(QMainWindow):
         quick_button.clicked.connect(lambda: self._labtools_general_stack.setCurrentWidget(quick_page))
         formula_button.clicked.connect(lambda: self._labtools_general_stack.setCurrentWidget(formula_page))
         root.addWidget(self._labtools_general_stack)
+        root.addWidget(
+            self._labtools_notice_card(
+                "本工具提供计算辅助，不替代实验设计与结果判断。请在正式实验前自行确认单位、浓度、体积与操作条件。",
+                object_name="labtoolsReviewNotice",
+                semantic_key=PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
+            )
+        )
         root.addStretch(1)
         self._set_labtools_content(content)
 
@@ -851,19 +870,31 @@ class MainWindow(QMainWindow):
         selector_card.setStyleSheet("QFrame#labtoolsCalculatorSelectorCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         selector_layout = QVBoxLayout(selector_card)
         selector_layout.setContentsMargins(16, 14, 16, 14)
-        selector_layout.addWidget(QLabel("Quick Calculator 任务"))
+        selector_layout.addWidget(make_section_title("计算任务", "选择常用实验计算任务。"))
+        search = QLineEdit()
+        search.setObjectName("labtoolsCalculatorTaskSearchInput")
+        search.setPlaceholderText("搜索计算任务...")
+        selector_layout.addWidget(search)
         self._labtools_quick_task_combo = QComboBox()
         self._labtools_quick_task_combo.setObjectName("labtoolsQuickTaskCombo")
         self._labtools_quick_task_combo.setProperty("pageKey", "quick_calculator")
         for task in labtools_runtime.list_quick_tasks():
             label = f"{task.title} · {task.category}"
             self._labtools_quick_task_combo.addItem(label, task.task_id)
+        self._labtools_quick_task_combo.setVisible(False)
         selector_layout.addWidget(self._labtools_quick_task_combo)
+        for task in labtools_runtime.list_quick_tasks():
+            task_button = make_button(f"{task.title}\n{task.description}", role="ghost", size="small", semantic_state="testing")
+            task_button.setObjectName("labtoolsCalculatorTaskItem")
+            task_button.setProperty("taskId", task.task_id)
+            task_button.setMinimumHeight(64)
+            task_button.clicked.connect(lambda _checked=False, item=task.task_id: self._select_labtools_quick_task(item))
+            selector_layout.addWidget(task_button)
         description = QLabel()
         description.setObjectName("labtoolsQuickTaskDescription")
         description.setWordWrap(True)
         selector_layout.addWidget(description)
-        selector_layout.addWidget(make_status_chip("backend_ready / ui_adapter_needed", status_key="testing"))
+        selector_layout.addWidget(make_status_chip("测试中 / 需复核", status_key="testing"))
         selector_layout.addStretch(1)
         layout.addWidget(selector_card, 1)
 
@@ -898,7 +929,7 @@ class MainWindow(QMainWindow):
         selector_card.setStyleSheet("QFrame#labtoolsFormulaSelectorCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         selector_layout = QVBoxLayout(selector_card)
         selector_layout.setContentsMargins(16, 14, 16, 14)
-        selector_layout.addWidget(QLabel("Dynamic Formula Solver"))
+        selector_layout.addWidget(make_section_title("动态公式求解", "输入等式并选择求解目标。"))
         self._labtools_formula_combo = QComboBox()
         self._labtools_formula_combo.setObjectName("labtoolsFormulaSpecCombo")
         for spec in labtools_runtime.list_formula_specs():
@@ -930,6 +961,14 @@ class MainWindow(QMainWindow):
         self._labtools_formula_combo.currentIndexChanged.connect(lambda _index: self._populate_labtools_formula_form())
         self._populate_labtools_formula_form()
         return page
+
+    def _select_labtools_quick_task(self, task_id: str) -> None:
+        combo = getattr(self, "_labtools_quick_task_combo", None)
+        if not isinstance(combo, QComboBox):
+            return
+        index = combo.findData(task_id)
+        if index >= 0:
+            combo.setCurrentIndex(index)
 
     def _populate_labtools_quick_form(self, description_label: QLabel) -> None:
         task_id = self._labtools_quick_task_combo.currentData()
@@ -1066,18 +1105,20 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
-        layout.addWidget(make_section_title("结果预览", "Draft calculation output; not a formal report."))
-        layout.addWidget(make_status_chip(status_key="draft", semantic_state="draft"))
-        result_primary = QLabel("暂无结果")
+        layout.addWidget(make_section_title("计算结果", "结果仅供实验计算辅助，需用户复核。"))
+        layout.addWidget(make_status_chip("等待输入 / 需复核", status_key="testing", semantic_state="testing"))
+        result_primary = QLabel("等待输入")
         result_primary.setObjectName("labtoolsResultPrimary")
         result_primary.setProperty("pageKey", page_key)
         result_primary.setWordWrap(True)
+        result_primary.setStyleSheet("font-size: 22px; font-weight: 800; color: #20A66A; background: #EAF8F0; border: 1px solid #BFE8D2; border-radius: 12px; padding: 14px;")
         layout.addWidget(result_primary)
         result_text = QPlainTextEdit()
         result_text.setObjectName("labtoolsResultText")
         result_text.setProperty("pageKey", page_key)
         result_text.setReadOnly(True)
-        result_text.setMinimumHeight(180)
+        result_text.setMinimumHeight(150)
+        result_text.setStyleSheet("background: #F8FAFC; border: 1px solid #E5EAF2; border-radius: 10px; color: #334155;")
         layout.addWidget(result_text)
         issue_label = QLabel(labtools_runtime.REVIEW_NOTICE)
         issue_label.setObjectName("labtoolsIssueRows")
@@ -1085,16 +1126,16 @@ class MainWindow(QMainWindow):
         issue_label.setWordWrap(True)
         layout.addWidget(issue_label)
         actions = QHBoxLayout()
-        copy_button = make_button("复制结果", role="secondary")
+        copy_button = make_button("复制结果", role="primary_action")
         copy_button.setObjectName("labtoolsCopyResultButton")
         copy_button.setProperty("pageKey", page_key)
         copy_button.clicked.connect(lambda _checked=False, key=page_key: self._copy_labtools_result(key))
-        save_button = make_button("保存本地记录摘要", role="secondary")
+        save_button = make_button("保存到历史 - 需适配", role="disabled_action")
         save_button.setObjectName("labtoolsSaveHistoryButton")
         save_button.setProperty("pageKey", page_key)
         save_button.clicked.connect(lambda _checked=False, key=page_key: self._save_labtools_calculation_record(key))
         self._set_storage_gated_button_state(save_button, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
-        export_button = make_button("导出结果 - 暂未开放", role="secondary")
+        export_button = make_button("导出结果 - 暂未开放", role="disabled_action")
         export_button.setObjectName("labtoolsExportResultButton")
         export_button.setProperty("pageKey", page_key)
         export_button.setEnabled(False)
@@ -1239,21 +1280,22 @@ class MainWindow(QMainWindow):
             page_key="reagent_preparation",
             semantic_key=semantic_key,
             title="试剂制备 / Reagent Preparation",
-            subtitle="展示试剂模板、模板详情和本次配制计算预览；保存历史仅在 BioMedPilot project storage 试点中启用，文件导出继续禁用。",
+            subtitle="试剂模板、本次配制与复核清单，计算结果需用户复核后用于实验。",
         )
         root = content.layout()
         nav = QHBoxLayout()
-        back = make_button("返回 LabTools 首页", role="secondary")
+        back = make_button("← 返回 LabTools 首页", role="secondary")
         back.setObjectName("labtoolsBackButton")
         back.clicked.connect(self._show_labtools_home)
         nav.addWidget(back)
-        nav.addWidget(make_status_chip("backend_ready / storage_adapter_needed", status_key="testing"))
-        nav.addWidget(make_status_chip("storage_adapter_needed", status_key="planned"))
+        nav.addWidget(make_status_chip("本地测试版", status_key="developer_preview"))
+        nav.addWidget(make_status_chip("需复核", status_key="testing"))
+        nav.addWidget(make_status_chip("需存储适配", status_key="planned"))
         nav.addStretch(1)
         root.addLayout(nav)
         root.addWidget(
             self._labtools_notice_card(
-                "桌面 UI 不默认写入 ~/.labtools；保存试点仅写入 BioMedPilot project_storage/labtools/，文件导出仍等待 FilePickerExportAdapter。",
+                "提示：保存路径由 BioMedPilot 存储适配器提供，当前桌面 UI 不默认写入个人目录。",
                 object_name="labtoolsAdapterNotice",
                 semantic_key=semantic_key,
             )
@@ -1302,6 +1344,13 @@ class MainWindow(QMainWindow):
                 sizes=(320, 620, 320),
             )
         )
+        root.addWidget(
+            self._labtools_notice_card(
+                "实验计算结果需由用户复核后用于台面操作。请核对 SOP、试剂纯度、pH、温度和安全要求。",
+                object_name="labtoolsReviewNotice",
+                semantic_key=semantic_key,
+            )
+        )
         root.addWidget(self._labtools_reagent_history_panel())
         root.addStretch(1)
         self._set_labtools_content(content)
@@ -1320,13 +1369,18 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
-        header = QLabel("试剂模板列表")
+        header = QLabel("试剂模板")
         header.setStyleSheet("font-weight: 700;")
         layout.addWidget(header)
         search = QLineEdit()
         search.setObjectName("labtoolsReagentSearchInput")
-        search.setPlaceholderText("搜索模板（当前为本地示例过滤占位）")
+        search.setPlaceholderText("搜索模板名称、分类或备注...")
         layout.addWidget(search)
+        filter_row = QHBoxLayout()
+        filter_row.addWidget(make_status_chip("全部分类", status_key="testing"))
+        filter_row.addWidget(make_status_chip("最近编辑", status_key="planned"))
+        filter_row.addStretch(1)
+        layout.addLayout(filter_row)
         if not templates:
             layout.addWidget(make_empty_state("暂无模板", "未接入存储适配前不读取真实模板库。", empty_state_key="empty_project", semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value))
         for template in templates:
@@ -1338,12 +1392,12 @@ class MainWindow(QMainWindow):
             row.setProperty("semanticKey", PageKey.LABTOOLS_REAGENT_PREPARATION.value)
             row.clicked.connect(lambda _checked=False, item=template.template_id: self._select_labtools_reagent_template(item))
             layout.addWidget(row)
-            status = make_status_chip(template.status_label, status_key="planned")
+            status = make_status_chip("示例模板 / 需存储适配", status_key="planned")
             status.setProperty("templateId", template.template_id)
             layout.addWidget(status)
         layout.addWidget(
             self._labtools_notice_card(
-                "默认展示示例模板；如已启用项目存储试点则优先读取 project_storage/labtools/templates。仍不连接库存系统、批次放行或协作能力。",
+                "示例模板用于配制流程预览；不会连接库存、批次放行或协作能力。",
                 object_name="labtoolsAdapterNotice",
                 semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
             )
@@ -1372,10 +1426,10 @@ class MainWindow(QMainWindow):
     ) -> None:
         layout = self._labtools_local_reagent_layout
         self._clear_layout(layout)
-        header = QLabel("本地试剂引用")
+        header = QLabel("本地试剂库（试点入口）")
         header.setStyleSheet("font-weight: 700;")
         layout.addWidget(header)
-        status = QLabel(f"local_data: {model.status.status}")
+        status = QLabel(f"本地试剂库：{_user_facing_labtools_status(model.status.status)} · {_user_facing_reagent_note(model.status.reason)}")
         status.setObjectName("labtoolsLocalReagentStatus")
         status.setProperty("status", model.status.status)
         status.setWordWrap(True)
@@ -1384,11 +1438,14 @@ class MainWindow(QMainWindow):
             layout.addWidget(
                 make_empty_state(
                     "暂无本地试剂",
-                    model.status.reason,
+                    "连接 BioMedPilot 项目后可读取本地试剂库；当前不在主流程中管理库存。",
                     empty_state_key="empty_project",
                     semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
                 )
             )
+            if model.status.status == "missing_project_context":
+                layout.addStretch(1)
+                return
         for reagent in model.reagents:
             row = QPushButton(
                 f"{reagent.name}\n{reagent.category or 'uncategorized'} · {reagent.concentration or 'no concentration'} · {reagent.storage_location or 'no location'}"
@@ -1400,7 +1457,7 @@ class MainWindow(QMainWindow):
             row.setProperty("status", reagent.status)
             row.clicked.connect(lambda _checked=False, item=reagent: self._select_labtools_local_reagent(item))
             layout.addWidget(row)
-        form_header = QLabel("本地试剂管理")
+        form_header = QLabel("本地试剂管理（开发者诊断 / 试点）")
         form_header.setStyleSheet("font-weight: 700;")
         layout.addWidget(form_header)
         self._labtools_local_reagent_inputs = {}
@@ -1431,7 +1488,7 @@ class MainWindow(QMainWindow):
         self._labtools_local_reagent_create_button = create
         self._labtools_local_reagent_update_button = update
         self._labtools_local_reagent_archive_button = archive
-        write_status = QLabel(_labtools_local_write_result_text(result) if result is not None else "本地保存，不会同步到其他设备。")
+        write_status = QLabel(_labtools_local_write_result_text(result) if result is not None else "本地保存入口为试点能力，不会同步到其他设备。")
         write_status.setObjectName("labtoolsLocalReagentWriteStatus")
         write_status.setProperty("status", result.status if result is not None else "idle")
         write_status.setWordWrap(True)
@@ -1439,7 +1496,7 @@ class MainWindow(QMainWindow):
         self._labtools_local_reagent_write_status = write_status
         layout.addWidget(
             self._labtools_notice_card(
-                "本阶段只引用本地试剂信息；不会扣减库存，也不会覆盖 reagent template。",
+                "本阶段只引用本地试剂信息；不会扣减库存，也不会覆盖试剂模板。",
                 object_name="labtoolsAdapterNotice",
                 semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
             )
@@ -1469,18 +1526,19 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
-        header = QLabel("本次配制计算预览")
+        header = QLabel("本次配制")
         header.setStyleSheet("font-weight: 700;")
         layout.addWidget(header)
+        layout.addWidget(make_status_chip("后端可用 / 需复核", status_key="testing"))
         self._labtools_reagent_run_inputs: dict[str, QLineEdit] = {}
         self._labtools_reagent_target_unit = QComboBox()
         self._labtools_reagent_target_unit.setObjectName("labtoolsReagentTargetVolumeUnit")
         self._labtools_reagent_target_unit.addItems(["mL", "µL", "L"])
-        layout.addLayout(self._labtools_reagent_input_row("目标体积", "target_volume", "500", unit_widget=self._labtools_reagent_target_unit))
-        layout.addLayout(self._labtools_reagent_input_row("操作者", "operator_name", "Researcher"))
-        layout.addLayout(self._labtools_reagent_input_row("实测 pH", "measured_ph", "7.4"))
-        layout.addLayout(self._labtools_reagent_input_row("pH 调整说明", "adjustment_note", "按 SOP 微调并人工记录"))
-        calculate = make_button("重新计算预览", role="primary")
+        layout.addLayout(self._labtools_reagent_input_row("目标体积 Target volume", "target_volume", "500", unit_widget=self._labtools_reagent_target_unit))
+        layout.addLayout(self._labtools_reagent_input_row("操作人 Operator", "operator_name", "Researcher"))
+        layout.addLayout(self._labtools_reagent_input_row("pH 实测值 pH measured", "measured_ph", "7.4"))
+        layout.addLayout(self._labtools_reagent_input_row("批次备注 / pH 调整后", "adjustment_note", "按 SOP 微调并人工记录"))
+        calculate = make_button("更新配制结果", role="primary")
         calculate.setObjectName("labtoolsReagentCalculateButton")
         calculate.clicked.connect(self._run_labtools_reagent_preparation)
         layout.addWidget(calculate)
@@ -1491,35 +1549,36 @@ class MainWindow(QMainWindow):
         self._labtools_reagent_result_rows = QVBoxLayout()
         result_rows_frame = QFrame()
         result_rows_frame.setObjectName("labtoolsReagentResultTable")
-        result_rows_frame.setStyleSheet("QFrame#labtoolsReagentResultTable { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
+        result_rows_frame.setStyleSheet("QFrame#labtoolsReagentResultTable { border: 1px solid #DDE5F0; border-radius: 12px; background: #F8FAFC; }")
         result_rows_frame.setLayout(self._labtools_reagent_result_rows)
         layout.addWidget(result_rows_frame)
         self._labtools_reagent_result_text = QPlainTextEdit()
         self._labtools_reagent_result_text.setObjectName("labtoolsReagentResultText")
         self._labtools_reagent_result_text.setReadOnly(True)
-        self._labtools_reagent_result_text.setMinimumHeight(140)
+        self._labtools_reagent_result_text.setMinimumHeight(80)
+        self._labtools_reagent_result_text.setVisible(False)
         layout.addWidget(self._labtools_reagent_result_text)
         self._labtools_reagent_issue_rows = QLabel(labtools_runtime.REVIEW_NOTICE)
         self._labtools_reagent_issue_rows.setObjectName("labtoolsReagentIssueRows")
         self._labtools_reagent_issue_rows.setWordWrap(True)
         layout.addWidget(self._labtools_reagent_issue_rows)
         actions = QHBoxLayout()
-        copy = make_button("复制摘要", role="secondary")
+        copy = make_button("复制配制摘要", role="primary_action")
         copy.setObjectName("labtoolsReagentCopySummaryButton")
         copy.clicked.connect(self._copy_labtools_reagent_summary)
-        save = make_button("保存本地记录摘要", role="secondary")
+        save = make_button("保存配制记录 - 需存储适配", role="disabled_action")
         save.setObjectName("labtoolsReagentSaveRecordButton")
         save.clicked.connect(self._save_labtools_reagent_record)
-        export = make_button("PDF / DOCX 导出 - 未开放", role="secondary")
+        export = make_button("正式导出 - 暂未开放", role="disabled_action")
         export.setObjectName("labtoolsReagentExportButton")
         export.setEnabled(False)
         export.setProperty("disabledState", "future")
-        export_md = make_button("导出 Markdown", role="secondary")
+        export_md = make_button("MD 文件", role="secondary")
         export_md.setObjectName("labtoolsReagentExportMarkdownButton")
         export_md.setProperty("exportRequiresFilePicker", True)
         export_md.setProperty("exportFormat", "markdown")
         export_md.clicked.connect(self._export_labtools_reagent_markdown)
-        export_csv = make_button("导出 CSV", role="secondary")
+        export_csv = make_button("CSV 文件", role="secondary")
         export_csv.setObjectName("labtoolsReagentExportCsvButton")
         export_csv.setProperty("exportRequiresFilePicker", True)
         export_csv.setProperty("exportFormat", "csv")
@@ -1551,10 +1610,10 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
-        header = QLabel("模板详情 / 编辑侧栏")
+        header = QLabel("模板编辑：PBS 1x")
         header.setStyleSheet("font-weight: 700;")
         layout.addWidget(header)
-        dirty = make_status_chip("已修改未保存 / storage_adapter_needed", status_key="planned")
+        dirty = make_status_chip("已修改未保存 / 需存储适配", status_key="planned")
         dirty.setObjectName("labtoolsReagentDirtyState")
         layout.addWidget(dirty)
         detail_body = QFrame()
@@ -1564,7 +1623,7 @@ class MainWindow(QMainWindow):
         detail_body_layout.setSpacing(8)
         self._labtools_reagent_detail_rows_layout = detail_body_layout
         layout.addWidget(detail_body)
-        save = make_button("保存模板 - 项目存储试点", role="secondary")
+        save = make_button("保存模板 - 需存储适配", role="disabled_action")
         save.setObjectName("labtoolsReagentSaveTemplateButton")
         save.clicked.connect(self._save_labtools_reagent_template)
         self._set_storage_gated_button_state(save, bool(self._labtools_project_root), "disabled_missing_storage_adapter")
@@ -1582,7 +1641,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(8)
-        header = QLabel("项目存储历史记录 / History Preview")
+        header = QLabel("配制记录预览 / History Preview")
         header.setStyleSheet("font-weight: 700;")
         layout.addWidget(header)
         self._labtools_reagent_history_status = QLabel("未连接项目存储上下文。")
@@ -1792,27 +1851,27 @@ class MainWindow(QMainWindow):
             f"分类：{detail.summary.category}",
             f"默认体积：{detail.summary.default_volume}",
             f"pH 目标：{detail.ph_target or '未设置'}",
-            f"说明：{detail.notes}",
+            f"备注：{_user_facing_reagent_note(detail.notes)}",
         ]
         for text in rows:
             label = QLabel(text)
             label.setObjectName("labtoolsReagentDetailRow")
             label.setWordWrap(True)
             layout.addWidget(label)
-        component_header = QLabel("组分与 validation")
+        component_header = QLabel(f"组分设置（共 {len(detail.components)} 项）")
         component_header.setObjectName("labtoolsReagentComponentHeader")
         component_header.setStyleSheet("font-weight: 700;")
         layout.addWidget(component_header)
         for component in detail.components:
-            label = QLabel(f"{component.stage} · {component.name} · {component.amount} · {component.notes or component.warning or '需人工复核'}")
+            label = QLabel(f"{component.name} · {component.stage} · {component.amount} · {component.notes or component.warning or '需人工复核'}")
             label.setObjectName("labtoolsReagentComponentRow")
             label.setWordWrap(True)
             layout.addWidget(label)
-        validation_header = QLabel("Validation summary")
+        validation_header = QLabel("验证与提示")
         validation_header.setStyleSheet("font-weight: 700;")
         layout.addWidget(validation_header)
         for row in detail.validation_rows:
-            label = QLabel(row)
+            label = QLabel(_user_facing_reagent_note(row))
             label.setObjectName("labtoolsReagentValidationRow")
             label.setWordWrap(True)
             layout.addWidget(label)
@@ -1835,7 +1894,7 @@ class MainWindow(QMainWindow):
         self._labtools_reagent_result_text.setPlainText(result.detail_text)
         self._clear_layout(self._labtools_reagent_result_rows)
         for component in result.component_rows:
-            row = QLabel(f"{component.stage} | {component.name} | {component.amount} | {component.notes or component.warning or 'OK'}")
+            row = QLabel(f"☐ {component.name}  |  {component.stage}  |  {component.amount}  |  {component.notes or component.warning or '需用户复核'}")
             row.setObjectName("labtoolsReagentResultRow")
             row.setWordWrap(True)
             self._labtools_reagent_result_rows.addWidget(row)
@@ -1844,12 +1903,12 @@ class MainWindow(QMainWindow):
             row.setObjectName("labtoolsReagentResultRow")
             self._labtools_reagent_result_rows.addWidget(row)
         issues = list(result.errors) + list(result.warnings)
-        self._labtools_reagent_issue_rows.setText("\n".join(f"- {issue}" for issue in issues))
+        self._labtools_reagent_issue_rows.setText("\n".join(f"- {_user_facing_reagent_note(issue)}" for issue in issues))
         self._labtools_reagent_issue_rows.setProperty("hasError", bool(result.errors))
         self._labtools_reagent_copy_text = result.copy_text if result.valid else ""
         if self._labtools_project_root:
             self._labtools_reagent_issue_rows.setText(
-                f"{self._labtools_reagent_issue_rows.text()}\n- 保存试点路径：project_storage/labtools/"
+                f"{self._labtools_reagent_issue_rows.text()}\n- 保存路径由 BioMedPilot 存储适配器提供。"
             )
 
     def _copy_labtools_reagent_summary(self) -> None:
@@ -1913,7 +1972,7 @@ class MainWindow(QMainWindow):
         self._labtools_reagent_history_list.clear()
         records = labtools_runtime.list_local_record_summaries(self._labtools_project_root, record_type="reagent_preparation")
         if not records:
-            self._labtools_reagent_history_status.setText("暂无本地配制记录摘要；保存后会写入 local_data record index。")
+            self._labtools_reagent_history_status.setText("暂无本地配制记录摘要；保存入口仍需存储适配。")
             self._labtools_reagent_history_detail.setPlainText("")
             return
         self._labtools_reagent_history_status.setText("本地实验记录摘要；不是正式报告。")
@@ -3621,6 +3680,7 @@ class MainWindow(QMainWindow):
 
     def _build_test_feedback_page(self) -> QWidget:
         summary = testing_mode_summary()
+        lan_summary = lan_real_world_feedback_summary()
         page = QWidget()
         page.setObjectName("testFeedbackPage")
         root = QVBoxLayout(page)
@@ -3647,6 +3707,23 @@ class MainWindow(QMainWindow):
         feedback_button.setObjectName("generateTestFeedbackButton")
         feedback_button.clicked.connect(self.generate_testing_feedback_template)
         content_layout.addWidget(feedback_button)
+        content_layout.addWidget(
+            self._list_card(
+                "LabTools LAN 真实测试检查点",
+                [
+                    str(lan_summary["goal"]),
+                    "人工真实局域网测试延后到界面完成后执行；当前只预留报告入口。",
+                    "报告只保存本机 Markdown 文件，不自动发送网络请求。",
+                    f"报告位置：{lan_summary['feedback_location']}",
+                ],
+            )
+        )
+        lan_feedback_button = QPushButton("生成 LAN 真实测试反馈报告")
+        lan_feedback_button.setObjectName("generateLanFeedbackButton")
+        lan_feedback_button.setProperty("feedbackType", "labtools_lan_real_world")
+        lan_feedback_button.setProperty("networkRequestAllowed", False)
+        lan_feedback_button.clicked.connect(self.generate_lan_testing_feedback_template)
+        content_layout.addWidget(lan_feedback_button)
         content_layout.addStretch(1)
         scroll.setWidget(content)
         root.addWidget(scroll, 1)
@@ -3701,6 +3778,10 @@ class MainWindow(QMainWindow):
         path = generate_feedback_template()
         self.statusBar().showMessage(f"已生成反馈模板：{path}", 8000)
 
+    def generate_lan_testing_feedback_template(self) -> None:
+        path = generate_lan_feedback_template()
+        self.statusBar().showMessage(f"已生成 LAN 真实测试反馈报告：{path}", 8000)
+
 
 def _labtools_local_write_result_text(result: labtools_runtime.LabToolsLocalWriteResult) -> str:
     if result.success:
@@ -3708,3 +3789,30 @@ def _labtools_local_write_result_text(result: labtools_runtime.LabToolsLocalWrit
         return f"{result.message} {result.entity_id}{version}".strip()
     blocker = f" blocker={result.blocker}" if result.blocker else ""
     return f"{result.message}{blocker}"
+
+
+def _user_facing_labtools_status(status: str) -> str:
+    return {
+        "ready": "可读取",
+        "available": "可读取",
+        "blocked": "未连接",
+        "missing_project_context": "未连接本地试剂库",
+        "adapter_needed": "需适配",
+        "disabled": "暂不可用",
+    }.get(status, status.replace("_", " "))
+
+
+def _user_facing_reagent_note(text: str) -> str:
+    replacements = {
+        "UI-C2d in-memory demo template; not stored and not linked to inventory.": "示例模板，仅用于配制流程预览；当前不保存到本地模板库，也不关联库存。",
+        "保存模板需要 BioMedPilotLabToolsStorageAdapter.": "模板保存需存储适配器，当前暂不可直接保存到本地。",
+        "保存模板需要 BioMedPilotLabToolsStorageAdapter。": "模板保存需存储适配器，当前暂不可直接保存到本地。",
+        "BioMedPilot project context is required before LabTools local_data can be read.": "连接 BioMedPilot 项目后可读取本地试剂库；当前不在主流程中管理库存。",
+        "保存模板和配制记录需要存储适配；当前不会写入 ~/.labtools。": "保存模板和配制记录需要存储适配；当前不会写入个人目录。",
+        "Validation summary": "验证与提示",
+    }
+    value = replacements.get(text, text)
+    value = value.replace("BioMedPilotLabToolsStorageAdapter", "存储适配器")
+    value = value.replace("~/.labtools", "个人目录")
+    value = value.replace("project_storage", "BioMedPilot 存储")
+    return value

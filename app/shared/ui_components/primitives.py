@@ -540,7 +540,7 @@ else:
             title: str = "萤火虫 / Firefly",
             footer: str = "Developer Preview",
             active_key: str = "",
-            width: int = 220,
+            width: int = 248,
         ) -> None:
             super().__init__()
             self.setObjectName("appSidebar")
@@ -556,6 +556,7 @@ else:
             title_label = QLabel(title)
             title_label.setObjectName("appSidebarTitle")
             title_label.setProperty("uiPrimitive", "app_sidebar_title")
+            title_label.setWordWrap(True)
             layout.addWidget(title_label)
 
             auxiliary_started = False
@@ -594,6 +595,7 @@ else:
             footer_label = QLabel(footer)
             footer_label.setObjectName("appSidebarFooter")
             footer_label.setProperty("uiPrimitive", "app_sidebar_footer")
+            footer_label.setWordWrap(True)
             layout.addWidget(footer_label)
 
 
@@ -655,12 +657,15 @@ def _app_sidebar_stylesheet() -> str:
     QLabel#appSidebarTitle {{
         color: {COLORS["bio"]};
         background: transparent;
-        font-size: {FONT_SIZE["page_title"]}px;
+        font-size: 24px;
         font-weight: 800;
     }}
     QLabel#appSidebarFooter {{
         color: {COLORS["muted"]};
-        background: transparent;
+        background: {COLORS["surface"]};
+        border: 1px solid {COLORS["border"]};
+        border-radius: 12px;
+        padding: 10px;
         font-size: {FONT_SIZE["caption"]}px;
     }}
     QPushButton#appSidebarButton, QPushButton#appSidebarAuxButton {{

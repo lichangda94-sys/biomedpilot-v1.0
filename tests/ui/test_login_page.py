@@ -107,6 +107,6 @@ def test_settings_page_displays_icon_asset_details(qt_app) -> None:
     labels = "\n".join(label.text() for label in window.findChildren(QLabel))
 
     assert "图标资源状态" in labels
+    assert "图标槽位" in labels
     assert "已生成" in labels
     assert "待生成" in labels
-    assert "UI-04 数据来源图标组" in labels

@@ -50,9 +50,9 @@ def test_status_tokens_cover_rebuild_semantics() -> None:
     assert "border-radius" in status_chip_stylesheet("testing")
 
 
-def test_button_tokens_and_radius_follow_b1_constraints() -> None:
+def test_button_tokens_and_radius_follow_product_ui_constraints() -> None:
     assert {"primary", "primary_action", "secondary", "ghost", "file_picker", "disabled_action", "danger"} <= set(BUTTON_TOKENS)
     assert get_button_token("unknown").role == "secondary"
-    assert RADIUS["card"] <= 8
+    assert 14 <= RADIUS["card"] <= 16
     assert RADIUS["control"] <= RADIUS["card"]
     assert COLORS["bio"] in button_stylesheet("primary")

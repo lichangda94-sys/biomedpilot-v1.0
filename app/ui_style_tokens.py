@@ -44,18 +44,23 @@ class UIStatusKey(StrEnum):
 
 COLORS: dict[str, str] = {
     "background": "#F8FAFC",
+    "app_bg": "#F7F9FC",
     "surface": "#FFFFFF",
     "surface_muted": "#F1F5F9",
-    "border": "#CBD5E1",
+    "border": "#DDE5F0",
+    "divider": "#E5EAF2",
     "text": "#0F172A",
+    "text_secondary": "#334155",
     "muted": "#64748B",
-    "bio": "#12324A",
-    "bio_soft": "#EAF2F8",
-    "bio_accent": "#1BAE9F",
+    "bio": "#0F56C7",
+    "bio_soft": "#EAF2FF",
+    "bio_accent": "#20A66A",
+    "bio_green": "#20A66A",
+    "bio_green_soft": "#EAF8F0",
     "meta": "#6B4FD8",
     "meta_soft": "#F0EDFF",
-    "labtools": "#7A4E12",
-    "labtools_soft": "#FFF4DE",
+    "labtools": "#1E88E5",
+    "labtools_soft": "#EAF6FF",
     "focus": "#2563EB",
     "warning_soft": "#FFF7E6",
     "warning": "#D99A00",
@@ -86,20 +91,20 @@ CONTROL_HEIGHT = {
 RADIUS = {
     "sm": 6,
     "md": 8,
-    "lg": 8,
+    "lg": 14,
     "control": 6,
-    "card": 8,
-    "panel": 8,
+    "card": 14,
+    "panel": 14,
 }
 
 FONT_SIZE = {
     "app_title": 24,
-    "page_title": 18,
+    "page_title": 30,
     "card_title": 16,
     "body": 13,
     "secondary": 12,
     "caption": 11,
-    "hero": 24,
+    "hero": 30,
 }
 
 THEME_PALETTE = {
@@ -480,9 +485,31 @@ def module_selection_stylesheet() -> str:
         border: 1px solid {COLORS["border"]};
         border-radius: {RADIUS["lg"]}px;
     }}
+    QFrame#dashboardHeader {{
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+    }}
+    QFrame#dashboardRecentProjectsCard {{
+        border-radius: 14px;
+        border: 1px solid {COLORS["border"]};
+    }}
+    QFrame#moduleCard {{
+        border-radius: 16px;
+        padding: 0;
+    }}
+    QFrame#moduleCard[moduleAccent="bio"] {{
+        border: 1px solid #BFE8D2;
+    }}
+    QFrame#moduleCard[moduleAccent="meta"] {{
+        border: 1px solid #D8CCFF;
+    }}
+    QFrame#moduleCard[moduleAccent="labtools"] {{
+        border: 1px solid #B9DCFF;
+    }}
     QLabel#dashboardTitle {{
-        color: {COLORS["bio"]};
-        font-size: 28px;
+        color: {COLORS["text"]};
+        font-size: 32px;
         font-weight: 800;
         background: transparent;
     }}
@@ -491,11 +518,11 @@ def module_selection_stylesheet() -> str:
         background: transparent;
     }}
     QLabel#sessionBadge {{
-        color: {COLORS["bio"]};
-        background: {COLORS["bio_soft"]};
+        color: {COLORS["text"]};
+        background: {COLORS["surface"]};
         border: 1px solid {COLORS["border"]};
-        border-radius: {RADIUS["sm"]}px;
-        padding: 7px 10px;
+        border-radius: 18px;
+        padding: 9px 12px;
         font-weight: 600;
     }}
     QLabel#previewBadge {{
@@ -507,21 +534,30 @@ def module_selection_stylesheet() -> str:
         font-weight: 600;
     }}
     QLabel#moduleTitle {{
-        color: {COLORS["bio"]};
-        font-size: 22px;
-        font-weight: 760;
+        color: {COLORS["text"]};
+        font-size: 25px;
+        font-weight: 800;
         background: transparent;
     }}
     QLabel#moduleEnglishTitle {{
-        color: {COLORS["bio_accent"]};
-        font-size: {FONT_SIZE["card_title"]}px;
+        color: {COLORS["text_secondary"]};
+        font-size: 18px;
         font-weight: 700;
         background: transparent;
     }}
     QLabel#moduleAccentLine {{
-        background: {COLORS["bio_accent"]};
+        background: {COLORS["bio_green"]};
         border: 0;
         border-radius: 2px;
+    }}
+    QFrame#moduleCard[moduleAccent="bio"] QLabel#moduleAccentLine {{
+        background: {COLORS["bio_green"]};
+    }}
+    QFrame#moduleCard[moduleAccent="meta"] QLabel#moduleAccentLine {{
+        background: {COLORS["meta"]};
+    }}
+    QFrame#moduleCard[moduleAccent="labtools"] QLabel#moduleAccentLine {{
+        background: {COLORS["labtools"]};
     }}
     QLabel#moduleIcon, QLabel#ui02Icon {{
         background: transparent;
@@ -548,15 +584,42 @@ def module_selection_stylesheet() -> str:
         color: {COLORS["muted"]};
         background: {COLORS["surface_muted"]};
     }}
-    QPushButton#primaryButton, QPushButton#bioModuleButton, QPushButton#metaModuleButton, QPushButton#labtoolsModuleButton {{
-        color: #FFFFFF;
-        background: {COLORS["bio"]};
-        border: 1px solid {COLORS["bio"]};
-        min-height: {CONTROL_HEIGHT["primary"] - 18}px;
-        font-weight: 700;
+    QPushButton#dashboardHeaderIconButton {{
+        color: {COLORS["text"]};
+        background: {COLORS["surface"]};
+        border: 1px solid {COLORS["divider"]};
+        border-radius: 11px;
+        padding: 0;
+        font-weight: 750;
     }}
-    QPushButton#bioModuleButton:hover, QPushButton#metaModuleButton:hover, QPushButton#labtoolsModuleButton:hover {{
-        background: #0D273B;
+    QPushButton#primaryButton, QPushButton#bioModuleButton, QPushButton#metaModuleButton, QPushButton#labtoolsModuleButton {{
+        min-height: 32px;
+        font-weight: 700;
+        border-radius: 10px;
+    }}
+    QPushButton#bioModuleButton {{
+        color: #168A54;
+        background: {COLORS["bio_green_soft"]};
+        border: 1px solid #BFE8D2;
+    }}
+    QPushButton#metaModuleButton {{
+        color: {COLORS["meta"]};
+        background: {COLORS["meta_soft"]};
+        border: 1px solid #D8CCFF;
+    }}
+    QPushButton#labtoolsModuleButton {{
+        color: {COLORS["labtools"]};
+        background: {COLORS["labtools_soft"]};
+        border: 1px solid #B9DCFF;
+    }}
+    QPushButton#bioModuleButton:hover {{
+        background: #DDF6E8;
+    }}
+    QPushButton#metaModuleButton:hover {{
+        background: #E8E1FF;
+    }}
+    QPushButton#labtoolsModuleButton:hover {{
+        background: #DDF0FF;
     }}
     QPushButton#secondaryButton {{
         color: {COLORS["bio"]};

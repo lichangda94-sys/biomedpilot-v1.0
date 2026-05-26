@@ -71,6 +71,7 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         status = window.findChild(QLabel, "labtoolsLanStatusText")
         counts = window.findChild(QLabel, "labtoolsLanCountRow")
         note = window.findChild(QLabel, "labtoolsLanBoundaryNote")
+        feedback = window.findChild(QPushButton, "labtoolsGenerateLanFeedbackButton")
 
         assert url_input is not None
         assert connect is not None
@@ -81,10 +82,14 @@ def test_labtools_home_manual_lan_connection_shows_readonly_counts(qt_app, tmp_p
         assert status is not None
         assert counts is not None
         assert note is not None
+        assert feedback is not None
         assert status.property("status") == "manual_connection_required"
         assert "自动发现" in note.text()
         assert "私有 LAN URL" in note.text()
         assert token_status.property("hasSavedToken") is False
+        assert feedback.text() == "生成 LAN 真实测试反馈报告"
+        assert feedback.property("feedbackType") == "labtools_lan_real_world"
+        assert feedback.property("networkRequestAllowed") is False
 
         with build_lan_health_server(LabToolsLanHealthServerConfig(health_only=False, local_data_root=tmp_path)) as server:
             url_input.setText(server.url(""))

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -11,6 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtWidgets import QApplication, QLabel, QListWidget, QPushButton
 
+    from app import labtools_runtime
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import PageKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
@@ -70,15 +70,17 @@ def test_wb_pilot_saves_record_in_project_storage(qt_app, tmp_path: Path, monkey
         save.click()
         history_button.click()
 
-        records_file = project_root / "project_storage" / "labtools" / "records" / "wb_loading_records.json"
-        assert records_file.exists()
-        assert str(records_file.resolve()).startswith(str((project_root / "project_storage" / "labtools").resolve()))
+        legacy_records_file = project_root / "project_storage" / "labtools" / "records" / "wb_loading_records.json"
+        record_index_file = project_root / "project_storage" / "labtools" / "labtools_record_index.json"
+        assert record_index_file.exists()
+        assert str(record_index_file.resolve()).startswith(str((project_root / "project_storage" / "labtools").resolve()))
+        assert not legacy_records_file.exists()
         assert not (home / ".labtools").exists()
 
-        payload = json.loads(records_file.read_text(encoding="utf-8"))
-        assert payload["records"]
+        records = labtools_runtime.list_local_record_summaries(project_root, record_type="wb_loading")
+        assert records
         assert history_list.count() >= 1
-        assert "Saved to project storage" in history_status.text() or "已保存到项目存储" in history_status.text()
+        assert "本地实验记录摘要" in history_status.text()
     finally:
         window.close()
         window.deleteLater()
@@ -103,7 +105,7 @@ def test_wb_pilot_missing_project_context_keeps_save_history_disabled(qt_app) ->
         qt_app.processEvents()
 
 
-def test_wb_pilot_corrupted_json_shows_error_state(qt_app, tmp_path: Path) -> None:
+def test_wb_pilot_legacy_corrupted_json_is_ignored_after_record_index_migration(qt_app, tmp_path: Path) -> None:
     project_root = tmp_path / "project"
     records_dir = project_root / "project_storage" / "labtools" / "records"
     records_dir.mkdir(parents=True, exist_ok=True)
@@ -116,7 +118,8 @@ def test_wb_pilot_corrupted_json_shows_error_state(qt_app, tmp_path: Path) -> No
         _open_wb(window)
 
         status = window.findChild(QLabel, "labtoolsWbHistoryStatus")
-        assert "JSON" in status.text() or "读取失败" in status.text()
+        assert "JSON" not in status.text()
+        assert "暂无 WB 本地记录摘要" in status.text()
     finally:
         window.close()
         window.deleteLater()

@@ -224,8 +224,13 @@ def test_about_and_test_feedback_shells_are_reachable(qt_app) -> None:
         window.show_test_feedback()
         assert window.current_workspace_key() == "test_feedback"
         feedback_button = window.findChild(QPushButton, "generateTestFeedbackButton")
+        lan_feedback_button = window.findChild(QPushButton, "generateLanFeedbackButton")
         assert feedback_button is not None
         assert feedback_button.text() == "生成测试反馈模板"
+        assert lan_feedback_button is not None
+        assert lan_feedback_button.text() == "生成 LAN 真实测试反馈报告"
+        assert lan_feedback_button.property("feedbackType") == "labtools_lan_real_world"
+        assert lan_feedback_button.property("networkRequestAllowed") is False
     finally:
         _dispose_window(window)
 

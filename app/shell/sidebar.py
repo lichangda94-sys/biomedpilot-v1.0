@@ -15,7 +15,7 @@ SidebarItem = AppSidebarItem
 
 
 COMMON_SIDEBAR_ITEMS = (
-    SidebarItem("dashboard", "Dashboard", NavKey.DASHBOARD.value),
+    SidebarItem("dashboard", "工作台 / Dashboard", NavKey.DASHBOARD.value),
     SidebarItem("bioinformatics", "Bioinformatics / 生信分析", NavKey.BIOINFORMATICS.value),
     SidebarItem("meta_analysis", "Meta Analysis / Meta 分析", NavKey.META_ANALYSIS.value),
     SidebarItem("labtools", "LabTools / 实验工具", NavKey.LABTOOLS.value),
@@ -65,7 +65,14 @@ if QPushButton is not None:
                 )
                 for index, item in enumerate(COMMON_SIDEBAR_ITEMS)
             )
-            super().__init__(items=items, callbacks=callbacks)
+            super().__init__(
+                items=items,
+                callbacks=callbacks,
+                title="萤火虫 Firefly\nBioMedPilot 医研智析",
+                footer="Developer Preview\n本地测试版\nv0.1.0 internal beta",
+                active_key="dashboard",
+                width=248,
+            )
 
 else:
 
