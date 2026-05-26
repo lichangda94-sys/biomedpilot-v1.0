@@ -25,12 +25,14 @@ RISK_SCORE_ADVANCED_VISUALIZATION_PREFLIGHT_GATE_SCHEMA_VERSION = "biomedpilot.r
 RISK_SCORE_ADVANCED_VISUALIZATION_ARTIFACT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_artifact_gate.v1"
 RISK_SCORE_CALIBRATION_DECISION_CURVE_INPUT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_input_gate.v1"
 RISK_SCORE_CALIBRATION_DECISION_CURVE_STATISTICS_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_statistics_gate.v1"
+RISK_SCORE_CALIBRATION_DECISION_CURVE_PLOT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_plot_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCOPE = "formal_risk_score_plot_artifact"
 RISK_SCORE_PLOT_ENGINE_NAME = "biomedpilot_risk_score_visualization_renderer"
 RISK_SCORE_PLOT_ENGINE_VERSION = "0.1.0"
 RISK_SCORE_REAL_PLOT_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_real_plot_manifest.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_manifest.v1"
 RISK_SCORE_CALIBRATION_DECISION_CURVE_STATISTICS_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_statistics_manifest.v1"
+RISK_SCORE_CALIBRATION_DECISION_CURVE_PLOT_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_plot_manifest.v1"
 SUPPORTED_RISK_SCORE_PLOT_TYPES = (
     "risk_score_distribution_plot",
     "risk_score_nomogram",
@@ -817,6 +819,146 @@ def run_risk_score_calibration_decision_curve_statistics(
     }
 
 
+def build_risk_score_calibration_decision_curve_plot_artifact_gate(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    plot_type: str = "risk_score_calibration_curve",
+    renderer: str = "builtin_svg",
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_source(root, result_id)
+    dependency = check_risk_score_plot_renderer_dependencies(renderer=renderer)
+    blockers: list[str] = []
+    warnings = [
+        "risk_score_calibration_decision_curve_plot_from_b44_statistics_only",
+        "no_report_ready_unlock",
+        "no_clinical_interpretation",
+    ]
+    if source is None:
+        blockers.append("formal_risk_score_result_not_found")
+    else:
+        blockers.extend(_source_blockers(source))
+    if plot_type not in {"risk_score_calibration_curve", "risk_score_decision_curve"}:
+        blockers.append(f"risk_score_calibration_decision_plot_type_not_enabled_in_b45:{plot_type}")
+    if renderer != "builtin_svg":
+        blockers.append(f"risk_score_calibration_decision_renderer_not_enabled_in_b45:{renderer}")
+    if dependency.get("status") != "passed":
+        blockers.extend(str(item) for item in dependency.get("blockers", []) or ["risk_score_plot_renderer_dependency_not_passed"])
+    stats = _statistics_artifact_paths(root, source or {})
+    if not stats.get("calibration"):
+        blockers.append("risk_score_calibration_statistics_table_missing")
+    if not stats.get("decision_curve"):
+        blockers.append("risk_score_decision_curve_statistics_table_missing")
+    source_table = _risk_score_table_path(root, source) if source else root / ""
+    candidate = _statistics_plot_artifact(
+        source or {},
+        _plot_id(str((source or {}).get("result_id") or result_id or "missing"), plot_type),
+        plot_type,
+        renderer,
+        dependency,
+        source_table,
+        stats,
+        root / "results" / "plots" / "risk_score" / "advanced" / "candidate.svg",
+    )
+    validation = validate_risk_score_plot_artifact_schema(candidate)
+    blockers.extend(str(item) for item in validation.get("blockers", []) or [] if item != "missing_source_result_id")
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema_version": RISK_SCORE_CALIBRATION_DECISION_CURVE_PLOT_GATE_SCHEMA_VERSION,
+        "status": "passed" if not blockers else "blocked",
+        "selected_result_id": str((source or {}).get("result_id") or result_id or ""),
+        "source_result_semantics": normalize_result_semantics((source or {}).get("result_semantics"), default="blocked"),
+        "plot_type": plot_type,
+        "renderer": renderer,
+        "statistics_artifacts": {key: str(path.relative_to(root)) for key, path in stats.items() if path},
+        "renderer_dependency_snapshot": dependency,
+        "artifact_schema_candidate": candidate,
+        "artifact_schema_validation": validation,
+        "formal_execution_enabled": False,
+        "writes_result_index": not blockers,
+        "creates_plot_artifact": not blockers,
+        "creates_report_artifact": False,
+        "report_ready_eligible": False,
+        "blockers": blockers,
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def create_risk_score_calibration_decision_curve_plot_artifact(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    plot_type: str = "risk_score_calibration_curve",
+    renderer: str = "builtin_svg",
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    gate = build_risk_score_calibration_decision_curve_plot_artifact_gate(root, result_id=result_id, plot_type=plot_type, renderer=renderer)
+    source = _select_source(root, result_id)
+    if gate.get("status") != "passed" or source is None:
+        return _blocked_artifact(str(result_id or gate.get("selected_result_id") or ""), {**gate, "plot_type": plot_type, "renderer": renderer})
+    stats = _statistics_artifact_paths(root, source)
+    calibration_rows = read_table(stats["calibration"]) if stats.get("calibration") else []
+    decision_rows = read_table(stats["decision_curve"]) if stats.get("decision_curve") else []
+    if plot_type == "risk_score_calibration_curve" and not calibration_rows:
+        blocked_gate = {**gate, "status": "blocked", "blockers": [*gate.get("blockers", []), "risk_score_calibration_statistics_table_empty"]}
+        return _blocked_artifact(str(source.get("result_id") or ""), blocked_gate)
+    if plot_type == "risk_score_decision_curve" and not decision_rows:
+        blocked_gate = {**gate, "status": "blocked", "blockers": [*gate.get("blockers", []), "risk_score_decision_curve_statistics_table_empty"]}
+        return _blocked_artifact(str(source.get("result_id") or ""), blocked_gate)
+
+    plot_id = _plot_id(str(source.get("result_id") or ""), plot_type)
+    out_dir = root / "results" / "plots" / "risk_score" / "advanced"
+    image_path = out_dir / f"{plot_id}.svg"
+    manifest_path = out_dir / f"{plot_id}_manifest.json"
+    dependency = gate.get("renderer_dependency_snapshot") if isinstance(gate.get("renderer_dependency_snapshot"), dict) else {}
+    source_table = _risk_score_table_path(root, source)
+    artifact = _statistics_plot_artifact(source, plot_id, plot_type, renderer, dependency, source_table, stats, image_path)
+    validation = validate_risk_score_plot_artifact_schema(artifact)
+    artifact["blockers"] = list(dict.fromkeys([*artifact.get("blockers", []), *validation.get("blockers", [])]))
+    artifact["warnings"] = list(dict.fromkeys([*artifact.get("warnings", []), *validation.get("warnings", [])]))
+    if artifact["blockers"]:
+        return {"status": "blocked", "plot_artifact": artifact, "report_ready_eligible": False, "warnings": artifact["warnings"], "blockers": artifact["blockers"]}
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    svg = _calibration_svg(calibration_rows, source) if plot_type == "risk_score_calibration_curve" else _decision_curve_svg(decision_rows, source)
+    image_path.write_text(svg, encoding="utf-8")
+    artifact["plot_spec_artifact"]["plot_manifest_path"] = str(manifest_path)
+    manifest = {
+        "schema_version": RISK_SCORE_CALIBRATION_DECISION_CURVE_PLOT_MANIFEST_SCHEMA_VERSION,
+        "plot_artifact": artifact,
+        "gate_snapshot": gate,
+        "source_result_id": str(source.get("result_id") or ""),
+        "source_statistics_artifacts": gate.get("statistics_artifacts", {}),
+        "report_ready_eligible": False,
+        "limitations": [
+            "statistical_validation_plot_only",
+            "source_is_b44_statistics_table",
+            "no_clinical_conclusion",
+            "no_report_ready_unlock",
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    registry = load_registry(root)
+    entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
+    for entry in entries:
+        if entry.get("result_id") == source.get("result_id"):
+            existing = [item for item in entry.get("plot_artifacts", []) or [] if isinstance(item, dict) and item.get("plot_id") != plot_id]
+            entry["plot_artifacts"] = [*existing, artifact]
+            entry["report_ready_eligible"] = False
+            break
+    save_registry(root, entries)
+    return {
+        "status": "passed",
+        "plot_artifact": artifact,
+        "plot_manifest_path": str(manifest_path),
+        "report_ready_eligible": False,
+        "warnings": artifact["warnings"],
+        "blockers": [],
+    }
+
+
 def build_risk_score_plot_artifact_schema_candidate(
     source: dict[str, Any],
     *,
@@ -1333,6 +1475,71 @@ def _advanced_plot_artifact(
     ).to_dict()
 
 
+def _statistics_plot_artifact(
+    source: dict[str, Any],
+    plot_id: str,
+    plot_type: str,
+    renderer: str,
+    dependency: dict[str, Any],
+    risk_score_table_path: Path,
+    statistics_paths: dict[str, Path],
+    image_path: Path,
+) -> dict[str, Any]:
+    semantics = normalize_result_semantics(source.get("canonical_result_semantics") or source.get("result_semantics"), default="blocked")
+    parameters = source.get("parameters_manifest") if isinstance(source.get("parameters_manifest"), dict) else {}
+    table_artifacts = [{"artifact_type": "risk_score_result_table", "path": str(risk_score_table_path)}]
+    if statistics_paths.get("calibration"):
+        table_artifacts.append({"artifact_type": "risk_score_calibration_statistics_table", "path": str(statistics_paths["calibration"])})
+    if statistics_paths.get("decision_curve"):
+        table_artifacts.append({"artifact_type": "risk_score_decision_curve_statistics_table", "path": str(statistics_paths["decision_curve"])})
+    return PlotArtifact(
+        plot_id=plot_id,
+        plot_type=plot_type,
+        source_result_id=str(source.get("result_id") or ""),
+        source_result_semantics=semantics,
+        source_task_type=str(source.get("task_type") or ""),
+        plot_semantics=semantics,
+        plot_artifact_scope=RISK_SCORE_PLOT_ARTIFACT_SCOPE,
+        input_package_id=str(source.get("input_package_id") or ""),
+        task_run_id=str(source.get("task_run_id") or ""),
+        parameters_manifest=parameters,
+        plot_parameters={
+            "renderer": renderer,
+            "format": "svg",
+            "source_statistics_stage": "B44",
+            "risk_group_generation": "forbidden",
+            "clinical_interpretation": "forbidden",
+            "report_ready_unlock": False,
+        },
+        plot_spec_artifact={
+            "schema_version": RISK_SCORE_PLOT_ARTIFACT_SCHEMA_VERSION,
+            "plot_type": plot_type,
+            "renderer": renderer,
+            "format": "svg",
+            "source_result_id": str(source.get("result_id") or ""),
+            "source_task_type": str(source.get("task_type") or ""),
+            "rendering": "real_svg_artifact_from_b44_statistics_tables_no_report_ready",
+            "b45_scope": "calibration_decision_curve_plot_from_statistics_only",
+            "forbidden_outputs": list(FORBIDDEN_RISK_SCORE_PLOT_FIELDS),
+        },
+        image_artifacts=(
+            {
+                "artifact_type": f"{plot_type}_svg",
+                "path": str(image_path),
+                "format": "svg",
+                "source_result_id": str(source.get("result_id") or ""),
+                "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            },
+        ),
+        table_artifacts=tuple(table_artifacts),
+        engine_name=RISK_SCORE_PLOT_ENGINE_NAME,
+        engine_version=RISK_SCORE_PLOT_ENGINE_VERSION,
+        dependency_snapshot=dependency,
+        warnings=("Statistical validation plot only from B44 tables; no clinical conclusion or report-ready export.",),
+        blockers=(),
+    ).to_dict()
+
+
 def _blocked_artifact(source_result_id: str, gate: dict[str, Any]) -> dict[str, Any]:
     plot_type = str(gate.get("plot_type") or "risk_score_distribution_plot")
     artifact = PlotArtifact(
@@ -1437,6 +1644,98 @@ def _nomogram_svg(rows: list[dict[str, Any]], source: dict[str, Any], preflight_
         f'<text x="{left}" y="290" font-size="12" fill="#555">This is not a clinical nomogram interpretation and must remain attached to the source formal risk score result provenance.</text>',
     ]
     return "<svg xmlns=\"http://www.w3.org/2000/svg\" " f"width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">\n" + "\n".join([*frame, *parts]) + "\n</svg>\n"
+
+
+def _calibration_svg(rows: list[dict[str, Any]], source: dict[str, Any]) -> str:
+    width, height = 720, 420
+    left, top, plot_w, plot_h = 76, 54, 540, 260
+    points: list[str] = []
+    for row in rows:
+        predicted = parse_float(row.get("mean_predicted_probability"))
+        observed = parse_float(row.get("observed_event_rate"))
+        if predicted is None or observed is None:
+            continue
+        x = left + max(0.0, min(1.0, predicted)) * plot_w
+        y = top + plot_h - max(0.0, min(1.0, observed)) * plot_h
+        points.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="#315f9f" />')
+    title = html.escape(f"{source.get('result_id') or 'risk score'} calibration")
+    frame = [
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff" />',
+        f'<text x="{left}" y="30" font-size="16" font-weight="600">{title}</text>',
+        f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" stroke="#202124" />',
+        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" stroke="#202124" />',
+        f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top}" stroke="#777" stroke-dasharray="5 5" />',
+        f'<text x="{left + 150}" y="{top + plot_h + 42}" font-size="13">Mean predicted probability</text>',
+        f'<text x="18" y="{top + 130}" font-size="13">Observed event rate</text>',
+        f'<text x="{left}" y="{height - 36}" font-size="12" fill="#555">Statistical validation plot from B44 table only; no clinical conclusion or report-ready unlock.</text>',
+    ]
+    return "<svg xmlns=\"http://www.w3.org/2000/svg\" " f"width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">\n" + "\n".join([*frame, *points]) + "\n</svg>\n"
+
+
+def _decision_curve_svg(rows: list[dict[str, Any]], source: dict[str, Any]) -> str:
+    width, height = 760, 430
+    left, top, plot_w, plot_h = 78, 54, 570, 270
+    thresholds: list[float] = []
+    model: list[float] = []
+    treat_all: list[float] = []
+    for row in rows:
+        threshold = parse_float(row.get("threshold_probability"))
+        model_value = parse_float(row.get("net_benefit_model"))
+        treat_all_value = parse_float(row.get("net_benefit_treat_all"))
+        if threshold is None or model_value is None or treat_all_value is None:
+            continue
+        thresholds.append(threshold)
+        model.append(model_value)
+        treat_all.append(treat_all_value)
+    values = [*model, *treat_all, 0.0]
+    min_y = min(values) if values else 0.0
+    max_y = max(values) if values else 1.0
+    span_y = max(max_y - min_y, 1.0)
+
+    def polyline(values_for_line: list[float]) -> str:
+        coords = []
+        for threshold, value in zip(thresholds, values_for_line):
+            x = left + threshold * plot_w
+            y = top + plot_h - ((value - min_y) / span_y) * plot_h
+            coords.append(f"{x:.1f},{y:.1f}")
+        return " ".join(coords)
+
+    zero_y = top + plot_h - ((0.0 - min_y) / span_y) * plot_h
+    title = html.escape(f"{source.get('result_id') or 'risk score'} decision curve")
+    frame = [
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff" />',
+        f'<text x="{left}" y="30" font-size="16" font-weight="600">{title}</text>',
+        f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" stroke="#202124" />',
+        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" stroke="#202124" />',
+        f'<line x1="{left}" y1="{zero_y:.1f}" x2="{left + plot_w}" y2="{zero_y:.1f}" stroke="#777" stroke-dasharray="5 5" />',
+        f'<polyline points="{polyline(model)}" fill="none" stroke="#315f9f" stroke-width="2.2" />',
+        f'<polyline points="{polyline(treat_all)}" fill="none" stroke="#7a4b00" stroke-width="2" />',
+        f'<text x="{left + 175}" y="{top + plot_h + 42}" font-size="13">Threshold probability</text>',
+        f'<text x="18" y="{top + 132}" font-size="13">Net benefit</text>',
+        f'<text x="{left}" y="{height - 58}" font-size="12" fill="#315f9f">Model</text>',
+        f'<text x="{left + 70}" y="{height - 58}" font-size="12" fill="#7a4b00">Treat all</text>',
+        f'<text x="{left}" y="{height - 34}" font-size="12" fill="#555">Statistical validation plot from B44 table only; no treatment recommendation or report-ready unlock.</text>',
+    ]
+    return "<svg xmlns=\"http://www.w3.org/2000/svg\" " f"width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">\n" + "\n".join(frame) + "\n</svg>\n"
+
+
+def _statistics_artifact_paths(root: Path, source: dict[str, Any]) -> dict[str, Path]:
+    artifacts = source.get("output_artifacts") if isinstance(source.get("output_artifacts"), list) else []
+    output: dict[str, Path] = {}
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        artifact_type = str(artifact.get("artifact_type") or "")
+        path_text = str(artifact.get("path") or "")
+        if not path_text:
+            continue
+        path = Path(path_text)
+        resolved = path if path.is_absolute() else root / path
+        if artifact_type == "risk_score_calibration_statistics_table" and resolved.is_file():
+            output["calibration"] = resolved
+        if artifact_type == "risk_score_decision_curve_statistics_table" and resolved.is_file():
+            output["decision_curve"] = resolved
+    return output
 
 
 def _select_source(root: Path, result_id: str | None) -> dict[str, Any] | None:

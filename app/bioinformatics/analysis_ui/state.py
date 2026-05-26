@@ -56,6 +56,7 @@ from app.bioinformatics.survival_clinical import (
     build_risk_score_advanced_visualization_preflight_gate,
     build_risk_score_advanced_visualization_runtime_plan,
     build_risk_score_calibration_decision_curve_input_gate,
+    build_risk_score_calibration_decision_curve_plot_artifact_gate,
     build_risk_score_calibration_decision_curve_statistics_gate,
     build_risk_score_nomogram_contract_gate,
     build_risk_score_plot_artifact_activation_gate,
@@ -198,6 +199,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         risk_score_advanced_artifact_gate=survival_clinical_state["risk_score_advanced_artifact_gate"],
         risk_score_calibration_decision_curve_input_gate=survival_clinical_state["risk_score_calibration_decision_curve_input_gate"],
         risk_score_calibration_decision_curve_statistics_gate=survival_clinical_state["risk_score_calibration_decision_curve_statistics_gate"],
+        risk_score_calibration_decision_curve_plot_gate=survival_clinical_state["risk_score_calibration_decision_curve_plot_gate"],
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         ora_input_gate=ora_gates["input_gate"],
@@ -1138,6 +1140,10 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
         project_root,
         result_id=_latest_result_id(result_entries or [], {"risk_score"}),
     )
+    risk_score_calibration_decision_curve_plot_gate = build_risk_score_calibration_decision_curve_plot_artifact_gate(
+        project_root,
+        result_id=_latest_result_id(result_entries or [], {"risk_score"}),
+    )
     gate_rows = [
         _formal_deg_gate_row(
             "Survival/clinical input resolver",
@@ -1275,6 +1281,13 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
             basis=f"source={risk_score_calibration_decision_curve_statistics_gate.get('selected_result_id', '')}; rows={risk_score_calibration_decision_curve_statistics_gate.get('validation_row_count', 0)}; no plot/report",
         ),
         _formal_deg_gate_row(
+            "B45 Risk score calibration / decision curve plot artifact gate",
+            risk_score_calibration_decision_curve_plot_gate.get("status"),
+            risk_score_calibration_decision_curve_plot_gate.get("blockers", []),
+            risk_score_calibration_decision_curve_plot_gate.get("warnings", []),
+            basis=f"source={risk_score_calibration_decision_curve_plot_gate.get('selected_result_id', '')}; plot={risk_score_calibration_decision_curve_plot_gate.get('plot_type', '')}; report_ready={risk_score_calibration_decision_curve_plot_gate.get('report_ready_eligible', False)}",
+        ),
+        _formal_deg_gate_row(
             "Survival dependency",
             dependency.get("status"),
             dependency.get("blockers", []),
@@ -1311,6 +1324,7 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
         "risk_score_advanced_artifact_gate": risk_score_advanced_artifact_gate,
         "risk_score_calibration_decision_curve_input_gate": risk_score_calibration_decision_curve_input_gate,
         "risk_score_calibration_decision_curve_statistics_gate": risk_score_calibration_decision_curve_statistics_gate,
+        "risk_score_calibration_decision_curve_plot_gate": risk_score_calibration_decision_curve_plot_gate,
         "gate_rows": gate_rows,
     }
 
@@ -1626,6 +1640,7 @@ def build_survival_clinical_rows(
     risk_score_advanced_artifact_gate = survival_clinical_state.get("risk_score_advanced_artifact_gate") if isinstance(survival_clinical_state.get("risk_score_advanced_artifact_gate"), dict) else {}
     risk_score_calibration_decision_curve_input_gate = survival_clinical_state.get("risk_score_calibration_decision_curve_input_gate") if isinstance(survival_clinical_state.get("risk_score_calibration_decision_curve_input_gate"), dict) else {}
     risk_score_calibration_decision_curve_statistics_gate = survival_clinical_state.get("risk_score_calibration_decision_curve_statistics_gate") if isinstance(survival_clinical_state.get("risk_score_calibration_decision_curve_statistics_gate"), dict) else {}
+    risk_score_calibration_decision_curve_plot_gate = survival_clinical_state.get("risk_score_calibration_decision_curve_plot_gate") if isinstance(survival_clinical_state.get("risk_score_calibration_decision_curve_plot_gate"), dict) else {}
     km_real_plot_gate = km_real_plot_gate or {}
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
@@ -1824,6 +1839,15 @@ def build_survival_clinical_rows(
             "backend_status": f"creates_statistics_artifact={risk_score_calibration_decision_curve_statistics_gate.get('creates_statistics_artifact', False)}; creates_plot_artifact={risk_score_calibration_decision_curve_statistics_gate.get('creates_plot_artifact', False)}; report_ready={risk_score_calibration_decision_curve_statistics_gate.get('report_ready_eligible', False)}",
             "disabled_reason": compact_list(_list(risk_score_calibration_decision_curve_statistics_gate.get("blockers")) or ["calibration_decision_curve_statistics_gate_not_passed"]),
             "warnings": compact_list(_list(risk_score_calibration_decision_curve_statistics_gate.get("warnings")) or ["Statistics tables only; no calibration/DCA plot."]),
+        },
+        {
+            "row_id": "risk_score_calibration_decision_curve_plot",
+            "label": "Risk score calibration / decision curve plot artifact",
+            "status": str(risk_score_calibration_decision_curve_plot_gate.get("status") or "blocked"),
+            "asset_status": f"source={risk_score_calibration_decision_curve_plot_gate.get('selected_result_id', '')}; plot={risk_score_calibration_decision_curve_plot_gate.get('plot_type', '')}",
+            "backend_status": f"creates_plot_artifact={risk_score_calibration_decision_curve_plot_gate.get('creates_plot_artifact', False)}; report_ready={risk_score_calibration_decision_curve_plot_gate.get('report_ready_eligible', False)}",
+            "disabled_reason": compact_list(_list(risk_score_calibration_decision_curve_plot_gate.get("blockers")) or ["calibration_decision_curve_plot_gate_not_passed"]),
+            "warnings": compact_list(_list(risk_score_calibration_decision_curve_plot_gate.get("warnings")) or ["Plot from B44 statistics only; no clinical interpretation."]),
         },
         {
             "row_id": "clinical_association",

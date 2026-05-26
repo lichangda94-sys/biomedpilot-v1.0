@@ -38,6 +38,7 @@ def build_action_rows(
     risk_score_advanced_artifact_gate: dict[str, Any] | None = None,
     risk_score_calibration_decision_curve_input_gate: dict[str, Any] | None = None,
     risk_score_calibration_decision_curve_statistics_gate: dict[str, Any] | None = None,
+    risk_score_calibration_decision_curve_plot_gate: dict[str, Any] | None = None,
     km_real_plot_gate: dict[str, Any] | None = None,
     cox_real_plot_gate: dict[str, Any] | None = None,
     km_report_gate: dict[str, Any] | None = None,
@@ -93,6 +94,7 @@ def build_action_rows(
     risk_score_advanced_artifact_gate = risk_score_advanced_artifact_gate or {}
     risk_score_calibration_decision_curve_input_gate = risk_score_calibration_decision_curve_input_gate or {}
     risk_score_calibration_decision_curve_statistics_gate = risk_score_calibration_decision_curve_statistics_gate or {}
+    risk_score_calibration_decision_curve_plot_gate = risk_score_calibration_decision_curve_plot_gate or {}
     km_real_plot_gate = km_real_plot_gate or {}
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
@@ -169,6 +171,7 @@ def build_action_rows(
     rows.append(_risk_score_advanced_artifact_action(risk_score_advanced_artifact_gate))
     rows.append(_risk_score_calibration_decision_curve_input_action(risk_score_calibration_decision_curve_input_gate))
     rows.append(_risk_score_calibration_decision_curve_statistics_action(risk_score_calibration_decision_curve_statistics_gate))
+    rows.append(_risk_score_calibration_decision_curve_plot_action(risk_score_calibration_decision_curve_plot_gate))
     rows.append(_survival_real_plot_action("generate_km_plot", "Generate KM plot", km_real_plot_gate))
     rows.append(_survival_real_plot_action("generate_cox_plot", "Generate Cox forest plot", cox_real_plot_gate))
     rows.append(_survival_report_ready_action(km_report_gate, cox_report_gate))
@@ -1334,6 +1337,28 @@ def _risk_score_calibration_decision_curve_statistics_action(gate: dict[str, Any
         str(gate.get("status") or "blocked"),
         "; ".join(dict.fromkeys([*blockers, "B44 requires a ready B43 input gate and validation probability table; no calibration curve, decision curve plot, report-ready package or clinical conclusion is generated."])),
         "Resolve validation probability table and B43 input blockers before generating controlled statistics tables.",
+    )
+
+
+def _risk_score_calibration_decision_curve_plot_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed":
+        return {
+            "action_id": "risk_score_calibration_decision_curve_plot",
+            "label": "Generate calibration / decision curve plot",
+            "state": "enabled_plot_artifact_from_statistics",
+            "button_behavior": "enabled_b45_statistics_sourced_svg_plot_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Generate a controlled SVG calibration or decision-curve plot from B44 statistics tables only; this does not create report-ready output, risk groups, treatment recommendation or clinical interpretation.",
+        }
+    blockers = _list(gate.get("blockers")) or ["calibration_decision_curve_plot_gate_not_passed"]
+    return _disabled(
+        "risk_score_calibration_decision_curve_plot",
+        "Generate calibration / decision curve plot",
+        str(gate.get("status") or "blocked"),
+        "; ".join(dict.fromkeys([*blockers, "B45 requires B44 statistics tables; no plot is created from preflight/config alone, and no report-ready package or clinical conclusion is generated."])),
+        "Generate B44 statistics tables first, then create a controlled B45 SVG plot artifact.",
     )
 
 

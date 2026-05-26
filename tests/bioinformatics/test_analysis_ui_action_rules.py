@@ -404,6 +404,40 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert statistics_enabled["button_behavior"] == "enabled_statistics_table_artifacts_only"
     assert "does not create calibration/decision plots" in statistics_enabled["next_action"]
 
+    plot_blocked_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_calibration_decision_curve_plot_gate={
+            "status": "blocked",
+            "blockers": ["risk_score_calibration_statistics_table_missing"],
+            "creates_plot_artifact": False,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    plot_blocked = _row(plot_blocked_rows, "risk_score_calibration_decision_curve_plot")
+    assert plot_blocked["enabled"] is False
+    assert "risk_score_calibration_statistics_table_missing" in plot_blocked["disabled_reason"]
+    assert "no plot is created from preflight/config alone" in plot_blocked["disabled_reason"]
+
+    plot_enabled_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_calibration_decision_curve_plot_gate={
+            "status": "passed",
+            "blockers": [],
+            "creates_plot_artifact": True,
+            "report_ready_eligible": False,
+        },
+        report_gate={"status": "blocked"},
+    )
+    plot_enabled = _row(plot_enabled_rows, "risk_score_calibration_decision_curve_plot")
+    assert plot_enabled["enabled"] is True
+    assert plot_enabled["button_behavior"] == "enabled_b45_statistics_sourced_svg_plot_only"
+    assert "from B44 statistics tables only" in plot_enabled["next_action"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(

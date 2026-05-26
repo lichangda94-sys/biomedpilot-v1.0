@@ -28,7 +28,12 @@ FORBIDDEN_RISK_SCORE_FIELDS = (
     "treatment_recommendation",
     "nomogram_score",
 )
-ALLOWED_RISK_SCORE_PLOT_TYPES = {"risk_score_distribution_plot", "risk_score_nomogram"}
+ALLOWED_RISK_SCORE_PLOT_TYPES = {
+    "risk_score_distribution_plot",
+    "risk_score_nomogram",
+    "risk_score_calibration_curve",
+    "risk_score_decision_curve",
+}
 
 
 def build_risk_score_result_schema_gate(

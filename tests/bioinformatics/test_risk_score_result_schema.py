@@ -60,8 +60,11 @@ def test_risk_score_result_index_schema_allows_only_formal_statistical_result_wi
     nomogram = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [_valid_plot_artifact("risk_score_nomogram")]})
     assert nomogram["status"] == "passed"
 
-    plot = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [_valid_plot_artifact("risk_score_calibration_curve")]})
-    assert "risk_score_plot_artifact_0:unsupported_plot_type:risk_score_calibration_curve" in plot["blockers"]
+    calibration = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [_valid_plot_artifact("risk_score_calibration_curve")]})
+    assert calibration["status"] == "passed"
+
+    decision = validate_risk_score_result_index_entry({**_valid_entry(), "plot_artifacts": [_valid_plot_artifact("risk_score_decision_curve")]})
+    assert decision["status"] == "passed"
 
 
 def _valid_entry() -> dict[str, object]:
