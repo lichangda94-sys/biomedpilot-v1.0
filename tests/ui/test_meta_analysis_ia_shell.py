@@ -83,6 +83,7 @@ def test_meta_active_types_include_exactly_ten_v1_types() -> None:
 def test_meta_workspace_renders_target_ia_shell(meta_workspace) -> None:
     title = meta_workspace.findChild(QLabel, "metaTargetIATitle")
     boundary = meta_workspace.findChild(QLabel, "metaTargetIABoundary")
+    workflow = meta_workspace.findChild(QFrame, "metaWorkflowNavigationPanel")
     nav_items = meta_workspace.findChildren(QPushButton, "metaTargetIANavItem")
 
     assert title is not None
@@ -90,6 +91,10 @@ def test_meta_workspace_renders_target_ia_shell(meta_workspace) -> None:
     assert boundary is not None
     assert "定义研究问题" in boundary.text()
     assert "全文管理" in boundary.text()
+    assert workflow is not None
+    assert workflow.property("uiPrimitive") == "workflow_stepper"
+    assert workflow.property("orientation") == "vertical"
+    assert workflow.property("moduleKey") == ModuleKey.META_ANALYSIS.value
     assert len(nav_items) == 11
     assert tuple(item.property("pageKey") for item in nav_items) == meta_workspace.target_ia_page_keys()
     assert all(item.isEnabled() for item in nav_items)

@@ -7,7 +7,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QFrame, QTableWidget
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QFrame, QSplitter, QTableView, QTableWidget
 
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
@@ -53,6 +53,7 @@ def test_meta_screening_page_renders_draft_decisions_only(meta_workspace) -> Non
     panel = meta_workspace.findChild(QFrame, "metaScreeningRuntimePanel")
     counts = meta_workspace.findChild(QTableWidget, "metaScreeningDraftCountsTable")
     queue = meta_workspace.findChild(QTableWidget, "metaScreeningReferenceQueue")
+    shared_queue = meta_workspace.findChild(QSplitter, "metaSharedReferenceQueuePanel")
     decisions = meta_workspace.findChildren(QPushButton, "metaScreeningDecisionDraftButton")
     save_draft = meta_workspace.findChild(QPushButton, "metaSaveDraftScreeningDecisionButton")
     ai_card = meta_workspace.findChild(QLabel, "metaScreeningAISuggestionCard")
@@ -68,6 +69,11 @@ def test_meta_screening_page_renders_draft_decisions_only(meta_workspace) -> Non
     assert "final PRISMA counts" not in labels
     assert queue is not None
     assert {"REF-001", "REF-002", "include_draft", "uncertain", "exclude_draft"} <= _table_values(queue)
+    assert shared_queue is not None
+    assert shared_queue.property("uiPrimitive") == "reference_queue_panel"
+    assert shared_queue.property("screeningState") == "draft_decisions_only"
+    assert shared_queue.property("finalDecisionEnabled") is False
+    assert shared_queue.property("formalActionEnabled") is False
     assert {button.property("decisionId") for button in decisions} == {
         "include_draft",
         "exclude_draft",
@@ -91,6 +97,7 @@ def test_meta_fulltext_extraction_keeps_tabs_and_draft_fields(meta_workspace) ->
     panel = meta_workspace.findChild(QFrame, "metaFulltextExtractionPanel")
     tabs = meta_workspace.findChildren(QPushButton, "metaFulltextExtractionTab")
     status = meta_workspace.findChild(QTableWidget, "metaFulltextStatusPreviewTable")
+    shared_table = meta_workspace.findChild(QTableView, "metaSharedExtractionFormTable")
     fields = meta_workspace.findChildren(QLabel, "metaExtractionFieldCell")
     mark_draft = meta_workspace.findChild(QPushButton, "metaConfirmExtractionButton")
     labels = _all_label_text(meta_workspace)
@@ -101,7 +108,13 @@ def test_meta_fulltext_extraction_keeps_tabs_and_draft_fields(meta_workspace) ->
     assert panel.property("resultSemanticKey") == "no_formal_result"
     assert [tab.property("tabKey") for tab in tabs] == ["全文管理", "提取表设计", "提取完成核查", "历史记录"]
     assert status is not None
+    assert status.property("horizontalOverflow") is True
     assert {"REF-001", "file pending", "needs retrieval", "not_started"} <= _table_values(status)
+    assert shared_table is not None
+    assert shared_table.property("uiPrimitive") == "extraction_form_table"
+    assert shared_table.property("draftOnly") is True
+    assert shared_table.property("formalAnalysisInput") is False
+    assert shared_table.property("formalActionEnabled") is False
     field_texts = {field.text() for field in fields}
     assert {
         "first_author",

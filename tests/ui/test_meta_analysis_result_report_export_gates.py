@@ -47,6 +47,8 @@ def _table_values(table: QTableWidget) -> set[str]:
 def test_meta_result_review_page_renders_gate_summary_without_formal_result(meta_workspace) -> None:
     meta_workspace.show_target_ia_page("result_report")
     panel = meta_workspace.findChild(QFrame, "metaResultReviewRuntimePanel")
+    pairwise_card = meta_workspace.findChild(QFrame, "metaPairwiseInputPreviewCard")
+    forest_placeholder = meta_workspace.findChild(QFrame, "metaForestPlotPlaceholder")
     readiness = meta_workspace.findChild(QTableWidget, "metaResultReadinessSummaryTable")
     pairwise = meta_workspace.findChild(QTableWidget, "metaPairwiseInputPreviewTable")
     notice = meta_workspace.findChild(QLabel, "metaResultReviewHumanReviewNotice")
@@ -60,7 +62,15 @@ def test_meta_result_review_page_renders_gate_summary_without_formal_result(meta
     assert panel.property("exportGate") == "disabled_empty_result"
     assert panel.property("fileWriteAllowed") is False
     assert panel.property("formalActionEnabled") is False
+    assert pairwise_card is not None
+    assert pairwise_card.property("uiPrimitive") == "preview_card"
+    assert pairwise_card.property("formalResult") is False
+    assert forest_placeholder is not None
+    assert forest_placeholder.property("uiPrimitive") == "plot_placeholder"
+    assert forest_placeholder.property("formalPlot") is False
+    assert forest_placeholder.property("fakePlotData") is False
     assert readiness is not None
+    assert readiness.property("horizontalOverflow") is True
     assert {
         "testing_summary_only / no_formal_result",
         "formal_pooled_effect",
@@ -109,6 +119,7 @@ def test_meta_report_ready_gate_blocks_report_generation(meta_workspace) -> None
 def test_meta_report_export_page_disables_all_formats_and_file_writes(meta_workspace) -> None:
     meta_workspace.show_target_ia_page("report_export")
     panel = meta_workspace.findChild(QFrame, "metaReportExportGateRuntimePanel")
+    shared_gate = meta_workspace.findChild(QFrame, "metaSharedExportGatePanel")
     gate = meta_workspace.findChild(QTableWidget, "metaReportExportGateReasonTable")
     export_buttons = meta_workspace.findChildren(QPushButton, "metaExportFormatDisabledButton")
     notice = meta_workspace.findChild(QLabel, "metaExportAfterGateNotice")
@@ -121,7 +132,13 @@ def test_meta_report_export_page_disables_all_formats_and_file_writes(meta_works
     assert panel.property("reportReadyState") == "blocked"
     assert panel.property("exportGate") == "disabled_empty_result"
     assert panel.property("fileWriteAllowed") is False
+    assert shared_gate is not None
+    assert shared_gate.property("uiPrimitive") == "export_gate_panel"
+    assert shared_gate.property("exportAllowed") is False
+    assert shared_gate.property("reportGenerationAllowed") is False
+    assert shared_gate.property("fileWriteAllowed") is False
     assert gate is not None
+    assert gate.property("horizontalOverflow") is True
     assert {"no formal result", "report not ready", "export adapter missing", "no file write in gated shell"} <= _table_values(gate)
     assert {button.property("exportFormat") for button in export_buttons} == {"DOCX", "HTML", "PDF", "CSV", "XLSX", "ZIP"}
     assert all(not button.isEnabled() for button in export_buttons)

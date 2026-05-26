@@ -8,12 +8,17 @@ from app.shared.feature_availability import FeatureAvailability, FeatureAvailabi
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
 from app.shared.semantic_keys import FeatureStatusKey, ModuleKey, PageKey
-from app.shared.ui_components.primitives import make_card, make_status_chip
-from app.shared.ui_components.workbench import (
-    WorkbenchNavItem,
-    make_workbench_secondary_nav,
-    make_workbench_shell,
+from app.shared.ui_components.common import WorkflowStep, make_workflow_stepper
+from app.shared.ui_components.dense_workbench import (
+    ExtractionField,
+    ReferenceItem,
+    make_extraction_form_table,
+    make_preview_card,
+    make_reference_queue_panel,
 )
+from app.shared.ui_components.primitives import make_card, make_status_chip
+from app.shared.ui_components.specialized import ExportFormatAction, ExportGateCheck, make_export_gate_panel, make_plot_placeholder
+from app.shared.ui_components.workbench import make_workbench_shell
 from app.version import APP_VERSION
 
 from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_analysis_project
@@ -22,9 +27,11 @@ from app.meta_analysis.version import META_ANALYSIS_MAINLINE_CONTRACT_VERSION
 try:
     from PySide6.QtCore import QSize, Qt
     from PySide6.QtWidgets import (
+        QAbstractItemView,
         QFrame,
         QGridLayout,
         QHBoxLayout,
+        QHeaderView,
         QLabel,
         QListWidget,
         QListWidgetItem,
@@ -233,9 +240,16 @@ if QWidget is not None:
     def _readonly_table(object_name: str, headers: tuple[str, ...], rows: tuple[tuple[str, ...], ...]) -> QTableWidget:
         table = QTableWidget(len(rows), len(headers))
         table.setObjectName(object_name)
+        table.setProperty("uiPrimitive", "meta_runtime_table")
+        table.setProperty("readOnly", True)
+        table.setProperty("horizontalOverflow", True)
         table.setHorizontalHeaderLabels(headers)
-        table.setEditTriggers(QTableWidget.NoEditTriggers)
-        table.setSelectionMode(QTableWidget.NoSelection)
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setSelectionMode(QAbstractItemView.NoSelection)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        table.horizontalHeader().setMinimumSectionSize(96)
         table.setAlternatingRowColors(True)
         for row_index, row in enumerate(rows):
             for column_index, value in enumerate(row):
@@ -387,28 +401,35 @@ if QWidget is not None:
             preview = make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview")
             preview.setObjectName("metaDeveloperPreviewChip")
 
-            nav_frame = make_workbench_secondary_nav(
+            nav_frame = make_workflow_stepper(
                 [
-                    WorkbenchNavItem(
-                        page.key,
-                        _meta_flow_button_text(page),
+                    WorkflowStep(
+                        key=page.key,
+                        label=_compact_flow_label(page.label),
                         status_key=page.status_key,
-                        semantic_key=_META_PAGE_SEMANTIC_KEYS[page.key],
+                        semantic_state=page.status_key,
+                        enabled=True,
                         current=page.key == self._current_target_page_key,
-                        tooltip=page.boundary,
+                        description=page.boundary,
                     )
                     for page in meta_target_ia_pages()
                 ],
                 object_name="metaWorkflowNavigationPanel",
                 title="Workflow / 流程导航",
+                on_step_requested=self.show_target_ia_page,
             )
+            nav_frame.setProperty("uiPrimitive", "workflow_stepper")
+            nav_frame.setProperty("orientation", "vertical")
+            nav_frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
             nav_frame.setProperty("layoutPolishNoOverlap", True)
             nav_frame.setMinimumWidth(280)
             nav_frame.setMaximumWidth(320)
             nav_title = nav_frame.findChild(QLabel, "workbenchSecondaryNavTitle")
+            if nav_title is None:
+                nav_title = nav_frame.findChild(QLabel, "uiSectionTitle")
             if nav_title is not None:
                 nav_title.setObjectName("metaWorkflowNavigationTitle")
-            nav_buttons = nav_frame.findChildren(QPushButton, "workbenchSecondaryNavItem")
+            nav_buttons = nav_frame.findChildren(QPushButton, "workflowStepperButton")
             for page, item in zip(meta_target_ia_pages(), nav_buttons, strict=False):
                 item.setObjectName("metaTargetIANavItem")
                 item.setText(_meta_flow_button_text(page))
@@ -416,6 +437,8 @@ if QWidget is not None:
                 item.setMinimumHeight(74)
                 item.setMinimumSize(0, 74)
                 item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                item.setProperty("pageKey", page.key)
+                item.setProperty("semanticKey", _META_PAGE_SEMANTIC_KEYS[page.key])
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
                 item.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
@@ -423,7 +446,6 @@ if QWidget is not None:
                 item.setProperty("interactionMode", "select_only")
                 item.setStyleSheet(_META_FLOW_BUTTON_STYLESHEET)
                 _apply_meta_page_icon(item, _META_PAGE_SEMANTIC_KEYS[page.key], size=22)
-                item.clicked.connect(lambda _checked=False, key=page.key: self.show_target_ia_page(key))
                 self._target_ia_buttons[page.key] = item
 
             runtime_main = make_card(object_name="metaRuntimeContentPanel")
@@ -1105,6 +1127,20 @@ if QWidget is not None:
             body.addWidget(detail, 1)
             layout.addLayout(body)
 
+            reference_queue = make_reference_queue_panel(
+                references=(
+                    ReferenceItem("REF-001", "Serum adiponectin and clinicopathological features", "include_draft", "testing", "testing"),
+                    ReferenceItem("REF-002", "ADIPOQ expression and survival outcomes", "uncertain", "testing", "testing"),
+                    ReferenceItem("REF-004", "Circulating adipokines and thyroid cancer risk", "exclude_draft", "testing", "testing"),
+                ),
+                object_name="metaSharedReferenceQueuePanel",
+            )
+            reference_queue.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            reference_queue.setProperty("pageKey", "screening")
+            reference_queue.setProperty("screeningState", "draft_decisions_only")
+            reference_queue.setProperty("formalActionEnabled", False)
+            layout.addWidget(reference_queue)
+
             decision_row = QHBoxLayout()
             for decision_id, text in (
                 ("include_draft", "Include draft"),
@@ -1291,6 +1327,24 @@ if QWidget is not None:
             body.addWidget(fields, 3)
             layout.addWidget(self._extraction_design_body)
 
+            shared_extraction_table = make_extraction_form_table(
+                (
+                    ExtractionField("first_author", "first_author", "Zhang", "testing", "draft", "manual extraction draft"),
+                    ExtractionField("year", "year", "2020", "testing", "draft", "manual extraction draft"),
+                    ExtractionField("cancer_type", "cancer_type", "thyroid carcinoma", "testing", "draft", "reviewer confirmation required"),
+                    ExtractionField("effect_measure", "effect_measure", "HR", "testing", "draft", "not a formal pooled input"),
+                    ExtractionField("effect_value", "effect_value", "1.48 draft", "testing", "draft", "not a formal effect estimate"),
+                    ExtractionField("ci_lower", "ci_lower", "1.05 draft", "testing", "draft", "not a formal effect estimate"),
+                    ExtractionField("ci_upper", "ci_upper", "2.10 draft", "testing", "draft", "not a formal effect estimate"),
+                ),
+                object_name="metaSharedExtractionFormTable",
+            )
+            shared_extraction_table.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            shared_extraction_table.setProperty("pageKey", "fulltext_extraction")
+            shared_extraction_table.setProperty("extractionState", "draft_extraction")
+            shared_extraction_table.setProperty("formalActionEnabled", False)
+            layout.addWidget(shared_extraction_table)
+
             self._extraction_action_bar = QFrame()
             self._extraction_action_bar.setObjectName("metaExtractionActionBar")
             action_row = QHBoxLayout(self._extraction_action_bar)
@@ -1418,6 +1472,17 @@ if QWidget is not None:
             readiness.setMinimumHeight(150)
             layout.addWidget(readiness)
 
+            layout.addWidget(
+                make_plot_placeholder(
+                    title="Forest plot placeholder / 森林图占位",
+                    plot_type="forest_plot",
+                    message="Formal synthesis estimates and figure previews are disabled in UI-D5.",
+                    status_key="blocked",
+                    semantic_state="blocked",
+                    object_name="metaForestPlotPlaceholder",
+                )
+            )
+
             pairwise = _readonly_table(
                 "metaPairwiseInputPreviewTable",
                 ("study_id", "effect_type", "effect_value", "ci_lower", "ci_upper", "readiness"),
@@ -1430,7 +1495,16 @@ if QWidget is not None:
             pairwise.setObjectName("metaPairwiseInputPreviewTable")
             pairwise.setProperty("previewOnly", True)
             pairwise.setMinimumHeight(120)
-            layout.addWidget(pairwise)
+            layout.addWidget(
+                make_preview_card(
+                    title="Pairwise input preview / 配对输入预览",
+                    preview_widget=pairwise,
+                    status_key="preflight_only",
+                    semantic_state="preflight_only",
+                    caption="Draft extraction values are shown for review only; no summary estimate is computed.",
+                    object_name="metaPairwiseInputPreviewCard",
+                )
+            )
 
             blockers = _readonly_table(
                 "metaReportReadyBlockerChecklist",
@@ -1480,6 +1554,25 @@ if QWidget is not None:
             title.setObjectName("metaReportExportGateRuntimeTitle")
             title.setStyleSheet("font-weight: 750;")
             layout.addWidget(title)
+
+            shared_gate = make_export_gate_panel(
+                title="Shared export gate / 共享导出门控",
+                checks=(
+                    ExportGateCheck("formal_result", "Formal pooled result", False, "No formal pairwise pooled result exists.", "blocked"),
+                    ExportGateCheck("report_ready", "Report-ready package", False, "Report-ready systematic review package is not enabled.", "report_disabled"),
+                    ExportGateCheck("export_adapter", "Export adapter", False, "Export adapter is not connected in the runtime shell.", "adapter_needed"),
+                ),
+                formats=(
+                    ExportFormatAction("export.format.docx", "DOCX disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                    ExportFormatAction("export.format.html", "HTML disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                    ExportFormatAction("export.format.pdf", "PDF disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                ),
+                artifact_exists=False,
+                object_name="metaSharedExportGatePanel",
+            )
+            shared_gate.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            shared_gate.setProperty("pageKey", "report_export")
+            layout.addWidget(shared_gate)
 
             gate = _readonly_table(
                 "metaReportExportGateReasonTable",
