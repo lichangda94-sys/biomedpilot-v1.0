@@ -4757,19 +4757,25 @@ def test_results_browser_survival_clinical_section_report_package_gate(qt_app, p
     gate_text = _table_text(gate_table)
     assert "KM/log-rank section report-ready" in gate_text
     assert "Cox section report-ready" in gate_text
+    assert "Risk score validation section report-ready" in gate_text
     assert "eligible_for_km_logrank_report_ready" in gate_text
     assert "eligible_for_cox_report_ready" in gate_text
 
     km_status = widget.findChild(QLabel, "kmReportReadyStatus")
     cox_status = widget.findChild(QLabel, "coxReportReadyStatus")
+    risk_status = widget.findChild(QLabel, "riskScoreReportReadyStatus")
     assert km_status is not None
     assert cox_status is not None
+    assert risk_status is not None
     assert "section-only package" in km_status.text()
     assert "section-only package" in cox_status.text()
+    assert "missing_risk_score_result" in risk_status.text()
     km_button = widget.findChild(QPushButton, "kmReportReadyButton")
     cox_button = widget.findChild(QPushButton, "coxReportReadyButton")
+    risk_button = widget.findChild(QPushButton, "riskScoreReportReadyButton")
     assert km_button is not None and km_button.isEnabled()
     assert cox_button is not None and cox_button.isEnabled()
+    assert risk_button is not None and not risk_button.isEnabled()
 
     km_package = widget.generate_km_logrank_report_ready_package()
     assert km_package is not None
@@ -4793,6 +4799,8 @@ def test_results_browser_survival_clinical_section_report_package_gate(qt_app, p
 def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, project_summary, monkeypatch) -> None:
     package_path = project_summary.project_root / "report_package" / "integrated" / "ui_ready"
     gate = _full_integrated_ui_gate()
+    captured_gate_kwargs: dict[str, object] = {}
+    captured_package_kwargs: dict[str, object] = {}
 
     def _fake_plan(_root, *, gate, export_format="markdown", renderer_gate=None):
         return {
@@ -4811,7 +4819,9 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
             "blocked_reason": "",
         }
 
-    def _fake_package(_root, *, export_format="markdown"):
+    def _fake_package(_root, *, export_format="markdown", include_sections=None, section_result_ids=None):
+        captured_package_kwargs["include_sections"] = include_sections
+        captured_package_kwargs["section_result_ids"] = section_result_ids
         package_path.mkdir(parents=True, exist_ok=True)
         (package_path / "integrated_report.md").write_text("# Integrated\n", encoding="utf-8")
         return {
@@ -4825,9 +4835,20 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
             "package_plan": _fake_plan(project_summary.project_root, gate=gate, export_format=export_format),
         }
 
-    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_gate", lambda _root: gate)
+    def _fake_gate(_root, **kwargs):
+        captured_gate_kwargs.clear()
+        captured_gate_kwargs.update(kwargs)
+        include_sections = kwargs.get("include_sections") or []
+        if "risk_score_validation" not in include_sections:
+            return gate
+        risk_gate = _full_integrated_ui_gate(include_risk_score=True)
+        risk_gate["included_optional_sections"] = ["risk_score_validation"]
+        return risk_gate
+
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_gate", _fake_gate)
     monkeypatch.setattr(workflow_pages, "build_full_integrated_report_package_plan", _fake_plan)
     monkeypatch.setattr(workflow_pages, "create_full_integrated_report_package", _fake_package)
+    monkeypatch.setattr(workflow_pages, "evaluate_risk_score_report_ready_gate", lambda *_args, **_kwargs: {"status": "eligible_for_risk_score_report_ready", "selected_result_id": "risk-ui", "blockers": [], "warnings": []})
 
     widget = BioinformaticsResultsBrowserWidget()
     widget.refresh_project(project_summary)
@@ -4838,6 +4859,9 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
     assert "DOCX rendered export=" in status.text()
     assert "PDF rendered export=" in status.text()
     assert "rendered exports are package artifacts only" in status.text()
+    include_risk = widget.findChild(QCheckBox, "fullIntegratedIncludeRiskScoreValidation")
+    assert include_risk is not None
+    assert include_risk.isChecked() is False
     button = widget.findChild(QPushButton, "fullIntegratedReportButton")
     assert button is not None and button.isEnabled()
     plan_table = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
@@ -4849,6 +4873,8 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
     assert "disabled_export_formats" in plan_text
     assert "pdf, docx" in plan_text
     assert "No clinical diagnosis" in plan_text
+    assert "risk_score_validation_optional_section" in plan_text
+    assert "not_included" in plan_text
     section_table = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
     assert section_table is not None
     headers = "\n".join(section_table.horizontalHeaderItem(column).text() for column in range(section_table.columnCount()))
@@ -4861,10 +4887,23 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
 
     assert result is not None
     assert result["status"] == "full_integrated_report_package_created"
+    assert captured_package_kwargs["include_sections"] == ["formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox"]
+    assert captured_package_kwargs["section_result_ids"] is None
     assert Path(str(result["package_path"])).is_dir()
     assert "输出位置：" in widget.status_message()
     assert "PDF/DOCX 仍禁用" in widget.status_message()
     assert "risk score" in widget.status_message()
+
+    include_risk.setChecked(True)
+    widget.refresh_results()
+
+    assert captured_gate_kwargs["include_sections"] == ["formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox", "risk_score_validation"]
+    assert captured_gate_kwargs["section_result_ids"] == {"risk_score_validation": "risk-ui"}
+    included_plan_text = _table_text(plan_table)
+    assert "risk_score_validation_optional_section" in included_plan_text
+    assert "included" in included_plan_text
+    included_sections_text = _table_text(section_table)
+    assert "risk_score_validation" in included_sections_text
 
 
 def test_results_browser_docx_rendered_export_gate_surfaces_missing_pandoc(qt_app, project_summary, monkeypatch) -> None:
@@ -5019,7 +5058,7 @@ def test_results_browser_pdf_rendered_export_real_environment_registers_package_
     assert not list((package_path / "exports" / ".tmp").glob("*.pdf"))
 
 
-def _full_integrated_ui_gate() -> dict[str, object]:
+def _full_integrated_ui_gate(*, include_risk_score: bool = False) -> dict[str, object]:
     rows = [
         _full_integrated_ui_section("formal_deg", "deg-ui", "deg", package_status="not_required"),
         _full_integrated_ui_section("ora_enrichment", "ora-ui", "ora_enrichment", package_status="not_required"),
@@ -5027,6 +5066,8 @@ def _full_integrated_ui_gate() -> dict[str, object]:
         _full_integrated_ui_section("survival_km_logrank", "km-ui", "survival_km_logrank", package_status="passed"),
         _full_integrated_ui_section("cox", "cox-ui", "cox_univariate", package_status="passed"),
     ]
+    if include_risk_score:
+        rows.append(_full_integrated_ui_section("risk_score_validation", "risk-ui", "risk_score", package_status="passed"))
     return {
         "schema_version": "biomedpilot.full_integrated_report_gate.v1",
         "status": "eligible_for_full_integrated_report",
@@ -5034,6 +5075,7 @@ def _full_integrated_ui_gate() -> dict[str, object]:
         "export_activation_status": "eligible_for_markdown_export",
         "enabled_export_formats": ["markdown"],
         "disabled_export_formats": ["pdf", "docx"],
+        "included_optional_sections": ["risk_score_validation"] if include_risk_score else [],
         "section_rows": rows,
         "prerequisite_rows": [
             {
@@ -5044,7 +5086,7 @@ def _full_integrated_ui_gate() -> dict[str, object]:
             }
             for row in rows
         ],
-        "prerequisite_summary": {"status": "passed", "blocked_count": 0, "passed_count": 5},
+        "prerequisite_summary": {"status": "passed", "blocked_count": 0, "passed_count": len(rows)},
         "limitations_required": [
             "Statistical research report only.",
             "No clinical diagnosis, prognosis, or treatment recommendation.",

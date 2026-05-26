@@ -95,8 +95,10 @@ from app.bioinformatics.reports.ora import create_ora_report_ready_package, eval
 from app.bioinformatics.reports.survival_clinical import (
     create_cox_report_ready_package,
     create_km_logrank_report_ready_package,
+    create_risk_score_report_ready_package,
     evaluate_cox_report_ready_gate,
     evaluate_km_logrank_report_ready_gate,
+    evaluate_risk_score_report_ready_gate,
 )
 from app.bioinformatics.survival_clinical import run_controlled_risk_score
 from app.bioinformatics.survival_clinical.risk_score_review import build_risk_score_result_review, export_risk_score_review_table
@@ -7030,18 +7032,49 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._render_survival_clinical_report_gates(getattr(self, "_km_report_gate", {}), result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
         return result
 
+    def generate_risk_score_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        gate = self._risk_score_report_gate if isinstance(getattr(self, "_risk_score_report_gate", {}), dict) else {}
+        result_id = str(gate.get("selected_result_id") or "") or None
+        allow_table_only = bool(self._risk_score_table_only_report.isChecked()) if hasattr(self, "_risk_score_table_only_report") else False
+        result = create_risk_score_report_ready_package(self._project_root, result_id=result_id, allow_table_only_report=allow_table_only)
+        if result.get("status") == "risk_score_validation_only_report_ready_package_created":
+            self.refresh_results()
+            self._status_label.setText(
+                "已生成 risk score validation section package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
+                "仅包含 risk score validation section，未生成 full integrated report、临床诊断、预后、risk group 或治疗建议。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "Risk score validation report-ready gate 未通过"
+            self._status_label.setText(f"Risk score validation section package 未生成：{blockers}")
+            self._render_survival_clinical_report_gates(
+                getattr(self, "_km_report_gate", {}),
+                getattr(self, "_cox_report_gate", {}),
+                result.get("gate", {}) if isinstance(result.get("gate"), dict) else result,
+            )
+        return result
+
     def generate_full_integrated_report_package(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
         export_format = self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown"
-        result = create_full_integrated_report_package(self._project_root, export_format=export_format)
+        result = create_full_integrated_report_package(
+            self._project_root,
+            export_format=export_format,
+            include_sections=self._full_integrated_include_sections(),
+            section_result_ids=self._full_integrated_section_result_ids(),
+        )
         if result.get("status") == "full_integrated_report_package_created":
             self.refresh_results()
+            optional = "；包含显式选择的 risk score validation section" if self._full_integrated_risk_score_requested() else ""
             self._status_label.setText(
                 "已生成 markdown full integrated report package；"
                 f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
-                "仅包含已通过 gate 的统计研究 sections；PDF/DOCX 仍禁用；不包含临床诊断、预后、risk score 或治疗建议。"
+                f"仅包含已通过 gate 的统计研究 sections{optional}；PDF/DOCX 仍禁用；risk score validation 只在显式选择时纳入；不包含临床诊断、预后、risk group 或治疗建议。"
             )
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "Full integrated report gate 未通过"
@@ -7482,6 +7515,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         cox_report_controls.addWidget(self._cox_report_status)
         cox_report_controls.addStretch(1)
         survival_report_layout.addLayout(cox_report_controls)
+        risk_score_report_controls = QHBoxLayout()
+        self._risk_score_table_only_report = QCheckBox("允许无 calibration/DCA 图 risk score table-only section")
+        self._risk_score_table_only_report.setObjectName("riskScoreTableOnlyReportMode")
+        self._risk_score_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
+        self._risk_score_report_button = _button("生成 risk score validation section package", "secondaryButton", self.generate_risk_score_report_ready_package)
+        self._risk_score_report_button.setObjectName("riskScoreReportReadyButton")
+        self._risk_score_report_status = _muted("Risk score validation section gate 需要 formal risk score result、B42 nomogram、B44 calibration/DCA statistics、B45 calibration/DCA plots；table-only 模式需显式勾选。")
+        self._risk_score_report_status.setObjectName("riskScoreReportReadyStatus")
+        risk_score_report_controls.addWidget(self._risk_score_table_only_report)
+        risk_score_report_controls.addWidget(self._risk_score_report_button)
+        risk_score_report_controls.addWidget(self._risk_score_report_status)
+        risk_score_report_controls.addStretch(1)
+        survival_report_layout.addLayout(risk_score_report_controls)
         self._survival_clinical_report_gate = _table(["Gate", "状态", "Source", "Package", "Blockers", "Warnings"])
         self._survival_clinical_report_gate.setObjectName("survivalClinicalReportGateTable")
         survival_report_layout.addWidget(self._survival_clinical_report_gate)
@@ -7507,6 +7553,10 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._full_integrated_format.currentIndexChanged.connect(lambda _index: self.refresh_results())
         integrated_controls.addWidget(QLabel("Format"))
         integrated_controls.addWidget(self._full_integrated_format)
+        self._full_integrated_include_risk_score = QCheckBox("包含 risk score validation section")
+        self._full_integrated_include_risk_score.setObjectName("fullIntegratedIncludeRiskScoreValidation")
+        self._full_integrated_include_risk_score.stateChanged.connect(lambda _state: self.refresh_results())
+        integrated_controls.addWidget(self._full_integrated_include_risk_score)
         self._full_integrated_button = _button("生成 full integrated report package", "secondaryButton", self.generate_full_integrated_report_package)
         self._full_integrated_button.setObjectName("fullIntegratedReportButton")
         integrated_controls.addWidget(self._full_integrated_button)
@@ -7634,10 +7684,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._project_root,
             allow_table_only_report=bool(self._cox_table_only_report.isChecked()),
         ) if self._project_root else {}
+        risk_score_report_gate = evaluate_risk_score_report_ready_gate(
+            self._project_root,
+            allow_table_only_report=bool(self._risk_score_table_only_report.isChecked()),
+        ) if self._project_root else {}
         self._km_report_gate = km_report_gate
         self._cox_report_gate = cox_report_gate
-        self._render_survival_clinical_report_gates(km_report_gate, cox_report_gate)
-        integrated_gate = evaluate_full_integrated_report_gate(self._project_root) if self._project_root else {}
+        self._risk_score_report_gate = risk_score_report_gate
+        self._render_survival_clinical_report_gates(km_report_gate, cox_report_gate, risk_score_report_gate)
+        integrated_gate = evaluate_full_integrated_report_gate(
+            self._project_root,
+            include_sections=self._full_integrated_include_sections(),
+            section_result_ids=self._full_integrated_section_result_ids(),
+        ) if self._project_root else {}
         integrated_plan = build_full_integrated_report_package_plan(
             self._project_root,
             gate=integrated_gate,
@@ -7648,7 +7707,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._render_full_integrated_report_preview(integrated_gate, integrated_plan, docx_gate, pdf_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("survival_clinical_report_gate_rows", []) or [])]))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "risk_score_review": risk_score_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan, "full_integrated_docx_rendered_export_gate": docx_gate, "full_integrated_pdf_rendered_export_gate": pdf_gate}))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "risk_score_review": risk_score_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "risk_score_report_gate": risk_score_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan, "full_integrated_docx_rendered_export_gate": docx_gate, "full_integrated_pdf_rendered_export_gate": pdf_gate}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -7798,9 +7857,10 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             ],
         )
 
-    def _render_survival_clinical_report_gates(self, km_gate: dict[str, object], cox_gate: dict[str, object]) -> None:
+    def _render_survival_clinical_report_gates(self, km_gate: dict[str, object], cox_gate: dict[str, object], risk_score_gate: dict[str, object] | None = None) -> None:
         if not hasattr(self, "_survival_clinical_report_gate"):
             return
+        risk_score_gate = risk_score_gate or {}
         self._render_single_survival_clinical_report_gate(
             km_gate,
             button=self._km_report_button,
@@ -7815,11 +7875,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             eligible_status="eligible_for_cox_report_ready",
             display_name="Cox section",
         )
+        self._render_single_survival_clinical_report_gate(
+            risk_score_gate,
+            button=self._risk_score_report_button,
+            label=self._risk_score_report_status,
+            eligible_status="eligible_for_risk_score_report_ready",
+            display_name="Risk score validation section",
+        )
         _fill_table(
             self._survival_clinical_report_gate,
             [
                 _survival_clinical_report_gate_row("KM/log-rank section report-ready", km_gate),
                 _survival_clinical_report_gate_row("Cox section report-ready", cox_gate),
+                _survival_clinical_report_gate_row("Risk score validation section report-ready", risk_score_gate),
             ],
         )
 
@@ -7839,7 +7907,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             label.setText(
                 f"{display_name} gate passed；source={gate.get('selected_result_id', '')}；"
                 f"table-only={gate.get('allow_table_only_report', False)}；"
-                "section-only package；full integrated report / risk score / clinical conclusion remain disabled."
+                "section-only package；full integrated inclusion requires explicit checkbox；clinical conclusion remains disabled."
             )
         else:
             button.setEnabled(False)
@@ -7857,6 +7925,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     ) -> None:
         if not hasattr(self, "_full_integrated_status"):
             return
+        risk_score_requested = self._full_integrated_risk_score_requested()
         docx_gate = docx_gate or self._build_full_integrated_docx_rendered_export_ui_gate()
         pdf_gate = pdf_gate or self._build_full_integrated_pdf_rendered_export_ui_gate()
         blockers = [str(item) for item in gate.get("blockers", []) or []]
@@ -7872,8 +7941,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             renderer_id = str(plan.get("renderer_id") or "builtin_markdown")
             self._full_integrated_status.setText(
                 f"Full integrated report gate passed；renderer={renderer_id}；markdown-only package can be created；"
+                f"risk score validation optional section={'included' if risk_score_requested else 'not included'}；"
                 f"DOCX rendered export={docx_gate.get('status', 'blocked')}；PDF rendered export={pdf_gate.get('status', 'blocked')}；"
-                "rendered exports are package artifacts only；no clinical diagnosis/prognosis/risk score/treatment advice."
+                "rendered exports are package artifacts only；no clinical diagnosis/prognosis/risk group/treatment advice."
             )
         else:
             reason = "；".join(disabled_reasons or blockers) or str(plan.get("blocked_reason") or "full integrated report gate 未通过")
@@ -7894,6 +7964,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._full_integrated_plan,
             [
                 ["section_scope", plan.get("section_scope", gate.get("section_scope", "full_integrated_report"))],
+                ["risk_score_validation_optional_section", "included" if risk_score_requested else "not_included"],
+                ["included_optional_sections", ", ".join(str(item) for item in gate.get("included_optional_sections", []) or [])],
+                ["optional_section_policy", "risk score validation is included only after explicit checkbox and B46 package prerequisite; no clinical interpretation"],
                 ["export_format", plan.get("export_format", self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown")],
                 ["can_create_package", plan.get("can_create_package", False)],
                 ["export_activation_status", gate.get("export_activation_status", "")],
@@ -7947,6 +8020,22 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 if isinstance(row, dict)
             ],
         )
+
+    def _full_integrated_risk_score_requested(self) -> bool:
+        return bool(self._full_integrated_include_risk_score.isChecked()) if hasattr(self, "_full_integrated_include_risk_score") else False
+
+    def _full_integrated_include_sections(self) -> list[str] | None:
+        sections = ["formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox"]
+        if self._full_integrated_risk_score_requested():
+            sections.append("risk_score_validation")
+        return sections
+
+    def _full_integrated_section_result_ids(self) -> dict[str, str] | None:
+        if not self._full_integrated_risk_score_requested():
+            return None
+        gate = self._risk_score_report_gate if isinstance(getattr(self, "_risk_score_report_gate", {}), dict) else {}
+        result_id = str(gate.get("selected_result_id") or "")
+        return {"risk_score_validation": result_id} if result_id else None
 
     def _build_full_integrated_docx_rendered_export_ui_gate(self) -> dict[str, object]:
         if self._project_root is None:
