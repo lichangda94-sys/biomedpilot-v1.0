@@ -12,6 +12,7 @@ try:
 
     from app.shared.local_engines import (
         ENGINE_STATUS_AVAILABLE,
+        ExternalEngineRegistry,
         OllamaInstalledModel,
         OllamaLLMPreflightResult,
         OllamaLLMRuntimeManifest,
@@ -106,6 +107,35 @@ def test_run_check_updates_manifest_display_from_preflight(qt_app, tmp_path: Pat
     assert "available" in _card_state_text(widget)
 
 
+def test_external_dependency_detection_updates_registry_without_business_completion_status(qt_app, tmp_path: Path) -> None:
+    def _fake_dependency_detector(**_kwargs):
+        return ExternalEngineRegistry(
+            (
+                _snapshot("r_bioconductor", "R / Bioconductor", "partially_available", "package.r.deseq2.available", "missing"),
+                _snapshot("python_statistical", "Python statistical runtime", "available", "package.python.scipy.available", "available"),
+                _snapshot("report_renderer", "Report renderer toolchain", "partially_available", "renderer.pandoc.available", "available"),
+            ),
+            storage_root=tmp_path,
+        )
+
+    widget = ExternalEngineManagerPage(
+        manifest_path=tmp_path / "missing_manifest.json",
+        ai_gateway_config_path=tmp_path / "missing_ai_gateway_config.json",
+        dependency_storage_root=tmp_path,
+        dependency_detector=_fake_dependency_detector,
+    )
+
+    widget.findChild(QPushButton, "runExternalDependencyDetectionButton").click()
+    details = widget.findChild(QPlainTextEdit, "externalDependencyDetailText").toPlainText()
+    labels = _label_text(widget)
+
+    assert "package.r.deseq2.available: missing" in details
+    assert "dependency detection only" in details
+    assert "limma 已完成" not in details
+    assert "Cox 多因素已完成" not in details
+    assert "R / Bioconductor 依赖" in labels
+
+
 def test_manifest_summary_and_config_draft_do_not_create_gateway_config(qt_app, tmp_path: Path) -> None:
     manifest_path = tmp_path / "ollama_llm_runtime_manifest.json"
     config_path = tmp_path / "ai_gateway_config.json"
@@ -165,6 +195,35 @@ def _manifest(
         ),
         privacy_mode="local_only",
     )
+
+
+def _snapshot(engine_family: str, engine_name: str, status: str, capability_key: str, capability_status: str) -> dict[str, object]:
+    return {
+        "schema_version": "biomedpilot_external_engine_dependency_snapshot.v1",
+        "engine_family": engine_family,
+        "engine_name": engine_name,
+        "status": status,
+        "runtime_path": "/usr/bin/env",
+        "version": "1.0.0",
+        "architecture": "arm64",
+        "checked_at": "2026-05-22T00:00:00+00:00",
+        "snapshot_path": f"/tmp/{engine_family}_snapshot.json",
+        "packages": [
+            {
+                "name": capability_key,
+                "required_for": ["test_runtime"],
+                "status": capability_status,
+                "version": "1.0.0" if capability_status == "available" else "",
+                "minimum_version": "",
+                "blocker": None
+                if capability_status == "available"
+                else {"code": "missing_dependency", "message": "missing", "required_by": ["test_runtime"]},
+                "capability_key": capability_key,
+            }
+        ],
+        "blockers": [] if capability_status == "available" else [{"code": "missing_dependency", "message": "missing", "required_by": ["test_runtime"]}],
+        "install_guidance": {"safe_to_show": True, "commands": [], "manual_steps": []},
+    }
 
 
 def _label_text(widget) -> str:

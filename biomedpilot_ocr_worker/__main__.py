@@ -3,11 +3,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from biomedpilot_ocr_worker.paddleocr_engine import (
+    EnginePage,
+    PaddleOcrEngineError,
+    create_paddleocr_engine,
+    ocr_image_path,
+    ocr_pdf_path,
+    paddle_lang,
+)
 
 
 OCR_RESULT_SCHEMA_VERSION = "biomedpilot_ocr_result.v1"
@@ -124,11 +132,11 @@ def run_image_ocr(path: str | Path, *, record_id: str, attachment_id: str = "", 
     source = Path(path).expanduser().resolve()
     if not source.exists() or not source.is_file():
         raise WorkerError("input_file_missing")
-    ocr, engine_version = _create_paddleocr(lang)
-    page = _ocr_image_path(ocr, source, page_index=0, lang=lang)
+    engine = _create_paddleocr(lang)
+    page = _worker_page(ocr_image_path(engine, source, page_index=0), lang=lang)
     return WorkerDocument(
         source=WorkerSource(path=str(source), media_type=_image_media_type(source), attachment_id=attachment_id, record_id=record_id),
-        engine=WorkerEngine(engine_version=engine_version),
+        engine=WorkerEngine(engine_version=engine.engine_version),
         pages=(page,),
     )
 
@@ -137,134 +145,51 @@ def run_pdf_ocr(path: str | Path, *, record_id: str, attachment_id: str = "", la
     source = Path(path).expanduser().resolve()
     if not source.exists() or not source.is_file():
         raise WorkerError("input_file_missing")
-    try:
-        import fitz  # type: ignore[import-not-found]
-    except Exception as exc:
-        raise WorkerError("pymupdf_missing") from exc
-    ocr, engine_version = _create_paddleocr(lang)
-    pages: list[WorkerPage] = []
-    with tempfile.TemporaryDirectory(prefix="biomedpilot_ocr_pdf_") as tmp_dir:
-        temp_path = Path(tmp_dir)
-        with fitz.open(str(source)) as pdf:
-            for page_index in range(pdf.page_count):
-                page = pdf[page_index]
-                pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-                image_path = temp_path / f"page_{page_index + 1}.png"
-                pixmap.save(str(image_path))
-                pages.append(_ocr_image_path(ocr, image_path, page_index=page_index, page_label=str(page_index + 1), lang=lang))
+    engine = _create_paddleocr(lang)
+    pages = [_worker_page(page, lang=lang) for page in ocr_pdf_path(engine, source)]
     return WorkerDocument(
         source=WorkerSource(path=str(source), media_type="application/pdf", attachment_id=attachment_id, record_id=record_id),
-        engine=WorkerEngine(engine_version=engine_version),
+        engine=WorkerEngine(engine_version=engine.engine_version),
         pages=tuple(pages),
     )
 
 
 def _create_paddleocr(lang: str):
     try:
-        import paddleocr as paddleocr_module  # type: ignore[import-not-found]
-        from paddleocr import PaddleOCR  # type: ignore[import-not-found]
+        return create_paddleocr_engine(lang)
+    except PaddleOcrEngineError as exc:
+        raise WorkerError(str(exc)) from exc
     except Exception as exc:
-        raise WorkerError("paddleocr_import_failed") from exc
-    kwargs = {
-        "lang": _paddle_lang(lang),
-        "ocr_version": "PP-OCRv5",
-        "use_doc_orientation_classify": False,
-        "use_doc_unwarping": False,
-        "use_textline_orientation": False,
-    }
-    try:
-        ocr = PaddleOCR(**kwargs)
-    except TypeError:
-        kwargs.pop("ocr_version", None)
-        ocr = PaddleOCR(**kwargs)
-    return ocr, str(getattr(paddleocr_module, "__version__", "") or "")
+        raise WorkerError(f"paddleocr_create_failed:{type(exc).__name__}") from exc
 
 
-def _ocr_image_path(ocr, image_path: Path, *, page_index: int, page_label: str | None = None, lang: str = "auto") -> WorkerPage:
-    result = ocr.predict(str(image_path))
-    if not result:
-        return WorkerPage(page_index=page_index, page_label=page_label or str(page_index + 1), warnings=("no_ocr_result",))
-    payload = _result_to_mapping(result[0])
-    rec_texts = [str(item) for item in payload.get("rec_texts", [])]
-    rec_scores = payload.get("rec_scores", [])
-    polys = payload.get("rec_polys") or payload.get("dt_polys") or []
+def _worker_page(page: EnginePage, *, lang: str) -> WorkerPage:
     blocks = tuple(
         WorkerBlock(
-            block_id=f"p{page_index + 1}_b{index + 1}",
-            text=text,
-            confidence=_float_at(rec_scores, index),
-            bbox=_bbox_at(polys, index),
+            block_id=f"p{page.page_index + 1}_b{index + 1}",
+            text=block.text,
+            confidence=block.confidence,
+            bbox=block.bbox,
             language=lang,
+            kind="text",
             order=index,
         )
-        for index, text in enumerate(rec_texts)
-        if text.strip()
+        for index, block in enumerate(page.blocks)
     )
-    text = "\n".join(block.text for block in blocks).strip()
-    width, height = _image_size(image_path)
     return WorkerPage(
-        page_index=page_index,
-        page_label=page_label or str(page_index + 1),
-        text=text,
-        width=width,
-        height=height,
+        page_index=page.page_index,
+        page_label=page.page_label,
+        text=page.text,
+        width=page.width,
+        height=page.height,
         blocks=blocks,
+        tables=page.tables,
+        warnings=page.warnings,
     )
-
-
-def _result_to_mapping(result: Any) -> dict[str, Any]:
-    if isinstance(result, dict):
-        return result
-    if hasattr(result, "to_dict"):
-        payload = result.to_dict()
-        if isinstance(payload, dict):
-            return payload.get("res", payload) if isinstance(payload.get("res", payload), dict) else payload
-    if hasattr(result, "json"):
-        payload = json.loads(result.json())
-        return payload.get("res", payload) if isinstance(payload, dict) else {}
-    try:
-        return dict(result)
-    except Exception:
-        return {}
-
-
-def _bbox_at(polys: Any, index: int) -> tuple[float, float, float, float]:
-    try:
-        poly = polys[index]
-        points = poly.tolist() if hasattr(poly, "tolist") else poly
-        xs = [float(point[0]) for point in points]
-        ys = [float(point[1]) for point in points]
-        return (min(xs), min(ys), max(xs), max(ys))
-    except Exception:
-        return (0, 0, 0, 0)
-
-
-def _float_at(values: Any, index: int) -> float:
-    try:
-        return float(values[index])
-    except Exception:
-        return 0.0
-
-
-def _image_size(path: Path) -> tuple[int, int]:
-    try:
-        from PIL import Image  # type: ignore[import-not-found]
-
-        with Image.open(path) as image:
-            return int(image.width), int(image.height)
-    except Exception:
-        return 0, 0
 
 
 def _paddle_lang(lang: str) -> str:
-    normalized = lang.strip().lower()
-    if normalized in {"", "auto", "zh", "zho", "ch", "chi", "cn", "zh-cn"}:
-        return "ch"
-    if normalized in {"en", "eng", "english"}:
-        return "en"
-    if normalized in {"cht", "traditional", "traditional_chinese", "zh-tw", "zh-hk"}:
-        return "chinese_cht"
-    return normalized
+    return paddle_lang(lang)
 
 
 def _image_media_type(path: Path) -> str:

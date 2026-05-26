@@ -6,11 +6,15 @@ from dataclasses import dataclass
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QApplication
 
+from app.shared.semantic_keys import AnalysisStatusKey, FeatureStatusKey, ReportStatusKey, ResourceStatusKey
+
 
 APP_NAME = "BioMedPilot / 医研智析"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "app"
 MODULE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "modules"
+STATUS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "status"
+EMPTY_STATE_IMAGE_DIR = PROJECT_ROOT / "assets" / "images" / "empty_states"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
@@ -59,6 +63,32 @@ UI03_PROJECT_HOME_ICON_PATHS = {
     "continue_next_step": UI03_PROJECT_HOME_ICON_DIR / "continue_next_step.png",
     "project_folder_structure": UI03_PROJECT_HOME_ICON_DIR / "project_folder_structure.png",
     "project_warning": UI03_PROJECT_HOME_ICON_DIR / "project_warning.png",
+}
+STATUS_ICON_PATHS = {
+    FeatureStatusKey.TESTING.value: STATUS_ICON_DIR / "status_testing.svg",
+    FeatureStatusKey.PLANNED.value: STATUS_ICON_DIR / "status_planned.svg",
+    FeatureStatusKey.SHELL_ONLY.value: STATUS_ICON_DIR / "status_shell_only.svg",
+    FeatureStatusKey.DEVELOPER_PREVIEW.value: STATUS_ICON_DIR / "status_developer_preview.svg",
+    FeatureStatusKey.BLOCKED.value: STATUS_ICON_DIR / "status_blocked.svg",
+    ResourceStatusKey.AVAILABLE.value: STATUS_ICON_DIR / "status_available.svg",
+    ResourceStatusKey.NOT_CONFIGURED.value: STATUS_ICON_DIR / "status_not_configured.svg",
+    ResourceStatusKey.FAILED.value: STATUS_ICON_DIR / "status_failed.svg",
+    AnalysisStatusKey.PREFLIGHT_ONLY.value: STATUS_ICON_DIR / "status_preflight_only.svg",
+    ReportStatusKey.DRAFT.value: STATUS_ICON_DIR / "status_draft.svg",
+}
+EMPTY_STATE_IMAGE_PATHS = {
+    "empty_project": EMPTY_STATE_IMAGE_DIR / "empty_project.svg",
+    "empty_result": EMPTY_STATE_IMAGE_DIR / "empty_result.svg",
+    "empty_missing_resource": EMPTY_STATE_IMAGE_DIR / "empty_missing_resource.svg",
+    "empty_blocked": EMPTY_STATE_IMAGE_DIR / "empty_blocked.svg",
+    "empty_shell_only": EMPTY_STATE_IMAGE_DIR / "empty_shell_only.svg",
+    "empty_preflight_only": EMPTY_STATE_IMAGE_DIR / "empty_preflight_only.svg",
+}
+EMPTY_STATE_SEMANTIC_IMAGE_KEYS = {
+    ResourceStatusKey.NOT_CONFIGURED.value: "empty_missing_resource",
+    FeatureStatusKey.BLOCKED.value: "empty_blocked",
+    FeatureStatusKey.SHELL_ONLY.value: "empty_shell_only",
+    AnalysisStatusKey.PREFLIGHT_ONLY.value: "empty_preflight_only",
 }
 
 
@@ -196,6 +226,43 @@ def load_ui03_project_home_icon(icon_key: str) -> QIcon:
 
 def load_ui03_project_home_pixmap(icon_key: str, size: int = 32) -> QPixmap:
     icon = load_ui03_project_home_icon(icon_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def empty_state_image_key_for(empty_state_key: str | None = None, semantic_key: str | None = None) -> str | None:
+    if empty_state_key in EMPTY_STATE_IMAGE_PATHS:
+        return empty_state_key
+    if semantic_key in EMPTY_STATE_SEMANTIC_IMAGE_KEYS:
+        return EMPTY_STATE_SEMANTIC_IMAGE_KEYS[semantic_key]
+    return None
+
+
+def load_empty_state_illustration(empty_state_key: str | None = None, *, semantic_key: str | None = None) -> QIcon:
+    resolved_key = empty_state_image_key_for(empty_state_key, semantic_key)
+    if not resolved_key:
+        return QIcon()
+    path = EMPTY_STATE_IMAGE_PATHS.get(resolved_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_empty_state_pixmap(empty_state_key: str | None = None, *, semantic_key: str | None = None, size: int = 72) -> QPixmap:
+    icon = load_empty_state_illustration(empty_state_key, semantic_key=semantic_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_status_icon(semantic_key: str) -> QIcon:
+    path = STATUS_ICON_PATHS.get(semantic_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_status_pixmap(semantic_key: str, size: int = 14) -> QPixmap:
+    icon = load_status_icon(semantic_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 
