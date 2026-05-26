@@ -10,12 +10,14 @@ from app.bioinformatics.survival_clinical import (
     build_risk_score_advanced_visualization_preflight_gate,
     build_risk_score_advanced_visualization_runtime_plan,
     build_risk_score_calibration_decision_curve_input_gate,
+    build_risk_score_calibration_decision_curve_statistics_gate,
     build_risk_score_plot_artifact_activation_gate,
     build_risk_score_plot_artifact_schema_candidate,
     build_risk_score_plot_nomogram_gate,
     check_risk_score_plot_renderer_dependencies,
     create_risk_score_advanced_visualization_artifact,
     create_risk_score_plot_artifact,
+    run_risk_score_calibration_decision_curve_statistics,
     validate_risk_score_plot_artifact_schema,
 )
 
@@ -393,6 +395,64 @@ def test_risk_score_calibration_decision_curve_input_gate_blocks_fake_or_missing
     assert "net_benefit_formula_policy_missing" in gate["blockers"]
     assert "decision_curve_treat_all_none_baselines_missing" in gate["blockers"]
     assert "clinical_decision_boundary_acknowledgement_missing" in gate["blockers"]
+
+
+def test_risk_score_calibration_decision_curve_statistics_gate_blocks_missing_probability_table(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    gate = build_risk_score_calibration_decision_curve_statistics_gate(tmp_path, planning_config=_calibration_decision_curve_config())
+
+    assert gate["schema_version"] == "biomedpilot.risk_score_calibration_decision_curve_statistics_gate.v1"
+    assert gate["status"] == "blocked"
+    assert "validation_probability_table_missing_or_empty" in gate["blockers"]
+    assert gate["creates_plot_artifact"] is False
+    assert gate["report_ready_eligible"] is False
+
+
+def test_risk_score_calibration_decision_curve_statistics_execution_writes_tables_only(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "risk.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
+        "S1\tC1\t1.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n"
+        "S2\tC2\t-0.5\tcox-mv-1\tformula\tcox-mv-1\tblock\tas_is\tstatistical_result_only\n",
+        encoding="utf-8",
+    )
+    validation = tmp_path / "results" / "tables" / "validation_probability.tsv"
+    validation.write_text(
+        "sample_id\tpredicted_probability\tOS_time\tOS_event\n"
+        "S1\t0.80\t300\t1\n"
+        "S2\t0.70\t310\t1\n"
+        "S3\t0.20\t500\t0\n"
+        "S4\t0.10\t620\t0\n",
+        encoding="utf-8",
+    )
+    _register_risk_score(tmp_path, table)
+
+    output = run_risk_score_calibration_decision_curve_statistics(
+        tmp_path,
+        planning_config={**_calibration_decision_curve_config(), "predicted_probability": {"source": str(validation.relative_to(tmp_path)), "column": "predicted_probability", "scale": "0_to_1"}, "calibration_bins": 2, "minimum_event_count": 2},
+    )
+
+    assert output["status"] == "passed"
+    assert output["report_ready_eligible"] is False
+    artifact_types = {artifact["artifact_type"] for artifact in output["statistics_artifacts"]}
+    assert "risk_score_calibration_statistics_table" in artifact_types
+    assert "risk_score_decision_curve_statistics_table" in artifact_types
+    assert output["calibration_rows"][0]["n"] == 2
+    assert output["decision_curve_rows"][0]["threshold_probability"] == "0.1"
+    registry_text = (tmp_path / "results" / "summaries" / "result_index.json").read_text(encoding="utf-8")
+    assert "risk_score_calibration_statistics_table" in registry_text
+    assert "risk_score_decision_curve_statistics_table" in registry_text
+    assert "risk_score_calibration_curve_svg" not in registry_text
+    assert '"report_ready_eligible": false' in registry_text
 
 
 def test_risk_score_plot_artifact_schema_blocks_nonformal_and_clinical_fields(tmp_path: Path) -> None:

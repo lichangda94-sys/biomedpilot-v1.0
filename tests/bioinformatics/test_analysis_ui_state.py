@@ -51,6 +51,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_advanced_preflight_gate"]["creates_plot_artifact"] is False
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_advanced_artifact_gate"]["report_ready_eligible"] is False
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_calibration_decision_curve_input_gate"]["creates_plot_artifact"] is False
+    assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_calibration_decision_curve_statistics_gate"]["creates_plot_artifact"] is False
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
@@ -114,6 +115,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "risk_score_advanced_visualization_preflight_not_passed" in survival_rows_text
     assert "Risk score calibration / decision curve input gate" in survival_rows_text
     assert "calibration_method_missing" in survival_rows_text
+    assert "Risk score calibration / decision curve statistics" in survival_rows_text
+    assert "risk_score_calibration_decision_curve_input_gate_not_ready" in survival_rows_text
     survival_diagnostics_text = "\n".join(str(row) for row in state["developer_diagnostics"]["survival_clinical_state"]["gate_rows"])
     assert "B33 Risk score parameter confirmation" in survival_diagnostics_text
     assert "B33 Risk score result schema gate" in survival_diagnostics_text
@@ -124,6 +127,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "B41 Risk score advanced visualization preflight" in survival_diagnostics_text
     assert "B42 Risk score advanced visualization artifact gate" in survival_diagnostics_text
     assert "B43 Risk score calibration / decision curve input gate" in survival_diagnostics_text
+    assert "B44 Risk score calibration / decision curve statistics gate" in survival_diagnostics_text
     gate_text = "\n".join(str(row) for row in state["gate_rows"])
     assert "DOCX rendered export" in gate_text
     assert "PDF rendered export" in gate_text

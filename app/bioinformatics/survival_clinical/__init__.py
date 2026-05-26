@@ -47,6 +47,7 @@ from .risk_score_executor import run_controlled_risk_score
 from .risk_score_plot_gate import build_risk_score_plot_nomogram_gate
 from .risk_score_plot_schema import (
     build_risk_score_calibration_decision_curve_input_gate,
+    build_risk_score_calibration_decision_curve_statistics_gate,
     build_risk_score_advanced_visualization_artifact_gate,
     build_risk_score_advanced_visualization_planning_gate,
     build_risk_score_advanced_visualization_preflight_gate,
@@ -56,6 +57,7 @@ from .risk_score_plot_schema import (
     check_risk_score_plot_renderer_dependencies,
     create_risk_score_advanced_visualization_artifact,
     create_risk_score_plot_artifact,
+    run_risk_score_calibration_decision_curve_statistics,
     validate_risk_score_plot_artifact_schema,
 )
 from .risk_score_result_schema import build_risk_score_result_schema_gate, validate_risk_score_result_index_entry, validate_risk_score_result_table
@@ -79,6 +81,7 @@ __all__ = [
     "build_km_result_review",
     "build_risk_score_nomogram_contract_gate",
     "build_risk_score_calibration_decision_curve_input_gate",
+    "build_risk_score_calibration_decision_curve_statistics_gate",
     "build_risk_score_advanced_visualization_artifact_gate",
     "build_risk_score_advanced_visualization_planning_gate",
     "build_risk_score_advanced_visualization_preflight_gate",
@@ -109,6 +112,7 @@ __all__ = [
     "run_controlled_cox_univariate",
     "run_controlled_km_logrank",
     "run_controlled_risk_score",
+    "run_risk_score_calibration_decision_curve_statistics",
     "validate_cox_multivariate_confirmation",
     "validate_cox_multivariate_result_index_entry",
     "validate_cox_multivariate_result_table",

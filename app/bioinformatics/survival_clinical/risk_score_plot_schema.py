@@ -24,11 +24,13 @@ RISK_SCORE_ADVANCED_VISUALIZATION_RUNTIME_PLAN_SCHEMA_VERSION = "biomedpilot.ris
 RISK_SCORE_ADVANCED_VISUALIZATION_PREFLIGHT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_preflight_gate.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_ARTIFACT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_artifact_gate.v1"
 RISK_SCORE_CALIBRATION_DECISION_CURVE_INPUT_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_input_gate.v1"
+RISK_SCORE_CALIBRATION_DECISION_CURVE_STATISTICS_GATE_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_statistics_gate.v1"
 RISK_SCORE_PLOT_ARTIFACT_SCOPE = "formal_risk_score_plot_artifact"
 RISK_SCORE_PLOT_ENGINE_NAME = "biomedpilot_risk_score_visualization_renderer"
 RISK_SCORE_PLOT_ENGINE_VERSION = "0.1.0"
 RISK_SCORE_REAL_PLOT_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_real_plot_manifest.v1"
 RISK_SCORE_ADVANCED_VISUALIZATION_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_advanced_visualization_manifest.v1"
+RISK_SCORE_CALIBRATION_DECISION_CURVE_STATISTICS_MANIFEST_SCHEMA_VERSION = "biomedpilot.risk_score_calibration_decision_curve_statistics_manifest.v1"
 SUPPORTED_RISK_SCORE_PLOT_TYPES = (
     "risk_score_distribution_plot",
     "risk_score_nomogram",
@@ -671,6 +673,150 @@ def build_risk_score_calibration_decision_curve_input_gate(
     }
 
 
+def build_risk_score_calibration_decision_curve_statistics_gate(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    planning_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_source(root, result_id)
+    input_gate = build_risk_score_calibration_decision_curve_input_gate(root, result_id=result_id, planning_config=planning_config)
+    config = input_gate.get("planning_config") if isinstance(input_gate.get("planning_config"), dict) else {}
+    blockers: list[str] = []
+    warnings = [
+        "risk_score_calibration_decision_curve_statistics_controlled_execution",
+        "no_calibration_curve_artifact_created",
+        "no_decision_curve_artifact_created",
+        "no_report_ready_unlock",
+        "no_clinical_interpretation",
+    ]
+    if input_gate.get("status") != "ready_for_future_artifact_gate":
+        blockers.extend(str(item) for item in input_gate.get("blockers", []) or [])
+        blockers.append("risk_score_calibration_decision_curve_input_gate_not_ready")
+    validation_rows = _validation_probability_rows(root, config)
+    row_blockers = _validation_probability_row_blockers(validation_rows, config)
+    blockers.extend(row_blockers)
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema_version": RISK_SCORE_CALIBRATION_DECISION_CURVE_STATISTICS_GATE_SCHEMA_VERSION,
+        "status": "passed" if not blockers else "blocked",
+        "selected_result_id": str((source or {}).get("result_id") or result_id or ""),
+        "source_result_semantics": normalize_result_semantics((source or {}).get("result_semantics"), default="blocked"),
+        "input_gate": input_gate,
+        "validation_row_count": len(validation_rows),
+        "planned_statistics": ["observed_vs_predicted_calibration_table", "decision_curve_net_benefit_table"],
+        "formal_execution_enabled": False,
+        "writes_result_index": not blockers,
+        "creates_statistics_artifact": not blockers,
+        "creates_plot_artifact": False,
+        "creates_report_artifact": False,
+        "report_ready_eligible": False,
+        "blockers": blockers,
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def run_risk_score_calibration_decision_curve_statistics(
+    project_root: str | Path,
+    result_id: str | None = None,
+    *,
+    planning_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    gate = build_risk_score_calibration_decision_curve_statistics_gate(root, result_id=result_id, planning_config=planning_config)
+    source = _select_source(root, result_id)
+    if gate.get("status") != "passed" or source is None:
+        return {
+            "status": "blocked",
+            "gate": gate,
+            "statistics_artifacts": [],
+            "report_ready_eligible": False,
+            "warnings": gate.get("warnings", []),
+            "blockers": gate.get("blockers", []),
+        }
+    config = gate.get("input_gate", {}).get("planning_config") if isinstance(gate.get("input_gate"), dict) else {}
+    rows = _validation_probability_rows(root, config)
+    calibration_rows = _calibration_statistics_rows(rows, config)
+    decision_rows = _decision_curve_statistics_rows(rows, config)
+    stats_id = _plot_id(str(source.get("result_id") or ""), "risk_score_calibration_decision_curve_statistics")
+    out_dir = root / "results" / "tables" / "risk_score" / "advanced"
+    calibration_path = out_dir / f"{stats_id}_calibration.tsv"
+    decision_path = out_dir / f"{stats_id}_decision_curve.tsv"
+    manifest_path = out_dir / f"{stats_id}_manifest.json"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    _write_tsv(calibration_path, calibration_rows, ["bin", "n", "mean_predicted_probability", "observed_event_rate", "event_count"])
+    _write_tsv(decision_path, decision_rows, ["threshold_probability", "net_benefit_model", "net_benefit_treat_all", "net_benefit_treat_none", "true_positive", "false_positive", "n"])
+    artifacts = [
+        {
+            "artifact_type": "risk_score_calibration_statistics_table",
+            "path": str(calibration_path.relative_to(root)),
+            "source_result_id": str(source.get("result_id") or ""),
+            "semantics": "formal_computed_result",
+        },
+        {
+            "artifact_type": "risk_score_decision_curve_statistics_table",
+            "path": str(decision_path.relative_to(root)),
+            "source_result_id": str(source.get("result_id") or ""),
+            "semantics": "formal_computed_result",
+        },
+    ]
+    manifest = {
+        "schema_version": RISK_SCORE_CALIBRATION_DECISION_CURVE_STATISTICS_MANIFEST_SCHEMA_VERSION,
+        "source_result_id": str(source.get("result_id") or ""),
+        "source_result_semantics": normalize_result_semantics(source.get("result_semantics"), default=""),
+        "input_gate": gate.get("input_gate", {}),
+        "statistics_artifacts": artifacts,
+        "validation_row_count": len(rows),
+        "report_ready_eligible": False,
+        "creates_plot_artifact": False,
+        "limitations": [
+            "statistical_validation_tables_only",
+            "no_calibration_curve_artifact",
+            "no_decision_curve_artifact",
+            "no_clinical_conclusion",
+            "no_report_ready_unlock",
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    manifest_artifact = {
+        "artifact_type": "risk_score_calibration_decision_curve_statistics_manifest",
+        "path": str(manifest_path.relative_to(root)),
+        "source_result_id": str(source.get("result_id") or ""),
+        "semantics": "formal_computed_result",
+    }
+
+    registry = load_registry(root)
+    entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
+    for entry in entries:
+        if entry.get("result_id") == source.get("result_id"):
+            existing = [
+                item
+                for item in entry.get("output_artifacts", []) or []
+                if isinstance(item, dict)
+                and item.get("artifact_type")
+                not in {
+                    "risk_score_calibration_statistics_table",
+                    "risk_score_decision_curve_statistics_table",
+                    "risk_score_calibration_decision_curve_statistics_manifest",
+                }
+            ]
+            entry["output_artifacts"] = [*existing, *artifacts, manifest_artifact]
+            entry["report_ready_eligible"] = False
+            break
+    save_registry(root, entries)
+    return {
+        "status": "passed",
+        "gate": gate,
+        "statistics_artifacts": [*artifacts, manifest_artifact],
+        "calibration_rows": calibration_rows,
+        "decision_curve_rows": decision_rows,
+        "report_ready_eligible": False,
+        "warnings": gate.get("warnings", []),
+        "blockers": [],
+    }
+
+
 def build_risk_score_plot_artifact_schema_candidate(
     source: dict[str, Any],
     *,
@@ -949,6 +1095,118 @@ def _decision_curve_input_blockers(config: dict[str, Any]) -> list[str]:
         blockers.append("decision_curve_treat_all_none_baselines_missing")
     blockers.extend(_event_count_blockers(config))
     return blockers
+
+
+def _validation_probability_rows(root: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
+    predicted = config.get("predicted_probability") if isinstance(config.get("predicted_probability"), dict) else {}
+    source = str(predicted.get("source") or "")
+    if not source:
+        return []
+    path = Path(source)
+    if not path.suffix:
+        return []
+    table_path = path if path.is_absolute() else root / path
+    if not table_path.is_file():
+        return []
+    probability_column = str(predicted.get("column") or "predicted_probability")
+    outcome = config.get("observed_outcome_mapping") if isinstance(config.get("observed_outcome_mapping"), dict) else {}
+    event_field = str(outcome.get("event_field") or "")
+    event_positive = str(outcome.get("event_positive_value") or "1")
+    rows: list[dict[str, Any]] = []
+    for row in read_table(table_path):
+        probability = parse_float(row.get(probability_column))
+        if probability is None:
+            rows.append({"_invalid": "predicted_probability_non_numeric"})
+            continue
+        event_value = str(row.get(event_field) or "")
+        rows.append(
+            {
+                "sample_id": str(row.get("sample_id") or row.get("case_id") or ""),
+                "predicted_probability": float(probability),
+                "event": 1 if event_value == event_positive else 0,
+            }
+        )
+    return rows
+
+
+def _validation_probability_row_blockers(rows: list[dict[str, Any]], config: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if not rows:
+        return ["validation_probability_table_missing_or_empty"]
+    invalid_rows = [row for row in rows if row.get("_invalid")]
+    if invalid_rows:
+        blockers.append("validation_probability_rows_invalid")
+    valid_rows = [row for row in rows if not row.get("_invalid")]
+    if not valid_rows:
+        blockers.append("validation_probability_no_valid_rows")
+    if any(parse_float(row.get("predicted_probability")) is None or float(row.get("predicted_probability")) < 0 or float(row.get("predicted_probability")) > 1 for row in valid_rows):
+        blockers.append("predicted_probability_out_of_range")
+    event_count = sum(int(row.get("event") or 0) for row in valid_rows)
+    minimum = parse_float(config.get("minimum_event_count")) or 10.0
+    if event_count < minimum:
+        blockers.append("minimum_event_count_not_met_for_statistics")
+    return blockers
+
+
+def _calibration_statistics_rows(rows: list[dict[str, Any]], config: dict[str, Any]) -> list[dict[str, Any]]:
+    valid_rows = sorted([row for row in rows if not row.get("_invalid")], key=lambda row: float(row["predicted_probability"]))
+    bin_count = int(parse_float(config.get("calibration_bins")) or 2)
+    output: list[dict[str, Any]] = []
+    for index in range(bin_count):
+        start = int(index * len(valid_rows) / bin_count)
+        end = int((index + 1) * len(valid_rows) / bin_count)
+        bucket = valid_rows[start:end]
+        if not bucket:
+            continue
+        n = len(bucket)
+        event_count = sum(int(row.get("event") or 0) for row in bucket)
+        mean_predicted = sum(float(row["predicted_probability"]) for row in bucket) / n
+        output.append(
+            {
+                "bin": index + 1,
+                "n": n,
+                "mean_predicted_probability": f"{mean_predicted:.8g}",
+                "observed_event_rate": f"{event_count / n:.8g}",
+                "event_count": event_count,
+            }
+        )
+    return output
+
+
+def _decision_curve_statistics_rows(rows: list[dict[str, Any]], config: dict[str, Any]) -> list[dict[str, Any]]:
+    valid_rows = [row for row in rows if not row.get("_invalid")]
+    n = len(valid_rows)
+    event_total = sum(int(row.get("event") or 0) for row in valid_rows)
+    prevalence = event_total / max(n, 1)
+    output: list[dict[str, Any]] = []
+    for threshold in config.get("threshold_probability_grid", []) or []:
+        probability = float(parse_float(threshold) or 0.0)
+        predicted_positive = [row for row in valid_rows if float(row["predicted_probability"]) >= probability]
+        tp = sum(int(row.get("event") or 0) for row in predicted_positive)
+        fp = len(predicted_positive) - tp
+        odds = probability / (1.0 - probability)
+        net_benefit_model = (tp / max(n, 1)) - (fp / max(n, 1)) * odds
+        net_benefit_treat_all = prevalence - (1.0 - prevalence) * odds
+        output.append(
+            {
+                "threshold_probability": f"{probability:.8g}",
+                "net_benefit_model": f"{net_benefit_model:.8g}",
+                "net_benefit_treat_all": f"{net_benefit_treat_all:.8g}",
+                "net_benefit_treat_none": "0",
+                "true_positive": tp,
+                "false_positive": fp,
+                "n": n,
+            }
+        )
+    return output
+
+
+def _write_tsv(path: Path, rows: list[dict[str, Any]], columns: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["\t".join(columns)]
+    for row in rows:
+        lines.append("\t".join(str(row.get(column, "")) for column in columns))
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _plot_artifact(
