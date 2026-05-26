@@ -30,6 +30,7 @@ def build_action_rows(
     risk_score_design: dict[str, Any] | None = None,
     risk_score_confirmation_gate: dict[str, Any] | None = None,
     risk_score_result_schema_gate: dict[str, Any] | None = None,
+    risk_score_plot_nomogram_gate: dict[str, Any] | None = None,
     km_real_plot_gate: dict[str, Any] | None = None,
     cox_real_plot_gate: dict[str, Any] | None = None,
     km_report_gate: dict[str, Any] | None = None,
@@ -77,6 +78,7 @@ def build_action_rows(
     risk_score_design = risk_score_design or {}
     risk_score_confirmation_gate = risk_score_confirmation_gate or {}
     risk_score_result_schema_gate = risk_score_result_schema_gate or {}
+    risk_score_plot_nomogram_gate = risk_score_plot_nomogram_gate or {}
     km_real_plot_gate = km_real_plot_gate or {}
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
@@ -145,6 +147,7 @@ def build_action_rows(
     rows.append(_cox_univariate_action(survival_package, survival_dependency, cox_parameter_gate, cox_confirmation_gate))
     rows.append(_cox_multivariate_action(survival_package, survival_dependency, cox_multivariate_parameter_gate, cox_multivariate_confirmation_gate))
     rows.append(_risk_score_action(risk_score_design, risk_score_confirmation_gate, risk_score_result_schema_gate))
+    rows.append(_risk_score_plot_nomogram_action(risk_score_plot_nomogram_gate))
     rows.append(_survival_real_plot_action("generate_km_plot", "Generate KM plot", km_real_plot_gate))
     rows.append(_survival_real_plot_action("generate_cox_plot", "Generate Cox forest plot", cox_real_plot_gate))
     rows.append(_survival_report_ready_action(km_report_gate, cox_report_gate))
@@ -1167,6 +1170,17 @@ def _risk_score_action(design: dict[str, Any], confirmation_gate: dict[str, Any]
         "confirmation_schema_gate_only" if confirmation_gate or result_schema_gate else ("contract_gate_only" if design else "hidden_until_ready"),
         "; ".join(dict.fromkeys([*blockers, f"{stage} only; no risk score result, nomogram, high/low-risk group or clinical conclusion is generated."])),
         "Review risk score prerequisites only: formal Cox multivariate source, clinical variable audit, coefficient provenance, training/validation, cutoff, missingness, scaling, calibration, nomogram policy, user confirmation and future result schema.",
+    )
+
+
+def _risk_score_plot_nomogram_action(gate: dict[str, Any]) -> dict[str, Any]:
+    blockers = _list(gate.get("blockers")) or ["b37_risk_score_renderer_activation_required"]
+    return _disabled(
+        "risk_score_plot_nomogram",
+        "Plan risk score plot / nomogram",
+        "blocked_planning_only",
+        "; ".join(dict.fromkeys([*blockers, "B36 planning only; no risk score plot, nomogram, calibration curve, decision curve, report-ready package or clinical conclusion is generated."])),
+        "Review future visualization prerequisites only. Activation requires a later renderer/schema stage and must continue to forbid risk groups and clinical interpretation.",
     )
 
 

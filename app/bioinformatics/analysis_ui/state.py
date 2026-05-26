@@ -52,6 +52,7 @@ from app.bioinformatics.survival_clinical import (
     build_cox_univariate_parameter_manifest,
     build_km_logrank_parameter_manifest,
     build_risk_score_nomogram_contract_gate,
+    build_risk_score_plot_nomogram_gate,
     build_risk_score_result_schema_gate,
     build_survival_outcome_gate,
     load_cox_multivariate_confirmation,
@@ -182,6 +183,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         risk_score_design=survival_clinical_state["risk_score_contract_gate"],
         risk_score_confirmation_gate=survival_clinical_state["risk_score_confirmation_gate"],
         risk_score_result_schema_gate=survival_clinical_state["risk_score_result_schema_gate"],
+        risk_score_plot_nomogram_gate=survival_clinical_state["risk_score_plot_nomogram_gate"],
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         ora_input_gate=ora_gates["input_gate"],
@@ -1090,6 +1092,10 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
         None,
         confirmation_gate=risk_score_confirmation_gate,
     )
+    risk_score_plot_nomogram_gate = build_risk_score_plot_nomogram_gate(
+        project_root,
+        result_id=_latest_result_id(result_entries or [], {"risk_score"}),
+    )
     gate_rows = [
         _formal_deg_gate_row(
             "Survival/clinical input resolver",
@@ -1171,6 +1177,13 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
             basis="future result index v2 schema only; no result write",
         ),
         _formal_deg_gate_row(
+            "B36 Risk score plot / nomogram gate",
+            risk_score_plot_nomogram_gate.get("status"),
+            risk_score_plot_nomogram_gate.get("blockers", []),
+            risk_score_plot_nomogram_gate.get("warnings", []),
+            basis=f"source={risk_score_plot_nomogram_gate.get('selected_result_id', '')}; planning only; no artifact write",
+        ),
+        _formal_deg_gate_row(
             "Survival dependency",
             dependency.get("status"),
             dependency.get("blockers", []),
@@ -1199,6 +1212,7 @@ def build_survival_clinical_gate_state(*, project_root: str | Path, result_entri
         "risk_score_parameter_confirmation": risk_score_confirmation,
         "risk_score_confirmation_gate": risk_score_confirmation_gate,
         "risk_score_result_schema_gate": risk_score_result_schema_gate,
+        "risk_score_plot_nomogram_gate": risk_score_plot_nomogram_gate,
         "gate_rows": gate_rows,
     }
 
@@ -1506,6 +1520,7 @@ def build_survival_clinical_rows(
     risk_score_contract_gate = survival_clinical_state.get("risk_score_contract_gate") if isinstance(survival_clinical_state.get("risk_score_contract_gate"), dict) else {}
     risk_score_confirmation_gate = survival_clinical_state.get("risk_score_confirmation_gate") if isinstance(survival_clinical_state.get("risk_score_confirmation_gate"), dict) else {}
     risk_score_result_schema_gate = survival_clinical_state.get("risk_score_result_schema_gate") if isinstance(survival_clinical_state.get("risk_score_result_schema_gate"), dict) else {}
+    risk_score_plot_nomogram_gate = survival_clinical_state.get("risk_score_plot_nomogram_gate") if isinstance(survival_clinical_state.get("risk_score_plot_nomogram_gate"), dict) else {}
     km_real_plot_gate = km_real_plot_gate or {}
     cox_real_plot_gate = cox_real_plot_gate or {}
     km_report_gate = km_report_gate or {}
@@ -1632,6 +1647,15 @@ def build_survival_clinical_rows(
             "backend_status": "B33 confirmation/schema gate only; no execution",
             "disabled_reason": compact_list(_list(risk_score_contract_gate.get("blockers")) + _list(risk_score_confirmation_gate.get("blockers")) + _list(risk_score_result_schema_gate.get("blockers")) or _list(risk_score_design.get("blockers")) or ["risk_score_execution_disabled_contract_gate_only"]),
             "warnings": compact_list(_list(risk_score_contract_gate.get("warnings")) + _list(risk_score_confirmation_gate.get("warnings")) + _list(risk_score_result_schema_gate.get("warnings")) or _list(risk_score_design.get("warnings")) or ["No prognosis or treatment recommendation."]),
+        },
+        {
+            "row_id": "risk_score_plot_nomogram",
+            "label": "Risk score plot / nomogram planning",
+            "status": str(risk_score_plot_nomogram_gate.get("status") or "blocked_planning_only"),
+            "asset_status": f"source={risk_score_plot_nomogram_gate.get('selected_result_id', '')}; artifacts={len(risk_score_plot_nomogram_gate.get('planned_artifacts', []) or [])}",
+            "backend_status": "B36 planning gate only; no plot/nomogram artifact",
+            "disabled_reason": compact_list(_list(risk_score_plot_nomogram_gate.get("blockers")) or ["b37_risk_score_renderer_activation_required"]),
+            "warnings": compact_list(_list(risk_score_plot_nomogram_gate.get("warnings")) or ["No report-ready or clinical interpretation."]),
         },
         {
             "row_id": "clinical_association",

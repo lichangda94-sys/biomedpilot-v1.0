@@ -186,6 +186,19 @@ def test_risk_score_action_remains_design_audit_only() -> None:
     assert b33_risk["button_behavior"] == "enabled_controlled_risk_score_table_only"
     assert "no risk groups" in b33_risk["next_action"]
 
+    plot_rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "passed"},
+        risk_score_plot_nomogram_gate={"status": "blocked_planning_only", "blockers": ["b37_risk_score_renderer_activation_required"]},
+        report_gate={"status": "blocked"},
+    )
+    plot_action = _row(plot_rows, "risk_score_plot_nomogram")
+    assert plot_action["enabled"] is False
+    assert plot_action["state"] == "blocked_planning_only"
+    assert "b37_risk_score_renderer_activation_required" in plot_action["disabled_reason"]
+    assert "no risk score plot" in plot_action["disabled_reason"]
+
 
 def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
     rows = build_action_rows(
