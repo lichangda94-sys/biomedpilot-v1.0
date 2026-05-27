@@ -15,6 +15,8 @@ def build_action_rows(
     results: list[dict[str, Any]] | None = None,
     deg_dependency: dict[str, Any] | None = None,
     deg_ready_gate: dict[str, Any] | None = None,
+    input_adaptation_gate: dict[str, Any] | None = None,
+    design_quality_gate: dict[str, Any] | None = None,
     parameter_gate: dict[str, Any] | None = None,
     confirmation_gate: dict[str, Any] | None = None,
     result_schema_gate: dict[str, Any] | None = None,
@@ -32,6 +34,8 @@ def build_action_rows(
     results = results or []
     deg_dependency = deg_dependency or {}
     deg_ready_gate = deg_ready_gate or {}
+    input_adaptation_gate = input_adaptation_gate or {"status": "passed", "blockers": []}
+    design_quality_gate = design_quality_gate or {"status": "passed", "blockers": []}
     parameter_gate = parameter_gate or {}
     confirmation_gate = confirmation_gate or {}
     result_schema_gate = result_schema_gate or {}
@@ -53,8 +57,8 @@ def build_action_rows(
     rows.append(_legacy_asset_pipeline_action(legacy_asset_pipeline))
     rows.extend(_legacy_asset_pipeline_operation_actions(legacy_asset_pipeline))
     rows.append(_deg_preflight_action(deg_package))
-    rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate))
-    rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
+    rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate, input_adaptation_gate, design_quality_gate))
+    rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate, input_adaptation_gate, design_quality_gate))
     rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_immune_action(immune_package, tasks))
@@ -152,6 +156,8 @@ def _formal_deg_action(
     parameter_gate: dict[str, Any],
     confirmation_gate: dict[str, Any],
     result_schema_gate: dict[str, Any],
+    input_adaptation_gate: dict[str, Any],
+    design_quality_gate: dict[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     state = "hidden_until_ready"
@@ -175,6 +181,14 @@ def _formal_deg_action(
         blockers.extend(_list(deg_ready_gate.get("blockers")) or ["deg_ready_gate_not_passed"])
         if state == "hidden_until_ready":
             state = "blocked_missing_input_package"
+    if input_adaptation_gate.get("status") != "passed":
+        blockers.extend(_list(input_adaptation_gate.get("blockers")) or ["input_adaptation_gate_not_passed"])
+        if state == "hidden_until_ready":
+            state = "blocked_input_adaptation"
+    if design_quality_gate.get("status") != "passed":
+        blockers.extend(_list(design_quality_gate.get("blockers")) or ["design_quality_gate_not_passed"])
+        if state == "hidden_until_ready":
+            state = "blocked_design_quality"
     if parameter_gate.get("status") != "passed":
         blockers.extend(_list(parameter_gate.get("blockers")) or ["parameter_gate_not_passed"])
         if state == "hidden_until_ready":
@@ -208,6 +222,8 @@ def _formal_deg_confirmation_action(
     parameter_gate: dict[str, Any],
     result_schema_gate: dict[str, Any],
     confirmation_gate: dict[str, Any],
+    input_adaptation_gate: dict[str, Any],
+    design_quality_gate: dict[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     if not package:
@@ -218,6 +234,10 @@ def _formal_deg_confirmation_action(
         blockers.extend(_list(dependency.get("blockers")) or ["deg_backend_dependency_not_passed"])
     if deg_ready_gate.get("status") != "passed":
         blockers.extend(_list(deg_ready_gate.get("blockers")) or ["deg_ready_gate_not_passed"])
+    if input_adaptation_gate.get("status") != "passed":
+        blockers.extend(_list(input_adaptation_gate.get("blockers")) or ["input_adaptation_gate_not_passed"])
+    if design_quality_gate.get("status") != "passed":
+        blockers.extend(_list(design_quality_gate.get("blockers")) or ["design_quality_gate_not_passed"])
     if parameter_gate.get("status") != "passed":
         blockers.extend(_list(parameter_gate.get("blockers")) or ["parameter_gate_not_passed"])
     if result_schema_gate.get("status") != "passed":

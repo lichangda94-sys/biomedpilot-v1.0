@@ -11,7 +11,7 @@ from app.bioinformatics.acquisition_adapters.selection_gate import LEGACY_ASSET_
 from app.bioinformatics.acquisition_adapters.standardized_bridge import LEGACY_ASSET_CANDIDATE_PATH
 from app.bioinformatics.clinical_analysis import build_clinical_association_preflight, build_survival_package, build_survival_preflight
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
-from app.bioinformatics.deg_engine import build_deg_input_adaptation_gate, build_deg_parameter_manifest, build_formal_deg_result_schema_gate
+from app.bioinformatics.deg_engine import build_deg_design_quality_gate, build_deg_input_adaptation_gate, build_deg_parameter_manifest, build_formal_deg_result_schema_gate
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
@@ -59,6 +59,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         results=result_entries,
         deg_dependency=deg_dependency,
         deg_ready_gate=deg_gates["deg_ready_gate"],
+        input_adaptation_gate=deg_gates["input_adaptation_gate"],
+        design_quality_gate=deg_gates["design_quality_gate"],
         parameter_gate=deg_gates["parameter_gate"],
         confirmation_gate=deg_gates["confirmation_gate"],
         result_schema_gate=deg_gates["result_schema_gate"],
@@ -359,6 +361,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
     if not deg_package:
         deg_ready_gate = {"status": "blocked", "blockers": ["missing_deg_recompute_input_package"], "warnings": []}
         input_adaptation_gate = build_deg_input_adaptation_gate(None, None)
+        design_quality_gate = build_deg_design_quality_gate(None)
         parameter_gate = {"status": "blocked", "blockers": ["missing_deg_ready_package"], "warnings": []}
         result_schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
         confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
@@ -373,6 +376,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
             "package": deg_ready,
         }
         input_adaptation_gate = build_deg_input_adaptation_gate(deg_package, deg_ready)
+        design_quality_gate = build_deg_design_quality_gate(deg_ready, method_family=str(confirmed_parameters.get("method_family") or ""))
         parameter_gate = build_deg_parameter_manifest(
             deg_ready,
             method=str(confirmed_parameters.get("method") or "welch_t_test"),
@@ -393,6 +397,13 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
             input_adaptation_gate.get("warnings", []),
             basis=f"value_type={input_adaptation_gate.get('value_type', '')}; gene_id_type={input_adaptation_gate.get('gene_id_type', '')}; methods={compact_list(input_adaptation_gate.get('allowed_methods', []) or [])}",
         ),
+        _formal_deg_gate_row(
+            "DEG batch/design QA",
+            design_quality_gate.get("status"),
+            design_quality_gate.get("blockers", []),
+            design_quality_gate.get("warnings", []),
+            basis=f"df={design_quality_gate.get('degrees_of_freedom', 0)}; covariates={compact_list(design_quality_gate.get('covariate_names', []) or [])}; batches={compact_list(design_quality_gate.get('batch_names', []) or [])}",
+        ),
         _formal_deg_gate_row("DEG-ready matrix", deg_ready_gate.get("status"), deg_ready_gate.get("blockers", []), deg_ready_gate.get("warnings", [])),
         _formal_deg_gate_row("Dependency policy", deg_dependency.get("status"), deg_dependency.get("blockers", []), deg_dependency.get("warnings", []), basis=str(deg_dependency.get("dependency_policy") or "")),
         _formal_deg_gate_row("Parameter manifest", parameter_gate.get("status"), parameter_gate.get("blockers", []), parameter_gate.get("warnings", [])),
@@ -403,6 +414,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
     return {
         "deg_ready_gate": deg_ready_gate,
         "input_adaptation_gate": input_adaptation_gate,
+        "design_quality_gate": design_quality_gate,
         "parameter_gate": parameter_gate,
         "confirmation_gate": confirmation_gate,
         "parameter_confirmation": confirmation,
