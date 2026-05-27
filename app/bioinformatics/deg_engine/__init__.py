@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .dependency_check import check_deg_backend_dependencies
 from .confirmation import load_deg_parameter_confirmation, save_deg_parameter_confirmation, validate_deg_parameter_confirmation
+from .data_quality import build_deg_data_quality_gate
 from .design_quality import build_deg_design_quality_gate
 from .input_adaptation import build_deg_input_adaptation_gate
 from .parameter_gate import build_deg_parameter_manifest, validate_deg_parameter_manifest
@@ -13,6 +14,7 @@ __all__ = [
     "build_deg_parameter_manifest",
     "build_deg_input_adaptation_gate",
     "build_deg_design_quality_gate",
+    "build_deg_data_quality_gate",
     "build_formal_deg_result_schema_gate",
     "check_deg_backend_dependencies",
     "load_deg_parameter_confirmation",
