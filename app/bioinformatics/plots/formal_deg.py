@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import csv
+import hashlib
+import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +69,7 @@ def build_formal_deg_plot_production_gate(
     renderer_capability: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     base_gate = build_formal_deg_plot_gate(project_root, result_id=result_id, plot_type=plot_type)
-    renderer = renderer_capability or {"status": "blocked", "renderer": "spec_only", "blockers": ["real_deg_plot_renderer_not_activated"]}
+    renderer = renderer_capability or _default_renderer_capability(plot_type)
     blockers = list(base_gate.get("blockers", []) or [])
     warnings = list(base_gate.get("warnings", []) or [])
     if renderer.get("status") != "passed":
@@ -115,6 +119,16 @@ def create_formal_deg_plot_artifact(
     source = next(entry for entry in entries if str(entry.get("result_id") or "") == str(gate.get("selected_result_id") or ""))
     source_semantics = normalize_result_semantics(source.get("canonical_result_semantics") or source.get("result_semantics"), default="")
     spec = build_basic_plot_spec(source, plot_type, parameters=parameters)
+    image_artifacts: list[dict[str, Any]] = []
+    renderer_warnings: list[str] = []
+    renderer_blockers: list[str] = []
+    renderer_log_artifact: dict[str, Any] = {}
+    if plot_type == "volcano_plot":
+        rendered = _render_volcano_svg(root, source, plot_type, parameters=parameters or {})
+        image_artifacts = rendered.get("image_artifacts", [])
+        renderer_warnings = rendered.get("warnings", [])
+        renderer_blockers = rendered.get("blockers", [])
+        renderer_log_artifact = rendered.get("renderer_log_artifact", {})
     artifact = PlotArtifact(
         plot_id=_formal_plot_id(source, plot_type),
         plot_type=plot_type,
@@ -130,11 +144,19 @@ def create_formal_deg_plot_artifact(
             "plot_policy": "formal_deg_plot_artifact_only_not_report_ready",
         },
         plot_spec_artifact=spec,
+        image_artifacts=tuple(image_artifacts),
         table_artifacts=tuple(_source_deg_tables(source)),
-        dependency_snapshot=source.get("dependency_snapshot") if isinstance(source.get("dependency_snapshot"), dict) else {},
-        warnings=tuple(spec.get("warnings", []) or []),
-        blockers=tuple(spec.get("blockers", []) or []),
+        engine_name="biomedpilot_svg_volcano_renderer" if plot_type == "volcano_plot" else "biomedpilot_plot_spec",
+        engine_version="0.1.0" if plot_type == "volcano_plot" else "0.1.0",
+        dependency_snapshot={
+            **(source.get("dependency_snapshot") if isinstance(source.get("dependency_snapshot"), dict) else {}),
+            "plot_renderer": _default_renderer_capability(plot_type),
+        },
+        warnings=tuple([*(spec.get("warnings", []) or []), *renderer_warnings]),
+        blockers=tuple([*(spec.get("blockers", []) or []), *renderer_blockers]),
     ).to_dict()
+    if renderer_log_artifact:
+        artifact["renderer_log_artifact"] = renderer_log_artifact
     validation = validate_plot_artifact(artifact)
     artifact["warnings"] = list(dict.fromkeys([*artifact.get("warnings", []), *validation.get("warnings", [])]))
     artifact["blockers"] = list(dict.fromkeys([*artifact.get("blockers", []), *validation.get("blockers", [])]))
@@ -221,3 +243,170 @@ def _result_options(entries: list[dict[str, Any]]) -> list[dict[str, str]]:
 
 def _formal_plot_id(source: dict[str, Any], plot_type: str) -> str:
     return f"{source.get('result_id') or 'formal-deg'}-{plot_type}-artifact"
+
+
+def _default_renderer_capability(plot_type: str) -> dict[str, Any]:
+    if plot_type == "volcano_plot":
+        return {
+            "status": "passed",
+            "renderer": "biomedpilot_builtin_svg_volcano",
+            "version": "0.1.0",
+            "output_formats": ["svg"],
+            "dependency_policy": "stdlib_only_no_external_renderer",
+            "blockers": [],
+        }
+    return {"status": "blocked", "renderer": "spec_only", "blockers": ["real_deg_plot_renderer_not_activated"]}
+
+
+def _render_volcano_svg(root: Path, source: dict[str, Any], plot_type: str, *, parameters: dict[str, Any]) -> dict[str, Any]:
+    table = _source_table_path(root, source)
+    rows = _read_deg_rows(table)
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if not rows:
+        blockers.append("volcano_renderer_requires_non_empty_deg_table")
+        return {"image_artifacts": [], "renderer_log_artifact": {}, "warnings": warnings, "blockers": blockers}
+    points = []
+    for row in rows:
+        try:
+            log2fc = float(str(row.get("log2_fold_change") or row.get("log2FC") or ""))
+            adjusted = float(str(row.get("adjusted_p_value") or row.get("FDR") or row.get("fdr") or ""))
+        except (TypeError, ValueError):
+            warnings.append("volcano_renderer_skipped_non_numeric_row")
+            continue
+        if adjusted <= 0:
+            adjusted = 1e-300
+        points.append(
+            {
+                "feature_id": str(row.get("feature_id") or ""),
+                "gene_symbol": str(row.get("gene_symbol") or row.get("feature_id") or ""),
+                "x": log2fc,
+                "y": -math.log10(adjusted),
+                "significance_label": str(row.get("significance_label") or ""),
+            }
+        )
+    if not points:
+        blockers.append("volcano_renderer_no_numeric_points")
+        return {"image_artifacts": [], "renderer_log_artifact": {}, "warnings": warnings, "blockers": blockers}
+    result_id = str(source.get("result_id") or "formal_deg")
+    plot_id = _formal_plot_id(source, plot_type)
+    plot_dir = root / "plots" / "formal_deg" / _safe_name(result_id)
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    svg_path = plot_dir / f"{plot_id}.svg"
+    log_path = plot_dir / f"{plot_id}.renderer_log.json"
+    svg_path.write_text(_volcano_svg(points, result_id=result_id, parameters=parameters), encoding="utf-8")
+    checksum = hashlib.sha256(svg_path.read_bytes()).hexdigest()
+    log_payload = {
+        "schema_version": "biomedpilot.formal_deg_volcano_renderer_log.v1",
+        "plot_id": plot_id,
+        "source_result_id": result_id,
+        "renderer": "biomedpilot_builtin_svg_volcano",
+        "format": "svg",
+        "point_count": len(points),
+        "warnings": warnings,
+        "blockers": blockers,
+        "clinical_conclusion_enabled": False,
+    }
+    log_path.write_text(json.dumps(log_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {
+        "image_artifacts": [
+            {
+                "artifact_type": "formal_deg_volcano_svg",
+                "path": str(svg_path.relative_to(root)),
+                "format": "svg",
+                "mime_type": "image/svg+xml",
+                "sha256": checksum,
+                "renderer": "biomedpilot_builtin_svg_volcano",
+                "semantic_boundary": "statistical_visualization_only_not_clinical_conclusion",
+            }
+        ],
+        "renderer_log_artifact": {
+            "artifact_type": "formal_deg_plot_renderer_log",
+            "path": str(log_path.relative_to(root)),
+            "schema": "biomedpilot.formal_deg_volcano_renderer_log.v1",
+        },
+        "warnings": warnings,
+        "blockers": blockers,
+    }
+
+
+def _source_table_path(root: Path, source: dict[str, Any]) -> Path:
+    tables = _source_deg_tables(source)
+    if not tables:
+        return root / "__missing_deg_table__"
+    raw = Path(str(tables[0].get("path") or tables[0].get("file_path") or ""))
+    return raw if raw.is_absolute() else root / raw
+
+
+def _read_deg_rows(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        return []
+    with path.open("r", encoding="utf-8", errors="replace", newline="") as handle:
+        first = handle.readline()
+        delimiter = "," if first.count(",") > first.count("\t") else "\t"
+        return list(csv.DictReader([first, *handle.readlines()], delimiter=delimiter))
+
+
+def _volcano_svg(points: list[dict[str, Any]], *, result_id: str, parameters: dict[str, Any]) -> str:
+    width = 900
+    height = 620
+    margin_left = 82
+    margin_right = 34
+    margin_top = 52
+    margin_bottom = 78
+    xs = [float(point["x"]) for point in points]
+    ys = [float(point["y"]) for point in points]
+    x_abs = max(1.0, max(abs(min(xs)), abs(max(xs))))
+    y_max = max(1.0, max(ys))
+    plot_width = width - margin_left - margin_right
+    plot_height = height - margin_top - margin_bottom
+
+    def sx(value: float) -> float:
+        return margin_left + ((value + x_abs) / (2 * x_abs)) * plot_width
+
+    def sy(value: float) -> float:
+        return margin_top + (1 - value / y_max) * plot_height
+
+    circles = []
+    for point in points:
+        label = _xml_escape(str(point.get("gene_symbol") or point.get("feature_id") or "feature"))
+        x = sx(float(point["x"]))
+        y = sy(float(point["y"]))
+        color = _volcano_color(str(point.get("significance_label") or ""))
+        circles.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4.2" fill="{color}" opacity="0.82"><title>{label}</title></circle>')
+    threshold = parameters.get("fdr_threshold", 0.05)
+    threshold_line = ""
+    try:
+        threshold_y = sy(-math.log10(float(threshold)))
+        threshold_line = f'<line x1="{margin_left}" y1="{threshold_y:.2f}" x2="{width - margin_right}" y2="{threshold_y:.2f}" stroke="#7a869a" stroke-dasharray="6 6" stroke-width="1.5"/>'
+    except (TypeError, ValueError):
+        threshold_line = ""
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" role="img" aria-label="Formal DEG volcano plot">\n'
+        "<style>text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;fill:#1f2937}.axis{stroke:#374151;stroke-width:1.4}.grid{stroke:#e5e7eb;stroke-width:1}</style>\n"
+        f'<rect width="900" height="620" fill="#ffffff"/><text x="82" y="32" font-size="20" font-weight="650">Formal DEG Volcano Plot</text><text x="82" y="54" font-size="12">Result: {_xml_escape(result_id)} | statistical visualization only</text>\n'
+        f'<line class="axis" x1="{margin_left}" y1="{height - margin_bottom}" x2="{width - margin_right}" y2="{height - margin_bottom}"/><line class="axis" x1="{margin_left}" y1="{margin_top}" x2="{margin_left}" y2="{height - margin_bottom}"/>\n'
+        f'<line class="grid" x1="{sx(0):.2f}" y1="{margin_top}" x2="{sx(0):.2f}" y2="{height - margin_bottom}"/>{threshold_line}\n'
+        + "\n".join(circles)
+        + f'\n<text x="{width / 2 - 80:.0f}" y="{height - 28}" font-size="14">log2 fold change</text><text transform="translate(24 {height / 2 + 80:.0f}) rotate(-90)" font-size="14">-log10 adjusted p-value</text>\n'
+        '<text x="82" y="594" font-size="11">No clinical diagnosis, prognosis, or treatment recommendation is implied.</text></svg>\n'
+    )
+
+
+def _volcano_color(label: str) -> str:
+    normalized = label.lower()
+    if "up" in normalized:
+        return "#c2410c"
+    if "down" in normalized:
+        return "#2563eb"
+    if "significant" in normalized:
+        return "#7c3aed"
+    return "#64748b"
+
+
+def _xml_escape(value: str) -> str:
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def _safe_name(value: str) -> str:
+    return "".join(char if char.isalnum() or char in {"-", "_", "."} else "_" for char in value) or "formal_deg"

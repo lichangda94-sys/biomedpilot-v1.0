@@ -26,6 +26,13 @@ def test_formal_deg_plot_artifact_registers_to_result_index_and_keeps_report_dis
     assert artifact["source_result_semantics"] == "formal_computed_result"
     assert artifact["plot_semantics"] == "formal_computed_result"
     assert artifact["plot_spec_artifact"]["data_source"] == "result_index_output_artifacts"
+    assert artifact["image_artifacts"][0]["format"] == "svg"
+    assert artifact["image_artifacts"][0]["sha256"]
+    svg_path = tmp_path / artifact["image_artifacts"][0]["path"]
+    assert svg_path.is_file()
+    assert "Formal DEG Volcano Plot" in svg_path.read_text(encoding="utf-8")
+    assert "clinical diagnosis" in svg_path.read_text(encoding="utf-8")
+    assert (tmp_path / artifact["renderer_log_artifact"]["path"]).is_file()
     assert "clinical conclusions" in result["guard_copy"]
 
     entry = load_registry(tmp_path)["results"][0]
@@ -85,18 +92,19 @@ def test_formal_deg_plot_blocks_non_deg_and_missing_deg_table(tmp_path: Path) ->
     assert "formal_deg_plot_requires_deg_result_table" in result["blockers"]
 
 
-def test_formal_deg_plot_production_gate_requires_real_renderer_capability(tmp_path: Path) -> None:
+def test_formal_deg_plot_production_gate_passes_for_builtin_volcano_renderer(tmp_path: Path) -> None:
     table = tmp_path / "results" / "tables" / "formal.tsv"
     table.parent.mkdir(parents=True, exist_ok=True)
     table.write_text("feature_id\tgene_symbol\tlog2_fold_change\tp_value\tadjusted_p_value\tsignificance_label\nf1\tTP53\t1.4\t0.01\t0.02\tup\n", encoding="utf-8")
     _register_formal(tmp_path, table)
 
-    blocked = build_formal_deg_plot_production_gate(tmp_path, result_id="formal-plot")
-    passed = build_formal_deg_plot_production_gate(tmp_path, result_id="formal-plot", renderer_capability={"status": "passed", "renderer": "matplotlib", "blockers": []})
+    passed = build_formal_deg_plot_production_gate(tmp_path, result_id="formal-plot")
+    blocked = build_formal_deg_plot_production_gate(tmp_path, result_id="formal-plot", renderer_capability={"status": "blocked", "renderer": "external", "blockers": ["renderer_missing"]})
 
     assert blocked["status"] == "blocked"
-    assert "real_deg_plot_renderer_not_activated" in blocked["blockers"]
+    assert "renderer_missing" in blocked["blockers"]
     assert passed["status"] == "passed"
+    assert passed["renderer_capability"]["renderer"] == "biomedpilot_builtin_svg_volcano"
     assert passed["inherits_source_semantics"] is True
     assert passed["report_ready_eligible_changed"] is False
     assert passed["clinical_conclusion_enabled"] is False
