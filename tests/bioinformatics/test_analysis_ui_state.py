@@ -49,6 +49,14 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
     assert "B9.2 controlled activation" in formal_gate_text
+    multifactor_gate_text = "\n".join(str(row) for row in state["multifactor_deg_gate_rows"])
+    assert "Multi-factor design QA" in multifactor_gate_text
+    assert "Multi-factor contrast" in multifactor_gate_text
+    assert "Multi-factor R dependency" in multifactor_gate_text
+    assert "Multi-factor user confirmation" in multifactor_gate_text
+    multifactor_action = _action(state, "multifactor_deg")
+    assert multifactor_action["enabled"] is False
+    assert "multifactor_deg_parameter_confirmation_missing" in multifactor_action["disabled_reason"]
     assert state["legacy_asset_pipeline"]["formal_analysis_enabled"] is False
     assert state["legacy_asset_pipeline"]["writes_result_index"] is False
     assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False

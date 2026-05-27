@@ -22,6 +22,7 @@ def build_action_rows(
     parameter_gate: dict[str, Any] | None = None,
     confirmation_gate: dict[str, Any] | None = None,
     result_schema_gate: dict[str, Any] | None = None,
+    multifactor_gate_state: dict[str, Any] | None = None,
     survival_dependency: dict[str, Any] | None = None,
     km_parameter_gate: dict[str, Any] | None = None,
     km_confirmation_gate: dict[str, Any] | None = None,
@@ -43,6 +44,7 @@ def build_action_rows(
     parameter_gate = parameter_gate or {}
     confirmation_gate = confirmation_gate or {}
     result_schema_gate = result_schema_gate or {}
+    multifactor_gate_state = multifactor_gate_state or {}
     survival_dependency = survival_dependency or {}
     km_parameter_gate = km_parameter_gate or {}
     km_confirmation_gate = km_confirmation_gate or {}
@@ -63,6 +65,7 @@ def build_action_rows(
     rows.append(_deg_preflight_action(deg_package))
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate, input_adaptation_gate, design_quality_gate, data_quality_gate, method_recommendation_gate))
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate, input_adaptation_gate, design_quality_gate, data_quality_gate, method_recommendation_gate))
+    rows.append(_multifactor_deg_action(multifactor_gate_state))
     rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_immune_action(immune_package, tasks))
@@ -285,6 +288,30 @@ def _formal_deg_confirmation_action(
         "disabled_reason": "",
         "next_action": "Review comparison, method, thresholds, value type policy, dependencies and output plan before formal DEG.",
     }
+
+
+def _multifactor_deg_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    blockers = _list(gate_state.get("blockers"))
+    if gate_state.get("status") == "passed" and not blockers:
+        return {
+            "action_id": "multifactor_deg",
+            "label": "Run controlled multi-factor DEG",
+            "state": "enabled_multifactor_deg",
+            "button_behavior": "enabled_only_when_multifactor_gates_pass",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run audited controlled multi-factor DEG only with confirmed design, contrast, method, dependencies and result schema.",
+        }
+    if not blockers:
+        blockers = ["multifactor_deg_gate_not_passed"]
+    return _disabled(
+        "multifactor_deg",
+        "Run controlled multi-factor DEG",
+        "blocked_multifactor_gate",
+        "; ".join(dict.fromkeys(blockers)),
+        "Resolve design QA, contrast, method, dependency, user confirmation and result schema gates before multi-factor DEG.",
+    )
 
 
 def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str, Any]]) -> dict[str, Any]:

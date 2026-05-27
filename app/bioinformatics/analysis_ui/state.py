@@ -11,7 +11,19 @@ from app.bioinformatics.acquisition_adapters.selection_gate import LEGACY_ASSET_
 from app.bioinformatics.acquisition_adapters.standardized_bridge import LEGACY_ASSET_CANDIDATE_PATH
 from app.bioinformatics.clinical_analysis import build_clinical_association_preflight, build_survival_package, build_survival_preflight
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
-from app.bioinformatics.deg_engine import build_deg_data_quality_gate, build_deg_design_quality_gate, build_deg_input_adaptation_gate, build_deg_method_recommendation_gate, build_deg_parameter_manifest, build_formal_deg_result_schema_gate
+from app.bioinformatics.deg_engine import (
+    build_deg_data_quality_gate,
+    build_deg_design_quality_gate,
+    build_deg_input_adaptation_gate,
+    build_deg_method_recommendation_gate,
+    build_deg_parameter_manifest,
+    build_formal_deg_result_schema_gate,
+    build_multifactor_deg_parameter_manifest,
+    build_multifactor_deg_result_schema_gate,
+    check_multifactor_r_backend,
+    load_multifactor_deg_parameter_confirmation,
+    validate_multifactor_deg_parameter_confirmation,
+)
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
@@ -50,6 +62,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
+    multifactor_deg_gates = build_multifactor_deg_gate_state(packages=packages, project_root=root)
     survival_gates = build_km_logrank_gate_state(packages=packages, survival_dependency=survival_dependency, project_root=root)
     legacy_pipeline = build_legacy_asset_pipeline_state(root)
     package_rows = build_package_rows(packages)
@@ -66,6 +79,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         parameter_gate=deg_gates["parameter_gate"],
         confirmation_gate=deg_gates["confirmation_gate"],
         result_schema_gate=deg_gates["result_schema_gate"],
+        multifactor_gate_state=multifactor_deg_gates,
         survival_dependency=survival_dependency,
         km_parameter_gate=survival_gates["parameter_gate"],
         km_confirmation_gate=survival_gates["confirmation_gate"],
@@ -95,6 +109,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "action_rows": action_rows,
         "dependency_rows": dependency_rows,
         "formal_deg_gate_rows": deg_gates["gate_rows"],
+        "multifactor_deg_gate_rows": multifactor_deg_gates["gate_rows"],
         "legacy_asset_pipeline": legacy_pipeline,
         "result_rows": result_rows,
         "gate_rows": gate_rows,
@@ -108,6 +123,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "analysis_input_resolver": resolver,
             "deg_dependency_snapshot": deg_dependency,
             "formal_deg_gate_state": deg_gates,
+            "multifactor_deg_gate_state": multifactor_deg_gates,
             "legacy_asset_pipeline": legacy_pipeline,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
@@ -442,6 +458,96 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         "parameter_confirmation": confirmation,
         "result_schema_gate": result_schema_gate,
         "gate_rows": gate_rows,
+    }
+
+
+def build_multifactor_deg_gate_state(*, packages: list[dict[str, Any]], project_root: str | Path | None = None) -> dict[str, Any]:
+    deg_package = next((item for item in packages if item.get("package_type") == "deg_recompute"), None)
+    confirmation = load_multifactor_deg_parameter_confirmation(project_root) if project_root is not None else {}
+    confirmed_parameters = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
+    method = str(confirmed_parameters.get("backend_method") or "limma")
+    dependency = check_multifactor_r_backend(method)
+    if not deg_package:
+        deg_ready_gate = {"status": "blocked", "blockers": ["missing_deg_recompute_input_package"], "warnings": []}
+        design_quality_gate = build_deg_design_quality_gate(None)
+        design_manifest = _multifactor_design_manifest(confirmed_parameters, design_quality_gate)
+        parameter_gate = {"status": "blocked", "blockers": ["missing_deg_ready_package"], "warnings": [], **design_manifest, "backend_method": method}
+    else:
+        deg_ready = build_deg_ready_package(deg_package).to_dict()
+        deg_ready_gate = {
+            "status": "passed" if not deg_ready.get("blockers") else "blocked",
+            "blockers": list(deg_ready.get("blockers", []) or []),
+            "warnings": list(deg_ready.get("warnings", []) or []),
+            "package": deg_ready,
+        }
+        design_quality_gate = build_deg_design_quality_gate(deg_ready, method_family="linear_model_multifactor")
+        design_manifest = _multifactor_design_manifest(confirmed_parameters, design_quality_gate)
+        parameter_gate = build_multifactor_deg_parameter_manifest(deg_ready, design_manifest=design_manifest, method=method, dependency_snapshot=dependency)
+    confirmation_gate = validate_multifactor_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_gate, dependency_snapshot=dependency)
+    result_schema_gate = build_multifactor_deg_result_schema_gate(parameter_manifest=parameter_gate, dependency_snapshot=dependency)
+    blockers = _dedupe(
+        [
+            *[str(item) for item in deg_ready_gate.get("blockers", []) or []],
+            *[str(item) for item in design_quality_gate.get("blockers", []) or []],
+            *[str(item) for item in parameter_gate.get("blockers", []) or []],
+            *[str(item) for item in dependency.get("blockers", []) or []],
+            *[str(item) for item in confirmation_gate.get("blockers", []) or []],
+            *[str(item) for item in result_schema_gate.get("blockers", []) or []],
+        ]
+    )
+    gate_rows = [
+        _formal_deg_gate_row("Multi-factor resolver package", deg_ready_gate.get("status"), deg_ready_gate.get("blockers", []), deg_ready_gate.get("warnings", [])),
+        _formal_deg_gate_row(
+            "Multi-factor design QA",
+            design_quality_gate.get("status"),
+            design_quality_gate.get("blockers", []),
+            design_quality_gate.get("warnings", []),
+            basis=f"formula={design_manifest.get('design_formula', '')}; rank={design_manifest.get('design_rank', 0)}; df={design_manifest.get('residual_degrees_of_freedom', 0)}; batches={compact_list(design_manifest.get('batch_variables', []) or [])}",
+        ),
+        _formal_deg_gate_row("Multi-factor contrast", "passed" if design_manifest.get("contrast", {}).get("contrast_id") else "blocked", [] if design_manifest.get("contrast", {}).get("contrast_id") else ["missing_contrast_id"], basis=str(design_manifest.get("contrast", {}))),
+        _formal_deg_gate_row("Multi-factor method", parameter_gate.get("status"), parameter_gate.get("blockers", []), parameter_gate.get("warnings", []), basis=f"method={method}; value_type_policy={parameter_gate.get('value_type_policy', '')}"),
+        _formal_deg_gate_row("Multi-factor R dependency", dependency.get("status"), dependency.get("blockers", []), dependency.get("warnings", []), basis=f"method={method}; policy={dependency.get('dependency_policy', '')}"),
+        _formal_deg_gate_row("Multi-factor user confirmation", confirmation_gate.get("status"), confirmation_gate.get("blockers", []), confirmation_gate.get("warnings", []), basis="User must confirm formula, contrast, covariates, batch, method, value type, dependencies and output path."),
+        _formal_deg_gate_row("Multi-factor result schema", result_schema_gate.get("status"), result_schema_gate.get("blockers", []), result_schema_gate.get("warnings", [])),
+    ]
+    return {
+        "schema_version": "biomedpilot.multifactor_deg_ui_gate_state.v1",
+        "status": "blocked" if blockers else "passed",
+        "method": method,
+        "deg_ready_gate": deg_ready_gate,
+        "design_quality_gate": design_quality_gate,
+        "parameter_gate": parameter_gate,
+        "dependency_snapshot": dependency,
+        "confirmation_gate": confirmation_gate,
+        "parameter_confirmation": confirmation,
+        "result_schema_gate": result_schema_gate,
+        "gate_rows": gate_rows,
+        "blockers": blockers,
+        "warnings": _dedupe(
+            [
+                *[str(item) for item in deg_ready_gate.get("warnings", []) or []],
+                *[str(item) for item in design_quality_gate.get("warnings", []) or []],
+                *[str(item) for item in parameter_gate.get("warnings", []) or []],
+                *[str(item) for item in dependency.get("warnings", []) or []],
+                *[str(item) for item in confirmation_gate.get("warnings", []) or []],
+                *[str(item) for item in result_schema_gate.get("warnings", []) or []],
+            ]
+        ),
+    }
+
+
+def _multifactor_design_manifest(confirmed_parameters: dict[str, Any], design_quality_gate: dict[str, Any]) -> dict[str, Any]:
+    contrast = confirmed_parameters.get("contrast") if isinstance(confirmed_parameters.get("contrast"), dict) else {}
+    covariates = confirmed_parameters.get("covariates") if isinstance(confirmed_parameters.get("covariates"), list) else []
+    batch_variables = confirmed_parameters.get("batch_variables") if isinstance(confirmed_parameters.get("batch_variables"), list) else list(design_quality_gate.get("batch_names", []) or [])
+    return {
+        "design_formula": str(confirmed_parameters.get("design_formula") or ""),
+        "contrast": contrast,
+        "covariates": covariates,
+        "batch_variables": batch_variables,
+        "design_rank": int(confirmed_parameters.get("design_rank") or design_quality_gate.get("design_rank") or 0),
+        "residual_degrees_of_freedom": int(confirmed_parameters.get("residual_degrees_of_freedom") or design_quality_gate.get("degrees_of_freedom") or 0),
+        "contrast_estimability": str(confirmed_parameters.get("contrast_estimability") or "not_confirmed"),
     }
 
 

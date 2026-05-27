@@ -115,6 +115,40 @@ def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:
     assert _row(rows, "formal_deg_parameter_confirmation")["state"] == "confirmed"
 
 
+def test_multifactor_deg_action_requires_joint_gate_state() -> None:
+    blocked = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        multifactor_gate_state={
+            "status": "blocked",
+            "blockers": [
+                "missing_design_formula",
+                "missing_contrast_id",
+                "multifactor_deg_parameter_confirmation_missing",
+                "dependency_snapshot_not_passed",
+            ],
+        },
+    )
+
+    action = _row(blocked, "multifactor_deg")
+    assert action["enabled"] is False
+    assert action["state"] == "blocked_multifactor_gate"
+    assert "missing_design_formula" in action["disabled_reason"]
+    assert "multifactor_deg_parameter_confirmation_missing" in action["disabled_reason"]
+
+    enabled = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        multifactor_gate_state={"status": "passed", "blockers": []},
+    )
+    assert _row(enabled, "multifactor_deg")["enabled"] is True
+    assert _row(enabled, "multifactor_deg")["button_behavior"] == "enabled_only_when_multifactor_gates_pass"
+
+
 def test_preflight_only_plot_source_is_blocked_and_report_gate_controls_export() -> None:
     rows = build_action_rows(
         packages=[],
