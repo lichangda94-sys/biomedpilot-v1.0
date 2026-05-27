@@ -137,6 +137,8 @@ def create_formal_deg_report_ready_package(
     _write_json(manifests_dir / "formal_deg_parameter_confirmation.json", load_deg_parameter_confirmation(root))
     _write_json(manifests_dir / "dependency_snapshot.json", selected.get("dependency_snapshot", {}))
     _write_json(manifests_dir / "plot_artifacts.json", selected.get("plot_artifacts", []) or [])
+    _write_json(manifests_dir / "plot_quality_summary.json", _plot_quality_summary(selected))
+    _write_json(manifests_dir / "method_explanation.json", _method_explanation(selected))
     _write_json(manifests_dir / "validation_report.json", gate)
     _write_json(manifests_dir / "gate_snapshot.json", gate)
     _write_json(manifests_dir / "provenance.json", gate.get("provenance_required", {}))
@@ -162,6 +164,12 @@ def create_formal_deg_report_ready_package(
         "survival_enabled": False,
         "clinical_conclusion_enabled": False,
         "allow_table_only_report": allow_table_only_report,
+        "production_review_inputs": {
+            "audit_package_expected": True,
+            "plot_quality_summary": "manifests/plot_quality_summary.json",
+            "method_explanation": "manifests/method_explanation.json",
+            "clinical_interpretation_enabled": False,
+        },
         "gate": gate,
     }
     _write_json(package_dir / "formal_deg_report_package_manifest.json", manifest)
@@ -359,6 +367,17 @@ def _formal_deg_report_markdown(entry: dict[str, Any], gate: dict[str, Any]) -> 
         lines.append(f"- {name}: {status.get('version', '')}")
     if gate.get("allow_table_only_report"):
         lines.extend(["", "## Table-Only Report Mode", "", f"- {_table_only_statement()}"])
+    method_explanation = _method_explanation(entry)
+    lines.extend(["", "## Method Explanation", ""])
+    lines.extend(f"- {item}" for item in method_explanation["explanation"])
+    plot_summary = _plot_quality_summary(entry)
+    lines.extend(["", "## Plot Artifacts", ""])
+    if plot_summary["plot_count"]:
+        lines.append(f"- plot_count: {plot_summary['plot_count']}")
+        lines.append(f"- image_count: {plot_summary['image_count']}")
+        lines.append(f"- quality_status: {plot_summary['quality_status']}")
+    else:
+        lines.append("- No plot artifact included.")
     warning_lines = [f"- {item}" for item in [*(entry.get("warnings", []) or []), *(gate.get("warnings", []) or [])]] or ["- None"]
     lines.extend(["", "## Warnings", "", *warning_lines, "", "## Limitations", "", *[f"- {item}" for item in _limitations()], "", "## Provenance", ""])
     for key, value in (gate.get("provenance_required", {}) or {}).items():
@@ -374,6 +393,38 @@ def _limitations() -> list[str]:
         "Imported, testing, exploratory, and preflight outputs are excluded from this formal report-ready package.",
         "Warnings, limitations, dependencies, parameters, and provenance must stay attached to the report package.",
     ]
+
+
+def _method_explanation(entry: dict[str, Any]) -> dict[str, Any]:
+    parameters = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
+    method = str(parameters.get("method") or "")
+    family = str(parameters.get("method_family") or "")
+    value_type = str(parameters.get("value_type") or "")
+    explanation = [
+        f"Method: {method or 'not recorded'}",
+        f"Method family: {family or 'not recorded'}",
+        f"Value type policy: {parameters.get('value_type_policy', 'not recorded')}",
+        f"Multiple testing policy: {parameters.get('multiple_testing_policy') or parameters.get('fdr_policy') or 'not recorded'}",
+        "Method selection is a statistical workflow decision and is not a clinical interpretation.",
+    ]
+    if value_type:
+        explanation.append(f"Input value type: {value_type}")
+    return {"method": method, "method_family": family, "value_type": value_type, "explanation": explanation}
+
+
+def _plot_quality_summary(entry: dict[str, Any]) -> dict[str, Any]:
+    plots = [item for item in entry.get("plot_artifacts", []) or [] if isinstance(item, dict)]
+    images = [image for plot in plots for image in plot.get("image_artifacts", []) or [] if isinstance(image, dict)]
+    missing_checksums = [str(image.get("path") or "") for image in images if not image.get("sha256")]
+    return {
+        "plot_count": len(plots),
+        "image_count": len(images),
+        "quality_status": "warning_missing_plot_image_checksum" if missing_checksums else ("passed" if images else "not_applicable"),
+        "missing_checksum_images": missing_checksums,
+        "plot_ids": [str(plot.get("plot_id") or "") for plot in plots],
+        "image_paths": [str(image.get("path") or "") for image in images],
+        "report_ready_eligible_changed_by_plot": False,
+    }
 
 
 def _table_only_statement() -> str:

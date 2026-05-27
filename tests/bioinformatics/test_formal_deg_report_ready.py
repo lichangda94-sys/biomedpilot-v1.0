@@ -36,6 +36,8 @@ def test_formal_deg_report_ready_package_requires_formal_plot_and_updates_result
     assert "Formal DEG Report-Ready Section" in report
     assert "does not include GSEA" in report
     assert "clinical conclusions" in report
+    assert "Method Explanation" in report
+    assert "Plot Artifacts" in report
     assert (package / "tables").is_dir()
     assert (package / "plots").is_dir()
     assert (package / "manifests").is_dir()
@@ -45,6 +47,8 @@ def test_formal_deg_report_ready_package_requires_formal_plot_and_updates_result
     assert (package / "manifests" / "formal_deg_parameter_confirmation.json").is_file()
     assert (package / "manifests" / "dependency_snapshot.json").is_file()
     assert (package / "manifests" / "plot_artifacts.json").is_file()
+    assert (package / "manifests" / "plot_quality_summary.json").is_file()
+    assert (package / "manifests" / "method_explanation.json").is_file()
     assert (package / "manifests" / "gate_snapshot.json").is_file()
     assert (package / "manifests" / "package_inventory.json").is_file()
     assert (package / "manifests" / "provenance.json").is_file()
