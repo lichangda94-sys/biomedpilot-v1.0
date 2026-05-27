@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.bioinformatics.plots import build_formal_deg_plot_gate, create_formal_deg_plot_artifact
+from app.bioinformatics.plots import build_formal_deg_plot_gate, build_formal_deg_plot_production_gate, create_formal_deg_plot_artifact
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import load_registry, register_result
@@ -83,6 +83,23 @@ def test_formal_deg_plot_blocks_non_deg_and_missing_deg_table(tmp_path: Path) ->
 
     assert result["status"] == "blocked"
     assert "formal_deg_plot_requires_deg_result_table" in result["blockers"]
+
+
+def test_formal_deg_plot_production_gate_requires_real_renderer_capability(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "formal.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text("feature_id\tgene_symbol\tlog2_fold_change\tp_value\tadjusted_p_value\tsignificance_label\nf1\tTP53\t1.4\t0.01\t0.02\tup\n", encoding="utf-8")
+    _register_formal(tmp_path, table)
+
+    blocked = build_formal_deg_plot_production_gate(tmp_path, result_id="formal-plot")
+    passed = build_formal_deg_plot_production_gate(tmp_path, result_id="formal-plot", renderer_capability={"status": "passed", "renderer": "matplotlib", "blockers": []})
+
+    assert blocked["status"] == "blocked"
+    assert "real_deg_plot_renderer_not_activated" in blocked["blockers"]
+    assert passed["status"] == "passed"
+    assert passed["inherits_source_semantics"] is True
+    assert passed["report_ready_eligible_changed"] is False
+    assert passed["clinical_conclusion_enabled"] is False
 
 
 def _register_formal(root: Path, table: Path) -> None:

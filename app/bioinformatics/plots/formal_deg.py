@@ -13,6 +13,7 @@ from .schema import validate_plot_artifact
 
 
 FORMAL_DEG_PLOT_GATE_SCHEMA_VERSION = "biomedpilot.formal_deg_plot_gate.v1"
+FORMAL_DEG_PLOT_PRODUCTION_GATE_SCHEMA_VERSION = "biomedpilot.formal_deg_plot_production_gate.v1"
 FORMAL_DEG_PLOT_TYPES = {"volcano_plot", "deg_heatmap"}
 FORMAL_DEG_PLOT_GUARD_COPY = (
     "Formal DEG plot artifacts visualize statistical analysis results only. "
@@ -51,6 +52,37 @@ def build_formal_deg_plot_gate(
         "result_index_path": str(Path(project_root).expanduser().resolve() / RESULT_INDEX),
         "guard_copy": FORMAL_DEG_PLOT_GUARD_COPY,
         "report_ready_eligible": bool((selected or {}).get("report_ready_eligible")),
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def build_formal_deg_plot_production_gate(
+    project_root: str | Path,
+    *,
+    result_id: str | None = None,
+    plot_type: str = "volcano_plot",
+    renderer_capability: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    base_gate = build_formal_deg_plot_gate(project_root, result_id=result_id, plot_type=plot_type)
+    renderer = renderer_capability or {"status": "blocked", "renderer": "spec_only", "blockers": ["real_deg_plot_renderer_not_activated"]}
+    blockers = list(base_gate.get("blockers", []) or [])
+    warnings = list(base_gate.get("warnings", []) or [])
+    if renderer.get("status") != "passed":
+        blockers.extend(str(item) for item in renderer.get("blockers", []) or ["plot_renderer_capability_not_passed"])
+    return {
+        "schema_version": FORMAL_DEG_PLOT_PRODUCTION_GATE_SCHEMA_VERSION,
+        "status": "blocked" if blockers else "passed",
+        "selected_result_id": base_gate.get("selected_result_id", ""),
+        "plot_type": plot_type,
+        "source_result_semantics": base_gate.get("source_result_semantics", ""),
+        "base_plot_gate": base_gate,
+        "renderer_capability": renderer,
+        "registers_to_result_index": True,
+        "inherits_source_semantics": True,
+        "report_ready_eligible_changed": False,
+        "clinical_conclusion_enabled": False,
+        "guard_copy": FORMAL_DEG_PLOT_GUARD_COPY,
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
