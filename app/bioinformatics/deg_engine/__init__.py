@@ -15,7 +15,7 @@ from .multifactor_confirmation import (
     validate_multifactor_deg_parameter_confirmation,
 )
 from .multifactor_gate import build_multifactor_deg_controlled_gate
-from .multifactor_r_runner import check_multifactor_r_backend, run_controlled_multifactor_deseq2_fixture, run_controlled_multifactor_limma_fixture
+from .multifactor_r_runner import check_multifactor_r_backend, run_controlled_multifactor_deseq2_fixture, run_controlled_multifactor_edger_fixture, run_controlled_multifactor_limma_fixture
 from .multifactor_schema import build_multifactor_deg_result_schema_gate, validate_multifactor_deg_result_bundle, validate_multifactor_deg_result_index_entry, validate_multifactor_deg_parameters_manifest
 from .parameter_gate import build_deg_parameter_manifest, validate_deg_parameter_manifest
 from .formal_runner import run_formal_controlled_deg
@@ -42,6 +42,7 @@ __all__ = [
     "load_multifactor_deg_parameter_confirmation",
     "run_formal_controlled_deg",
     "run_controlled_multifactor_deseq2_fixture",
+    "run_controlled_multifactor_edger_fixture",
     "run_controlled_multifactor_limma_fixture",
     "run_controlled_deg",
     "save_deg_parameter_confirmation",

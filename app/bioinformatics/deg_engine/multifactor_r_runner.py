@@ -20,7 +20,7 @@ from .multifactor_schema import build_multifactor_deg_result_schema_gate, valida
 
 MULTIFACTOR_DEG_RUN_SCHEMA_VERSION = "biomedpilot.multifactor_deg_controlled_run.v1"
 MULTIFACTOR_DEG_FIXTURE_SCHEMA_VERSION = "biomedpilot.multifactor_deg_fixture.v1"
-SUPPORTED_MULTIFACTOR_R_METHODS = {"limma": "limma", "DESeq2": "DESeq2"}
+SUPPORTED_MULTIFACTOR_R_METHODS = {"limma": "limma", "DESeq2": "DESeq2", "edgeR": "edgeR"}
 
 
 def check_multifactor_r_backend(method: str) -> dict[str, Any]:
@@ -243,6 +243,101 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
     }
 
 
+def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_type: str = "count") -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    dependency = check_multifactor_r_backend("edgeR")
+    deg_ready = _fixture_deg_ready_package(value_type=value_type)
+    design = _fixture_design_manifest()
+    parameter_manifest = build_multifactor_deg_parameter_manifest(deg_ready, design_manifest=design, method="edgeR", dependency_snapshot=dependency)
+    confirmation = save_multifactor_deg_parameter_confirmation(root, deg_ready_package=deg_ready, design_manifest=design, method="edgeR", dependency_snapshot=dependency)
+    confirmation_gate = validate_multifactor_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_manifest, dependency_snapshot=dependency)
+    schema_gate = build_multifactor_deg_result_schema_gate(parameter_manifest=parameter_manifest, dependency_snapshot=dependency)
+    blockers = [
+        *[str(item) for item in dependency.get("blockers", []) or []],
+        *[str(item) for item in parameter_manifest.get("blockers", []) or []],
+        *[str(item) for item in confirmation_gate.get("blockers", []) or []],
+        *[str(item) for item in schema_gate.get("blockers", []) or []],
+    ]
+    if blockers:
+        return _blocked(*blockers, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, confirmation_gate=confirmation_gate, result_schema_gate=schema_gate)
+
+    result_id = str(confirmation["output_plan"]["result_id"])
+    task_run_id = str(confirmation["output_plan"]["task_run_id"])
+    with tempfile.TemporaryDirectory(prefix="biomedpilot_multifactor_edger_") as workdir:
+        work = Path(workdir)
+        matrix_path = _write_count_fixture_matrix(work)
+        metadata_path = _write_fixture_metadata(work)
+        raw_output = work / "edger_output.tsv"
+        run_log = _run_edger_rscript(dependency["rscript"]["path"], matrix_path, metadata_path, raw_output)
+        if run_log["status"] != "passed":
+            return _blocked(*[str(item) for item in run_log.get("blockers", []) or []], parameter_manifest=parameter_manifest, dependency_snapshot=dependency, rscript_log=run_log)
+        rows = _read_edger_rows(raw_output)
+
+    bundle = {
+        "schema_version": MULTIFACTOR_DEG_FIXTURE_SCHEMA_VERSION,
+        "status": "passed",
+        "result_semantics": "formal_computed_result",
+        "engine_name": "r_edger_multifactor",
+        "engine_version": _package_version(dependency, "edgeR"),
+        "input_package_id": str(parameter_manifest.get("input_package_id") or ""),
+        "deg_ready_package_id": str(parameter_manifest.get("deg_ready_package_id") or ""),
+        "parameters_manifest": parameter_manifest,
+        "dependency_snapshot": dependency,
+        "rows": rows,
+        "warnings": [],
+        "blockers": [],
+    }
+    bundle_validation = validate_multifactor_deg_result_bundle(bundle)
+    if bundle_validation["status"] != "passed":
+        return _blocked(*[str(item) for item in bundle_validation.get("blockers", []) or []], parameter_manifest=parameter_manifest, dependency_snapshot=dependency, result_bundle=bundle)
+
+    output_path = _write_deg_table(root, result_id, rows)
+    log_path = _write_run_log(root, result_id, task_run_id, bundle, run_log)
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    entry = ResultIndexEntry(
+        result_id=result_id,
+        task_run_id=task_run_id,
+        task_type="deg",
+        result_semantics="formal_computed_result",
+        input_package_id=str(parameter_manifest.get("input_package_id") or ""),
+        source_dataset_id="controlled_multifactor_fixture",
+        source_repository_manifest="controlled_fixture://multifactor_deg/edger/v1",
+        parameters_manifest=parameter_manifest,
+        engine_name="r_edger_multifactor",
+        engine_version=_package_version(dependency, "edgeR"),
+        dependency_snapshot=dependency,
+        output_artifacts=({"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},),
+        plot_artifacts=(),
+        report_artifacts=(),
+        validation_status="passed",
+        warnings=tuple(str(item) for item in bundle.get("warnings", []) or []),
+        blockers=(),
+        log_artifacts=({"artifact_type": "multifactor_deg_run_log", "path": str(log_path.relative_to(root))},),
+        failure_reason="",
+        created_at=now,
+        updated_at=now,
+        report_ready_eligible=False,
+    ).to_dict()
+    entry_validation = validate_multifactor_deg_result_index_entry(entry)
+    if entry_validation["status"] != "passed":
+        return _blocked(*[str(item) for item in entry_validation.get("blockers", []) or []], parameter_manifest=parameter_manifest, dependency_snapshot=dependency, result_bundle=bundle, result_entry=entry)
+    registered = register_result(root, entry)
+    return {
+        "schema_version": MULTIFACTOR_DEG_RUN_SCHEMA_VERSION,
+        "status": "passed",
+        "method": "edgeR",
+        "result_id": result_id,
+        "task_run_id": task_run_id,
+        "result_entry": registered,
+        "result_table_path": str(output_path),
+        "task_run_log_path": str(log_path),
+        "parameter_manifest": parameter_manifest,
+        "dependency_snapshot": dependency,
+        "warnings": list(registered.get("warnings", []) or []),
+        "blockers": [],
+    }
+
+
 def _run_limma_rscript(rscript: str, matrix_path: Path, metadata_path: Path, output_path: Path) -> dict[str, Any]:
     script = """
 suppressPackageStartupMessages(library(limma))
@@ -290,6 +385,33 @@ write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
 """
     proc = subprocess.run([rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
     blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"deseq2_rscript_failed:{proc.returncode}"]
+    return {"status": "blocked" if blockers else "passed", "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
+
+
+def _run_edger_rscript(rscript: str, matrix_path: Path, metadata_path: Path, output_path: Path) -> dict[str, Any]:
+    script = """
+suppressPackageStartupMessages(library(edgeR))
+args <- commandArgs(trailingOnly=TRUE)
+matrix_path <- args[[1]]
+metadata_path <- args[[2]]
+output_path <- args[[3]]
+counts <- read.table(matrix_path, header=TRUE, row.names=1, sep="\\t", check.names=FALSE)
+meta <- read.table(metadata_path, header=TRUE, sep="\\t", stringsAsFactors=TRUE)
+meta <- meta[match(colnames(counts), meta$sample_id), ]
+meta$group <- relevel(factor(meta$group), ref="control")
+meta$batch <- factor(meta$batch)
+design <- model.matrix(~ batch + group, data=meta)
+y <- DGEList(counts=round(as.matrix(counts)))
+y <- calcNormFactors(y)
+y <- estimateDisp(y, design)
+fit <- glmQLFit(y, design)
+test <- glmQLFTest(fit, coef="groupcase")
+result <- topTags(test, n=Inf, sort.by="none")$table
+result$feature_id <- rownames(result)
+write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
+"""
+    proc = subprocess.run([rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
+    blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"edger_rscript_failed:{proc.returncode}"]
     return {"status": "blocked" if blockers else "passed", "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
 
 
@@ -421,6 +543,32 @@ def _read_deseq2_rows(path: Path) -> list[dict[str, str]]:
                     "adjusted_p_value": f"{fdr:.8g}",
                     "significance_label": _significance(logfc, fdr),
                     "warnings": "" if str(raw.get("padj") or "").upper() != "NA" else "adjusted_p_value_na_replaced_for_schema",
+                }
+            )
+    return rows
+
+
+def _read_edger_rows(path: Path) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        for raw in reader:
+            logfc = _safe_float(raw.get("logFC"))
+            p_value = _safe_float(raw.get("PValue"), default=1.0)
+            fdr = _safe_float(raw.get("FDR"), default=1.0)
+            rows.append(
+                {
+                    "feature_id": str(raw.get("feature_id") or ""),
+                    "gene_symbol": str(raw.get("feature_id") or ""),
+                    "base_mean_or_mean_expression": str(raw.get("logCPM") or ""),
+                    "case_mean": "",
+                    "control_mean": "",
+                    "log2_fold_change": f"{logfc:.8g}",
+                    "statistic": str(raw.get("F") or ""),
+                    "p_value": f"{p_value:.8g}",
+                    "adjusted_p_value": f"{fdr:.8g}",
+                    "significance_label": _significance(logfc, fdr),
+                    "warnings": "",
                 }
             )
     return rows
