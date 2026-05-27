@@ -92,6 +92,42 @@ def test_formal_deg_plot_blocks_non_deg_and_missing_deg_table(tmp_path: Path) ->
     assert "formal_deg_plot_requires_deg_result_table" in result["blockers"]
 
 
+def test_formal_deg_heatmap_svg_renderer_uses_case_control_means(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "formal.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text(
+        "feature_id\tgene_symbol\tcase_mean\tcontrol_mean\tlog2_fold_change\tp_value\tadjusted_p_value\tsignificance_label\n"
+        "f1\tTP53\t12\t4\t1.4\t0.01\t0.02\tup\n"
+        "f2\tEGFR\t3\t11\t-1.8\t0.02\t0.03\tdown\n",
+        encoding="utf-8",
+    )
+    _register_formal(tmp_path, table)
+
+    gate = build_formal_deg_plot_production_gate(tmp_path, result_id="formal-plot", plot_type="deg_heatmap")
+    result = create_formal_deg_plot_artifact(tmp_path, result_id="formal-plot", plot_type="deg_heatmap")
+
+    assert gate["status"] == "passed"
+    assert result["status"] == "passed"
+    artifact = result["plot_artifact"]
+    assert artifact["image_artifacts"][0]["artifact_type"] == "formal_deg_summary_heatmap_svg"
+    assert artifact["image_artifacts"][0]["semantic_boundary"] == "deg_summary_heatmap_not_sample_level_expression_heatmap"
+    svg_text = (tmp_path / artifact["image_artifacts"][0]["path"]).read_text(encoding="utf-8")
+    assert "Formal DEG Summary Heatmap" in svg_text
+    assert "not sample-level expression" in svg_text
+
+
+def test_formal_deg_heatmap_blocks_without_case_control_means(tmp_path: Path) -> None:
+    table = tmp_path / "results" / "tables" / "formal.tsv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text("feature_id\tgene_symbol\tlog2_fold_change\tp_value\tadjusted_p_value\tsignificance_label\nf1\tTP53\t1.4\t0.01\t0.02\tup\n", encoding="utf-8")
+    _register_formal(tmp_path, table)
+
+    result = create_formal_deg_plot_artifact(tmp_path, result_id="formal-plot", plot_type="deg_heatmap")
+
+    assert result["status"] == "blocked"
+    assert "deg_heatmap_renderer_requires_case_control_mean_columns" in result["blockers"]
+
+
 def test_formal_deg_plot_production_gate_passes_for_builtin_volcano_renderer(tmp_path: Path) -> None:
     table = tmp_path / "results" / "tables" / "formal.tsv"
     table.parent.mkdir(parents=True, exist_ok=True)

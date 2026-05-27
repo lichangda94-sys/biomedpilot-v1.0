@@ -125,6 +125,11 @@ def create_formal_deg_plot_artifact(
     renderer_log_artifact: dict[str, Any] = {}
     if plot_type == "volcano_plot":
         rendered = _render_volcano_svg(root, source, plot_type, parameters=parameters or {})
+    elif plot_type == "deg_heatmap":
+        rendered = _render_heatmap_svg(root, source, plot_type, parameters=parameters or {})
+    else:
+        rendered = {"image_artifacts": [], "warnings": [], "blockers": []}
+    if plot_type in {"volcano_plot", "deg_heatmap"}:
         image_artifacts = rendered.get("image_artifacts", [])
         renderer_warnings = rendered.get("warnings", [])
         renderer_blockers = rendered.get("blockers", [])
@@ -146,7 +151,7 @@ def create_formal_deg_plot_artifact(
         plot_spec_artifact=spec,
         image_artifacts=tuple(image_artifacts),
         table_artifacts=tuple(_source_deg_tables(source)),
-        engine_name="biomedpilot_svg_volcano_renderer" if plot_type == "volcano_plot" else "biomedpilot_plot_spec",
+        engine_name=_renderer_engine_name(plot_type),
         engine_version="0.1.0" if plot_type == "volcano_plot" else "0.1.0",
         dependency_snapshot={
             **(source.get("dependency_snapshot") if isinstance(source.get("dependency_snapshot"), dict) else {}),
@@ -245,11 +250,28 @@ def _formal_plot_id(source: dict[str, Any], plot_type: str) -> str:
     return f"{source.get('result_id') or 'formal-deg'}-{plot_type}-artifact"
 
 
+def _renderer_engine_name(plot_type: str) -> str:
+    if plot_type == "volcano_plot":
+        return "biomedpilot_svg_volcano_renderer"
+    if plot_type == "deg_heatmap":
+        return "biomedpilot_svg_deg_summary_heatmap_renderer"
+    return "biomedpilot_plot_spec"
+
+
 def _default_renderer_capability(plot_type: str) -> dict[str, Any]:
     if plot_type == "volcano_plot":
         return {
             "status": "passed",
             "renderer": "biomedpilot_builtin_svg_volcano",
+            "version": "0.1.0",
+            "output_formats": ["svg"],
+            "dependency_policy": "stdlib_only_no_external_renderer",
+            "blockers": [],
+        }
+    if plot_type == "deg_heatmap":
+        return {
+            "status": "passed",
+            "renderer": "biomedpilot_builtin_svg_deg_summary_heatmap",
             "version": "0.1.0",
             "output_formats": ["svg"],
             "dependency_policy": "stdlib_only_no_external_renderer",
@@ -338,6 +360,76 @@ def _source_table_path(root: Path, source: dict[str, Any]) -> Path:
     return raw if raw.is_absolute() else root / raw
 
 
+def _render_heatmap_svg(root: Path, source: dict[str, Any], plot_type: str, *, parameters: dict[str, Any]) -> dict[str, Any]:
+    table = _source_table_path(root, source)
+    rows = _read_deg_rows(table)
+    blockers: list[str] = []
+    warnings: list[str] = []
+    heatmap_rows = []
+    top_n = int(parameters.get("top_n") or 25)
+    for row in rows:
+        try:
+            case_mean = float(str(row.get("case_mean") or row.get("case") or ""))
+            control_mean = float(str(row.get("control_mean") or row.get("control") or ""))
+            fdr = float(str(row.get("adjusted_p_value") or row.get("FDR") or row.get("fdr") or "1"))
+        except (TypeError, ValueError):
+            warnings.append("heatmap_renderer_skipped_row_without_case_control_means")
+            continue
+        heatmap_rows.append(
+            {
+                "gene_symbol": str(row.get("gene_symbol") or row.get("feature_id") or "feature"),
+                "case_mean": case_mean,
+                "control_mean": control_mean,
+                "rank": fdr,
+            }
+        )
+    heatmap_rows = sorted(heatmap_rows, key=lambda item: item["rank"])[:top_n]
+    if not heatmap_rows:
+        blockers.append("deg_heatmap_renderer_requires_case_control_mean_columns")
+        return {"image_artifacts": [], "renderer_log_artifact": {}, "warnings": warnings, "blockers": blockers}
+    result_id = str(source.get("result_id") or "formal_deg")
+    plot_id = _formal_plot_id(source, plot_type)
+    plot_dir = root / "plots" / "formal_deg" / _safe_name(result_id)
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    svg_path = plot_dir / f"{plot_id}.svg"
+    log_path = plot_dir / f"{plot_id}.renderer_log.json"
+    svg_path.write_text(_heatmap_svg(heatmap_rows, result_id=result_id), encoding="utf-8")
+    checksum = hashlib.sha256(svg_path.read_bytes()).hexdigest()
+    log_payload = {
+        "schema_version": "biomedpilot.formal_deg_heatmap_renderer_log.v1",
+        "plot_id": plot_id,
+        "source_result_id": result_id,
+        "renderer": "biomedpilot_builtin_svg_deg_summary_heatmap",
+        "format": "svg",
+        "row_count": len(heatmap_rows),
+        "warnings": warnings,
+        "blockers": blockers,
+        "semantic_note": "summary heatmap from DEG case/control means, not sample-level expression heatmap",
+        "clinical_conclusion_enabled": False,
+    }
+    log_path.write_text(json.dumps(log_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {
+        "image_artifacts": [
+            {
+                "artifact_type": "formal_deg_summary_heatmap_svg",
+                "path": str(svg_path.relative_to(root)),
+                "format": "svg",
+                "mime_type": "image/svg+xml",
+                "sha256": checksum,
+                "renderer": "biomedpilot_builtin_svg_deg_summary_heatmap",
+                "semantic_boundary": "deg_summary_heatmap_not_sample_level_expression_heatmap",
+            }
+        ],
+        "renderer_log_artifact": {
+            "artifact_type": "formal_deg_plot_renderer_log",
+            "path": str(log_path.relative_to(root)),
+            "schema": "biomedpilot.formal_deg_heatmap_renderer_log.v1",
+        },
+        "warnings": warnings,
+        "blockers": blockers,
+    }
+
+
 def _read_deg_rows(path: Path) -> list[dict[str, str]]:
     if not path.is_file():
         return []
@@ -390,6 +482,45 @@ def _volcano_svg(points: list[dict[str, Any]], *, result_id: str, parameters: di
         + "\n".join(circles)
         + f'\n<text x="{width / 2 - 80:.0f}" y="{height - 28}" font-size="14">log2 fold change</text><text transform="translate(24 {height / 2 + 80:.0f}) rotate(-90)" font-size="14">-log10 adjusted p-value</text>\n'
         '<text x="82" y="594" font-size="11">No clinical diagnosis, prognosis, or treatment recommendation is implied.</text></svg>\n'
+    )
+
+
+def _heatmap_svg(rows: list[dict[str, Any]], *, result_id: str) -> str:
+    width = 760
+    row_height = 24
+    margin_left = 180
+    margin_top = 74
+    cell_width = 150
+    height = margin_top + len(rows) * row_height + 70
+    values = [float(row["case_mean"]) for row in rows] + [float(row["control_mean"]) for row in rows]
+    v_min = min(values)
+    v_max = max(values)
+    span = v_max - v_min or 1.0
+
+    def color(value: float) -> str:
+        ratio = (value - v_min) / span
+        red = int(245 * ratio + 37 * (1 - ratio))
+        blue = int(49 * ratio + 153 * (1 - ratio))
+        green = int(89 * ratio + 99 * (1 - ratio))
+        return f"#{red:02x}{green:02x}{blue:02x}"
+
+    cells = []
+    for index, row in enumerate(rows):
+        y = margin_top + index * row_height
+        label = _xml_escape(str(row["gene_symbol"]))
+        cells.append(f'<text x="24" y="{y + 16}" font-size="12">{label}</text>')
+        for col, key in enumerate(("case_mean", "control_mean")):
+            x = margin_left + col * cell_width
+            value = float(row[key])
+            cells.append(f'<rect x="{x}" y="{y}" width="{cell_width - 2}" height="{row_height - 2}" fill="{color(value)}"><title>{label} {key}: {value:.4g}</title></rect>')
+            cells.append(f'<text x="{x + 10}" y="{y + 16}" font-size="11" fill="#ffffff">{value:.3g}</text>')
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="Formal DEG summary heatmap">\n'
+        "<style>text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;fill:#1f2937}</style>\n"
+        f'<rect width="{width}" height="{height}" fill="#ffffff"/><text x="24" y="32" font-size="20" font-weight="650">Formal DEG Summary Heatmap</text><text x="24" y="54" font-size="12">Result: {_xml_escape(result_id)} | case/control means, not sample-level expression</text>\n'
+        f'<text x="{margin_left + 42}" y="68" font-size="12" font-weight="650">Case mean</text><text x="{margin_left + cell_width + 32}" y="68" font-size="12" font-weight="650">Control mean</text>\n'
+        + "\n".join(cells)
+        + f'\n<text x="24" y="{height - 24}" font-size="11">Statistical visualization only. No clinical conclusion or treatment recommendation is implied.</text></svg>\n'
     )
 
 
