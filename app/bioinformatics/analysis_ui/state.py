@@ -11,7 +11,7 @@ from app.bioinformatics.acquisition_adapters.selection_gate import LEGACY_ASSET_
 from app.bioinformatics.acquisition_adapters.standardized_bridge import LEGACY_ASSET_CANDIDATE_PATH
 from app.bioinformatics.clinical_analysis import build_clinical_association_preflight, build_survival_package, build_survival_preflight
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
-from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate
+from app.bioinformatics.deg_engine import build_deg_input_adaptation_gate, build_deg_parameter_manifest, build_formal_deg_result_schema_gate
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
@@ -358,6 +358,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
     confirmed_parameters = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
     if not deg_package:
         deg_ready_gate = {"status": "blocked", "blockers": ["missing_deg_recompute_input_package"], "warnings": []}
+        input_adaptation_gate = build_deg_input_adaptation_gate(None, None)
         parameter_gate = {"status": "blocked", "blockers": ["missing_deg_ready_package"], "warnings": []}
         result_schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
         confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
@@ -371,6 +372,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
             "warnings": list(deg_ready.get("warnings", []) or []),
             "package": deg_ready,
         }
+        input_adaptation_gate = build_deg_input_adaptation_gate(deg_package, deg_ready)
         parameter_gate = build_deg_parameter_manifest(
             deg_ready,
             method=str(confirmed_parameters.get("method") or "welch_t_test"),
@@ -384,6 +386,13 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
     gate_rows = [
         _formal_deg_gate_row("Resolver package", "passed" if deg_package and not deg_package.get("blockers") else "blocked", list(deg_package.get("blockers", []) or []) if deg_package else ["missing_deg_recompute_input_package"]),
+        _formal_deg_gate_row(
+            "DEG real-project input adaptation",
+            input_adaptation_gate.get("status"),
+            input_adaptation_gate.get("blockers", []),
+            input_adaptation_gate.get("warnings", []),
+            basis=f"value_type={input_adaptation_gate.get('value_type', '')}; gene_id_type={input_adaptation_gate.get('gene_id_type', '')}; methods={compact_list(input_adaptation_gate.get('allowed_methods', []) or [])}",
+        ),
         _formal_deg_gate_row("DEG-ready matrix", deg_ready_gate.get("status"), deg_ready_gate.get("blockers", []), deg_ready_gate.get("warnings", [])),
         _formal_deg_gate_row("Dependency policy", deg_dependency.get("status"), deg_dependency.get("blockers", []), deg_dependency.get("warnings", []), basis=str(deg_dependency.get("dependency_policy") or "")),
         _formal_deg_gate_row("Parameter manifest", parameter_gate.get("status"), parameter_gate.get("blockers", []), parameter_gate.get("warnings", [])),
@@ -393,6 +402,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
     ]
     return {
         "deg_ready_gate": deg_ready_gate,
+        "input_adaptation_gate": input_adaptation_gate,
         "parameter_gate": parameter_gate,
         "confirmation_gate": confirmation_gate,
         "parameter_confirmation": confirmation,
