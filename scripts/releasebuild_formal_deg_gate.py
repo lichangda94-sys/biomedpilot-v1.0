@@ -77,10 +77,11 @@ def run_gate(controlled_python: Path, *, skip_full_tests: bool = False) -> dict[
 
     started_at = datetime.now(UTC).isoformat(timespec="seconds")
     results: dict[str, object] = {
-        "schema_version": "biomedpilot.releasebuild.formal_deg_gate.v1",
+        "schema_version": "biomedpilot.releasebuild.formal_deg_gate.v2",
         "started_at": started_at,
         "repo_root": str(REPO_ROOT),
         "controlled_python": str(controlled_python),
+        "default_runtime_policy": "default_gui_python_must_pass_formal_deg_runtime_check_after_b50",
         "steps": [],
     }
 
@@ -122,12 +123,21 @@ def run_gate(controlled_python: Path, *, skip_full_tests: bool = False) -> dict[
             str(DEFAULT_RUNTIME_JSON),
         ]
     )
-    default_runtime = _assert_runtime_status(DEFAULT_RUNTIME_JSON, expected_status="blocked_missing_dependency")
+    default_runtime = _assert_runtime_status(DEFAULT_RUNTIME_JSON, expected_status="passed")
+    default_fixture = default_runtime.get("fixture_result", {})
+    if not isinstance(default_fixture, dict) or default_fixture.get("status") != "passed":
+        raise RuntimeError("Default GUI formal DEG fixture did not pass.")
     steps.append(
         {
             "name": "default_gui_formal_deg_runtime_check",
-            "status": "blocked_missing_dependency",
-            "missing_packages": default_runtime.get("dependency_snapshot", {}).get("missing_packages", []),
+            "status": "passed",
+            "dependency_status": default_runtime.get("dependency_snapshot", {}).get("status"),
+            "fixture_status": default_fixture.get("status"),
+            "dependency_versions": {
+                package_name: (package_info or {}).get("version", "")
+                for package_name, package_info in (default_runtime.get("dependency_snapshot", {}).get("packages", {}) or {}).items()
+                if isinstance(package_info, dict)
+            },
             "output": str(DEFAULT_RUNTIME_JSON),
         }
     )
