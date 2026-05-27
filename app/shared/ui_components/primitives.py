@@ -18,7 +18,7 @@ from app.ui_style_tokens import (
     status_chip_stylesheet,
 )
 from app.shared.semantic_keys import AnalysisStatusKey, FeatureStatusKey, ReportStatusKey, ResourceStatusKey
-from app.app_identity import MODULE_ICON_PATHS, STATUS_ICON_PATHS, load_module_icon, load_status_pixmap
+from app.app_identity import APP_ICON_PNG_PATH, MODULE_ICON_PATHS, STATUS_ICON_PATHS, load_app_icon, load_module_icon, load_status_pixmap, load_ui02_module_selection_icon
 
 
 SEMANTIC_STATE_KEYS: tuple[str, ...] = (
@@ -515,7 +515,7 @@ def make_app_sidebar(
     title: str = "萤火虫 / Firefly",
     footer: str = "Developer Preview",
     active_key: str = "",
-    width: int = 220,
+    width: int = 200,
 ):
     return AppSidebar(items=items, callbacks=callbacks, title=title, footer=footer, active_key=active_key, width=width)
 
@@ -525,8 +525,8 @@ class AppSidebar:  # Assigned below when PySide is available.
 
 
 try:
-    from PySide6.QtCore import QSize
-    from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout
+    from PySide6.QtCore import QSize, Qt
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 except Exception:  # pragma: no cover
     pass
 else:
@@ -540,54 +540,90 @@ else:
             title: str = "萤火虫 / Firefly",
             footer: str = "Developer Preview",
             active_key: str = "",
-            width: int = 248,
+            width: int = 200,
         ) -> None:
             super().__init__()
             self.setObjectName("appSidebar")
             self.setProperty("uiPrimitive", "app_sidebar")
             self.setProperty("activeKey", active_key)
+            self._nav_buttons: dict[str, QPushButton] = {}
             self.setFixedWidth(width)
             self.setStyleSheet(_app_sidebar_stylesheet())
 
             layout = QVBoxLayout(self)
-            layout.setContentsMargins(SPACING["md"], SPACING["lg"], SPACING["md"], SPACING["lg"])
-            layout.setSpacing(SPACING["sm"])
+            layout.setContentsMargins(7, 14, 7, 14)
+            layout.setSpacing(2)
 
-            title_label = QLabel(title)
+            brand = QFrame()
+            brand.setObjectName("appSidebarBrand")
+            brand.setProperty("uiPrimitive", "app_sidebar_brand")
+            brand_layout = QHBoxLayout(brand)
+            brand_layout.setContentsMargins(7, 0, 7, 14)
+            brand_layout.setSpacing(9)
+            brand_icon = QLabel()
+            brand_icon.setObjectName("appSidebarBrandIcon")
+            brand_icon.setProperty("uiPrimitive", "app_sidebar_brand_icon")
+            brand_icon.setFixedSize(28, 28)
+            brand_icon.setScaledContents(True)
+            app_icon = load_app_icon()
+            if not app_icon.isNull():
+                brand_icon.setPixmap(app_icon.pixmap(28, 28))
+                brand_icon.setProperty("iconSource", str(APP_ICON_PNG_PATH))
+                brand_icon.setProperty("iconFallback", False)
+            else:
+                brand_icon.setText("F")
+                brand_icon.setAlignment(Qt.AlignCenter)
+                brand_icon.setProperty("iconFallback", True)
+            brand_layout.addWidget(brand_icon, 0, Qt.AlignTop)
+
+            title_lines = [line.strip() for line in title.splitlines() if line.strip()]
+            title_col = QVBoxLayout()
+            title_col.setContentsMargins(0, 0, 0, 0)
+            title_col.setSpacing(1)
+            title_label = QLabel(title_lines[0] if title_lines else title)
             title_label.setObjectName("appSidebarTitle")
             title_label.setProperty("uiPrimitive", "app_sidebar_title")
-            title_label.setWordWrap(True)
-            layout.addWidget(title_label)
+            title_label.setWordWrap(False)
+            subtitle_label = QLabel(title_lines[1] if len(title_lines) > 1 else "")
+            subtitle_label.setObjectName("appSidebarSubtitle")
+            subtitle_label.setProperty("uiPrimitive", "app_sidebar_subtitle")
+            subtitle_label.setWordWrap(False)
+            title_col.addWidget(title_label)
+            title_col.addWidget(subtitle_label)
+            brand_layout.addLayout(title_col, 1)
+            layout.addWidget(brand)
 
             auxiliary_started = False
             for item in items:
                 if item.usability_role == "auxiliary_navigation" and not auxiliary_started:
                     layout.addStretch(1)
                     auxiliary_started = True
-                button = QPushButton(item.label)
+                button = QPushButton(_sidebar_item_text(item.label))
                 button.setObjectName("appSidebarButton" if item.usability_role == "primary_navigation" else "appSidebarAuxButton")
                 button.setProperty("uiPrimitive", "app_sidebar_item")
                 button.setProperty("navKey", item.semantic_key)
                 button.setProperty("semanticKey", item.semantic_key)
                 button.setProperty("pageKey", item.key)
-                button.setProperty("moduleKey", item.icon_key)
+                button.setProperty("iconKey", item.icon_key)
+                button.setProperty("moduleKey", item.icon_key if item.icon_key.startswith("module.") else "")
                 button.setProperty("usabilityRole", item.usability_role)
                 button.setProperty("current", item.key == active_key)
                 button.setProperty("formalActionEnabled", False)
                 button.setProperty("fileWriteAllowed", False)
                 button.setAccessibleName(item.label)
                 button.setToolTip(item.tooltip or item.label)
-                button.setMinimumHeight(36)
+                button.setMinimumHeight(44)
                 if item.icon_key:
-                    icon = load_module_icon(item.icon_key)
+                    icon = _load_sidebar_icon(item.icon_key)
                     if not icon.isNull():
                         button.setIcon(icon)
                         button.setIconSize(QSize(18, 18))
-                    button.setProperty("iconSource", str(MODULE_ICON_PATHS.get(item.icon_key, "")))
+                    button.setProperty("iconSource", _sidebar_icon_source(item.icon_key))
                     button.setProperty("iconFallback", icon.isNull())
                 callback = callbacks.get(item.key)
                 if callback is not None:
                     button.clicked.connect(callback)
+                self._nav_buttons[item.key] = button
                 layout.addWidget(button)
 
             if not auxiliary_started:
@@ -598,9 +634,36 @@ else:
             footer_label.setWordWrap(True)
             layout.addWidget(footer_label)
 
+        def set_active_key(self, active_key: str) -> None:
+            self.setProperty("activeKey", active_key)
+            for key, button in self._nav_buttons.items():
+                button.setProperty("current", key == active_key)
+                button.style().unpolish(button)
+                button.style().polish(button)
+                button.update()
+
 
 def diagnostic_disclosure_title(title: str) -> str:
     return f"{title} / Developer diagnostics"
+
+
+def _sidebar_item_text(label: str) -> str:
+    if " / " in label:
+        primary, secondary = label.split(" / ", 1)
+        return f"{primary}\n{secondary}"
+    return label
+
+
+def _load_sidebar_icon(icon_key: str):
+    if icon_key.startswith("ui02."):
+        return load_ui02_module_selection_icon(icon_key.removeprefix("ui02."))
+    return load_module_icon(icon_key)
+
+
+def _sidebar_icon_source(icon_key: str) -> str:
+    if icon_key.startswith("ui02."):
+        return icon_key
+    return str(MODULE_ICON_PATHS.get(icon_key, ""))
 
 
 def _button_object_name(role: str) -> str:
@@ -651,42 +714,62 @@ def _state_for_severity(severity: str) -> str:
 def _app_sidebar_stylesheet() -> str:
     return f"""
     QFrame#appSidebar {{
-        background: {COLORS["background"]};
-        border-right: 1px solid {COLORS["border"]};
+        background: #FFFFFF;
+        border-right: 1px solid #E5E8EF;
     }}
-    QLabel#appSidebarTitle {{
-        color: {COLORS["bio"]};
+    QFrame#appSidebarBrand {{
         background: transparent;
-        font-size: 24px;
+        border: 0;
+    }}
+    QLabel#appSidebarBrandIcon {{
+        background: #EEF3FF;
+        border: 1px solid #D9E4FF;
+        border-radius: 8px;
+        color: #3B6FD9;
+        font-size: 14px;
         font-weight: 800;
     }}
+    QLabel#appSidebarTitle {{
+        color: #1A1D2E;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 800;
+        padding: 0;
+    }}
+    QLabel#appSidebarSubtitle {{
+        color: #8B93A5;
+        background: transparent;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 0;
+    }}
     QLabel#appSidebarFooter {{
-        color: {COLORS["muted"]};
-        background: {COLORS["surface"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: 12px;
-        padding: 10px;
-        font-size: {FONT_SIZE["caption"]}px;
+        color: #8B93A5;
+        background: #F5F7FF;
+        border: 1px solid #DDE3F5;
+        border-radius: 8px;
+        padding: 10px 11px;
+        font-size: 10px;
     }}
     QPushButton#appSidebarButton, QPushButton#appSidebarAuxButton {{
         text-align: left;
-        color: {COLORS["text"]};
+        color: #5A6179;
         background: transparent;
         border: 1px solid transparent;
-        border-radius: {RADIUS["sm"]}px;
-        padding: 8px 10px;
-        font-size: {FONT_SIZE["body"]}px;
+        border-radius: 8px;
+        padding: 7px 10px;
+        font-size: 11px;
     }}
     QPushButton#appSidebarButton:hover, QPushButton#appSidebarAuxButton:hover {{
-        background: {COLORS["surface_muted"]};
+        background: #F5F8FF;
     }}
     QPushButton#appSidebarButton[current="true"], QPushButton#appSidebarAuxButton[current="true"] {{
-        color: {COLORS["bio"]};
-        background: {COLORS["bio_soft"]};
-        border: 1px solid #D6E2EA;
+        color: #3B6FD9;
+        background: #EEF3FE;
+        border: 1px solid #EEF3FE;
         font-weight: 750;
     }}
     QPushButton#appSidebarAuxButton {{
-        color: {COLORS["muted"]};
+        color: #5A6179;
     }}
     """

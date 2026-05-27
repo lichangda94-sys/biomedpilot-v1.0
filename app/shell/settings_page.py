@@ -32,6 +32,21 @@ from app.ui_style_tokens import COLORS, FONT_SIZE, SPACING
 
 SettingsPixmapLoader = Callable[[str, int], QPixmap]
 
+SETTINGS_CENTER_TOKENS = {
+    "surface": "#FFFFFF",
+    "surface_subtle": "#FAFBFD",
+    "border": "rgba(0, 0, 0, 0.07)",
+    "divider": "rgba(0, 0, 0, 0.06)",
+    "text": "#111827",
+    "muted": "#6B7280",
+    "faint": "#9CA3AF",
+    "blue_soft": "#EEF3FF",
+    "green_soft": "#F0FDF4",
+    "yellow_soft": "#FFFBEB",
+    "purple_soft": "#F5F3FF",
+    "radius": 11,
+}
+
 
 def build_settings_page(
     *,
@@ -56,8 +71,8 @@ def build_settings_page(
     content.setProperty("uiPrimitive", "page_shell")
     content.setProperty("layoutPolishNoOverlap", True)
     root = QVBoxLayout(content)
-    root.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
-    root.setSpacing(SPACING["lg"])
+    root.setContentsMargins(21, 16, 21, 21)
+    root.setSpacing(12)
 
     root.addWidget(
         make_page_header(
@@ -117,207 +132,294 @@ def _base_page(*, object_name: str, page_key: str, semantic_key: str) -> QWidget
 def _build_settings_general_page(profile: SettingsProfile, _pixmap_loader: SettingsPixmapLoader) -> QWidget:
     page = _base_page(object_name="settingsGeneralPage", page_key="general", semantic_key=PageKey.SETTINGS_GENERAL.value)
     root = page.layout()
-    grid = QGridLayout()
-    grid.setContentsMargins(0, 0, 0, 0)
-    grid.setHorizontalSpacing(SPACING["lg"])
-    grid.setVerticalSpacing(SPACING["lg"])
-    grid.addWidget(_settings_preferences_card(profile), 0, 0)
-    grid.addWidget(_settings_external_capability_overview_card(), 0, 1)
-    grid.addWidget(_settings_system_info_card(profile), 1, 0)
-    grid.setColumnStretch(0, 3)
-    grid.setColumnStretch(1, 2)
-    root.addLayout(grid)
+    root.setSpacing(14)
+    content_row = QHBoxLayout()
+    content_row.setContentsMargins(0, 0, 0, 0)
+    content_row.setSpacing(14)
+    left_col = QVBoxLayout()
+    left_col.setContentsMargins(0, 0, 0, 0)
+    left_col.setSpacing(14)
+    left_col.addWidget(_settings_preferences_card(profile))
+    left_col.addWidget(_settings_system_info_card(profile))
+    left_col.addStretch(1)
+    content_row.addLayout(left_col, 0)
+    content_row.addWidget(_settings_external_capability_overview_card(), 1)
+    root.addLayout(content_row)
     root.addWidget(_settings_quick_actions_panel())
     root.addStretch(1)
     return page
 
 
 def _settings_preferences_card(profile: SettingsProfile) -> QFrame:
-    card = make_workbench_card(object_name="settingsGeneralPreferencesPanel", semantic_state="available")
+    card = _settings_center_panel("settingsGeneralPreferencesPanel", width=360)
     card.setProperty("uiPrimitive", "settings_preferences_card")
     layout = QVBoxLayout(card)
-    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-    layout.setSpacing(SPACING["md"])
-    layout.addWidget(make_section_title("通用偏好", "用户可操作的全局偏好入口。"))
-    for title, body, value, status_key in (
-        ("界面与语言", "设置界面语言、主题和字体大小", f"{profile.language} · 浅色主题", "available"),
-        ("数据与存储", "设置默认路径、缓存与临时文件", profile.default_project_path, "testing"),
-        ("行为与启动", "设置启动行为、更新与通知偏好", "启动到工作台", "planned"),
-        ("隐私与安全", "日志级别、数据匿名化与隐私选项", "日志级别：信息", "available"),
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+    layout.addWidget(_settings_panel_header("通用偏好", "General"))
+    for title, body, value, icon_text, status_key in (
+        ("界面与语言", "设置界面语言、主题和字体大小", f"{profile.language}   浅色主题", "A", "available"),
+        ("数据与存储", "设置默认路径、缓存与临时文件", "管理路径", "D", "testing"),
+        ("行为与启动", "设置启动行为、更新与通知偏好", "", "B", "planned"),
+        ("隐私与安全", "日志级别、数据匿名化与隐私选项", "日志级别：信息", "S", "available"),
     ):
-        layout.addWidget(_settings_row(title, body, value, status_key=status_key))
+        layout.addWidget(_settings_row(title, body, value, icon_text=icon_text, status_key=status_key))
     return card
 
 
-def _settings_row(title: str, body: str, value: str, *, status_key: str) -> QFrame:
+def _settings_row(title: str, body: str, value: str, *, icon_text: str, status_key: str) -> QFrame:
     row = QFrame()
     row.setObjectName("settingsPreferenceRow")
     row.setProperty("uiPrimitive", "settings_row")
     row.setProperty("statusKey", status_key)
     row.setStyleSheet(
-        f"""
-        QFrame#settingsPreferenceRow {{
-            background: #FBFCFE;
-            border: 1px solid {COLORS["divider"]};
-            border-radius: 12px;
-        }}
-        """
+        f"QFrame#settingsPreferenceRow {{ background: transparent; border-bottom: 1px solid {SETTINGS_CENTER_TOKENS['divider']}; }}"
     )
     layout = QHBoxLayout(row)
-    layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
-    layout.setSpacing(SPACING["md"])
-    icon = QLabel(title[:1])
+    layout.setContentsMargins(14, 10, 14, 10)
+    layout.setSpacing(10)
+    icon = QLabel(icon_text)
     icon.setObjectName("settingsRowIcon")
-    icon.setFixedSize(34, 34)
+    icon.setFixedSize(28, 28)
     icon.setAlignment(Qt.AlignCenter)
     icon.setStyleSheet(
-        f"background: {COLORS['bio_soft']}; color: {COLORS['bio']}; border-radius: 10px; font-weight: 800;"
+        f"background: {SETTINGS_CENTER_TOKENS['blue_soft']}; color: {COLORS['bio']}; border-radius: 8px; font-size: 11px; font-weight: 800;"
     )
     layout.addWidget(icon)
     text_col = QVBoxLayout()
-    text_col.setSpacing(2)
+    text_col.setSpacing(1)
     title_label = QLabel(title)
     title_label.setObjectName("settingsRowTitle")
-    title_label.setStyleSheet(f"color: {COLORS['text']}; font-size: 15px; font-weight: 800;")
+    title_label.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['text']}; font-size: 13px; font-weight: 750;")
     body_label = QLabel(body)
     body_label.setObjectName("settingsRowDescription")
     body_label.setWordWrap(True)
-    body_label.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['secondary']}px;")
+    body_label.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['muted']}; font-size: 11px;")
     text_col.addWidget(title_label)
     text_col.addWidget(body_label)
     layout.addLayout(text_col, 1)
-    value_label = QLabel(value)
-    value_label.setObjectName("settingsRowValue")
-    value_label.setWordWrap(True)
-    value_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: {FONT_SIZE['secondary']}px;")
-    layout.addWidget(value_label, 0)
-    layout.addWidget(make_status_chip(status_key=status_key), 0)
+    if value:
+        value_label = QLabel(value)
+        value_label.setObjectName("settingsRowValue")
+        value_label.setWordWrap(False)
+        value_label.setStyleSheet(
+            f"color: {SETTINGS_CENTER_TOKENS['text']}; background: {SETTINGS_CENTER_TOKENS['surface_subtle']}; "
+            f"border: 1px solid {SETTINGS_CENTER_TOKENS['divider']}; border-radius: 8px; padding: 3px 8px; font-size: 11px;"
+        )
+        layout.addWidget(value_label, 0)
+    chevron = QLabel(">")
+    chevron.setObjectName("settingsRowChevron")
+    chevron.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['faint']}; font-size: 14px;")
+    layout.addWidget(chevron, 0)
     return row
 
 
 def _settings_external_capability_overview_card() -> QFrame:
-    card = make_workbench_card(object_name="settingsExternalCapabilityOverviewCard", semantic_state="testing")
+    card = _settings_center_panel("settingsExternalCapabilityOverviewCard")
     card.setProperty("uiPrimitive", "external_capability_overview")
     card.setProperty("installAllowed", False)
     card.setProperty("downloadAllowed", False)
     card.setProperty("engineExecutionAllowed", False)
     layout = QVBoxLayout(card)
-    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-    layout.setSpacing(SPACING["md"])
-    header = QHBoxLayout()
-    header.addWidget(make_section_title("外部能力检测总览", "仅显示状态与配置入口，不执行安装或引擎。"), 1)
-    refresh = make_action_button("重新检测", role="secondary", enabled=False, semantic_state="disabled", disabled_reason="检测动作在后续设置阶段开放。")
-    refresh.setObjectName("settingsOverviewRedetectButton")
-    header.addWidget(refresh)
-    layout.addLayout(header)
-    for name, status_key, detail in (
-        ("图像分析引擎 / Image Analysis", "available", "ImageJ/Fiji 已检测到或可配置；不在此页运行图像分析。"),
-        ("PDF OCR", "available", "OCR 能力作为外部资源状态展示。"),
-        ("本地语言模型 / Local LLM", "not_configured", "本地模型可选配置，未配置不影响基础工作台。"),
-        ("云端 AI 服务 / Cloud AI", "blocked", "云服务未配置，当前不连接云端。"),
-        ("GO / KEGG 分析资源", "planned", "资源检测与下载策略后续开放。"),
-        ("R / Bioconductor", "not_configured", "可选环境，检测后由用户主动配置。"),
-        ("Python / 包管理器", "available", "本地 Python runtime 可用于桌面壳层。"),
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+    layout.addWidget(_settings_panel_header("外部能力检测总览", "External Capabilities"))
+    for name, english, status_key, detail, icon_text in (
+        ("图像分析引擎", "Image Analysis", "available", "ImageJ/Fiji 已检测到或可配置", "I"),
+        ("PDF OCR", "OCR Engine", "available", "Tesseract 已检测到，版本：5.3.1", "O"),
+        ("本地语言模型", "Local LLM", "not_configured", "Ollama 已检测到，未配置模型", "L"),
+        ("云端 AI 服务", "Cloud AI", "not_configured", "未配置任何云服务，可配置 OpenAI / Claude 等", "C"),
+        ("GO 分析服务", "Gene Ontology", "available", "连接正常，上次检查：2025-05-20", "G"),
+        ("KEGG 分析服务", "KEGG", "available", "连接正常，上次检查：2025-05-20", "K"),
+        ("R / Bioconductor", "R 环境", "available", "R 4.3.2，Bioconductor 3.18", "R"),
+        ("Python / 包管理器", "Python Environment", "available", "Python 3.11.6，pip 可用", "P"),
     ):
-        layout.addWidget(_capability_overview_row(name, status_key, detail))
-    layout.addWidget(make_info_banner("绿色：可用；蓝色/灰色：可选或需配置；红色：不可用或当前关闭。", severity="info", semantic_state="testing"))
+        layout.addWidget(_capability_overview_row(name, english, status_key, detail, icon_text=icon_text))
+    footer = QHBoxLayout()
+    footer.setContentsMargins(17, 11, 17, 11)
+    footer.setSpacing(14)
+    for label, key in (("可用：可正常使用", "available"), ("可选：可配置使用", "not_configured"), ("不可用：未检测到", "blocked")):
+        footer.addWidget(make_status_chip(label, status_key=key), 0)
+    footer.addStretch(1)
+    log = make_action_button("查看详细日志", role="ghost", size="small", enabled=False, semantic_state="disabled", disabled_reason="日志查看入口保留，当前不执行导出。")
+    log.setObjectName("settingsOverviewLogButton")
+    footer.addWidget(log, 0)
+    layout.addLayout(footer)
     return card
 
 
-def _capability_overview_row(name: str, status_key: str, detail: str) -> QFrame:
+def _capability_overview_row(name: str, english: str, status_key: str, detail: str, *, icon_text: str) -> QFrame:
     row = QFrame()
     row.setObjectName("settingsCapabilityOverviewRow")
     row.setProperty("statusKey", status_key)
-    row.setStyleSheet(f"QFrame#settingsCapabilityOverviewRow {{ border-bottom: 1px solid {COLORS['divider']}; background: transparent; }}")
+    row.setStyleSheet(f"QFrame#settingsCapabilityOverviewRow {{ border-bottom: 1px solid {SETTINGS_CENTER_TOKENS['divider']}; background: transparent; }}")
     layout = QHBoxLayout(row)
-    layout.setContentsMargins(0, SPACING["xs"], 0, SPACING["xs"])
-    layout.setSpacing(SPACING["sm"])
+    layout.setContentsMargins(17, 9, 17, 9)
+    layout.setSpacing(10)
+    icon = QLabel(icon_text)
+    icon.setObjectName("settingsCapabilityOverviewIcon")
+    icon.setFixedSize(25, 25)
+    icon.setAlignment(Qt.AlignCenter)
+    icon.setStyleSheet(
+        f"background: {SETTINGS_CENTER_TOKENS['surface_subtle']}; color: {COLORS['bio']}; border-radius: 7px; font-size: 10px; font-weight: 800;"
+    )
+    layout.addWidget(icon, 0)
     text_col = QVBoxLayout()
+    text_col.setSpacing(0)
     title = QLabel(name)
     title.setObjectName("settingsCapabilityOverviewTitle")
-    title.setStyleSheet(f"color: {COLORS['text']}; font-weight: 750;")
+    title.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['text']}; font-size: 12px; font-weight: 750;")
     desc = QLabel(detail)
     desc.setObjectName("settingsCapabilityOverviewDetail")
     desc.setWordWrap(True)
-    desc.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['caption']}px;")
+    desc.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['muted']}; font-size: 11px;")
     text_col.addWidget(title)
-    text_col.addWidget(desc)
-    layout.addLayout(text_col, 1)
+    english_label = QLabel(english)
+    english_label.setObjectName("settingsCapabilityOverviewEnglish")
+    english_label.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['faint']}; font-size: 10px;")
+    text_col.addWidget(english_label)
+    layout.addLayout(text_col, 2)
     layout.addWidget(make_status_chip(status_key=status_key), 0)
+    layout.addWidget(desc, 1)
     configure = make_action_button("配置", role="ghost", size="small", enabled=False, semantic_state="disabled", disabled_reason="配置入口保留，当前不执行外部能力配置。")
     configure.setObjectName("settingsCapabilityConfigureButton")
     layout.addWidget(configure, 0)
+    chevron = QLabel(">")
+    chevron.setObjectName("settingsCapabilityChevron")
+    chevron.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['faint']}; font-size: 12px;")
+    layout.addWidget(chevron, 0)
     return row
 
 
 def _settings_system_info_card(profile: SettingsProfile) -> QFrame:
-    card = make_workbench_card(object_name="settingsSystemInfoCard", semantic_state="available")
+    card = _settings_center_panel("settingsSystemInfoCard", width=360)
     card.setProperty("uiPrimitive", "system_info_card")
     layout = QVBoxLayout(card)
-    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-    layout.setSpacing(SPACING["md"])
-    layout.addWidget(make_section_title("系统信息", "本地测试版运行环境概览。"))
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+    layout.addWidget(_settings_panel_header("系统信息", "System Info"))
     for label, value in (
-        ("应用版本", "0.1.0 internal beta (Developer Preview)"),
+        ("应用版本", "0.1.0  Developer Preview"),
         ("运行模式", "本地模式"),
         ("操作系统", "macOS / 当前本机环境"),
         ("内存使用", "暂不可用"),
         ("磁盘使用", "暂不可用"),
     ):
         row = QHBoxLayout()
+        row.setContentsMargins(14, 8, 14, 8)
+        row.setSpacing(8)
         key = QLabel(label)
-        key.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['secondary']}px;")
+        key.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['muted']}; font-size: 12px;")
         val = QLabel(value)
         val.setWordWrap(True)
-        val.setStyleSheet(f"color: {COLORS['text']}; font-weight: 650;")
+        val.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        val.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['text']}; font-size: 12px; font-weight: 650;")
         row.addWidget(key)
         row.addWidget(val, 1)
         layout.addLayout(row)
-    copy = make_action_button("复制系统信息", role="secondary", enabled=False, semantic_state="disabled", disabled_reason="复制动作后续开放；当前只展示系统信息布局。")
+    copy = make_action_button("复制系统信息", role="secondary", size="small", enabled=False, semantic_state="disabled", disabled_reason="复制动作后续开放；当前只展示系统信息布局。")
     copy.setObjectName("settingsCopySystemInfoButton")
-    layout.addWidget(copy, 0, Qt.AlignLeft)
+    copy_row = QHBoxLayout()
+    copy_row.setContentsMargins(14, 8, 14, 14)
+    copy_row.addWidget(copy, 0)
+    copy_row.addStretch(1)
+    layout.addLayout(copy_row)
     return card
 
 
 def _settings_quick_actions_panel() -> QFrame:
-    panel = make_workbench_card(object_name="settingsQuickActionsPanel", semantic_state="planned")
+    panel = _settings_center_panel("settingsQuickActionsPanel")
     panel.setProperty("uiPrimitive", "quick_actions_panel")
     layout = QVBoxLayout(panel)
-    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-    layout.setSpacing(SPACING["md"])
-    layout.addWidget(make_section_title("快速操作", "常用设置入口；未开放动作保持禁用。"))
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+    layout.addWidget(_settings_panel_header("快速操作", ""))
     row = QHBoxLayout()
-    row.setSpacing(SPACING["md"])
-    for title, body, status_key in (
-        ("管理默认路径", "设置数据、结果与缓存路径", "testing"),
-        ("检查更新", "当前已是最新版本 0.1.0", "planned"),
-        ("清理缓存", "释放临时文件与缓存空间", "planned"),
-        ("导出日志", "导出系统与运行日志", "planned"),
+    row.setContentsMargins(14, 14, 14, 14)
+    row.setSpacing(10)
+    for title, body, status_key, icon_text, icon_bg in (
+        ("管理默认路径", "设置数据、结果与缓存路径", "testing", "P", SETTINGS_CENTER_TOKENS["blue_soft"]),
+        ("检查更新", "当前已是最新版本 0.1.0", "planned", "U", SETTINGS_CENTER_TOKENS["green_soft"]),
+        ("清理缓存", "释放临时文件与缓存空间", "planned", "C", SETTINGS_CENTER_TOKENS["yellow_soft"]),
+        ("导出日志", "导出系统与运行日志", "planned", "L", SETTINGS_CENTER_TOKENS["purple_soft"]),
     ):
-        row.addWidget(_quick_action_card(title, body, status_key=status_key), 1)
+        row.addWidget(_quick_action_card(title, body, status_key=status_key, icon_text=icon_text, icon_bg=icon_bg), 1)
     layout.addLayout(row)
     return panel
 
 
-def _quick_action_card(title: str, body: str, *, status_key: str) -> QFrame:
+def _quick_action_card(title: str, body: str, *, status_key: str, icon_text: str, icon_bg: str) -> QFrame:
     card = QFrame()
     card.setObjectName("settingsQuickActionCard")
     card.setProperty("statusKey", status_key)
+    card.setProperty("actionAllowed", False)
     card.setStyleSheet(
-        f"QFrame#settingsQuickActionCard {{ background: #FFFFFF; border: 1px solid {COLORS['border']}; border-radius: 12px; }}"
+        f"QFrame#settingsQuickActionCard {{ background: {SETTINGS_CENTER_TOKENS['surface_subtle']}; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 11px; }}"
     )
-    layout = QVBoxLayout(card)
-    layout.setContentsMargins(SPACING["md"], SPACING["md"], SPACING["md"], SPACING["md"])
-    layout.setSpacing(SPACING["xs"])
+    layout = QHBoxLayout(card)
+    layout.setContentsMargins(15, 13, 15, 13)
+    layout.setSpacing(10)
+    icon = QLabel(icon_text)
+    icon.setObjectName("settingsQuickActionIcon")
+    icon.setFixedSize(35, 35)
+    icon.setAlignment(Qt.AlignCenter)
+    icon.setStyleSheet(f"background: {icon_bg}; color: {COLORS['bio']}; border-radius: 9px; font-weight: 800;")
+    layout.addWidget(icon, 0)
+    text_col = QVBoxLayout()
+    text_col.setSpacing(1)
     title_label = QLabel(title)
-    title_label.setStyleSheet(f"color: {COLORS['text']}; font-weight: 800;")
+    title_label.setObjectName("settingsQuickActionTitle")
+    title_label.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['text']}; font-size: 12px; font-weight: 750;")
     body_label = QLabel(body)
+    body_label.setObjectName("settingsQuickActionBody")
     body_label.setWordWrap(True)
-    body_label.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['secondary']}px;")
-    layout.addWidget(title_label)
-    layout.addWidget(body_label)
-    layout.addWidget(make_status_chip(status_key=status_key), 0, Qt.AlignLeft)
+    body_label.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['muted']}; font-size: 11px;")
+    text_col.addWidget(title_label)
+    text_col.addWidget(body_label)
+    layout.addLayout(text_col, 1)
+    chevron = QLabel(">")
+    chevron.setObjectName("settingsQuickActionChevron")
+    chevron.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['faint']}; font-size: 14px;")
+    layout.addWidget(chevron, 0)
     return card
+
+
+def _settings_center_panel(object_name: str, *, width: int | None = None) -> QFrame:
+    panel = QFrame()
+    panel.setObjectName(object_name)
+    panel.setProperty("uiPrimitive", "settings_center_panel")
+    panel.setProperty("designReference", "Settings Center UI Design")
+    panel.setStyleSheet(
+        f"""
+        QFrame#{object_name} {{
+            background: {SETTINGS_CENTER_TOKENS['surface']};
+            border: 1px solid {SETTINGS_CENTER_TOKENS['border']};
+            border-radius: {SETTINGS_CENTER_TOKENS['radius']}px;
+        }}
+        """
+    )
+    if width is not None:
+        panel.setFixedWidth(width)
+    return panel
+
+
+def _settings_panel_header(title: str, secondary: str) -> QFrame:
+    header = QFrame()
+    header.setObjectName("settingsPanelHeader")
+    header.setStyleSheet(f"QFrame#settingsPanelHeader {{ background: transparent; border-bottom: 1px solid {SETTINGS_CENTER_TOKENS['divider']}; }}")
+    layout = QHBoxLayout(header)
+    layout.setContentsMargins(14, 10, 14, 10)
+    title_label = QLabel(title)
+    title_label.setObjectName("settingsPanelTitle")
+    title_label.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['text']}; font-size: 13px; font-weight: 800;")
+    layout.addWidget(title_label)
+    layout.addStretch(1)
+    if secondary:
+        secondary_label = QLabel(secondary)
+        secondary_label.setObjectName("settingsPanelSecondary")
+        secondary_label.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['faint']}; font-size: 11px;")
+        layout.addWidget(secondary_label)
+    return header
 
 
 def _build_settings_external_capabilities_page(_profile: SettingsProfile, pixmap_loader: SettingsPixmapLoader) -> QWidget:

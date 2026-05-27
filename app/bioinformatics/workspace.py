@@ -7,7 +7,6 @@ from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
 from app.shared.semantic_keys import AnalysisStatusKey, ModuleKey, PageKey, ReportStatusKey, ResultSemanticKey
-from app.shared.ui_components.common import WorkflowStep, make_workflow_stepper
 from app.shared.ui_components.primitives import make_status_chip
 
 
@@ -264,11 +263,13 @@ def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
 
 
 try:
-    from PySide6.QtCore import QSize
-    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
+    from PySide6.QtCore import QSize, Qt
+    from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
+    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
     from app.app_identity import BIOINFORMATICS_PAGE_ICON_PATHS, load_bioinformatics_page_icon
 except Exception:  # pragma: no cover - non-GUI environments import feature registry only.
-    QSize = None
+    QSize = Qt = None
+    QColor = QFont = QIcon = QPainter = QPen = QPixmap = None
     QFrame = QGridLayout = QHBoxLayout = QLabel = QPushButton = QSizePolicy = QStackedWidget = QVBoxLayout = QWidget = None
     BIOINFORMATICS_PAGE_ICON_PATHS = {}
     load_bioinformatics_page_icon = None
@@ -300,44 +301,176 @@ else:
 
 
 if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
+    BIO_HOME_TOKENS = {
+        "color": {
+            "page_bg": "#F3F6FA",
+            "card_bg": "#FFFFFF",
+            "card_border": "#D8E1EC",
+            "navy": "#0D2746",
+            "text": "#132238",
+            "muted": "#637489",
+            "soft": "#F7FAFD",
+            "accent": "#2F80ED",
+            "accent_soft": "#EAF3FF",
+            "green": "#22A06B",
+            "purple": "#8B5CF6",
+            "amber": "#D97706",
+            "rose": "#E11D48",
+        },
+        "radius": {"shell": 0, "card": 16, "tile": 14, "pill": 999},
+        "spacing": {"page_x": 28, "page_y": 18, "section": 16, "card": 14, "gap": 10},
+        "shadow": "0 10px 24px rgba(15, 35, 60, 0.08)",
+    }
+
+    _BIO_HOME_COPY = {
+        "project_home": (
+            "项目首页",
+            "Project Home",
+            "管理项目与团队\n查看进度与关键状态",
+        ),
+        "data_source": (
+            "数据来源",
+            "Data Source",
+            "连接并获取数据\n支持多种来源检索",
+        ),
+        "data_check_preparation": (
+            "数据检查与准备",
+            "Data Check & Prep",
+            "完成质量检查与预处理\n构建分析数据集",
+        ),
+        "group_design": (
+            "分组与分析设计",
+            "Group & Design",
+            "定义分组与比较方案\n设置协变量设计",
+        ),
+        "analysis_tasks": (
+            "分析任务",
+            "Analysis Tasks",
+            "配置并提交任务\n管理队列与状态",
+        ),
+        "result_report": (
+            "结果与报告",
+            "Result & Report",
+            "查看分析结果\n探索并生成报告",
+        ),
+        "report_export": (
+            "报告导出",
+            "Report Export",
+            "导出报告与结果\n选择格式与模板",
+        ),
+        "settings_resources": (
+            "生信分析设置",
+            "Resources",
+            "管理生信分析相关资源、参数配置、参考数据库与外部工具连接。",
+        ),
+        "project_logs_technical_details": (
+            "项目日志与技术详情",
+            "Project Logs & Details",
+            "查看项目操作日志、运行记录与技术细节，支持问题排查与复现。",
+        ),
+    }
+
+    _BIO_QUICK_ACCESS = (
+        ("最近使用", "快速访问最近使用的项目或流程", "#2F80ED", "◷"),
+        ("使用指南", "查看生信分析流程说明与示例", "#22A06B", "□"),
+        ("常见问题", "查看常见问题与解决方案", "#F59E0B", "?"),
+        ("意见反馈", "提出建议或报告问题", "#8B5CF6", "▱"),
+    )
+
+    _BIO_STEP_ACCENTS = {
+        "project_home": ("#3B82F6", "⌂"),
+        "data_source": ("#6366F1", "▤"),
+        "data_check_preparation": ("#06B6D4", "✓"),
+        "group_design": ("#10B981", "⋯"),
+        "analysis_tasks": ("#F59E0B", "⌁"),
+        "result_report": ("#8B5CF6", "▥"),
+        "report_export": ("#7C3AED", "↓"),
+        "settings_resources": ("#10B981", "⚙"),
+        "project_logs_technical_details": ("#3B82F6", "≡"),
+    }
+
     _BIO_FLOW_BUTTON_STYLESHEET = """
     QPushButton#bioinformaticsIANavItem {
-        border: 1px solid #C9D6E6;
-        border-radius: 8px;
+        border: 1px solid #D8E1EC;
+        border-radius: 14px;
         background: #FFFFFF;
-        color: #42526B;
+        color: #132238;
         font-size: 12px;
-        font-weight: 650;
-        padding: 8px 10px;
+        font-weight: 700;
+        padding: 12px 12px;
         text-align: left;
     }
     QPushButton#bioinformaticsIANavItem:disabled {
-        color: #42526B;
+        color: #132238;
         background: #FFFFFF;
     }
     QPushButton#bioinformaticsIANavItem[currentStep="true"] {
         border: 2px solid #2F80ED;
         background: #EAF3FF;
-        color: #123E73;
+        color: #0D3C75;
         font-weight: 800;
     }
     QPushButton#bioinformaticsIANavItem[pageGroup="auxiliary"] {
         background: #F8FAFC;
     }
+    QPushButton#bioinformaticsIANavItem[pageGroup="auxiliary"]:disabled {
+        background: #F8FAFC;
+    }
+    QPushButton#quickAccessButton {
+        border: 1px solid #E0E7EF;
+        border-radius: 12px;
+        background: #FFFFFF;
+        color: #132238;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 10px 12px;
+        text-align: left;
+    }
+    QPushButton#quickAccessButton:disabled {
+        color: #132238;
+        background: #FFFFFF;
+    }
     """
 
-    def _compact_flow_label(label: str) -> str:
-        parts = [part.strip() for part in label.split("/", 1)]
-        compact = "\n".join(parts) if len(parts) == 2 else label
-        return compact.replace("&", "&&")
-
     def _bio_flow_button_text(page: BioinformaticsIAPage) -> str:
-        status = page.status_key.replace("_", " ")
-        return f"{page.flow_index:02d}\n{_compact_flow_label(page.label)}\n{status}"
+        zh, en, description = _BIO_HOME_COPY[page.key]
+        return f"{page.flow_index:02d}\n{zh}\n{en}\n{description}"
 
-    def _apply_bio_page_icon(button: QPushButton, semantic_key: str, *, size: int) -> None:
+    def _bio_auxiliary_button_text(page: BioinformaticsIAPage) -> str:
+        zh, en, description = _BIO_HOME_COPY[page.key]
+        return f"{zh}\n{en}\n{description}"
+
+    def _make_bio_target_icon(accent: str, symbol: str, *, size: int = 44, step_number: int | None = None) -> QIcon:
+        pixmap = QPixmap(size, size)
+        pixmap.fill(QColor(0, 0, 0, 0))
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        accent_color = QColor(accent)
+        soft = QColor(accent)
+        soft.setAlpha(32)
+        painter.setBrush(soft)
+        painter.setPen(QPen(QColor(0, 0, 0, 0)))
+        painter.drawRoundedRect(5, 13, size - 10, size - 10, 9, 9)
+        painter.setBrush(accent_color)
+        painter.drawEllipse(int(size / 2) - 11, 1, 22, 22)
+        painter.setPen(QPen(QColor("#FFFFFF")))
+        painter.setFont(QFont("Arial", 9, QFont.Bold))
+        painter.drawText(0, 1, size, 22, Qt.AlignCenter, str(step_number) if step_number is not None else "")
+        painter.setPen(QPen(accent_color, 2))
+        painter.setFont(QFont("Arial", 14, QFont.Bold))
+        painter.drawText(0, 16, size, size - 16, Qt.AlignCenter, symbol)
+        painter.end()
+        icon = QIcon()
+        icon.addPixmap(pixmap, QIcon.Normal)
+        icon.addPixmap(pixmap, QIcon.Disabled)
+        return icon
+
+    def _apply_bio_page_icon(button: QPushButton, semantic_key: str, *, size: int, page_key: str | None = None, step_number: int | None = None) -> None:
         icon = load_bioinformatics_page_icon(semantic_key)
         if not icon.isNull():
+            if page_key and page_key in _BIO_STEP_ACCENTS:
+                accent, symbol = _BIO_STEP_ACCENTS[page_key]
+                icon = _make_bio_target_icon(accent, symbol, size=max(42, size), step_number=step_number)
             button.setIcon(icon)
             button.setIconSize(QSize(size, size))
         button.setProperty("iconSource", str(BIOINFORMATICS_PAGE_ICON_PATHS.get(semantic_key, "")))
@@ -347,6 +480,23 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
         widget.style().unpolish(widget)
         widget.style().polish(widget)
         widget.update()
+
+    def _section_title(title_text: str, subtitle_text: str | None = None) -> QFrame:
+        title_wrap = QFrame()
+        title_wrap.setObjectName("bioinformaticsSectionTitle")
+        title_wrap.setStyleSheet("QFrame#bioinformaticsSectionTitle { border: 0; background: transparent; }")
+        title_layout = QHBoxLayout(title_wrap)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(8)
+        title = QLabel(title_text)
+        title.setStyleSheet("font-size: 15px; font-weight: 800; color: #132238;")
+        title_layout.addWidget(title)
+        if subtitle_text:
+            subtitle = QLabel(subtitle_text)
+            subtitle.setStyleSheet("font-size: 12px; font-weight: 700; color: #637489;")
+            title_layout.addWidget(subtitle)
+        title_layout.addStretch(1)
+        return title_wrap
 
     class BioinformaticsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -360,8 +510,9 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             self._stack = QStackedWidget()
             root = QVBoxLayout(self)
             root.setContentsMargins(0, 0, 0, 0)
-            root.addWidget(self._build_target_ia_shell())
-            root.addWidget(self._stack)
+            self._target_ia_shell = self._build_target_ia_shell()
+            root.addWidget(self._target_ia_shell, 1)
+            root.addWidget(self._stack, 1)
             self._project_home_page = BioinformaticsProjectHomeWidget(
                 on_continue=self.show_data_source,
                 on_back=on_back,
@@ -463,21 +614,29 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             )
 
         def _build_target_ia_shell(self) -> QFrame:
+            tokens = BIO_HOME_TOKENS
             frame = QFrame()
             frame.setObjectName("bioinformaticsTargetIAShell")
-            frame.setStyleSheet("QFrame#bioinformaticsTargetIAShell { border-bottom: 1px solid #D8DEE9; background: #F8FAFC; }")
+            frame.setStyleSheet(
+                "QFrame#bioinformaticsTargetIAShell { "
+                f"border: 0; background: {tokens['color']['page_bg']};"
+                "}"
+            )
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(18, 16, 18, 16)
-            layout.setSpacing(12)
+            layout.setContentsMargins(tokens["spacing"]["page_x"], tokens["spacing"]["page_y"], tokens["spacing"]["page_x"], tokens["spacing"]["page_y"])
+            layout.setSpacing(tokens["spacing"]["section"])
 
             header = QHBoxLayout()
+            header.setSpacing(14)
             title_col = QVBoxLayout()
+            title_col.setSpacing(4)
             title = QLabel("生信分析 / Bioinformatics")
             title.setObjectName("bioinformaticsIATitle")
-            title.setStyleSheet("font-size: 22px; font-weight: 750;")
+            title.setStyleSheet(f"font-size: 24px; font-weight: 850; color: {tokens['color']['navy']};")
             subtitle = QLabel("提供生信分析全流程工具，支持从数据来源到结果解读的一站式分析与可视化。")
             subtitle.setObjectName("bioinformaticsIASubtitle")
             subtitle.setWordWrap(True)
+            subtitle.setStyleSheet(f"font-size: 13px; font-weight: 500; color: {tokens['color']['muted']};")
             title_col.addWidget(title)
             title_col.addWidget(subtitle)
             header.addLayout(title_col, 1)
@@ -486,39 +645,49 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
 
             main_card = QFrame()
             main_card.setObjectName("bioinformaticsWorkflowOverviewCard")
-            main_card.setStyleSheet("QFrame#bioinformaticsWorkflowOverviewCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
-            main_layout = QVBoxLayout(main_card)
-            main_layout.setContentsMargins(14, 14, 14, 14)
-            main_layout.setSpacing(12)
-            main_title = QLabel("生信分析流程概览 / Workflow Overview")
-            main_title.setObjectName("bioinformaticsIAMainFlowTitle")
-            main_title.setStyleSheet("font-weight: 700;")
-            main_layout.addWidget(main_title)
-            flow_stepper = make_workflow_stepper(
-                [
-                    WorkflowStep(
-                        key=page.key,
-                        label=_compact_flow_label(page.label),
-                        status_key=page.status_key,
-                        semantic_state=page.status_key,
-                        enabled=False,
-                        current=page.key == self._current_target_flow_page_key,
-                    )
-                    for page in bioinformatics_main_flow_pages()
-                ],
-                title="Bioinformatics workflow",
-                object_name="bioinformaticsWorkflowStepper",
+            main_card.setStyleSheet(
+                "QFrame#bioinformaticsWorkflowOverviewCard { "
+                f"border: 1px solid {tokens['color']['card_border']}; "
+                f"border-radius: {tokens['radius']['card']}px; "
+                f"background: {tokens['color']['card_bg']};"
+                "}"
             )
+            main_layout = QVBoxLayout(main_card)
+            main_layout.setContentsMargins(18, 16, 18, 18)
+            main_layout.setSpacing(14)
+            title_row = QHBoxLayout()
+            title_row.setContentsMargins(0, 0, 0, 0)
+            title_row.addWidget(_section_title("生信分析流程概览 / Workflow Overview"), 1)
+            step_count = QLabel("7 个分析步骤")
+            step_count.setObjectName("bioinformaticsStepCountBadge")
+            step_count.setStyleSheet(
+                "QLabel#bioinformaticsStepCountBadge { "
+                "border: 1px solid #D7E3F4; border-radius: 12px; "
+                "background: #F0F6FF; color: #1F5FA8; font-size: 12px; "
+                "font-weight: 800; padding: 5px 10px; }"
+            )
+            title_row.addWidget(step_count)
+            main_layout.addLayout(title_row)
+            flow_stepper = QFrame()
+            flow_stepper.setObjectName("bioinformaticsWorkflowStepper")
+            flow_stepper.setStyleSheet("QFrame#bioinformaticsWorkflowStepper { border: 0; background: transparent; }")
+            flow_stepper.setProperty("uiPrimitive", "workflow_stepper")
+            flow_stepper.setProperty("orientation", "vertical")
             flow_stepper.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
             flow_stepper.setProperty("pageGroup", "main_flow")
             flow_stepper.setProperty("formalActionEnabled", False)
-            for page, item in zip(bioinformatics_main_flow_pages(), flow_stepper.findChildren(QPushButton, "workflowStepperButton"), strict=True):
+            flow_grid = QGridLayout(flow_stepper)
+            flow_grid.setContentsMargins(0, 0, 0, 0)
+            flow_grid.setHorizontalSpacing(tokens["spacing"]["gap"])
+            flow_grid.setVerticalSpacing(tokens["spacing"]["gap"])
+            for index, page in enumerate(bioinformatics_main_flow_pages()):
+                item = QPushButton()
                 item.setObjectName("bioinformaticsIANavItem")
                 item.setText(_bio_flow_button_text(page))
                 item.setCheckable(True)
-                item.setMinimumHeight(76)
-                item.setMinimumWidth(132)
-                item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                item.setMinimumHeight(108)
+                item.setMinimumWidth(192)
+                item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
@@ -530,29 +699,36 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.label)
                 item.setStyleSheet(_BIO_FLOW_BUTTON_STYLESHEET)
-                _apply_bio_page_icon(item, _BIO_PAGE_SEMANTIC_KEYS[page.key], size=22)
+                _apply_bio_page_icon(item, _BIO_PAGE_SEMANTIC_KEYS[page.key], size=44, page_key=page.key, step_number=page.flow_index)
                 item.setEnabled(False)
                 self._target_ia_buttons[page.key] = item
+                row = 0 if index < 4 else 1
+                column = index if index < 4 else index - 4
+                flow_grid.addWidget(item, row, column)
+                flow_grid.setColumnStretch(column, 1)
             main_layout.addWidget(flow_stepper)
             layout.addWidget(main_card)
 
             auxiliary_card = QFrame()
             auxiliary_card.setObjectName("bioinformaticsAuxiliaryCard")
-            auxiliary_card.setStyleSheet("QFrame#bioinformaticsAuxiliaryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            auxiliary_card.setStyleSheet(
+                "QFrame#bioinformaticsAuxiliaryCard { "
+                f"border: 1px solid {tokens['color']['card_border']}; "
+                f"border-radius: {tokens['radius']['card']}px; "
+                f"background: {tokens['color']['card_bg']};"
+                "}"
+            )
             auxiliary_layout = QVBoxLayout(auxiliary_card)
-            auxiliary_layout.setContentsMargins(14, 14, 14, 14)
-            auxiliary_layout.setSpacing(10)
-            auxiliary_title = QLabel("辅助功能 / Auxiliary")
-            auxiliary_title.setObjectName("bioinformaticsIAAuxiliaryTitle")
-            auxiliary_title.setStyleSheet("font-weight: 700;")
-            auxiliary_layout.addWidget(auxiliary_title)
+            auxiliary_layout.setContentsMargins(18, 14, 18, 18)
+            auxiliary_layout.setSpacing(12)
+            auxiliary_layout.addWidget(_section_title("辅助功能 / Auxiliary"))
             auxiliary_row = QHBoxLayout()
-            auxiliary_row.setSpacing(10)
+            auxiliary_row.setSpacing(tokens["spacing"]["gap"])
             for page in bioinformatics_auxiliary_pages():
-                item = QPushButton(_compact_flow_label(page.label))
+                item = QPushButton(_bio_auxiliary_button_text(page))
                 item.setObjectName("bioinformaticsIANavItem")
                 item.setCheckable(True)
-                item.setMinimumHeight(54)
+                item.setMinimumHeight(96)
                 item.setMinimumWidth(180)
                 item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 item.setProperty("pageKey", page.key)
@@ -566,11 +742,10 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.label)
                 item.setStyleSheet(_BIO_FLOW_BUTTON_STYLESHEET)
-                _apply_bio_page_icon(item, _BIO_PAGE_SEMANTIC_KEYS[page.key], size=20)
+                _apply_bio_page_icon(item, _BIO_PAGE_SEMANTIC_KEYS[page.key], size=44, page_key=page.key)
                 item.setEnabled(False)
                 self._target_ia_buttons[page.key] = item
                 auxiliary_row.addWidget(item)
-            auxiliary_row.addStretch(1)
             auxiliary_layout.addLayout(auxiliary_row)
             layout.addWidget(auxiliary_card)
 
@@ -582,26 +757,33 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
 
             quick = QFrame()
             quick.setObjectName("bioinformaticsQuickAccessCard")
-            quick.setStyleSheet("QFrame#bioinformaticsQuickAccessCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            quick.setStyleSheet(
+                "QFrame#bioinformaticsQuickAccessCard { "
+                f"border: 1px solid {tokens['color']['card_border']}; "
+                f"border-radius: {tokens['radius']['card']}px; "
+                f"background: {tokens['color']['card_bg']};"
+                "}"
+            )
             quick_layout = QVBoxLayout(quick)
-            quick_layout.setContentsMargins(14, 12, 14, 12)
-            quick_layout.setSpacing(8)
-            quick_title = QLabel("快速入口")
-            quick_title.setObjectName("quickAccessTitle")
-            quick_title.setStyleSheet("font-weight: 700;")
-            quick_layout.addWidget(quick_title)
+            quick_layout.setContentsMargins(18, 14, 18, 18)
+            quick_layout.setSpacing(12)
+            quick_layout.addWidget(_section_title("快速入口"))
             quick_row = QHBoxLayout()
-            quick_row.setSpacing(8)
-            for text in ("最近使用", "使用指南", "常见问题", "意见反馈"):
-                button = QPushButton(text)
+            quick_row.setSpacing(tokens["spacing"]["gap"])
+            for text, description, accent, symbol in _BIO_QUICK_ACCESS:
+                button = QPushButton(f"{text}\n{description}")
                 button.setObjectName("quickAccessButton")
                 button.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
                 button.setProperty("quickAccessKey", text)
-                button.setMinimumHeight(36)
-                button.setMinimumWidth(96)
+                button.setProperty("accentColor", accent)
+                button.setMinimumHeight(64)
+                button.setMinimumWidth(170)
+                button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                button.setStyleSheet(_BIO_FLOW_BUTTON_STYLESHEET)
+                button.setIcon(_make_bio_target_icon(accent, symbol, size=38))
+                button.setIconSize(QSize(38, 38))
                 button.setEnabled(False)
                 quick_row.addWidget(button)
-            quick_row.addStretch(1)
             quick_layout.addLayout(quick_row)
             layout.addWidget(quick)
             self._sync_target_flow_state()
@@ -615,7 +797,7 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 button.setChecked(is_current)
                 button.setProperty("currentStep", is_current)
                 _refresh_dynamic_style(button)
-                button.setMinimumHeight(76 if button.property("pageGroup") == "main_flow" else 54)
+                button.setMinimumHeight(108 if button.property("pageGroup") == "main_flow" else 96)
             if hasattr(self, "_result_report_panel"):
                 self._result_report_panel.setVisible(self._current_target_flow_page_key == "result_report")
 
@@ -760,6 +942,11 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             if route_key in self._legacy_route_by_key:
                 self._current_target_flow_page_key = self._legacy_route_by_key[route_key].target_page_key
             self._sync_target_flow_state()
+            show_home_shell = self._current_target_flow_page_key == "project_home"
+            if hasattr(self, "_target_ia_shell"):
+                self._target_ia_shell.setVisible(show_home_shell)
+            if hasattr(self, "_stack"):
+                self._stack.setVisible(not show_home_shell)
 
 
     def _feature_row(feature: FeatureAvailability) -> QFrame:

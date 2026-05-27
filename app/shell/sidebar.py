@@ -16,19 +16,22 @@ SidebarItem = AppSidebarItem
 
 COMMON_SIDEBAR_ITEMS = (
     SidebarItem("dashboard", "工作台 / Dashboard", NavKey.DASHBOARD.value),
-    SidebarItem("bioinformatics", "Bioinformatics / 生信分析", NavKey.BIOINFORMATICS.value),
-    SidebarItem("meta_analysis", "Meta Analysis / Meta 分析", NavKey.META_ANALYSIS.value),
-    SidebarItem("labtools", "LabTools / 实验工具", NavKey.LABTOOLS.value),
-    SidebarItem("settings", "设置中心", NavKey.SETTINGS.value),
-    SidebarItem("test_feedback", "Test Feedback / 测试反馈", NavKey.TEST_FEEDBACK.value),
-    SidebarItem("about", "About / 关于", NavKey.ABOUT.value),
+    SidebarItem("bioinformatics", "生信分析 / Bioinformatics", NavKey.BIOINFORMATICS.value),
+    SidebarItem("meta_analysis", "Meta 分析 / Meta Analysis", NavKey.META_ANALYSIS.value),
+    SidebarItem("labtools", "实验工具 / LabTools", NavKey.LABTOOLS.value),
+    SidebarItem("settings", "设置中心 / Settings", NavKey.SETTINGS.value),
+    SidebarItem("test_feedback", "测试反馈 / Test Feedback", NavKey.TEST_FEEDBACK.value),
+    SidebarItem("about", "关于 / About", NavKey.ABOUT.value),
 )
 
 SIDEBAR_MODULE_ICON_KEYS = {
+    "dashboard": "ui02.dashboard",
     "bioinformatics": "module.bioinformatics",
     "meta_analysis": "module.meta_analysis",
     "labtools": "module.labtools",
     "settings": "module.settings",
+    "test_feedback": "ui02.developer_preview",
+    "about": "ui02.version",
 }
 
 
@@ -71,7 +74,7 @@ if QPushButton is not None:
                 title="萤火虫 Firefly\nBioMedPilot 医研智析",
                 footer="Developer Preview\n本地测试版\nv0.1.0 internal beta",
                 active_key="dashboard",
-                width=248,
+                width=200,
             )
 
 else:

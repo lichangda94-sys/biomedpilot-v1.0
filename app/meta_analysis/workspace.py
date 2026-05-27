@@ -215,6 +215,232 @@ if QWidget is not None:
     }
     """
 
+    _META_PROJECT_HOME_STYLESHEET = """
+    QWidget#metaAnalysisWorkspace {
+        background: #F5F7FB;
+    }
+    QFrame#metaMainlineHeader {
+        background: #FFFFFF;
+        border: 0;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    QFrame#metaProjectHomeRuntimePanel {
+        background: #F5F7FB;
+        border: 0;
+    }
+    QFrame#metaProjectHomeCard,
+    QFrame#metaProjectHomeSideCard,
+    QFrame#metaProjectQuestionCard,
+    QFrame#metaProjectGateNotice {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+    }
+    QLabel#metaProjectHomeSectionTitle {
+        color: #111827;
+        font-size: 13px;
+        font-weight: 850;
+    }
+    QLabel#metaProjectHomeSectionSubtitle,
+    QLabel#metaProjectHomeMuted,
+    QLabel#metaProjectHomeFooter {
+        color: #64748B;
+        font-size: 11px;
+    }
+    QLabel#metaProjectHomeStepDone,
+    QLabel#metaProjectHomeStepTodo,
+    QLabel#metaProjectHomeStepCurrent {
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+        padding: 8px 10px;
+        color: #475569;
+        font-size: 10px;
+        font-weight: 750;
+    }
+    QLabel#metaProjectHomeStepCurrent {
+        background: #EAF3FF;
+        border-color: #93C5FD;
+        color: #2563EB;
+    }
+    QLabel#metaProjectHomeStepTodo {
+        background: #FFFFFF;
+        color: #64748B;
+    }
+    QLabel#metaProjectHomeStepDone {
+        background: #F0FDF4;
+        border-color: #BBF7D0;
+        color: #059669;
+    }
+    QLabel#metaProjectHomeSummaryBadge {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 4px 8px;
+    }
+    QLabel#metaProjectHomeSummaryBlocked {
+        background: #FFF7ED;
+        border: 1px solid #FED7AA;
+        border-radius: 10px;
+        color: #C2410C;
+        font-size: 11px;
+        font-weight: 850;
+        padding: 4px 8px;
+    }
+    QLabel#metaProjectHomeSummaryTesting {
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 10px;
+        color: #2563EB;
+        font-size: 11px;
+        font-weight: 850;
+        padding: 4px 8px;
+    }
+    QLabel#metaProjectHomeActionIndex {
+        background: #EAF3FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 10px;
+        color: #2563EB;
+        font-size: 11px;
+        font-weight: 900;
+    }
+    QPushButton#metaProjectHomeBoundaryButton {
+        background: #FFFFFF;
+        border: 1px solid #D8E1EC;
+        border-radius: 9px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 7px 11px;
+    }
+    QFrame#metaQuestionTypeDraftPanel,
+    QFrame#metaTypeSelectionPanel,
+    QFrame#metaQuestionQuickAccessPanel {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+    }
+    QLabel#metaQuestionStepBadge {
+        background: #EAF3FF;
+        border: 0;
+        border-radius: 4px;
+        color: #2563EB;
+        font-size: 12px;
+        font-weight: 900;
+    }
+    QLabel#metaQuestionStepBadge[semantic="green"] {
+        background: #E9FBEF;
+        color: #059669;
+    }
+    QLabel#metaQuestionSectionTitle {
+        background: transparent;
+        border: 0;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 850;
+    }
+    QLabel#metaQuestionMuted,
+    QLabel#metaQuestionTypeDescription {
+        background: transparent;
+        border: 0;
+        color: #64748B;
+        font-size: 11px;
+    }
+    QLabel#metaQuestionTextarea {
+        background: #F8FAFC;
+        border: 1px solid #D8E1EC;
+        border-radius: 8px;
+        color: #7B8494;
+        font-size: 12px;
+        padding: 10px;
+    }
+    QFrame#metaQuestionAISuggestionCard {
+        background: #EFF8FF;
+        border: 1px solid #BAE6FD;
+        border-radius: 8px;
+    }
+    QFrame#metaQuestionTipsCard {
+        background: #FFFBEB;
+        border: 1px solid #FDE68A;
+        border-radius: 8px;
+    }
+    QLabel#metaQuestionTipsText {
+        background: transparent;
+        border: 0;
+        color: #92400E;
+        font-size: 11px;
+    }
+    QFrame#metaActiveTypeCard {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+    }
+    QFrame#metaActiveTypeCard[selected="true"] {
+        border: 2px solid #60A5FA;
+        background: #EFF6FF;
+    }
+    QFrame#metaActiveTypeCard[planned="true"] {
+        border: 1px dashed #CBD5E1;
+        background: #F8FAFC;
+    }
+    QLabel#metaMetaTypeCategoryLabel {
+        background: #F1F5F9;
+        border-radius: 4px;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 850;
+        padding: 4px 8px;
+    }
+    QLabel#metaActiveTypeId {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: #94A3B8;
+        font-size: 9px;
+        font-family: Menlo;
+    }
+    QLabel#metaActiveTypeLabel {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: #111827;
+        font-size: 12px;
+        font-weight: 850;
+    }
+    QLabel#metaActiveTypeEffect {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: #64748B;
+        font-size: 11px;
+    }
+    QPushButton#metaActiveTypeSelectButton {
+        background: #FFFFFF;
+        border: 2px solid #D1D5DB;
+        border-radius: 10px;
+        color: transparent;
+        max-width: 20px;
+        min-width: 20px;
+        max-height: 20px;
+        min-height: 20px;
+    }
+    QPushButton#metaActiveTypeSelectButton:checked {
+        background: #2563EB;
+        border-color: #2563EB;
+    }
+    QPushButton#metaQuestionNextSearchStrategyButton {
+        background: #2563EB;
+        border: 1px solid #2563EB;
+        border-radius: 9px;
+        color: #FFFFFF;
+        font-size: 12px;
+        font-weight: 850;
+        padding: 7px 11px;
+    }
+    """
+
     def _compact_flow_label(label: str) -> str:
         parts = [part.strip() for part in label.split("/", 1)]
         compact = "\n".join(parts) if len(parts) == 2 else label
@@ -263,6 +489,7 @@ if QWidget is not None:
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
             super().__init__()
             self.setObjectName("metaAnalysisWorkspace")
+            self.setStyleSheet(_META_PROJECT_HOME_STYLESHEET)
             self._on_back = on_back
             self._current_project_dir: Path | None = None
             self._current_meta_project: MetaProjectSummary | None = None
@@ -355,11 +582,13 @@ if QWidget is not None:
             header.setObjectName("metaMainlineHeader")
             header_layout = QHBoxLayout(header)
             title_col = QVBoxLayout()
-            title = QLabel("Meta 分析模块")
+            title = QLabel("Meta 分析 / Meta Analysis")
             title.setObjectName("metaWorkspaceTitle")
             title.setStyleSheet("font-size: 22px; font-weight: 700;")
-            subtitle = QLabel("mainline 入口与项目壳；完整功能开发保留在 dev/meta-analysis。")
+            subtitle = QLabel("系统综述与 Meta 分析流程管理，当前为 Developer Preview（本地测试版）。")
             subtitle.setObjectName("metaWorkspaceSubtitle")
+            self._workspace_title_label = title
+            self._workspace_subtitle_label = subtitle
             title_col.addWidget(title)
             title_col.addWidget(subtitle)
             header_layout.addLayout(title_col, 1)
@@ -373,6 +602,7 @@ if QWidget is not None:
 
             self._status_label = QLabel("")
             self._status_label.setObjectName("metaProjectStatus")
+            self._status_label.setVisible(False)
             root.addWidget(self._status_label)
 
             body = QHBoxLayout()
@@ -383,6 +613,8 @@ if QWidget is not None:
             self._page_stack.setObjectName("metaCurrentStepWorkspace")
             self._navigation_list.setMaximumHeight(150)
             self._page_stack.setMaximumHeight(150)
+            self._navigation_list.setVisible(False)
+            self._page_stack.setVisible(False)
             body.addWidget(self._navigation_list)
             body.addWidget(self._page_stack, 1)
             root.addLayout(body, 0)
@@ -447,6 +679,7 @@ if QWidget is not None:
                 item.setStyleSheet(_META_FLOW_BUTTON_STYLESHEET)
                 _apply_meta_page_icon(item, _META_PAGE_SEMANTIC_KEYS[page.key], size=22)
                 self._target_ia_buttons[page.key] = item
+            nav_frame.setVisible(False)
 
             runtime_main = make_card(object_name="metaRuntimeContentPanel")
             runtime_main.setObjectName("metaRuntimeContentPanel")
@@ -491,6 +724,9 @@ if QWidget is not None:
             boundary = frame.findChild(QLabel, "workbenchPageSubtitle")
             if boundary is not None:
                 boundary.setObjectName("metaTargetIABoundary")
+            shell_header = frame.findChild(QFrame, "workbenchHeader")
+            if shell_header is not None:
+                shell_header.setVisible(False)
 
             self._project_home_panel = self._build_project_home_runtime_panel()
             self._add_target_runtime_page("project_home", self._project_home_panel)
@@ -513,99 +749,56 @@ if QWidget is not None:
             self._active_type_section.setProperty("reportStatusKey", "report.status.draft")
             self._active_type_section.setProperty("exportGate", "disabled_empty_result")
             self._active_type_section.setProperty("formalActionEnabled", False)
+            self._active_type_section.setStyleSheet(
+                """
+                QFrame#metaActiveTypeSection QLabel {
+                    background: transparent;
+                    border: 0;
+                    padding: 0;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaQuestionStepBadge {
+                    background: #EAF3FF;
+                    border-radius: 4px;
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaQuestionStepBadge[semantic="green"] {
+                    background: #E9FBEF;
+                    color: #059669;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaQuestionTextarea {
+                    background: #F8FAFC;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 8px;
+                    color: #7B8494;
+                    padding: 10px;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaMetaTypeCategoryLabel,
+                QFrame#metaActiveTypeSection QLabel#metaProjectHomeSummaryTesting,
+                QFrame#metaActiveTypeSection QLabel#metaProjectHomeSummaryBadge {
+                    background: #F1F5F9;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 8px;
+                    padding: 4px 8px;
+                }
+                """
+            )
             active_type_layout = QVBoxLayout(self._active_type_section)
             active_type_layout.setContentsMargins(0, 0, 0, 0)
-            active_type_layout.setSpacing(10)
-
-            draft_panel = self._build_question_type_draft_panel()
-            active_type_layout.addWidget(draft_panel)
+            active_type_layout.setSpacing(12)
 
             self._active_type_status = QLabel("")
             self._active_type_status.setObjectName("metaActiveTypeInteractionStatus")
             self._active_type_status.setWordWrap(True)
-            active_type_layout.addWidget(self._active_type_status)
+            self._active_type_status.setObjectName("metaActiveTypeInteractionStatus")
 
-            type_groups: dict[str, list[MetaActiveType]] = {}
-            for meta_type in meta_active_types_v1():
-                type_groups.setdefault(meta_type.group, []).append(meta_type)
-            for group, meta_types in type_groups.items():
-                group_label = QLabel(group)
-                group_label.setObjectName("metaTypeGroupTitle")
-                group_label.setStyleSheet("font-weight: 700;")
-                active_type_layout.addWidget(group_label)
-                type_row = QHBoxLayout()
-                type_row.setSpacing(8)
-                for meta_type in meta_types:
-                    card = QFrame()
-                    card.setObjectName("metaActiveTypeCard")
-                    card.setProperty("typeId", meta_type.type_id)
-                    card.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
-                    card.setProperty("statusKey", meta_type.status_key)
-                    card.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
-                    card.setMinimumHeight(154)
-                    card.setMinimumWidth(240)
-                    card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                    card.setStyleSheet("QFrame#metaActiveTypeCard { border: 1px solid #CBD5E1; border-radius: 8px; background: #FFFFFF; }")
-                    card_layout = QVBoxLayout(card)
-                    card_layout.setContentsMargins(12, 10, 12, 10)
-                    card_layout.setSpacing(8)
-                    card_layout.addWidget(make_status_chip(status_key=meta_type.status_key))
-                    type_id = QLabel(meta_type.type_id)
-                    type_id.setObjectName("metaActiveTypeId")
-                    type_id.setWordWrap(True)
-                    label = QLabel(meta_type.label_zh)
-                    label.setObjectName("metaActiveTypeLabel")
-                    label.setWordWrap(True)
-                    effect = QLabel(meta_type.effect_size)
-                    effect.setObjectName("metaActiveTypeEffect")
-                    effect.setWordWrap(True)
-                    select = QPushButton("选择类型")
-                    select.setObjectName("metaActiveTypeSelectButton")
-                    select.setCheckable(True)
-                    select.setProperty("typeId", meta_type.type_id)
-                    select.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
-                    select.setProperty("statusKey", meta_type.status_key)
-                    select.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
-                    select.setProperty("interactionMode", meta_type.interaction_mode)
-                    select.setProperty("formalActionEnabled", False)
-                    select.setMinimumHeight(34)
-                    select.clicked.connect(lambda _checked=False, type_id=meta_type.type_id: self.select_active_meta_type(type_id))
-                    self._active_type_buttons[meta_type.type_id] = select
-                    card_layout.addWidget(type_id)
-                    card_layout.addWidget(label)
-                    card_layout.addWidget(effect)
-                    card_layout.addStretch(1)
-                    card_layout.addWidget(select)
-                    type_row.addWidget(card)
-                active_type_layout.addLayout(type_row)
-
-            planned = QLabel("Network Meta：planned only / not enabled，不属于当前 active Meta 类型。")
-            planned.setObjectName("metaNetworkMetaBoundary")
-            planned.setProperty("typeId", "network_meta_analysis")
-            planned.setProperty("statusKey", "planned")
-            planned.setProperty("formalActionEnabled", False)
-            planned.setWordWrap(True)
-            planned.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 6px 8px; background: #FFF7E6;")
-            active_type_layout.addWidget(planned)
-            network_button = QPushButton("Network Meta planned")
-            network_button.setObjectName("metaNetworkMetaPlannedButton")
-            network_button.setProperty("typeId", "network_meta_analysis")
-            network_button.setProperty("statusKey", "planned")
-            network_button.setProperty("interactionMode", "planned_disabled")
-            network_button.setProperty("formalActionEnabled", False)
-            network_button.setEnabled(False)
-            active_type_layout.addWidget(network_button)
-
-            next_search = QPushButton("下一步：检索策略 / Next: Search Strategy")
-            next_search.setObjectName("metaQuestionNextSearchStrategyButton")
-            next_search.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
-            next_search.setProperty("pageKey", "question_meta_type")
-            next_search.setProperty("targetPageKey", "search_strategy")
-            next_search.setProperty("actionSemantic", "navigation_only")
-            next_search.setProperty("formalActionEnabled", False)
-            next_search.setMinimumHeight(36)
-            next_search.clicked.connect(lambda _checked=False: self.show_target_ia_page("search_strategy"))
-            active_type_layout.addWidget(next_search)
+            visual_row = QHBoxLayout()
+            visual_row.setContentsMargins(0, 0, 0, 0)
+            visual_row.setSpacing(14)
+            visual_row.addWidget(self._build_question_type_draft_panel(), 0, Qt.AlignTop)
+            visual_row.addWidget(self._build_meta_type_selection_panel(), 1)
+            active_type_layout.addLayout(visual_row, 1)
+            active_type_layout.addWidget(self._build_question_type_quick_access_panel())
             self._add_target_runtime_page("question_meta_type", self._active_type_section)
 
             self._search_strategy_panel = self._build_search_strategy_panel()
@@ -707,33 +900,37 @@ if QWidget is not None:
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("exportGate", "disabled_empty_result")
             frame.setProperty("formalActionEnabled", False)
-            frame.setStyleSheet("QFrame#metaProjectHomeRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(14, 12, 14, 12)
-            layout.setSpacing(10)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(12)
 
-            title = QLabel("Meta Project Home / 项目首页")
-            title.setObjectName("metaProjectHomeRuntimeTitle")
-            title.setStyleSheet("font-weight: 750;")
-            layout.addWidget(title)
+            body = QHBoxLayout()
+            body.setContentsMargins(0, 0, 0, 0)
+            body.setSpacing(12)
+            main_col = QVBoxLayout()
+            main_col.setSpacing(12)
+            main_col.addWidget(self._build_project_home_status_chips())
+            main_col.addWidget(self._build_project_home_workflow_card())
+            main_col.addWidget(self._build_project_home_question_card())
+            body.addLayout(main_col, 1)
 
-            chip_row = QHBoxLayout()
-            for object_name, text, status_key in (
-                ("metaProjectHomeDeveloperPreviewChip", "Developer Preview / 本地测试版", "developer_preview"),
-                ("metaProjectHomeEnglishFirstChip", "English-first processing", "testing"),
-                ("metaProjectHomeAISuggestionChip", "AI suggestion only", "testing"),
-                ("metaProjectHomeReportNotReadyChip", "Report not ready", "blocked"),
-            ):
-                chip = make_status_chip(text, status_key=status_key)
-                chip.setObjectName(object_name)
-                chip_row.addWidget(chip)
-            chip_row.addStretch(1)
-            layout.addLayout(chip_row)
+            side_col = QVBoxLayout()
+            side_col.setSpacing(12)
+            side_col.addWidget(self._build_project_home_summary_card())
+            side_col.addWidget(self._build_project_home_next_actions_card())
+            side_col.addStretch(1)
+            side_wrap = QWidget()
+            side_wrap.setMinimumWidth(268)
+            side_wrap.setMaximumWidth(300)
+            side_wrap.setLayout(side_col)
+            body.addWidget(side_wrap)
+            layout.addLayout(body)
+            layout.addWidget(self._build_project_home_gate_notice())
 
-            overview_title = QLabel("Workflow overview")
-            overview_title.setObjectName("metaProjectHomeWorkflowOverviewTitle")
-            overview_title.setStyleSheet("font-weight: 700;")
-            layout.addWidget(overview_title)
+            hidden_contract = QWidget()
+            hidden_contract.setVisible(False)
+            hidden_layout = QVBoxLayout(hidden_contract)
+            hidden_layout.setContentsMargins(0, 0, 0, 0)
             workflow_rows = tuple(
                 (
                     f"{page.flow_index:02d}" if page.page_group == "main_flow" else "AUX",
@@ -749,12 +946,8 @@ if QWidget is not None:
                 workflow_rows,
             )
             workflow.setMinimumHeight(190)
-            layout.addWidget(workflow)
+            hidden_layout.addWidget(workflow)
 
-            summary_title = QLabel("Project Summary")
-            summary_title.setObjectName("metaProjectHomeSummaryTitle")
-            summary_title.setStyleSheet("font-weight: 700;")
-            layout.addWidget(summary_title)
             summary = _readonly_table(
                 "metaProjectHomeSummaryTable",
                 ("Area", "Current state", "Gate"),
@@ -769,8 +962,259 @@ if QWidget is not None:
                 ),
             )
             summary.setMinimumHeight(170)
-            layout.addWidget(summary)
+            hidden_layout.addWidget(summary)
+            layout.addWidget(hidden_contract)
             return frame
+
+        def _build_project_home_status_chips(self) -> QWidget:
+            wrap = QWidget()
+            wrap.setFixedHeight(30)
+            chip_row = QHBoxLayout(wrap)
+            chip_row.setContentsMargins(0, 0, 0, 0)
+            chip_row.setSpacing(8)
+            for object_name, text, semantic in (
+                ("metaProjectHomeDeveloperPreviewChip", "Developer Preview / 本地测试版", "testing"),
+                ("metaProjectHomeEnglishFirstChip", "English-first processing", "testing"),
+                ("metaProjectHomeAISuggestionChip", "AI suggestion only", "testing"),
+                ("metaProjectHomeReportNotReadyChip", "Report not ready", "blocked"),
+            ):
+                chip = QLabel(text)
+                chip.setObjectName(object_name)
+                chip.setProperty("statusKey", semantic)
+                chip.setStyleSheet(
+                    "background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; color: #9A3412; "
+                    "font-size: 11px; font-weight: 850; padding: 4px 8px;"
+                    if semantic == "blocked"
+                    else "background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px; color: #2563EB; "
+                    "font-size: 11px; font-weight: 850; padding: 4px 8px;"
+                )
+                chip.setFixedHeight(24)
+                chip.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+                chip_row.addWidget(chip)
+            chip_row.addStretch(1)
+            return wrap
+
+        def _build_project_home_workflow_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectHomeCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 14, 16, 16)
+            layout.setSpacing(12)
+            header = QHBoxLayout()
+            title_col = QVBoxLayout()
+            title_col.setSpacing(2)
+            title = QLabel("Meta 工作流程总览")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            subtitle = QLabel("Workflow Overview · 12 步流程")
+            subtitle.setObjectName("metaProjectHomeSectionSubtitle")
+            title_col.addWidget(title)
+            title_col.addWidget(subtitle)
+            header.addLayout(title_col, 1)
+            legend_current = QLabel("● 当前步骤")
+            legend_current.setObjectName("metaProjectHomeMuted")
+            legend_todo = QLabel("○ 待完成")
+            legend_todo.setObjectName("metaProjectHomeMuted")
+            header.addWidget(legend_current)
+            header.addWidget(legend_todo)
+            layout.addLayout(header)
+
+            rows = (
+                (
+                    ("1", "项目首页", "Project Home", "current"),
+                    ("2", "问题与类型", "Question & Meta Type", "todo"),
+                    ("3", "检索策略", "Search Strategy", "todo"),
+                    ("4", "文献导入", "Reference Management", "todo"),
+                    ("5", "去重", "Deduplication", "todo"),
+                    ("6", "筛选", "Screening", "todo"),
+                ),
+                (
+                    ("7", "全文与提取", "Full-text & Extraction", "todo"),
+                    ("8", "数据提取", "Extraction", "todo"),
+                    ("9", "质量评价", "Risk of Bias", "todo"),
+                    ("10", "统计分析", "Analysis Tasks", "todo"),
+                    ("11", "结果报告", "Result & Report", "todo"),
+                    ("12", "报告导出", "Report Export", "todo"),
+                ),
+            )
+            for row_index, step_row in enumerate(rows):
+                row = QHBoxLayout()
+                row.setSpacing(8)
+                for number, zh, en, state in step_row:
+                    row.addWidget(self._project_home_step_label(number, zh, en, state), 1)
+                layout.addLayout(row)
+                if row_index == 0:
+                    divider = QHBoxLayout()
+                    left = QFrame()
+                    left.setFrameShape(QFrame.HLine)
+                    left.setStyleSheet("color: #E5E7EB;")
+                    center = QLabel("Steps 7 - 12")
+                    center.setObjectName("metaProjectHomeMuted")
+                    right = QFrame()
+                    right.setFrameShape(QFrame.HLine)
+                    right.setStyleSheet("color: #E5E7EB;")
+                    divider.addWidget(left, 1)
+                    divider.addWidget(center)
+                    divider.addWidget(right, 1)
+                    layout.addLayout(divider)
+            return card
+
+        def _project_home_step_label(self, number: str, zh: str, en: str, state: str) -> QLabel:
+            label = QLabel(f"{number}    {zh}\n{en}")
+            label.setObjectName(
+                "metaProjectHomeStepCurrent"
+                if state == "current"
+                else ("metaProjectHomeStepDone" if state == "done" else "metaProjectHomeStepTodo")
+            )
+            label.setWordWrap(True)
+            label.setMinimumHeight(70)
+            label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            return label
+
+        def _build_project_home_question_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectQuestionCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 14, 16, 16)
+            layout.setSpacing(12)
+            title = QLabel("研究问题草稿 / Research Question Draft")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            layout.addWidget(title)
+            question_row = QHBoxLayout()
+            question_row.setSpacing(10)
+            for heading, body in (
+                ("中文问题", "甲状腺癌患者中 adiponectin 表达或水平是否与预后或临床病理特征相关？"),
+                (
+                    "English Question",
+                    "Is adiponectin expression or circulating adiponectin associated with prognosis or clinicopathological features in thyroid cancer patients?",
+                ),
+            ):
+                block = QFrame()
+                block.setObjectName("metaProjectHomeCard")
+                block_layout = QVBoxLayout(block)
+                block_layout.setContentsMargins(12, 10, 12, 10)
+                heading_label = QLabel(heading)
+                heading_label.setObjectName("metaProjectHomeMuted")
+                body_label = QLabel(body)
+                body_label.setObjectName("metaProjectHomeSectionSubtitle")
+                body_label.setWordWrap(True)
+                block_layout.addWidget(heading_label)
+                block_layout.addWidget(body_label)
+                question_row.addWidget(block, 1)
+            layout.addLayout(question_row)
+            suggested = QHBoxLayout()
+            suggested.addWidget(QLabel("Suggested type"))
+            for text in ("prognostic_factor_meta", "biomarker_expression_difference_meta"):
+                badge = QLabel(text)
+                badge.setObjectName("metaProjectHomeSummaryTesting")
+                suggested.addWidget(badge)
+            suggested.addStretch(1)
+            layout.addLayout(suggested)
+            notice = QLabel("本界面为非生产环境示例数据（Mockup only），不代表真实证据或分析结果。reviewer manual confirmation is required.")
+            notice.setObjectName("metaProjectHomeMuted")
+            notice.setWordWrap(True)
+            layout.addWidget(notice)
+            return card
+
+        def _build_project_home_summary_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectHomeSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 14, 14, 14)
+            layout.setSpacing(9)
+            title = QLabel("项目摘要")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            subtitle = QLabel("Project Summary")
+            subtitle.setObjectName("metaProjectHomeSectionSubtitle")
+            layout.addWidget(title)
+            layout.addWidget(subtitle)
+            for label, value, state in (
+                ("References", "0 imported", "neutral"),
+                ("Screening", "not started", "neutral"),
+                ("Extraction", "not started", "neutral"),
+                ("Risk of bias", "incomplete", "blocked"),
+                ("Formal result", "none", "blocked"),
+                ("Report-ready", "blocked", "blocked"),
+                ("Export", "disabled", "blocked"),
+            ):
+                row = QHBoxLayout()
+                name = QLabel(label)
+                name.setObjectName("metaProjectHomeMuted")
+                badge = QLabel(value)
+                badge.setObjectName("metaProjectHomeSummaryBlocked" if state == "blocked" else "metaProjectHomeSummaryBadge")
+                row.addWidget(name, 1)
+                row.addWidget(badge)
+                layout.addLayout(row)
+            return card
+
+        def _build_project_home_next_actions_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectHomeSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 14, 14, 14)
+            layout.setSpacing(10)
+            title = QLabel("下一步建议")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            subtitle = QLabel("Next Actions")
+            subtitle.setObjectName("metaProjectHomeSectionSubtitle")
+            layout.addWidget(title)
+            layout.addWidget(subtitle)
+            for index, (title_text, body) in enumerate(
+                (
+                    ("确认研究问题与 Meta 类型", "Confirm research question and Meta type"),
+                    ("生成英文检索式草稿", "Generate English search query draft"),
+                    ("导入参考文献", "Import references"),
+                    ("人工确认筛选规则", "Manually confirm screening criteria"),
+                ),
+                start=1,
+            ):
+                row = QHBoxLayout()
+                number = QLabel(str(index))
+                number.setObjectName("metaProjectHomeActionIndex")
+                number.setFixedSize(22, 22)
+                number.setAlignment(Qt.AlignCenter)
+                text_col = QVBoxLayout()
+                text_col.setSpacing(1)
+                title_label = QLabel(title_text)
+                title_label.setObjectName("metaProjectHomeSectionSubtitle")
+                body_label = QLabel(body)
+                body_label.setObjectName("metaProjectHomeMuted")
+                body_label.setWordWrap(True)
+                text_col.addWidget(title_label)
+                text_col.addWidget(body_label)
+                row.addWidget(number)
+                row.addLayout(text_col, 1)
+                layout.addLayout(row)
+            return card
+
+        def _build_project_home_gate_notice(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectGateNotice")
+            layout = QHBoxLayout(card)
+            layout.setContentsMargins(16, 14, 16, 14)
+            layout.setSpacing(12)
+            text_col = QVBoxLayout()
+            text_col.setSpacing(6)
+            title = QLabel("重要提示 / Gate Notice")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            text_col.addWidget(title)
+            for text in (
+                "中文输入可辅助生成英文检索式，但当前仅保留英文优先的本地草稿流程。",
+                "AI suggestion 仅供参考，不能替代人工筛选、提取、偏倚风险判断或结论。",
+                "当前没有正式统计结果、正式图表、report-ready package 或文件导出。",
+                "网络 Meta（Network Meta）暂不启用。",
+                "本界面为 Developer Preview，仅供流程设计与演示。",
+            ):
+                item = QLabel(f"• {text}")
+                item.setObjectName("metaProjectHomeMuted")
+                item.setWordWrap(True)
+                text_col.addWidget(item)
+            layout.addLayout(text_col, 1)
+            button = QPushButton("了解边界 / View Boundaries")
+            button.setObjectName("metaProjectHomeBoundaryButton")
+            button.setProperty("formalActionEnabled", False)
+            button.setEnabled(False)
+            layout.addWidget(button, 0, Qt.AlignTop)
+            return card
 
         def _build_question_type_draft_panel(self) -> QFrame:
             frame = QFrame()
@@ -785,15 +1229,85 @@ if QWidget is not None:
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("exportGate", "disabled_empty_result")
             frame.setProperty("formalActionEnabled", False)
-            frame.setStyleSheet("QFrame#metaQuestionTypeDraftPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            frame.setMinimumWidth(340)
+            frame.setMaximumWidth(370)
+            frame.setMaximumHeight(500)
+            frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Maximum)
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(14, 12, 14, 12)
-            layout.setSpacing(10)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(12)
 
-            title = QLabel("Question & Meta Type / 研究问题与 Meta 类型")
-            title.setObjectName("metaQuestionTypeRuntimeTitle")
-            title.setStyleSheet("font-weight: 750;")
-            layout.addWidget(title)
+            header_wrap = QWidget()
+            header_wrap.setFixedHeight(24)
+            header = QHBoxLayout(header_wrap)
+            header.setContentsMargins(0, 0, 0, 0)
+            badge = QLabel("1")
+            badge.setObjectName("metaQuestionStepBadge")
+            badge.setFixedSize(20, 20)
+            badge.setAlignment(Qt.AlignCenter)
+            title = QLabel("研究问题 / Research Question")
+            title.setObjectName("metaQuestionSectionTitle")
+            header.addWidget(badge)
+            header.addWidget(title)
+            header.addStretch(1)
+            layout.addWidget(header_wrap)
+
+            question_label = QLabel("研究问题（中文）")
+            question_label.setObjectName("metaQuestionSectionTitle")
+            layout.addWidget(question_label)
+            textarea = QLabel("请用中文简要描述您的研究问题，例如：\n某药物对癌症患者生存率的影响。\n\n\n\n0/500")
+            textarea.setObjectName("metaQuestionTextarea")
+            textarea.setMinimumHeight(128)
+            textarea.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            layout.addWidget(textarea)
+
+            ai_card = QFrame()
+            ai_card.setObjectName("metaQuestionAISuggestionCard")
+            ai_layout = QVBoxLayout(ai_card)
+            ai_layout.setContentsMargins(12, 10, 12, 10)
+            ai_layout.setSpacing(8)
+            ai_header = QHBoxLayout()
+            ai_title = QLabel("研究问题建议（英文）")
+            ai_title.setObjectName("metaQuestionSectionTitle")
+            ai_badge = QLabel("AI 建议，仅供参考")
+            ai_badge.setObjectName("metaProjectHomeSummaryTesting")
+            shuffle = QLabel("换一换")
+            shuffle.setObjectName("metaQuestionMuted")
+            ai_header.addWidget(ai_title)
+            ai_header.addWidget(ai_badge)
+            ai_header.addStretch(1)
+            ai_header.addWidget(shuffle)
+            ai_layout.addLayout(ai_header)
+            ai_body = QLabel("What is the effect of [intervention/exposure] on\n[outcome] in [population]?")
+            ai_body.setObjectName("metaQuestionSectionSubtitle")
+            ai_body.setStyleSheet("color: #0369A1; font-size: 12px; font-style: italic;")
+            ai_body.setWordWrap(True)
+            ai_layout.addWidget(ai_body)
+            layout.addWidget(ai_card)
+
+            tips = QFrame()
+            tips.setObjectName("metaQuestionTipsCard")
+            tips_layout = QVBoxLayout(tips)
+            tips_layout.setContentsMargins(12, 10, 12, 10)
+            tips_layout.setSpacing(8)
+            tips_title = QLabel("提示 / Tips")
+            tips_title.setObjectName("metaQuestionSectionTitle")
+            tips_layout.addWidget(tips_title)
+            for text in (
+                "请确保问题包含：研究对象、干预/暴露、结局指标。",
+                "选择最符合您研究目的的 Meta 分析类型。",
+                "不同类型将启用不同的统计方法与结果展示。",
+            ):
+                item = QLabel(f"• {text}")
+                item.setObjectName("metaQuestionTipsText")
+                item.setWordWrap(True)
+                tips_layout.addWidget(item)
+            layout.addWidget(tips)
+
+            legacy_contract = QWidget()
+            legacy_contract.setVisible(False)
+            legacy_layout = QVBoxLayout(legacy_contract)
+            legacy_layout.setContentsMargins(0, 0, 0, 0)
 
             chinese = QLabel("中文工作问题：脂联素表达与甲状腺癌预后或诊断价值之间的关系。")
             chinese.setObjectName("metaChineseWorkingQuestionDraft")
@@ -801,8 +1315,8 @@ if QWidget is not None:
             english = QLabel("English question draft: Is adiponectin associated with thyroid cancer diagnosis or prognosis in human studies?")
             english.setObjectName("metaEnglishQuestionDraft")
             english.setWordWrap(True)
-            layout.addWidget(chinese)
-            layout.addWidget(english)
+            legacy_layout.addWidget(chinese)
+            legacy_layout.addWidget(english)
 
             pico = _readonly_table(
                 "metaPicoPecoDraftTable",
@@ -816,13 +1330,13 @@ if QWidget is not None:
                 ),
             )
             pico.setMinimumHeight(146)
-            layout.addWidget(pico)
+            legacy_layout.addWidget(pico)
 
             suggested = QLabel("Suggested Meta type draft: Prognostic factor meta or Biomarker expression difference meta. AI suggestion is advisory only.")
             suggested.setObjectName("metaSuggestedMetaTypeDraft")
             suggested.setWordWrap(True)
             suggested.setStyleSheet("border: 1px solid #BFD7FF; border-radius: 6px; padding: 6px 8px; background: #EFF6FF;")
-            layout.addWidget(suggested)
+            legacy_layout.addWidget(suggested)
 
             card_grid = QGridLayout()
             card_grid.setHorizontalSpacing(8)
@@ -854,8 +1368,213 @@ if QWidget is not None:
                 card_layout.addWidget(candidate_label)
                 card_layout.addWidget(state_label)
                 card_grid.addWidget(card, index // 3, index % 3)
-            layout.addLayout(card_grid)
+            legacy_layout.addLayout(card_grid)
+            layout.addWidget(legacy_contract)
+            layout.addStretch(1)
             return frame
+
+        def _build_meta_type_selection_panel(self) -> QFrame:
+            panel = QFrame()
+            panel.setObjectName("metaTypeSelectionPanel")
+            layout = QVBoxLayout(panel)
+            layout.setContentsMargins(20, 12, 20, 16)
+            layout.setSpacing(12)
+
+            header = QHBoxLayout()
+            badge = QLabel("2")
+            badge.setObjectName("metaQuestionStepBadge")
+            badge.setProperty("semantic", "green")
+            badge.setFixedSize(20, 20)
+            badge.setAlignment(Qt.AlignCenter)
+            title = QLabel("Meta 类型选择 / Select Meta Type")
+            title.setObjectName("metaQuestionSectionTitle")
+            header.addWidget(badge)
+            header.addWidget(title)
+            header.addStretch(1)
+            layout.addLayout(header)
+            description = QLabel("请选择最符合您研究问题的 Meta 分析类型。")
+            description.setObjectName("metaQuestionMuted")
+            layout.addWidget(description)
+
+            hidden_groups = QWidget()
+            hidden_groups.setVisible(False)
+            hidden_group_layout = QVBoxLayout(hidden_groups)
+            hidden_group_layout.setContentsMargins(0, 0, 0, 0)
+            for text in ("结局型 Meta", "流行病学 Meta", "诊断与关联 Meta", "关联与预后 Meta", "Testing schema"):
+                label = QLabel(text)
+                label.setObjectName("metaTypeGroupTitle")
+                hidden_group_layout.addWidget(label)
+            layout.addWidget(hidden_groups)
+
+            self._active_type_cards: dict[str, QFrame] = {}
+            active_types = {item.type_id: item for item in meta_active_types_v1()}
+            groups = (
+                ("疗效 / 效果类", ("binary_outcome_meta", "continuous_outcome_meta", "survival_outcome_meta")),
+                ("发生率 / 诊断类", ("prevalence_incidence_meta", "diagnostic_accuracy_meta", "exposure_disease_risk_meta")),
+                ("生物标志物 / 相关性类", ("biomarker_expression_difference_meta", "correlation_meta", "prognostic_factor_meta")),
+                ("剂量反应类", ("dose_response_meta",)),
+            )
+            for label, type_ids in groups:
+                section = QVBoxLayout()
+                section.setSpacing(8)
+                title_row = QHBoxLayout()
+                group_label = QLabel(label)
+                group_label.setObjectName("metaMetaTypeCategoryLabel")
+                divider = QFrame()
+                divider.setFrameShape(QFrame.HLine)
+                divider.setStyleSheet("color: #E5E7EB;")
+                title_row.addWidget(group_label)
+                title_row.addWidget(divider, 1)
+                section.addLayout(title_row)
+                cards = QHBoxLayout()
+                cards.setSpacing(10)
+                for type_id in type_ids:
+                    cards.addWidget(self._build_meta_type_card(active_types[type_id]), 1)
+                if label == "剂量反应类":
+                    cards.addWidget(self._build_network_meta_planned_card(), 1)
+                    cards.addStretch(1)
+                section.addLayout(cards)
+                layout.addLayout(section)
+
+            footer = QHBoxLayout()
+            footer.addWidget(self._active_type_status, 1)
+            next_search = QPushButton("下一步：检索策略 / Next: Search Strategy")
+            next_search.setObjectName("metaQuestionNextSearchStrategyButton")
+            next_search.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            next_search.setProperty("pageKey", "question_meta_type")
+            next_search.setProperty("targetPageKey", "search_strategy")
+            next_search.setProperty("actionSemantic", "navigation_only")
+            next_search.setProperty("formalActionEnabled", False)
+            next_search.setMinimumHeight(34)
+            next_search.clicked.connect(lambda _checked=False: self.show_target_ia_page("search_strategy"))
+            footer.addWidget(next_search)
+            layout.addLayout(footer)
+            return panel
+
+        def _build_meta_type_card(self, meta_type: MetaActiveType) -> QFrame:
+            descriptions = {
+                "binary_outcome_meta": "如缓解率、有效率、死亡率等",
+                "continuous_outcome_meta": "如均值差、标准化均值差等",
+                "survival_outcome_meta": "如 OS、PFS、HR 等",
+                "prevalence_incidence_meta": "如疾病患病率、发病率等",
+                "diagnostic_accuracy_meta": "如灵敏度、特异度、AUC 等",
+                "exposure_disease_risk_meta": "如 OR、RR、HR 等",
+                "biomarker_expression_difference_meta": "如基因、蛋白表达差异等",
+                "correlation_meta": "如相关系数合并等",
+                "prognostic_factor_meta": "如预后因子与结局的关联等",
+                "dose_response_meta": "如剂量-反应关系、趋势分析等",
+            }
+            card = QFrame()
+            card.setObjectName("metaActiveTypeCard")
+            card.setProperty("typeId", meta_type.type_id)
+            card.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            card.setProperty("statusKey", meta_type.status_key)
+            card.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
+            card.setMinimumHeight(154)
+            card.setMinimumWidth(170)
+            card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(7)
+            top = QHBoxLayout()
+            icon = QLabel("⌁")
+            icon.setObjectName("metaProjectHomeSummaryTesting")
+            icon.setFixedSize(32, 32)
+            icon.setAlignment(Qt.AlignCenter)
+            select = QPushButton("")
+            select.setObjectName("metaActiveTypeSelectButton")
+            select.setCheckable(True)
+            select.setProperty("typeId", meta_type.type_id)
+            select.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            select.setProperty("statusKey", meta_type.status_key)
+            select.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
+            select.setProperty("interactionMode", meta_type.interaction_mode)
+            select.setProperty("formalActionEnabled", False)
+            select.clicked.connect(lambda _checked=False, type_id=meta_type.type_id: self.select_active_meta_type(type_id))
+            self._active_type_buttons[meta_type.type_id] = select
+            self._active_type_cards[meta_type.type_id] = card
+            top.addWidget(icon)
+            top.addStretch(1)
+            top.addWidget(select)
+            layout.addLayout(top)
+            type_id = QLabel(meta_type.type_id)
+            type_id.setObjectName("metaActiveTypeId")
+            type_id.setWordWrap(True)
+            label = QLabel(meta_type.label_zh)
+            label.setObjectName("metaActiveTypeLabel")
+            label.setWordWrap(True)
+            effect = QLabel(descriptions.get(meta_type.type_id, meta_type.effect_size))
+            effect.setObjectName("metaActiveTypeEffect")
+            effect.setWordWrap(True)
+            layout.addWidget(type_id)
+            layout.addWidget(label)
+            layout.addWidget(effect)
+            layout.addStretch(1)
+            return card
+
+        def _build_network_meta_planned_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaActiveTypeCardPlanned")
+            card.setProperty("typeId", "network_meta_analysis")
+            card.setProperty("planned", True)
+            card.setMinimumHeight(154)
+            card.setMinimumWidth(170)
+            card.setStyleSheet("QFrame#metaActiveTypeCardPlanned { border: 1px dashed #CBD5E1; border-radius: 10px; background: #F8FAFC; }")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(12, 10, 12, 10)
+            top = QHBoxLayout()
+            icon = QLabel("⌘")
+            icon.setObjectName("metaProjectHomeSummaryBadge")
+            icon.setFixedSize(32, 32)
+            icon.setAlignment(Qt.AlignCenter)
+            planned_button = QPushButton("计划中")
+            planned_button.setObjectName("metaNetworkMetaPlannedButton")
+            planned_button.setProperty("typeId", "network_meta_analysis")
+            planned_button.setProperty("statusKey", "planned")
+            planned_button.setProperty("interactionMode", "planned_disabled")
+            planned_button.setProperty("formalActionEnabled", False)
+            planned_button.setEnabled(False)
+            top.addWidget(icon)
+            top.addStretch(1)
+            top.addWidget(planned_button)
+            layout.addLayout(top)
+            type_id = QLabel("network_meta")
+            type_id.setObjectName("metaActiveTypeId")
+            title = QLabel("网络 Meta 分析")
+            title.setObjectName("metaActiveTypeLabel")
+            desc = QLabel("探索干预比较的网络证据合成\n计划中 / Planned")
+            desc.setObjectName("metaActiveTypeEffect")
+            desc.setWordWrap(True)
+            boundary = QLabel("Network Meta：planned only / not enabled，不属于当前 active Meta 类型。")
+            boundary.setObjectName("metaNetworkMetaBoundary")
+            boundary.setProperty("typeId", "network_meta_analysis")
+            boundary.setProperty("statusKey", "planned")
+            boundary.setProperty("formalActionEnabled", False)
+            boundary.setVisible(False)
+            layout.addWidget(type_id)
+            layout.addWidget(title)
+            layout.addWidget(desc)
+            layout.addWidget(boundary)
+            layout.addStretch(1)
+            return card
+
+        def _build_question_type_quick_access_panel(self) -> QFrame:
+            panel = QFrame()
+            panel.setObjectName("metaQuestionQuickAccessPanel")
+            layout = QHBoxLayout(panel)
+            layout.setContentsMargins(20, 13, 20, 13)
+            layout.setSpacing(8)
+            title = QLabel("快速入口")
+            title.setObjectName("metaQuestionSectionTitle")
+            layout.addWidget(title)
+            layout.addStretch(1)
+            for text in ("最近使用", "使用指南", "常见问题", "意见反馈"):
+                button = QPushButton(text)
+                button.setObjectName("metaProjectHomeBoundaryButton")
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(False)
+                layout.addWidget(button)
+            return panel
 
         def _build_search_strategy_panel(self) -> QFrame:
             frame = QFrame()
@@ -869,27 +1588,142 @@ if QWidget is not None:
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("exportGate", "disabled_empty_result")
             frame.setProperty("formalActionEnabled", False)
-            frame.setStyleSheet("QFrame#metaSearchStrategyRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            frame.setStyleSheet(
+                """
+                QFrame#metaSearchStrategyRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaSearchCard,
+                QFrame#metaSearchSideCard,
+                QFrame#metaSearchStepper {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaSearchTitle {
+                    color: #0F172A;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaSearchStepDone {
+                    background: transparent;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchStepCurrent {
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 900;
+                }
+                QLabel#metaSearchTermGroup {
+                    border-radius: 8px;
+                    font-size: 11px;
+                    font-weight: 850;
+                    padding: 7px 12px;
+                }
+                QLabel#metaSearchTermGroup[semantic="population"] {
+                    background: #EAF3FF;
+                    color: #1D4ED8;
+                    border-left: 3px solid #3B82F6;
+                }
+                QLabel#metaSearchTermGroup[semantic="exposure"] {
+                    background: #E9FBF3;
+                    color: #047857;
+                    border-left: 3px solid #10B981;
+                }
+                QLabel#metaSearchTermGroup[semantic="outcome"] {
+                    background: #FFF7ED;
+                    color: #C2410C;
+                    border-left: 3px solid #FB923C;
+                }
+                QLabel#metaSearchTermGroup[semantic="study"] {
+                    background: #F5F3FF;
+                    color: #7C3AED;
+                    border-left: 3px solid #A855F7;
+                }
+                QLabel#metaSearchQueryEditor {
+                    background: #FFFFFF;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 8px;
+                    color: #64748B;
+                    font-family: Menlo;
+                    font-size: 11px;
+                    padding: 8px;
+                }
+                QLabel#metaSearchDbRow {
+                    background: #FFFFFF;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 9px 12px;
+                }
+                QLabel#metaSearchDbRow[selected="true"] {
+                    background: #EFF6FF;
+                    border-color: #93C5FD;
+                }
+                QLabel#metaSearchChecklistPassed {
+                    color: #059669;
+                    font-size: 11px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchChecklistWarning {
+                    color: #D97706;
+                    font-size: 11px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchChecklistTodo {
+                    color: #64748B;
+                    font-size: 11px;
+                    font-weight: 850;
+                }
+                QPushButton#metaDatabaseDraftScopeButton {
+                    background: #EFF6FF;
+                    border: 1px solid #93C5FD;
+                    border-radius: 8px;
+                    color: #1D4ED8;
+                    font-size: 11px;
+                    font-weight: 850;
+                    text-align: left;
+                    padding: 8px 10px;
+                }
+                QPushButton#metaCopyQueryButton,
+                QPushButton#metaSaveSearchDraftButton,
+                QPushButton#metaSearchTokenButton {
+                    background: #FFFFFF;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 7px;
+                    color: #334155;
+                    font-size: 11px;
+                    font-weight: 750;
+                    padding: 6px 10px;
+                }
+                QPushButton#metaSearchTokenButton[token="operator"] {
+                    background: #EFF6FF;
+                    border-color: #93C5FD;
+                    color: #1D4ED8;
+                }
+                QPushButton#metaSearchNextReferenceButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 9px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 850;
+                    padding: 10px 12px;
+                }
+                """
+            )
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(14, 12, 14, 12)
-            layout.setSpacing(10)
-
-            title = QLabel("Search Strategy / 检索策略")
-            title.setObjectName("metaSearchStrategyRuntimeTitle")
-            title.setStyleSheet("font-weight: 750;")
-            layout.addWidget(title)
-
-            status_row = QHBoxLayout()
-            for object_name, text, status_key in (
-                ("metaSearchEnglishFirstChip", "English query draft", "testing"),
-                ("metaSearchLocalDraftChip", "local draft only", "shell_only"),
-                ("metaSearchNoExecutionChip", "search execution disabled", "blocked"),
-            ):
-                chip = make_status_chip(text, status_key=status_key)
-                chip.setObjectName(object_name)
-                status_row.addWidget(chip)
-            status_row.addStretch(1)
-            layout.addLayout(status_row)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(14)
+            layout.addWidget(self._build_meta_search_stepper())
 
             term_table = _readonly_table(
                 "metaSearchTermGroupTable",
@@ -901,12 +1735,7 @@ if QWidget is not None:
                 ),
             )
             term_table.setMinimumHeight(118)
-            layout.addWidget(term_table)
-
-            logic = QLabel("Boolean logic preview: Disease AND Biomarker AND Outcome")
-            logic.setObjectName("metaSearchBooleanLogicPreview")
-            logic.setWordWrap(True)
-            layout.addWidget(logic)
+            term_table.setVisible(False)
 
             query = QLabel(
                 'PubMed-style query draft: ("thyroid cancer"[Title/Abstract] OR "thyroid carcinoma"[Title/Abstract] OR '
@@ -917,13 +1746,18 @@ if QWidget is not None:
             query.setObjectName("metaSearchPubMedStyleQueryDraft")
             query.setProperty("queryState", "draft_only")
             query.setWordWrap(True)
-            query.setStyleSheet("border: 1px solid #BFD7FF; border-radius: 6px; padding: 8px; background: #EFF6FF;")
-            layout.addWidget(query)
+            query.setStyleSheet("background: transparent; border: 0; color: #64748B;")
+            query.setVisible(False)
+
+            logic = QLabel("Boolean logic preview: Disease AND Biomarker AND Outcome")
+            logic.setObjectName("metaSearchBooleanLogicPreview")
+            logic.setWordWrap(True)
+            logic.setVisible(False)
 
             database_scope = QFrame()
             database_scope.setObjectName("metaDatabaseDraftScope")
             database_scope.setProperty("selectionState", "draft_scope_only")
-            database_layout = QHBoxLayout(database_scope)
+            database_layout = QVBoxLayout(database_scope)
             database_layout.setContentsMargins(0, 0, 0, 0)
             database_layout.setSpacing(8)
             for database in ("PubMed", "Embase", "Web of Science"):
@@ -935,10 +1769,8 @@ if QWidget is not None:
                 item.setProperty("selectionState", "draft_scope_only")
                 item.setProperty("executedSearch", False)
                 item.setProperty("formalActionEnabled", False)
-                item.setMinimumHeight(32)
+                item.setMinimumHeight(42)
                 database_layout.addWidget(item)
-            database_layout.addStretch(1)
-            layout.addWidget(database_scope)
 
             action_row = QHBoxLayout()
             copy_query = QPushButton("Copy Query")
@@ -955,8 +1787,226 @@ if QWidget is not None:
             action_row.addWidget(copy_query)
             action_row.addWidget(save_draft)
             action_row.addStretch(1)
-            layout.addLayout(action_row)
+
+            main = QHBoxLayout()
+            main.setSpacing(14)
+            left = QVBoxLayout()
+            left.setSpacing(14)
+            left.addWidget(self._build_query_builder_card(term_table, query, action_row))
+            left.addWidget(self._build_search_fields_card())
+            main.addLayout(left, 1)
+            right = QVBoxLayout()
+            right.setSpacing(14)
+            right.addWidget(self._build_database_selection_card(database_scope))
+            right.addWidget(self._build_strategy_checklist_card())
+            right.addStretch(1)
+            right_wrap = QWidget()
+            right_wrap.setMinimumWidth(360)
+            right_wrap.setMaximumWidth(400)
+            right_wrap.setLayout(right)
+            main.addWidget(right_wrap)
+            layout.addLayout(main)
+
+            next_ref = QPushButton("下一步：文献导入 / Next: Reference Management")
+            next_ref.setObjectName("metaSearchNextReferenceButton")
+            next_ref.setProperty("targetPageKey", "import_dedup")
+            next_ref.setProperty("formalActionEnabled", False)
+            next_ref.clicked.connect(lambda _checked=False: self.show_target_ia_page("import_dedup"))
+            layout.addWidget(next_ref)
+            layout.addWidget(logic)
             return frame
+
+        def _build_meta_search_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaSearchStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(16, 10, 16, 10)
+            layout.setSpacing(8)
+            steps = (
+                ("✓", "项目首页\nProject Home", "done"),
+                ("✓", "问题与类型\nQuestion", "done"),
+                ("3", "检索策略\nSearch Strategy", "current"),
+                ("4", "文献导入\nReferences", "todo"),
+                ("5", "去重\nDeduplication", "todo"),
+                ("6", "筛选\nScreening", "todo"),
+                ("7", "全文提取\nFull-text", "todo"),
+                ("8", "偏倚风险\nRisk of Bias", "todo"),
+                ("9", "成对Meta\nPairwise", "todo"),
+                ("10", "结果复核\nReview", "todo"),
+                ("11", "报告门控\nGate", "todo"),
+                ("12", "导出\nExport", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName("metaSearchStepCurrent" if state == "current" else "metaSearchStepDone")
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(64)
+                layout.addWidget(item, 1)
+            return stepper
+
+        def _build_query_builder_card(self, term_table: QTableWidget, query: QLabel, action_row: QHBoxLayout) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 10, 14, 12)
+            layout.setSpacing(9)
+            title = QLabel("1. 检索式构建 / Query Builder")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            header = QHBoxLayout()
+            label = QLabel("关键词组 / TERM GROUPS")
+            label.setObjectName("metaSearchTitle")
+            count = QLabel("4 groups")
+            count.setObjectName("metaSearchMuted")
+            header.addWidget(label)
+            header.addStretch(1)
+            header.addWidget(count)
+            layout.addLayout(header)
+            for semantic, heading, value, terms in (
+                ("population", "POPULATION / 人群", "甲状腺癌", "3 terms"),
+                ("exposure", "EXPOSURE / INDEX MARKER / 暴露/指标", "Adiponectin", "4 terms"),
+                ("outcome", "OUTCOME / 结局", "预后 / 生存等", "6 terms"),
+                ("study", "STUDY DESIGN / 研究设计", "观察性研究", "4 terms"),
+            ):
+                layout.addWidget(self._search_term_group_label(semantic, heading, value, terms))
+            add = QLabel("+  新建关键词组 / New Group")
+            add.setObjectName("metaSearchMuted")
+            add.setAlignment(Qt.AlignCenter)
+            add.setStyleSheet("border: 1px dashed #CBD5E1; border-radius: 8px; padding: 8px; color: #64748B;")
+            layout.addWidget(add)
+            editor_header = QHBoxLayout()
+            editor_title = QLabel("检索式编辑 / QUERY EDITOR")
+            editor_title.setObjectName("metaSearchTitle")
+            editor_count = QLabel("5 lines · 313 chars")
+            editor_count.setObjectName("metaSearchMuted")
+            editor_header.addWidget(editor_title)
+            editor_header.addStretch(1)
+            editor_header.addWidget(editor_count)
+            layout.addLayout(editor_header)
+            editor = QLabel(
+                "1  (thyroid cancer OR thyroid carcinoma OR thyroid neoplasm)\n"
+                "2  AND (adiponectin OR ADIPOQ)\n"
+                "3  AND (prognosis OR survival OR recurrence)\n"
+                "4  AND (clinicopathological OR overall survival)\n"
+                "5  NOT animal studies"
+            )
+            editor.setObjectName("metaSearchQueryEditor")
+            editor.setMinimumHeight(118)
+            editor.setMaximumHeight(118)
+            editor.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            layout.addWidget(editor)
+            token_row = QHBoxLayout()
+            token_row.setSpacing(6)
+            for text, semantic in (("清空", ""), ("格式化", ""), ("添加组", ""), ("AND", "operator"), ("OR", "operator"), ("NOT", "operator"), ("(", "operator"), (")", "operator"), ("预览", "")):
+                button = QPushButton(text)
+                button.setObjectName("metaSearchTokenButton")
+                button.setProperty("token", semantic)
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(text not in {"添加组"})
+                button.setMinimumHeight(28)
+                token_row.addWidget(button)
+            token_row.addStretch(1)
+            layout.addLayout(token_row)
+            layout.addLayout(action_row)
+            layout.addWidget(query)
+            layout.addWidget(term_table)
+            return card
+
+        def _search_term_group_label(self, semantic: str, heading: str, value: str, terms: str) -> QLabel:
+            label = QLabel(f"{heading}\n{value}                                      {terms}   edit  delete")
+            label.setObjectName("metaSearchTermGroup")
+            label.setProperty("semantic", semantic)
+            label.setMinimumHeight(46)
+            label.setMaximumHeight(46)
+            return label
+
+        def _build_search_fields_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(10)
+            title = QLabel("2. 检索字段与限制 / Fields & Filters")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            for text in (
+                "FIELD / 字段：Title/Abstract, MeSH Terms, Keywords",
+                "LANGUAGE / 语言：English-first draft; Chinese database search disabled",
+                "YEAR / 年份：No limit by default",
+            ):
+                label = QLabel(text)
+                label.setObjectName("metaSearchDbRow")
+                layout.addWidget(label)
+            return card
+
+        def _build_database_selection_card(self, database_scope: QFrame) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(10)
+            title = QLabel("4. 选择数据库 / Select Databases (Draft)")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            tabs = QHBoxLayout()
+            for text, active in (("全部 / All", False), ("常用 / Common", True), ("自定义 / Custom", False)):
+                tab = QLabel(text)
+                tab.setAlignment(Qt.AlignCenter)
+                tab.setObjectName("metaSearchDbRow")
+                tab.setProperty("selected", active)
+                if active:
+                    tab.setStyleSheet("background: #2563EB; color: #FFFFFF; border: 0; border-radius: 0; padding: 8px; font-weight: 850;")
+                tabs.addWidget(tab, 1)
+            layout.addLayout(tabs)
+            layout.addWidget(database_scope)
+            for name, code, selected in (
+                ("Scopus", "SCP", False),
+                ("Cochrane Library", "COC", False),
+                ("Other（手动导入 / Manual import）", "", False),
+            ):
+                row = QLabel(f"{'☑' if selected else '☐'}   {name}\n无数量限制 / No limit                         {code}")
+                row.setObjectName("metaSearchDbRow")
+                row.setProperty("selected", selected)
+                layout.addWidget(row)
+            footer = QHBoxLayout()
+            selected = QLabel("2 个已选 / selected")
+            selected.setObjectName("metaSearchMuted")
+            draft = QLabel("Draft — 不执行真实检索")
+            draft.setStyleSheet("background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; color: #D97706; padding: 4px 8px;")
+            footer.addWidget(selected)
+            footer.addStretch(1)
+            footer.addWidget(draft)
+            layout.addLayout(footer)
+            return card
+
+        def _build_strategy_checklist_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(10)
+            title = QLabel("5. 检索策略清单 / Strategy Checklist")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            rows = (
+                ("研究问题已确定", "Research question defined", "passed"),
+                ("关键词组已覆盖核心要素", "Key elements covered", "passed"),
+                ("布尔逻辑结构完整", "Boolean logic structure complete", "passed"),
+                ("字段与限制需优化", "Fields & limits need optimization", "warning"),
+                ("数据库组合待确认", "Database combination to confirm", "todo"),
+                ("检索执行与结果数量待记录", "Execution & results to be recorded", "todo"),
+            )
+            for zh, en, state in rows:
+                label = QLabel(f"{'✓' if state == 'passed' else ('!' if state == 'warning' else '○')}  {zh}\n   {en}        { {'passed': '通过', 'warning': '警告', 'todo': '未完成'}[state] }")
+                label.setObjectName(
+                    "metaSearchChecklistPassed" if state == "passed" else ("metaSearchChecklistWarning" if state == "warning" else "metaSearchChecklistTodo")
+                )
+                layout.addWidget(label)
+            progress = QLabel("3 / 6 完成")
+            progress.setObjectName("metaSearchMuted")
+            progress.setAlignment(Qt.AlignRight)
+            layout.addWidget(progress)
+            return card
 
         def _build_reference_dedup_panel(self) -> QFrame:
             frame = QFrame()
@@ -1073,15 +2123,194 @@ if QWidget is not None:
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("exportGate", "disabled_empty_result")
             frame.setProperty("formalActionEnabled", False)
-            frame.setStyleSheet("QFrame#metaScreeningRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            frame.setStyleSheet(
+                """
+                QFrame#metaScreeningRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaScreeningCard,
+                QFrame#metaScreeningStepper,
+                QFrame#metaScreeningProgressCard,
+                QFrame#metaScreeningDecisionCard,
+                QFrame#metaScreeningDecisionLog {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaScreeningTitle {
+                    color: #111827;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaScreeningMuted,
+                QLabel#metaScreeningSmall {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaScreeningStepDone,
+                QLabel#metaScreeningStepCurrent,
+                QLabel#metaScreeningStepTodo {
+                    color: #94A3B8;
+                    font-size: 10px;
+                    font-weight: 750;
+                }
+                QLabel#metaScreeningStepDone,
+                QLabel#metaScreeningStepCurrent {
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaScreeningRefItem {
+                    background: #FFFFFF;
+                    border: 1px solid transparent;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaScreeningRefItem[selected="true"] {
+                    background: #EAF3FF;
+                    border-left: 3px solid #2563EB;
+                    border-color: #BFDBFE;
+                }
+                QLabel#metaScreeningStatusInclude {
+                    background: #DCFCE7;
+                    border-radius: 8px;
+                    color: #059669;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningStatusExclude {
+                    background: #FEE2E2;
+                    border-radius: 8px;
+                    color: #DC2626;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningStatusUncertain {
+                    background: #FEF3C7;
+                    border-radius: 8px;
+                    color: #D97706;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningStatusFulltext {
+                    background: #DBEAFE;
+                    border-radius: 8px;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningMetric {
+                    color: #2563EB;
+                    font-size: 16px;
+                    font-weight: 900;
+                }
+                QLabel#metaScreeningAbstract {
+                    background: transparent;
+                    border: 0;
+                    color: #475569;
+                    font-size: 12px;
+                    line-height: 1.35;
+                }
+                QLabel#metaScreeningMetaBox,
+                QLabel#metaScreeningNoteBox {
+                    background: #F8FAFC;
+                    border: 1px solid #EEF2F7;
+                    border-radius: 10px;
+                    color: #475569;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaScreeningKeyword {
+                    background: #EFF6FF;
+                    border: 1px solid #BFDBFE;
+                    border-radius: 10px;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 800;
+                    padding: 4px 8px;
+                }
+                QLabel#metaScreeningAISuggestionCard {
+                    background: #FFFBEB;
+                    border: 1px solid #FDE68A;
+                    border-radius: 10px;
+                    color: #B45309;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaScreeningExclusionReason,
+                QLabel#metaScreeningNotesBox {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    color: #94A3B8;
+                    font-size: 11px;
+                    padding: 9px 10px;
+                }
+                QPushButton#metaScreeningDecisionDraftButton {
+                    border-radius: 10px;
+                    font-size: 12px;
+                    font-weight: 850;
+                    padding: 10px 12px;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="include_draft"] {
+                    background: #E9FBF3;
+                    border: 1px solid #86EFAC;
+                    color: #059669;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="exclude_draft"] {
+                    background: #FF3045;
+                    border: 1px solid #FF3045;
+                    color: #FFFFFF;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="uncertain"] {
+                    background: #FFFBEB;
+                    border: 1px solid #FACC15;
+                    color: #B45309;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="need_full_text"] {
+                    background: #EFF6FF;
+                    border: 1px solid #93C5FD;
+                    color: #2563EB;
+                }
+                QPushButton#metaSaveDraftScreeningDecisionButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 10px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 10px 12px;
+                }
+                QPushButton#metaScreeningSaveNextButton {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 10px;
+                    color: #475569;
+                    font-size: 11px;
+                    font-weight: 750;
+                    padding: 8px 10px;
+                }
+                QPushButton#metaScreeningNextFulltextButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 10px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 10px 14px;
+                }
+                """
+            )
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(14, 12, 14, 12)
-            layout.setSpacing(10)
-
-            title = QLabel("Screening / 文献筛选")
-            title.setObjectName("metaScreeningRuntimeTitle")
-            title.setStyleSheet("font-weight: 750;")
-            layout.addWidget(title)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(12)
+            layout.addWidget(self._build_meta_screening_stepper())
 
             counts = _readonly_table(
                 "metaScreeningDraftCountsTable",
@@ -1095,9 +2324,8 @@ if QWidget is not None:
                 ),
             )
             counts.setMinimumHeight(118)
-            layout.addWidget(counts)
+            counts.setVisible(False)
 
-            body = QHBoxLayout()
             queue = _readonly_table(
                 "metaScreeningReferenceQueue",
                 ("ref_id", "title", "screening_status"),
@@ -1108,24 +2336,7 @@ if QWidget is not None:
                 ),
             )
             queue.setMinimumHeight(138)
-            body.addWidget(queue, 2)
-
-            detail = QFrame()
-            detail.setObjectName("metaScreeningReferenceDetail")
-            detail.setStyleSheet("QFrame#metaScreeningReferenceDetail { border: 1px solid #CBD5E1; border-radius: 8px; background: #F8FAFC; }")
-            detail_layout = QVBoxLayout(detail)
-            detail_layout.setContentsMargins(10, 8, 10, 8)
-            for text in (
-                "Reference detail: REF-001",
-                "Title/abstract review state: draft only",
-                "Reason draft: biomarker association in target population",
-            ):
-                label = QLabel(text)
-                label.setObjectName("metaScreeningReferenceDetailLabel")
-                label.setWordWrap(True)
-                detail_layout.addWidget(label)
-            body.addWidget(detail, 1)
-            layout.addLayout(body)
+            queue.setVisible(False)
 
             reference_queue = make_reference_queue_panel(
                 references=(
@@ -1139,38 +2350,316 @@ if QWidget is not None:
             reference_queue.setProperty("pageKey", "screening")
             reference_queue.setProperty("screeningState", "draft_decisions_only")
             reference_queue.setProperty("formalActionEnabled", False)
-            layout.addWidget(reference_queue)
+            reference_queue.setVisible(False)
 
-            decision_row = QHBoxLayout()
+            main = QHBoxLayout()
+            main.setSpacing(12)
+            main.addWidget(self._build_screening_queue_column(counts, queue, reference_queue))
+            main.addWidget(self._build_screening_reference_detail_card(), 1)
+            main.addWidget(self._build_screening_decision_column())
+            layout.addLayout(main)
+
+            footer = QHBoxLayout()
+            note = QLabel("AI 建议仅供参考，不能替代人工筛选。最终纳排决策须由研究者确认后方可进入下一流程。")
+            note.setObjectName("metaScreeningMuted")
+            note.setStyleSheet("color: #2563EB;")
+            footer.addWidget(note, 1)
+            next_fulltext = QPushButton("下一步：全文与提取 / Next: Full-text & Extraction  ->")
+            next_fulltext.setObjectName("metaScreeningNextFulltextButton")
+            next_fulltext.setProperty("targetPageKey", "fulltext_extraction")
+            next_fulltext.setProperty("formalActionEnabled", False)
+            next_fulltext.clicked.connect(lambda _checked=False: self.show_target_ia_page("fulltext_extraction"))
+            footer.addWidget(next_fulltext)
+            layout.addLayout(footer)
+
+            layout.addWidget(counts)
+            layout.addWidget(queue)
+            layout.addWidget(reference_queue)
+            return frame
+
+        def _build_meta_screening_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaScreeningStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(12, 9, 12, 9)
+            layout.setSpacing(6)
+            steps = (
+                ("1", "选题\nTopic", "done"),
+                ("2", "协议\nProtocol", "done"),
+                ("3", "检索\nSearch", "done"),
+                ("4", "去重\nDedup", "done"),
+                ("5", "筛选\nScreening", "current"),
+                ("6", "全文\nFull-text", "todo"),
+                ("7", "提取\nExtraction", "todo"),
+                ("8", "质量\nQuality", "todo"),
+                ("9", "合并\nSynthesis", "todo"),
+                ("10", "分析\nAnalysis", "todo"),
+                ("11", "报告\nReport", "todo"),
+                ("12", "发布\nPublish", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName(
+                    "metaScreeningStepCurrent" if state == "current" else ("metaScreeningStepDone" if state == "done" else "metaScreeningStepTodo")
+                )
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(48)
+                layout.addWidget(item, 1)
+            return stepper
+
+        def _build_screening_queue_column(self, counts: QTableWidget, queue: QTableWidget, reference_queue: QFrame) -> QFrame:
+            column = QFrame()
+            column.setObjectName("metaScreeningCard")
+            column.setFixedWidth(280)
+            column.setFixedHeight(575)
+            layout = QVBoxLayout(column)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("参考文献队列 / Queue")
+            title.setObjectName("metaScreeningTitle")
+            title.setWordWrap(True)
+            badge = QLabel("8 条")
+            badge.setObjectName("metaScreeningSmall")
+            badge.setStyleSheet("border: 1px solid #E5E7EB; border-radius: 10px; padding: 3px 8px;")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(badge)
+            layout.addLayout(header)
+
+            tabs = QHBoxLayout()
+            for text, active in (("全部 (8)", True), ("待筛选 (6)", False), ("已处理 (2)", False)):
+                tab = QLabel(text)
+                tab.setObjectName("metaScreeningSmall")
+                tab.setAlignment(Qt.AlignCenter)
+                if active:
+                    tab.setStyleSheet("color: #2563EB; font-weight: 900; border-bottom: 2px solid #2563EB; padding: 6px;")
+                else:
+                    tab.setStyleSheet("color: #64748B; padding: 6px;")
+                tabs.addWidget(tab, 1)
+            layout.addLayout(tabs)
+
+            refs = (
+                ("#004", "建议纳入", "include", "待筛选", "CAR-T relapsed B-cell lymphoma review", "2022  Blood Cancer"),
+                ("#005", "建议排除", "exclude", "已排除", "PD-L1 gastric cancer meta-analysis", "2017  Oncotarget"),
+                ("#006", "不确定", "uncertain", "待筛选", "Dupilumab safety in adult dermatitis", "2019  JAMA"),
+            )
+            for index, (ref_no, badge_text, semantic, state, title_text, meta) in enumerate(refs):
+                layout.addWidget(self._build_screening_reference_item(ref_no, badge_text, semantic, state, title_text, meta, selected=index == 0))
+
+            footer = QHBoxLayout()
+            footer_label = QLabel("第 1-8 条，共 22 条")
+            footer_label.setObjectName("metaScreeningMuted")
+            page = QLabel("<   1   >")
+            page.setObjectName("metaScreeningMuted")
+            page.setAlignment(Qt.AlignRight)
+            footer.addWidget(footer_label)
+            footer.addStretch(1)
+            footer.addWidget(page)
+            layout.addLayout(footer)
+
+            progress = QFrame()
+            progress.setObjectName("metaScreeningProgressCard")
+            progress_layout = QVBoxLayout(progress)
+            progress_layout.setContentsMargins(12, 10, 12, 10)
+            progress_layout.setSpacing(8)
+            progress_title = QLabel("筛选进度 / Screening Progress")
+            progress_title.setObjectName("metaScreeningTitle")
+            progress_layout.addWidget(progress_title)
+            metrics = QHBoxLayout()
+            for value, label, color in (("6", "待筛选", "#2563EB"), ("1", "已纳入", "#059669"), ("1", "已排除", "#DC2626"), ("0", "不确定", "#D97706")):
+                box = QVBoxLayout()
+                metric = QLabel(value)
+                metric.setObjectName("metaScreeningMetric")
+                metric.setAlignment(Qt.AlignCenter)
+                metric.setStyleSheet(f"color: {color}; font-size: 16px; font-weight: 900;")
+                caption = QLabel(label)
+                caption.setObjectName("metaScreeningMuted")
+                caption.setAlignment(Qt.AlignCenter)
+                box.addWidget(metric)
+                box.addWidget(caption)
+                metrics.addLayout(box)
+            progress_layout.addLayout(metrics)
+            bar = QLabel("")
+            bar.setFixedHeight(6)
+            bar.setStyleSheet("background: #2563EB; border-radius: 3px;")
+            progress_layout.addWidget(bar)
+            percent = QLabel("25% 完成")
+            percent.setObjectName("metaScreeningMuted")
+            percent.setAlignment(Qt.AlignRight)
+            progress_layout.addWidget(percent)
+            layout.addWidget(progress)
+            return column
+
+        def _build_screening_reference_item(self, ref_no: str, badge_text: str, semantic: str, state: str, title_text: str, meta: str, *, selected: bool) -> QLabel:
+            label = QLabel(f"{ref_no}    {badge_text}                                      {state}\n{title_text} · {meta}")
+            label.setObjectName("metaScreeningRefItem")
+            label.setProperty("selected", selected)
+            label.setWordWrap(True)
+            label.setMinimumHeight(72 if selected else 68)
+            label.setMaximumHeight(82 if selected else 76)
+            return label
+
+        def _build_screening_reference_detail_card(self) -> QFrame:
+            detail = QFrame()
+            detail.setObjectName("metaScreeningReferenceDetail")
+            detail.setProperty("screeningState", "draft_decisions_only")
+            detail.setFixedWidth(390)
+            detail.setFixedHeight(575)
+            layout = QVBoxLayout(detail)
+            layout.setContentsMargins(14, 10, 14, 10)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("文献详情 / Reference Detail")
+            title.setObjectName("metaScreeningTitle")
+            pager = QLabel("<    4 / 8    >")
+            pager.setObjectName("metaScreeningMuted")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(pager)
+            layout.addLayout(header)
+
+            paper_title = QLabel("CAR-T cell therapy for relapsed or refractory B-cell non-Hodgkin lymphoma: systematic review and meta-analysis")
+            paper_title.setObjectName("metaScreeningTitle")
+            paper_title.setStyleSheet("font-size: 14px; font-weight: 900; color: #111827;")
+            paper_title.setWordWrap(True)
+            layout.addWidget(paper_title)
+            author = QLabel("Schuster SJ, Bishop MR, Tam CS, et al.")
+            author.setObjectName("metaScreeningMuted")
+            layout.addWidget(author)
+
+            meta_box = QLabel("期刊 / JOURNAL                         年份 / YEAR\nBlood Cancer Journal                    2022\n\nPMID                                     DOI\n35773265                                10.1038/s41408-022-00700-z")
+            meta_box.setObjectName("metaScreeningMetaBox")
+            meta_box.setWordWrap(True)
+            layout.addWidget(meta_box)
+
+            abstract_title = QLabel("摘要 / ABSTRACT")
+            abstract_title.setObjectName("metaScreeningMuted")
+            abstract_title.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(abstract_title)
+            abstract = QLabel(
+                "Chimeric antigen receptor T-cell (CAR-T) therapy has emerged as a transformative treatment for relapsed or refractory B-cell non-Hodgkin lymphoma. "
+                "This systematic review and meta-analysis evaluates efficacy and safety across multiple clinical trials. Pooled response rate and safety outcomes are summarized for reviewer triage."
+            )
+            abstract.setObjectName("metaScreeningAbstract")
+            abstract.setWordWrap(True)
+            layout.addWidget(abstract)
+
+            keyword_title = QLabel("关键词 / KEYWORDS")
+            keyword_title.setObjectName("metaScreeningMuted")
+            keyword_title.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(keyword_title)
+            keyword_row = QHBoxLayout()
+            for keyword in ("CAR-T", "B-cell", "CD19", "immuno", "meta"):
+                chip = QLabel(keyword)
+                chip.setObjectName("metaScreeningKeyword")
+                chip.setAlignment(Qt.AlignCenter)
+                keyword_row.addWidget(chip)
+            keyword_row.addStretch(1)
+            layout.addLayout(keyword_row)
+
+            ai_card = QLabel("AI suggestion: likely_include, confidence 0.72. Advisory only; reviewer remains the authority.")
+            ai_card.setObjectName("metaScreeningAISuggestionCard")
+            ai_card.setProperty("aiBoundary", "advisory_only")
+            ai_card.setWordWrap(True)
+            layout.addWidget(ai_card)
+            layout.addStretch(1)
+            return detail
+
+        def _build_screening_decision_column(self) -> QFrame:
+            column = QFrame()
+            column.setObjectName("metaScreeningDecisionCard")
+            column.setFixedWidth(260)
+            column.setFixedHeight(575)
+            layout = QVBoxLayout(column)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(8)
+            title = QLabel("筛选决策 / Screening Decision")
+            title.setObjectName("metaScreeningTitle")
+            title.setWordWrap(True)
+            layout.addWidget(title)
+            decision_label = QLabel("选择决策 / SELECT DECISION")
+            decision_label.setObjectName("metaScreeningMuted")
+            decision_label.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(decision_label)
+
+            decision_grid = QGridLayout()
+            decision_grid.setHorizontalSpacing(8)
+            decision_grid.setVerticalSpacing(8)
             for decision_id, text in (
-                ("include_draft", "Include draft"),
-                ("exclude_draft", "Exclude draft"),
-                ("uncertain", "Uncertain"),
-                ("need_full_text", "Need full text"),
+                ("include_draft", "纳入草稿"),
+                ("exclude_draft", "排除草稿"),
+                ("uncertain", "不确定"),
+                ("need_full_text", "需全文"),
             ):
                 button = QPushButton(text)
                 button.setObjectName("metaScreeningDecisionDraftButton")
                 button.setProperty("decisionId", decision_id)
                 button.setProperty("decisionState", "draft_only")
                 button.setProperty("formalActionEnabled", False)
-                button.setMinimumHeight(34)
-                decision_row.addWidget(button)
-            layout.addLayout(decision_row)
+                button.setMinimumHeight(40)
+                index = {"include_draft": 0, "exclude_draft": 1, "uncertain": 2, "need_full_text": 3}[decision_id]
+                decision_grid.addWidget(button, index // 2, index % 2)
+            layout.addLayout(decision_grid)
 
-            ai_card = QLabel("AI suggestion: likely_include, confidence 0.72. Advisory only; reviewer remains the authority.")
-            ai_card.setObjectName("metaScreeningAISuggestionCard")
-            ai_card.setProperty("aiBoundary", "advisory_only")
-            ai_card.setWordWrap(True)
-            ai_card.setStyleSheet("border: 1px solid #BFD7FF; border-radius: 6px; padding: 8px; background: #EFF6FF;")
-            layout.addWidget(ai_card)
+            reason_label = QLabel("排除原因 / EXCLUSION REASON")
+            reason_label.setObjectName("metaScreeningMuted")
+            reason_label.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(reason_label)
+            reason = QLabel("请选择排除原因                         v")
+            reason.setObjectName("metaScreeningExclusionReason")
+            layout.addWidget(reason)
+            notes_label = QLabel("补充说明 / ADDITIONAL NOTES")
+            notes_label.setObjectName("metaScreeningMuted")
+            notes_label.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(notes_label)
+            notes = QLabel("添加决策说明（可选）...\n\n")
+            notes.setObjectName("metaScreeningNotesBox")
+            notes.setMaximumHeight(70)
+            layout.addWidget(notes)
 
             save_draft = QPushButton("Save Draft Decision")
             save_draft.setObjectName("metaSaveDraftScreeningDecisionButton")
             save_draft.setProperty("actionSemantic", "draft_only")
             save_draft.setProperty("formalActionEnabled", False)
-            save_draft.setMinimumHeight(34)
+            save_draft.setMinimumHeight(40)
             layout.addWidget(save_draft)
-            return frame
+            save_next = QPushButton("保存并下一条 / Save Next")
+            save_next.setObjectName("metaScreeningSaveNextButton")
+            save_next.setProperty("actionSemantic", "draft_only")
+            save_next.setProperty("formalActionEnabled", False)
+            save_next.setMinimumHeight(32)
+            layout.addWidget(save_next)
+            layout.addSpacing(20)
+
+            log = QFrame()
+            log.setObjectName("metaScreeningDecisionLog")
+            log_layout = QVBoxLayout(log)
+            log_layout.setContentsMargins(12, 10, 12, 10)
+            log_layout.setSpacing(8)
+            log_header = QHBoxLayout()
+            log_title = QLabel("决策记录 / Log")
+            log_title.setObjectName("metaScreeningTitle")
+            log_title.setWordWrap(True)
+            log_count = QLabel("3 条记录")
+            log_count.setObjectName("metaScreeningMuted")
+            log_header.addWidget(log_title)
+            log_header.addStretch(1)
+            log_header.addWidget(log_count)
+            log_layout.addLayout(log_header)
+            for badge, semantic, text in (
+                ("纳入草稿", "include", "RCT设计，符合纳入标准\n09:15 · Developer"),
+                ("排除草稿", "exclude", "结局指标与检索方案不符\n09:32 · Developer"),
+                ("需全文", "fulltext", "摘要信息不足，需全文核查\n10:05 · Developer"),
+            ):
+                row = QLabel(f"{badge}    {text}")
+                row.setObjectName(
+                    "metaScreeningStatusInclude" if semantic == "include" else ("metaScreeningStatusExclude" if semantic == "exclude" else "metaScreeningStatusFulltext")
+                )
+                row.setWordWrap(True)
+                log_layout.addWidget(row)
+            layout.addWidget(log, 1)
+            return column
 
         def _build_fulltext_extraction_panel(self) -> QFrame:
             frame = QFrame()
@@ -1184,14 +2673,152 @@ if QWidget is not None:
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("exportGate", "disabled_empty_result")
             frame.setProperty("formalActionEnabled", False)
-            frame.setMinimumHeight(360)
-            frame.setStyleSheet("QFrame#metaFulltextExtractionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            frame.setStyleSheet(
+                """
+                QFrame#metaFulltextExtractionPanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaFulltextStepper,
+                QFrame#metaFulltextCard,
+                QFrame#metaFulltextSideCard,
+                QFrame#metaFulltextTableCard,
+                QFrame#metaExtractionDesignBody,
+                QFrame#metaFulltextManagementBody {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaFulltextTitle,
+                QLabel#metaExtractionSectionTitle {
+                    color: #111827;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaFulltextMuted,
+                QLabel#metaFulltextSmall,
+                QLabel#metaExtractionMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaFulltextStepDone,
+                QLabel#metaFulltextStepCurrent,
+                QLabel#metaFulltextStepTodo {
+                    color: #94A3B8;
+                    font-size: 10px;
+                    font-weight: 750;
+                }
+                QLabel#metaFulltextStepDone,
+                QLabel#metaFulltextStepCurrent {
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QPushButton#metaFulltextExtractionTab {
+                    background: transparent;
+                    border: 0;
+                    border-radius: 0;
+                    color: #475569;
+                    font-size: 12px;
+                    font-weight: 750;
+                    padding: 7px 10px;
+                }
+                QPushButton#metaFulltextExtractionTab:checked {
+                    color: #2563EB;
+                    border-bottom: 2px solid #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaFulltextStatusRow,
+                QLabel#metaFulltextSourceRow,
+                QLabel#metaExtractionStructureItem,
+                QLabel#metaExtractionInfoBox {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaFulltextStatusRow[status="ready"],
+                QLabel#metaExtractionMatchBadge {
+                    background: #ECFDF5;
+                    border-color: #BBF7D0;
+                    color: #059669;
+                    font-weight: 850;
+                }
+                QLabel#metaFulltextStatusRow[status="pending"] {
+                    background: #FFFBEB;
+                    border-color: #FDE68A;
+                    color: #B45309;
+                }
+                QLabel#metaFulltextStatusRow[status="missing"] {
+                    background: #FEF2F2;
+                    border-color: #FECACA;
+                    color: #DC2626;
+                }
+                QLabel#metaExtractionFieldHeader {
+                    background: #F8FAFC;
+                    border: 0;
+                    color: #64748B;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 6px;
+                }
+                QLabel#metaExtractionFieldCell {
+                    background: #FFFFFF;
+                    border: 0;
+                    border-bottom: 1px solid #F1F5F9;
+                    color: #334155;
+                    font-size: 10px;
+                    padding: 6px;
+                }
+                QLabel#metaExtractionFieldCell[semantic="section"] {
+                    background: #F8FAFC;
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaExtractionRequiredDot {
+                    background: #2563EB;
+                    border-radius: 7px;
+                    color: #FFFFFF;
+                    font-size: 9px;
+                    font-weight: 900;
+                }
+                QLabel#metaExtractionAnalysisDot {
+                    background: #22C55E;
+                    border-radius: 7px;
+                    color: #FFFFFF;
+                    font-size: 9px;
+                    font-weight: 900;
+                }
+                QPushButton#metaSaveExtractionDesignButton,
+                QPushButton#metaBackToFulltextButton {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 9px;
+                    color: #334155;
+                    font-size: 12px;
+                    font-weight: 800;
+                    padding: 9px 12px;
+                }
+                QPushButton#metaConfirmExtractionButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 10px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 10px 14px;
+                }
+                """
+            )
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(10)
 
+            layout.addWidget(self._build_fulltext_stepper())
+
             tab_row = QHBoxLayout()
-            tab_row.setSpacing(8)
+            tab_row.setSpacing(14)
             self._fulltext_extraction_tabs: dict[str, QPushButton] = {}
             for index, tab in enumerate(("全文管理", "提取表设计", "提取完成核查", "历史记录")):
                 button = QPushButton(tab)
@@ -1199,7 +2826,6 @@ if QWidget is not None:
                 button.setCheckable(True)
                 button.setChecked(index == 0)
                 button.setMinimumHeight(34)
-                button.setMinimumWidth(92)
                 button.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                 button.setProperty("pageKey", "fulltext_extraction")
                 button.setProperty("tabKey", tab)
@@ -1209,26 +2835,6 @@ if QWidget is not None:
             tab_row.addStretch(1)
             layout.addLayout(tab_row)
 
-            self._fulltext_management_body = QFrame()
-            self._fulltext_management_body.setObjectName("metaFulltextManagementBody")
-            self._fulltext_management_body.setMinimumHeight(260)
-            self._fulltext_management_body.setStyleSheet("QFrame#metaFulltextManagementBody { border: 1px solid #E2E8F0; border-radius: 8px; background: #F8FAFC; }")
-            management_layout = QVBoxLayout(self._fulltext_management_body)
-            management_layout.setContentsMargins(12, 10, 12, 10)
-            management_layout.setSpacing(8)
-            management_title = QLabel("全文管理")
-            management_title.setObjectName("metaFulltextManagementTitle")
-            management_title.setStyleSheet("font-weight: 700;")
-            management_layout.addWidget(management_title)
-            for text in (
-                "全文文件：待绑定 PDF / HTML；当前不自动抽取正文。",
-                "提取准备：仅做 shell 级状态核查，不生成研究数据。",
-                "下一步：确认全文齐备后进入提取表设计与人工提取阶段。",
-            ):
-                label = QLabel(text)
-                label.setObjectName("metaFulltextManagementStatus")
-                label.setWordWrap(True)
-                management_layout.addWidget(label)
             fulltext_status = _readonly_table(
                 "metaFulltextStatusPreviewTable",
                 ("ref_id", "full_text_state", "extraction_state"),
@@ -1238,100 +2844,21 @@ if QWidget is not None:
                     ("REF-004", "not requested", "not_started"),
                 ),
             )
+            fulltext_status.setProperty("horizontalOverflow", True)
             fulltext_status.setMinimumHeight(92)
-            management_layout.addWidget(fulltext_status)
-            management_layout.addStretch(1)
+            fulltext_status.setVisible(False)
+
+            self._fulltext_management_body = self._build_fulltext_management_body(fulltext_status)
             layout.addWidget(self._fulltext_management_body)
 
-            self._extraction_design_body = QFrame()
-            self._extraction_design_body.setObjectName("metaExtractionDesignBody")
-            self._extraction_design_body.setStyleSheet("QFrame#metaExtractionDesignBody { border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; }")
-            body = QHBoxLayout(self._extraction_design_body)
-            body.setContentsMargins(12, 10, 12, 10)
-            body.setSpacing(12)
-            structure = QFrame()
-            structure.setObjectName("metaExtractionStructurePanel")
-            structure.setMinimumWidth(260)
-            structure.setStyleSheet("QFrame#metaExtractionStructurePanel { border: 1px solid #E2E8F0; border-radius: 8px; background: #F8FAFC; }")
-            structure_layout = QVBoxLayout(structure)
-            structure_layout.setContentsMargins(12, 10, 12, 10)
-            structure_layout.setSpacing(8)
-            structure_title = QLabel("提取表结构")
-            structure_title.setObjectName("metaExtractionStructureTitle")
-            structure_title.setStyleSheet("font-weight: 700;")
-            structure_layout.addWidget(structure_title)
-            for section, count in (
-                ("研究基本信息", "6"),
-                ("研究对象与分组", "4"),
-                ("干预 / 暴露", "3"),
-                ("对照措施", "2"),
-                ("结局指标", "5"),
-                ("效应量数据（二分类）", "8"),
-                ("备注与来源", "3"),
-                ("复核字段", "2"),
-            ):
-                label = QLabel(f"{section}  {count}")
-                label.setObjectName("metaExtractionStructureItem")
-                label.setProperty("sectionKey", section)
-                label.setMinimumHeight(24)
-                structure_layout.addWidget(label)
-            body.addWidget(structure, 1)
-
-            fields = QFrame()
-            fields.setObjectName("metaExtractionFieldStructure")
-            fields.setMinimumWidth(620)
-            fields.setMinimumHeight(260)
-            fields.setStyleSheet("QFrame#metaExtractionFieldStructure { border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; }")
-            fields_layout = QVBoxLayout(fields)
-            fields_layout.setContentsMargins(12, 10, 12, 10)
-            fields_layout.setSpacing(8)
-            fields_title = QLabel("Draft extraction fields（Biomarker / Prognostic Meta）")
-            fields_title.setObjectName("metaExtractionFieldTitle")
-            fields_title.setStyleSheet("font-weight: 700;")
-            fields_layout.addWidget(fields_title)
-            legacy_contract = QLabel("当前提取表字段（Binary Outcome Meta 专用）")
-            legacy_contract.setObjectName("metaExtractionLegacyContractLabel")
-            legacy_contract.setProperty("legacyCompatibilityOnly", True)
-            fields_layout.addWidget(legacy_contract)
-            field_grid = QGridLayout()
-            field_grid.setHorizontalSpacing(10)
-            field_grid.setVerticalSpacing(6)
-            for column, header in enumerate(("field", "example / draft note", "required", "state", "analysis use")):
-                header_label = QLabel(header)
-                header_label.setObjectName("metaExtractionFieldHeader")
-                header_label.setStyleSheet("font-weight: 700; color: #64748B;")
-                header_label.setMinimumHeight(26)
-                field_grid.addWidget(header_label, 0, column)
-            for row, values in enumerate(
-                (
-                    ("first_author", "Zhang", "yes", "draft extraction", "-"),
-                    ("year", "2020", "yes", "draft extraction", "-"),
-                    ("研究设计", "observational cohort / case-control", "yes", "draft extraction", "yes"),
-                    ("cancer_type", "thyroid carcinoma", "yes", "reviewer confirmed later", "yes"),
-                    ("marker_name", "adiponectin / ADIPOQ", "yes", "draft extraction", "yes"),
-                    ("effect_measure", "HR", "yes", "draft extraction", "yes"),
-                    ("effect_value", "1.48 mockup-only / draft extraction", "yes", "not final", "yes"),
-                    ("ci_lower", "1.05 mockup-only / draft extraction", "yes", "not final", "yes"),
-                    ("ci_upper", "2.10 mockup-only / draft extraction", "yes", "not final", "yes"),
-                    ("adjusted_model", "multivariable", "optional", "draft extraction", "yes"),
-                    ("outcome_name", "overall survival", "yes", "draft extraction", "yes"),
-                ),
-                start=1,
-            ):
-                for column, value in enumerate(values):
-                    label = QLabel(value)
-                    label.setObjectName("metaExtractionFieldCell")
-                    label.setMinimumHeight(24)
-                    field_grid.addWidget(label, row, column)
-            fields_layout.addLayout(field_grid)
-            body.addWidget(fields, 3)
+            self._extraction_design_body = self._build_extraction_design_body()
             layout.addWidget(self._extraction_design_body)
 
             shared_extraction_table = make_extraction_form_table(
                 (
                     ExtractionField("first_author", "first_author", "Zhang", "testing", "draft", "manual extraction draft"),
                     ExtractionField("year", "year", "2020", "testing", "draft", "manual extraction draft"),
-                    ExtractionField("cancer_type", "cancer_type", "thyroid carcinoma", "testing", "draft", "reviewer confirmation required"),
+                    ExtractionField("cancer_type", "cancer_type", "thyroid carcinoma", "testing", "draft", "manual review required"),
                     ExtractionField("effect_measure", "effect_measure", "HR", "testing", "draft", "not a formal pooled input"),
                     ExtractionField("effect_value", "effect_value", "1.48 draft", "testing", "draft", "not a formal effect estimate"),
                     ExtractionField("ci_lower", "ci_lower", "1.05 draft", "testing", "draft", "not a formal effect estimate"),
@@ -1343,13 +2870,16 @@ if QWidget is not None:
             shared_extraction_table.setProperty("pageKey", "fulltext_extraction")
             shared_extraction_table.setProperty("extractionState", "draft_extraction")
             shared_extraction_table.setProperty("formalActionEnabled", False)
+            shared_extraction_table.setProperty("draftOnly", True)
+            shared_extraction_table.setProperty("formalAnalysisInput", False)
+            shared_extraction_table.setVisible(False)
             layout.addWidget(shared_extraction_table)
 
             self._extraction_action_bar = QFrame()
             self._extraction_action_bar.setObjectName("metaExtractionActionBar")
             action_row = QHBoxLayout(self._extraction_action_bar)
             action_row.setContentsMargins(0, 0, 0, 0)
-            save = QPushButton("保存提取表设计 - adapter needed")
+            save = QPushButton("保存提取表设计")
             save.setObjectName("metaSaveExtractionDesignButton")
             save.setMinimumHeight(34)
             save.setEnabled(False)
@@ -1365,7 +2895,7 @@ if QWidget is not None:
             back = QPushButton("返回全文管理")
             back.setObjectName("metaBackToFulltextButton")
             back.setMinimumHeight(34)
-            back.setEnabled(False)
+            back.clicked.connect(lambda _checked=False: self._select_fulltext_extraction_tab("全文管理"))
             action_row.addWidget(save)
             action_row.addStretch(1)
             action_row.addWidget(mark_draft)
@@ -1373,6 +2903,269 @@ if QWidget is not None:
             layout.addWidget(self._extraction_action_bar)
             self._select_fulltext_extraction_tab("全文管理")
             return frame
+
+        def _build_fulltext_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaFulltextStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(14, 9, 14, 9)
+            layout.setSpacing(8)
+            steps = (
+                ("✓", "项目首页", "done"),
+                ("✓", "研究问题与\nMeta类型", "done"),
+                ("✓", "检索策略", "done"),
+                ("✓", "文献导入与\n去重", "done"),
+                ("✓", "文献筛选", "done"),
+                ("6", "全文与数据\n提取", "current"),
+                ("7", "质量评价", "todo"),
+                ("8", "统计分析", "todo"),
+                ("9", "结果与报告", "todo"),
+                ("10", "报告导出", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName(
+                    "metaFulltextStepCurrent" if state == "current" else ("metaFulltextStepDone" if state == "done" else "metaFulltextStepTodo")
+                )
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(70)
+                layout.addWidget(item, 1)
+            return stepper
+
+        def _build_fulltext_management_body(self, fulltext_status: QTableWidget) -> QFrame:
+            body = QFrame()
+            body.setObjectName("metaFulltextManagementBody")
+            body.setFixedHeight(560)
+            layout = QHBoxLayout(body)
+            layout.setContentsMargins(12, 12, 12, 12)
+            layout.setSpacing(12)
+
+            queue = QFrame()
+            queue.setObjectName("metaFulltextCard")
+            queue.setFixedWidth(280)
+            queue_layout = QVBoxLayout(queue)
+            queue_layout.setContentsMargins(14, 12, 14, 12)
+            queue_layout.setSpacing(9)
+            title = QLabel("全文管理 / Full-text Management")
+            title.setObjectName("metaFulltextTitle")
+            queue_layout.addWidget(title)
+            for text, status in (
+                ("REF-001  file pending\nCAR-T B-cell lymphoma review", "pending"),
+                ("REF-002  needs retrieval\nPD-L1 gastric cancer meta-analysis", "missing"),
+                ("REF-004  ready for extraction\nCirculating adipokines and cancer risk", "ready"),
+            ):
+                row = QLabel(text)
+                row.setObjectName("metaFulltextStatusRow")
+                row.setProperty("status", status)
+                row.setWordWrap(True)
+                row.setMinimumHeight(62)
+                queue_layout.addWidget(row)
+            upload = QLabel("+ 绑定 PDF / HTML 文件")
+            upload.setObjectName("metaFulltextSourceRow")
+            upload.setStyleSheet("border-style: dashed; color: #2563EB;")
+            upload.setAlignment(Qt.AlignCenter)
+            upload.setMinimumHeight(44)
+            queue_layout.addWidget(upload)
+            queue_layout.addWidget(fulltext_status)
+            queue_layout.addStretch(1)
+            layout.addWidget(queue)
+
+            preview = QFrame()
+            preview.setObjectName("metaFulltextTableCard")
+            preview_layout = QVBoxLayout(preview)
+            preview_layout.setContentsMargins(14, 12, 14, 12)
+            preview_layout.setSpacing(10)
+            preview_header = QHBoxLayout()
+            preview_title = QLabel("全文预览 / Full-text Preview")
+            preview_title.setObjectName("metaFulltextTitle")
+            state = QLabel("mockup-only / draft extraction")
+            state.setObjectName("metaExtractionMatchBadge")
+            preview_header.addWidget(preview_title)
+            preview_header.addStretch(1)
+            preview_header.addWidget(state)
+            preview_layout.addLayout(preview_header)
+            meta = QLabel("REF-001 · Blood Cancer Journal · 2022 · PMID 35773265")
+            meta.setObjectName("metaFulltextMuted")
+            preview_layout.addWidget(meta)
+            for heading, content in (
+                ("Abstract", "CAR-T therapy has emerged as a transformative treatment for relapsed or refractory B-cell non-Hodgkin lymphoma. This article is queued for manual evidence extraction."),
+                ("Methods", "Eligible studies were summarized by response and safety endpoints. Extraction remains reviewer-controlled."),
+                ("Extraction readiness", "PDF/HTML binding is pending for one record; no production data extraction is generated from this preview."),
+            ):
+                section = QLabel(f"{heading}\n{content}")
+                section.setObjectName("metaFulltextSourceRow")
+                section.setWordWrap(True)
+                section.setMinimumHeight(78)
+                preview_layout.addWidget(section)
+            preview_layout.addStretch(1)
+            layout.addWidget(preview, 1)
+
+            side = QFrame()
+            side.setObjectName("metaFulltextSideCard")
+            side.setFixedWidth(210)
+            side_layout = QVBoxLayout(side)
+            side_layout.setContentsMargins(14, 12, 14, 12)
+            side_layout.setSpacing(10)
+            side_title = QLabel("全文状态 / Readiness")
+            side_title.setObjectName("metaFulltextTitle")
+            side_layout.addWidget(side_title)
+            for text, status in (
+                ("全文文件齐备度\n1 / 3 ready", "pending"),
+                ("数据提取准备\nmanual extraction draft", "ready"),
+                ("质量追踪\nmanual review required", "pending"),
+                ("边界\nadapter disabled; reviewer controlled", "missing"),
+            ):
+                row = QLabel(text)
+                row.setObjectName("metaFulltextStatusRow")
+                row.setProperty("status", status)
+                row.setWordWrap(True)
+                side_layout.addWidget(row)
+            next_design = QPushButton("进入提取表设计")
+            next_design.setObjectName("metaSaveExtractionDesignButton")
+            next_design.setProperty("formalActionEnabled", False)
+            next_design.clicked.connect(lambda _checked=False: self._select_fulltext_extraction_tab("提取表设计"))
+            side_layout.addStretch(1)
+            side_layout.addWidget(next_design)
+            layout.addWidget(side)
+            return body
+
+        def _build_extraction_design_body(self) -> QFrame:
+            body = QFrame()
+            body.setObjectName("metaExtractionDesignBody")
+            body.setFixedHeight(560)
+            layout = QHBoxLayout(body)
+            layout.setContentsMargins(12, 12, 12, 12)
+            layout.setSpacing(12)
+
+            structure = QFrame()
+            structure.setObjectName("metaFulltextCard")
+            structure.setFixedWidth(180)
+            structure_layout = QVBoxLayout(structure)
+            structure_layout.setContentsMargins(12, 10, 12, 10)
+            structure_layout.setSpacing(8)
+            structure_title = QLabel("提取表结构")
+            structure_title.setObjectName("metaExtractionSectionTitle")
+            structure_layout.addWidget(structure_title)
+            structure_hint = QLabel("点击切换查看或编辑各部分字段")
+            structure_hint.setObjectName("metaExtractionMuted")
+            structure_hint.setWordWrap(True)
+            structure_layout.addWidget(structure_hint)
+            for section, count, active in (
+                ("研究基本信息", "6", True),
+                ("研究对象与分组", "4", False),
+                ("干预 / 暴露", "3", False),
+                ("对照措施", "2", False),
+                ("结局指标", "5", False),
+                ("效应量数据（二分类）", "8", False),
+                ("备注与来源", "3", False),
+                ("复核字段", "2", False),
+            ):
+                label = QLabel(f"{section}                                      {count}")
+                label.setObjectName("metaExtractionStructureItem")
+                label.setProperty("sectionKey", section)
+                if active:
+                    label.setStyleSheet("background: #EAF3FF; border-color: #BFDBFE; color: #2563EB; font-weight: 900;")
+                structure_layout.addWidget(label)
+            add = QLabel("+  新增自定义字段")
+            add.setObjectName("metaExtractionStructureItem")
+            add.setStyleSheet("border-style: dashed; color: #2563EB;")
+            add.setAlignment(Qt.AlignCenter)
+            structure_layout.addWidget(add)
+            layout.addWidget(structure)
+
+            fields = QFrame()
+            fields.setObjectName("metaFulltextTableCard")
+            fields.setFixedWidth(560)
+            fields_layout = QVBoxLayout(fields)
+            fields_layout.setContentsMargins(14, 12, 14, 12)
+            fields_layout.setSpacing(8)
+            title_row = QHBoxLayout()
+            fields_title = QLabel("当前提取表字段（Binary Outcome Meta 专用）")
+            fields_title.setObjectName("metaExtractionSectionTitle")
+            match = QLabel("与当前 Meta 类型匹配")
+            match.setObjectName("metaExtractionMatchBadge")
+            title_row.addWidget(fields_title)
+            title_row.addWidget(match)
+            title_row.addStretch(1)
+            for text in ("导入", "保存", "预览"):
+                action = QLabel(text)
+                action.setObjectName("metaFulltextSourceRow")
+                action.setStyleSheet("background: #FFFFFF; color: #2563EB;")
+                title_row.addWidget(action)
+            fields_layout.addLayout(title_row)
+            legacy_contract = QLabel("当前提取表字段（Binary Outcome Meta 专用）")
+            legacy_contract.setObjectName("metaExtractionLegacyContractLabel")
+            legacy_contract.setProperty("legacyCompatibilityOnly", True)
+            legacy_contract.setVisible(False)
+            fields_layout.addWidget(legacy_contract)
+            field_grid = QGridLayout()
+            field_grid.setHorizontalSpacing(0)
+            field_grid.setVerticalSpacing(0)
+            for column, header in enumerate(("序号", "字段名称", "字段含义 / 说明", "必填", "数据类型", "来源提示", "用于分析", "操作")):
+                header_label = QLabel(header)
+                header_label.setObjectName("metaExtractionFieldHeader")
+                field_grid.addWidget(header_label, 0, column)
+            rows = (
+                ("一、研究基本信息", "", "", "", "", "", "", ""),
+                ("1", "研究 ID", "本研究在本项目中的唯一编号", "✓", "文本 Text", "-", "", "edit"),
+                ("2", "first_author", "论文第一作者", "✓", "文本 Text", "来源首页", "", "edit"),
+                ("3", "year", "论文发表年份", "✓", "数字 Number", "来源首页", "", "edit"),
+                ("4", "cancer_type", "研究所处国家或地区", "✓", "下拉选择 Select", "方法部分", "✓", "edit"),
+                ("5", "研究设计", "研究类型（RCT、队列研究等）", "✓", "下拉选择 Select", "-", "✓", "edit"),
+                ("6", "样本量（总样本）", "研究纳入的总样本量", "", "数字 Number", "-", "✓", "edit"),
+                ("二、研究对象与分组", "", "", "", "", "", "", ""),
+                ("7", "marker_name", "adiponectin / ADIPOQ", "✓", "文本 Text", "结果部分", "✓", "edit"),
+                ("8", "effect_measure", "HR / OR / RR", "✓", "Select", "表格", "✓", "edit"),
+                ("9", "effect_value", "1.48 mockup-only / draft extraction", "✓", "Number", "表格", "✓", "edit"),
+                ("10", "ci_lower", "1.05 mockup-only / draft extraction", "✓", "Number", "表格", "✓", "edit"),
+                ("11", "ci_upper", "2.10 mockup-only / draft extraction", "✓", "Number", "表格", "✓", "edit"),
+                ("12", "adjusted_model", "multivariable", "", "Text", "方法", "✓", "edit"),
+                ("13", "outcome_name", "overall survival", "✓", "Text", "结果", "✓", "edit"),
+            )
+            for row, values in enumerate(rows, start=1):
+                section_row = values[1] == ""
+                for column, value in enumerate(values):
+                    label = QLabel(value)
+                    label.setObjectName("metaExtractionFieldCell")
+                    if section_row:
+                        label.setProperty("semantic", "section")
+                    label.setWordWrap(False)
+                    label.setMinimumHeight(28)
+                    field_grid.addWidget(label, row, column)
+            fields_layout.addLayout(field_grid)
+            legend = QLabel("必填字段    非必填字段    用于统计分析                         共 8 个部分，33 个字段，必填字段 25 个")
+            legend.setObjectName("metaExtractionMuted")
+            fields_layout.addWidget(legend)
+            layout.addWidget(fields, 1)
+
+            side = QFrame()
+            side.setObjectName("metaFulltextSideCard")
+            side.setFixedWidth(172)
+            side_layout = QVBoxLayout(side)
+            side_layout.setContentsMargins(12, 10, 12, 10)
+            side_layout.setSpacing(10)
+            info_title = QLabel("提取表信息")
+            info_title.setObjectName("metaExtractionSectionTitle")
+            side_layout.addWidget(info_title)
+            for text in (
+                "提取表名称\n二分类结局（RCT）提取表 v2.1",
+                "适用研究类型\n随机对照试验（RCT）",
+                "创建时间\n2024-05-20 14:25",
+                "更新时间\n2024-05-20 14:25",
+                "创建者\nResearcher（她）",
+                "备注\n-",
+            ):
+                box = QLabel(text)
+                box.setObjectName("metaExtractionInfoBox")
+                box.setWordWrap(True)
+                side_layout.addWidget(box)
+            completeness = QLabel("完整性检查\n100%\n配置完整\n必填字段已配置 25/25\n建议字段已配置 8/8\n与 Meta 类型匹配")
+            completeness.setObjectName("metaExtractionMatchBadge")
+            completeness.setWordWrap(True)
+            side_layout.addWidget(completeness)
+            side_layout.addStretch(1)
+            layout.addWidget(side)
+            return body
 
         def _build_risk_of_bias_panel(self) -> QFrame:
             frame = QFrame()
@@ -1440,22 +3233,151 @@ if QWidget is not None:
             frame.setProperty("exportGate", "disabled_empty_result")
             frame.setProperty("fileWriteAllowed", False)
             frame.setProperty("formalActionEnabled", False)
-            frame.setStyleSheet("QFrame#metaResultReviewRuntimePanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            frame.setStyleSheet(
+                """
+                QFrame#metaResultReviewRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaExportReportStepper,
+                QFrame#metaExportReportCard,
+                QFrame#metaExportReportGateCard,
+                QFrame#metaExportReportBottomCard {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaExportReportTitle {
+                    color: #111827;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaExportReportMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaExportReportStepDone,
+                QLabel#metaExportReportStepCurrent,
+                QLabel#metaExportReportStepBlocked {
+                    color: #16A34A;
+                    font-size: 10px;
+                    font-weight: 900;
+                }
+                QLabel#metaExportReportStepBlocked {
+                    color: #EF4444;
+                }
+                QLabel#metaExportReportStepCurrent {
+                    color: #2563EB;
+                }
+                QLabel#metaReportTypeItem {
+                    background: #FFFFFF;
+                    border: 1px solid transparent;
+                    border-radius: 9px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 9px 10px;
+                }
+                QLabel#metaReportTypeItem[selected="true"] {
+                    background: #EAF3FF;
+                    border-color: #BFDBFE;
+                }
+                QLabel#metaExportFormatBadge {
+                    background: #EFF6FF;
+                    border-radius: 7px;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaExportPreviewRow {
+                    background: #FFFFFF;
+                    border: 0;
+                    border-bottom: 1px solid #F1F5F9;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 7px 8px;
+                }
+                QLabel#metaExportStatusDone {
+                    background: #DCFCE7;
+                    border: 1px solid #86EFAC;
+                    border-radius: 7px;
+                    color: #059669;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 4px 7px;
+                }
+                QLabel#metaExportStatusDraft {
+                    background: #FEF3C7;
+                    border: 1px solid #FACC15;
+                    border-radius: 7px;
+                    color: #B45309;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 4px 7px;
+                }
+                QLabel#metaExportStatusDisabled {
+                    background: #F3F4F6;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 7px;
+                    color: #9CA3AF;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 4px 7px;
+                }
+                QLabel#metaExportGateRow {
+                    background: #FFFFFF;
+                    border: 0;
+                    border-bottom: 1px solid #FEE2E2;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 7px 8px;
+                }
+                QLabel#metaExportGateHeader,
+                QLabel#metaExportFinalBlocked {
+                    background: #FEF2F2;
+                    border: 1px solid #FECACA;
+                    border-radius: 9px;
+                    color: #DC2626;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 9px 10px;
+                }
+                QLabel#metaExportSettingBox {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 9px;
+                    color: #64748B;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaResultReviewHumanReviewNotice {
+                    background: #FFFBEB;
+                    border: 1px solid #FDE68A;
+                    border-radius: 10px;
+                    color: #B45309;
+                    font-size: 11px;
+                    padding: 9px 10px;
+                }
+                QPushButton#metaGenerateReportDisabledButton {
+                    background: #F3F4F6;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 10px;
+                    color: #9CA3AF;
+                    font-size: 12px;
+                    font-weight: 850;
+                    padding: 10px 12px;
+                }
+                """
+            )
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(14, 12, 14, 12)
-            layout.setSpacing(10)
-
-            title = QLabel("Result Review + Report-ready Gate / 结果复核与报告门控")
-            title.setObjectName("metaResultReviewRuntimeTitle")
-            title.setStyleSheet("font-weight: 750;")
-            layout.addWidget(title)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(12)
+            layout.addWidget(self._build_export_report_stepper())
 
             review_notice = QLabel("人工复核集中在此页面：前置草稿、提取和 RoB 预览不能升级为正式结果。")
             review_notice.setObjectName("metaResultReviewHumanReviewNotice")
             review_notice.setProperty("reviewBoundary", "human_review_required")
             review_notice.setWordWrap(True)
-            review_notice.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 8px; background: #FFF7E6;")
-            layout.addWidget(review_notice)
 
             readiness = _readonly_table(
                 "metaResultReadinessSummaryTable",
@@ -1470,18 +3392,17 @@ if QWidget is not None:
                 ),
             )
             readiness.setMinimumHeight(150)
-            layout.addWidget(readiness)
+            readiness.setVisible(False)
 
-            layout.addWidget(
-                make_plot_placeholder(
-                    title="Forest plot placeholder / 森林图占位",
-                    plot_type="forest_plot",
-                    message="Formal synthesis estimates and figure previews are disabled in UI-D5.",
-                    status_key="blocked",
-                    semantic_state="blocked",
-                    object_name="metaForestPlotPlaceholder",
-                )
+            forest_placeholder = make_plot_placeholder(
+                title="Forest plot placeholder / 森林图占位",
+                plot_type="forest_plot",
+                message="Formal synthesis estimates and figure previews are disabled in UI-D5.",
+                status_key="blocked",
+                semantic_state="blocked",
+                object_name="metaForestPlotPlaceholder",
             )
+            forest_placeholder.setVisible(False)
 
             pairwise = _readonly_table(
                 "metaPairwiseInputPreviewTable",
@@ -1495,16 +3416,15 @@ if QWidget is not None:
             pairwise.setObjectName("metaPairwiseInputPreviewTable")
             pairwise.setProperty("previewOnly", True)
             pairwise.setMinimumHeight(120)
-            layout.addWidget(
-                make_preview_card(
-                    title="Pairwise input preview / 配对输入预览",
-                    preview_widget=pairwise,
-                    status_key="preflight_only",
-                    semantic_state="preflight_only",
-                    caption="Draft extraction values are shown for review only; no summary estimate is computed.",
-                    object_name="metaPairwiseInputPreviewCard",
-                )
+            pairwise_card = make_preview_card(
+                title="Pairwise input preview / 配对输入预览",
+                preview_widget=pairwise,
+                status_key="preflight_only",
+                semantic_state="preflight_only",
+                caption="Draft extraction values are shown for review only; no summary estimate is computed.",
+                object_name="metaPairwiseInputPreviewCard",
             )
+            pairwise_card.setVisible(False)
 
             blockers = _readonly_table(
                 "metaReportReadyBlockerChecklist",
@@ -1521,7 +3441,7 @@ if QWidget is not None:
                 ),
             )
             blockers.setMinimumHeight(162)
-            layout.addWidget(blockers)
+            blockers.setVisible(False)
 
             generate = QPushButton("Generate Report disabled")
             generate.setObjectName("metaGenerateReportDisabledButton")
@@ -1530,8 +3450,254 @@ if QWidget is not None:
             generate.setProperty("fileWriteAllowed", False)
             generate.setEnabled(False)
             generate.setMinimumHeight(34)
-            layout.addWidget(generate)
+
+            main = QHBoxLayout()
+            main.setSpacing(12)
+            main.addWidget(self._build_export_report_type_card())
+            main.addWidget(self._build_export_content_preview_card(), 1)
+            main.addWidget(self._build_export_gate_status_card(generate))
+            layout.addLayout(main)
+
+            bottom = QHBoxLayout()
+            bottom.setSpacing(12)
+            bottom.addWidget(self._build_export_settings_card(), 1)
+            bottom.addWidget(self._build_export_history_card(), 1)
+            layout.addLayout(bottom)
+            layout.addWidget(review_notice)
+
+            layout.addWidget(readiness)
+            layout.addWidget(forest_placeholder)
+            layout.addWidget(pairwise_card)
+            layout.addWidget(blockers)
             return frame
+
+        def _build_export_report_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaExportReportStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(14, 9, 14, 9)
+            layout.setSpacing(7)
+            steps = (
+                ("✓", "项目首页", "done"),
+                ("✓", "问题与类型", "done"),
+                ("✓", "检索策略", "done"),
+                ("✓", "文献导入", "done"),
+                ("✓", "去重", "done"),
+                ("✓", "筛选", "done"),
+                ("✓", "全文与提取", "done"),
+                ("✓", "偏倚风险", "done"),
+                ("✓", "成对Meta输入", "done"),
+                ("✓", "结果复核", "done"),
+                ("✕", "报告门控", "blocked"),
+                ("12", "导出", "current"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName(
+                    "metaExportReportStepCurrent" if state == "current" else ("metaExportReportStepBlocked" if state == "blocked" else "metaExportReportStepDone")
+                )
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(58)
+                layout.addWidget(item, 1)
+            return stepper
+
+        def _build_export_report_type_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportCard")
+            card.setFixedWidth(260)
+            card.setFixedHeight(455)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(9)
+            title = QLabel("报告类型 / Report Type")
+            title.setObjectName("metaExportReportTitle")
+            layout.addWidget(title)
+            tabs = QHBoxLayout()
+            for text, active in (("系统模板", True), ("自定义模板", False), ("输出片段", False)):
+                tab = QLabel(text)
+                tab.setObjectName("metaExportReportMuted")
+                tab.setAlignment(Qt.AlignCenter)
+                if active:
+                    tab.setStyleSheet("color: #2563EB; border-bottom: 2px solid #2563EB; padding: 6px; font-weight: 900;")
+                tabs.addWidget(tab, 1)
+            layout.addLayout(tabs)
+            for title_text, subtitle, fmt, selected in (
+                ("Meta 分析完整报告", "Full Meta-Analysis Report", "DOCX", False),
+                ("方法学与流程报告", "Methods & Process Report", "DOCX", False),
+                ("数据提取表", "Data Extraction Table", "XLSX", False),
+                ("成对比较结果表", "Paired Comparison Results", "XLSX", False),
+                ("PRISMA 流程图", "PRISMA Flowchart", "PNG/SVG", False),
+                ("汇总包", "Summary Package", "ZIP", True),
+            ):
+                item = QLabel(f"{title_text}                                      {fmt}\n{subtitle}")
+                item.setObjectName("metaReportTypeItem")
+                item.setProperty("selected", selected)
+                item.setWordWrap(True)
+                layout.addWidget(item)
+            footer = QLabel("导出已禁用，通过 Gate 后解锁")
+            footer.setObjectName("metaExportReportMuted")
+            footer.setStyleSheet("color: #9CA3AF;")
+            layout.addStretch(1)
+            layout.addWidget(footer)
+            return card
+
+        def _build_export_content_preview_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportCard")
+            card.setFixedWidth(410)
+            card.setFixedHeight(455)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("导出内容预览 / Export Content Preview")
+            title.setObjectName("metaExportReportTitle")
+            draft = QLabel("仅显示草稿状态")
+            draft.setObjectName("metaExportReportMuted")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(draft)
+            layout.addLayout(header)
+            column_header = QLabel("内容项 / CONTENT                                      状态 / STATUS                         说明")
+            column_header.setObjectName("metaExportReportMuted")
+            column_header.setStyleSheet("font-weight: 850; color: #64748B;")
+            layout.addWidget(column_header)
+            rows = (
+                ("方法与流程 / Methods", "已完成草稿", "done", "可纳入报告"),
+                ("检索策略 / Search", "已完成草稿", "done", "可纳入报告"),
+                ("文献信息 / Literature", "已导入草稿", "info", "待人工确认"),
+                ("筛选结果 / Screening", "草稿", "draft", "需完善"),
+                ("数据提取表 / Extraction", "草稿", "draft", "需完善"),
+                ("偏倚风险 / Risk of Bias", "已完成草稿", "done", "可纳入报告"),
+                ("成对输入 / Paired Input", "草稿", "draft", "需完善"),
+                ("Meta 分析结果 / Results", "不可用", "disabled", "Gate 未过"),
+                ("图表与森林图 / Plots", "不可用", "disabled", "Gate 未过"),
+                ("发表偏倚 / Bias", "不可用", "disabled", "Gate 未过"),
+            )
+            for name, status, semantic, note in rows:
+                row = QHBoxLayout()
+                name_label = QLabel(name)
+                name_label.setObjectName("metaExportPreviewRow")
+                name_label.setMaximumHeight(31)
+                name_label.setMinimumWidth(175)
+                status_label = QLabel(status)
+                status_label.setObjectName(
+                    "metaExportStatusDone" if semantic in {"done", "info"} else ("metaExportStatusDraft" if semantic == "draft" else "metaExportStatusDisabled")
+                )
+                status_label.setAlignment(Qt.AlignCenter)
+                status_label.setFixedWidth(95)
+                status_label.setMaximumHeight(31)
+                note_label = QLabel(note)
+                note_label.setObjectName("metaExportPreviewRow")
+                note_label.setMaximumHeight(31)
+                row.addWidget(name_label)
+                row.addWidget(status_label)
+                row.addWidget(note_label, 1)
+                layout.addLayout(row)
+            warning = QLabel("⚠ 3 项内容不可用，需先通过 Report-ready Gate")
+            warning.setObjectName("metaExportReportMuted")
+            warning.setStyleSheet("background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; color: #B45309; padding: 7px;")
+            layout.addWidget(warning)
+            return card
+
+        def _build_export_gate_status_card(self, generate: QPushButton) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportGateCard")
+            card.setFixedWidth(250)
+            card.setFixedHeight(455)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            header = QLabel("报告门控未通过")
+            header.setObjectName("metaExportGateHeader")
+            header.setMinimumHeight(46)
+            header.setMaximumHeight(52)
+            header.setAlignment(Qt.AlignCenter)
+            layout.addWidget(header)
+            column_header = QLabel("检查项                                      状态")
+            column_header.setObjectName("metaExportReportMuted")
+            column_header.setStyleSheet("font-weight: 850;")
+            layout.addWidget(column_header)
+            checks = (
+                ("研究问题确认", False),
+                ("检索策略确认", False),
+                ("去重完成确认", True),
+                ("筛选完成确认", False),
+                ("提取完成确认", False),
+                ("偏倚风险确认", False),
+                ("成对输入确认", False),
+                ("分析一致性", False),
+                ("结果可报告性", False),
+            )
+            for text, passed in checks:
+                row = QLabel(f"{text}                                      {'✓' if passed else '✕'}")
+                row.setObjectName("metaExportGateRow")
+                row.setWordWrap(False)
+                row.setMaximumHeight(34)
+                layout.addWidget(row)
+            final = QLabel("最终结果 / Final Result                                      ✕")
+            final.setObjectName("metaExportFinalBlocked")
+            final.setMinimumHeight(34)
+            final.setAlignment(Qt.AlignCenter)
+            layout.addWidget(final)
+            generate.setText("Export Disabled")
+            layout.addWidget(generate)
+            footer = QLabel("8/9 checks failed · 需完成所有检查项")
+            footer.setObjectName("metaExportReportMuted")
+            footer.setAlignment(Qt.AlignCenter)
+            layout.addWidget(footer)
+            return card
+
+        def _build_export_settings_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportBottomCard")
+            card.setFixedHeight(126)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("导出设置 / Export Settings")
+            title.setObjectName("metaExportReportTitle")
+            disabled = QLabel("已禁用")
+            disabled.setObjectName("metaExportReportMuted")
+            disabled.setStyleSheet("background: #F3F4F6; border-radius: 7px; padding: 4px 8px;")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(disabled)
+            layout.addLayout(header)
+            grid = QGridLayout()
+            grid.setHorizontalSpacing(10)
+            grid.setVerticalSpacing(8)
+            for index, text in enumerate(
+                (
+                    "文件格式 / File Format\nDOCX (.docx)",
+                    "包含级别 / Include Level\n完整报告 Full Report",
+                    "报告语言 / Language\n中英双语 Bilingual",
+                    "引用格式 / Citation Format\nVancouver Style",
+                )
+            ):
+                box = QLabel(text)
+                box.setObjectName("metaExportSettingBox")
+                grid.addWidget(box, index // 2, index % 2)
+            layout.addLayout(grid)
+            return card
+
+        def _build_export_history_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportBottomCard")
+            card.setFixedHeight(126)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            title = QLabel("导出历史 / Export History")
+            title.setObjectName("metaExportReportTitle")
+            layout.addWidget(title)
+            empty = QLabel("暂无导出记录\n通过 Report-ready Gate 后才记录正式导出历史\nFormal export history logged after gate passes")
+            empty.setObjectName("metaExportReportMuted")
+            empty.setAlignment(Qt.AlignCenter)
+            empty.setWordWrap(True)
+            layout.addWidget(empty, 1)
+            return card
 
         def _build_report_export_gate_panel(self) -> QFrame:
             frame = QFrame()
@@ -1621,6 +3787,25 @@ if QWidget is not None:
         def _sync_target_interaction_state(self) -> None:
             pages = {page.key: page for page in meta_target_ia_pages()}
             current = pages[self._current_target_page_key]
+            if hasattr(self, "_workspace_title_label"):
+                if self._current_target_page_key == "question_meta_type":
+                    self._workspace_title_label.setText("Meta Analysis / 研究问题与 Meta 类型")
+                    self._workspace_subtitle_label.setText("定义研究问题，选择适合的 Meta 分析类型，系统将为您推荐后续流程与方法。")
+                elif self._current_target_page_key == "search_strategy":
+                    self._workspace_title_label.setText("检索策略 / Search Strategy Builder")
+                    self._workspace_subtitle_label.setText("构建英文检索式，管理检索数据库与字段，当前为 Developer Preview。")
+                elif self._current_target_page_key == "screening":
+                    self._workspace_title_label.setText("筛选 / Screening Workspace")
+                    self._workspace_subtitle_label.setText("标题与摘要筛选、人工决策、AI 建议仅供参考。")
+                elif self._current_target_page_key == "fulltext_extraction":
+                    self._workspace_title_label.setText("全文与数据提取 / Full-text & Extraction")
+                    self._workspace_subtitle_label.setText("管理全文获取状态、进行数据提取与质控追踪，确保数据提取逻辑和可追溯。")
+                elif self._current_target_page_key == "result_report":
+                    self._workspace_title_label.setText("导出与报告 / Export & Report")
+                    self._workspace_subtitle_label.setText("当前结果未通过 Report-ready Gate，正式报告生成与导出功能已禁用。")
+                elif self._current_target_page_key == "project_home":
+                    self._workspace_title_label.setText("Meta 分析 / Meta Analysis")
+                    self._workspace_subtitle_label.setText("系统综述与 Meta 分析流程管理，当前为 Developer Preview（本地测试版）。")
             for key, button in self._target_ia_buttons.items():
                 is_current = key == self._current_target_page_key
                 button.setChecked(is_current)
@@ -1637,13 +3822,16 @@ if QWidget is not None:
                 if target_index is not None:
                     self._target_runtime_stack.setCurrentIndex(target_index)
             if hasattr(self, "_result_export_panel"):
-                self._result_export_panel.setVisible(self._current_target_page_key in {"result_report", "report_export"})
+                self._result_export_panel.setVisible(self._current_target_page_key == "report_export")
 
         def _sync_type_interaction_state(self) -> None:
             types = {meta_type.type_id: meta_type for meta_type in meta_active_types_v1()}
             current = types[self._selected_active_meta_type_id]
             for type_id, button in self._active_type_buttons.items():
                 button.setChecked(type_id == self._selected_active_meta_type_id)
+            for type_id, card in getattr(self, "_active_type_cards", {}).items():
+                card.setProperty("selected", type_id == self._selected_active_meta_type_id)
+                _refresh_dynamic_style(card)
             if hasattr(self, "_active_type_status"):
                 self._active_type_status.setText(
                     f"Selected active Meta type: {current.type_id} · {current.status_key} · {current.interaction_mode}; AI suggestion remains review-only."
