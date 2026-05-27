@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.bioinformatics.deg_engine import build_deg_cross_project_acceptance_gate, evaluate_deg_cross_project_scenario
+from app.bioinformatics.deg_engine import build_deg_cross_project_acceptance_gate, build_deg_real_world_fixture_acceptance, evaluate_deg_cross_project_scenario
 
 
 def test_cross_project_acceptance_passes_local_and_tcga_like_counts(tmp_path: Path) -> None:
@@ -60,6 +60,16 @@ def test_cross_project_acceptance_blocks_batch_confounding_sample_mismatch_and_d
     assert "group_covariate_fully_confounded:batch" in confounded["blockers"]
     assert "expression_and_metadata_samples_do_not_overlap" in mismatch["blockers"]
     assert "missing_python_package:scipy" in missing_dependency["blockers"]
+
+
+def test_real_world_fixture_acceptance_has_expected_positive_and_negative_scenarios(tmp_path: Path) -> None:
+    gate = build_deg_real_world_fixture_acceptance(tmp_path, dependency_snapshot=_dependency())
+
+    assert gate["status"] == "passed"
+    assert gate["positive_scenarios_passed"] is True
+    assert gate["negative_scenarios_blocked"] is True
+    assert set(gate["expected_positive_scenarios"]).issubset(set(gate["passed_scenarios"]))
+    assert set(gate["expected_negative_scenarios"]).issubset(set(gate["blocked_scenarios"]))
 
 
 def _package(
