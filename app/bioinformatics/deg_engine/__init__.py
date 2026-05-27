@@ -8,6 +8,12 @@ from .data_quality import build_deg_data_quality_gate
 from .design_quality import build_deg_design_quality_gate
 from .input_adaptation import build_deg_input_adaptation_gate
 from .method_recommendation import build_deg_method_recommendation_gate
+from .multifactor_confirmation import (
+    build_multifactor_deg_parameter_manifest,
+    load_multifactor_deg_parameter_confirmation,
+    save_multifactor_deg_parameter_confirmation,
+    validate_multifactor_deg_parameter_confirmation,
+)
 from .multifactor_gate import build_multifactor_deg_controlled_gate
 from .multifactor_schema import build_multifactor_deg_result_schema_gate, validate_multifactor_deg_result_bundle, validate_multifactor_deg_result_index_entry, validate_multifactor_deg_parameters_manifest
 from .parameter_gate import build_deg_parameter_manifest, validate_deg_parameter_manifest
@@ -22,6 +28,7 @@ __all__ = [
     "build_deg_data_quality_gate",
     "build_deg_method_recommendation_gate",
     "build_multifactor_deg_controlled_gate",
+    "build_multifactor_deg_parameter_manifest",
     "build_multifactor_deg_result_schema_gate",
     "build_formal_deg_result_schema_gate",
     "check_deg_backend_dependencies",
@@ -30,15 +37,18 @@ __all__ = [
     "build_deg_real_world_fixture_acceptance",
     "evaluate_deg_cross_project_scenario",
     "load_deg_parameter_confirmation",
+    "load_multifactor_deg_parameter_confirmation",
     "run_formal_controlled_deg",
     "run_controlled_deg",
     "save_deg_parameter_confirmation",
+    "save_multifactor_deg_parameter_confirmation",
     "validate_deg_result_bundle",
     "validate_deg_result_entry",
     "validate_deg_parameter_manifest",
     "validate_deg_parameter_confirmation",
     "validate_formal_deg_result_index_entry",
     "validate_multifactor_deg_parameters_manifest",
+    "validate_multifactor_deg_parameter_confirmation",
     "validate_multifactor_deg_result_bundle",
     "validate_multifactor_deg_result_index_entry",
 ]
