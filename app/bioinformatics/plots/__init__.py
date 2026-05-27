@@ -3,6 +3,7 @@ from __future__ import annotations
 from .basic_renderers import build_basic_plot_spec
 from .cox import create_cox_forest_plot_artifact
 from .formal_deg import build_formal_deg_plot_gate, build_formal_deg_plot_production_gate, create_formal_deg_plot_artifact
+from .quality import evaluate_plot_export_quality_gate
 from .registry import create_plot_artifact
 from .schema import validate_plot_artifact
 from .survival import create_km_plot_artifact
@@ -15,5 +16,6 @@ __all__ = [
     "create_formal_deg_plot_artifact",
     "create_km_plot_artifact",
     "create_plot_artifact",
+    "evaluate_plot_export_quality_gate",
     "validate_plot_artifact",
 ]
