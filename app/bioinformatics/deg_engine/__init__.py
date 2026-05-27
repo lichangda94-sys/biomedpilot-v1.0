@@ -9,6 +9,7 @@ from .design_quality import build_deg_design_quality_gate
 from .input_adaptation import build_deg_input_adaptation_gate
 from .method_recommendation import build_deg_method_recommendation_gate
 from .multifactor_gate import build_multifactor_deg_controlled_gate
+from .multifactor_schema import build_multifactor_deg_result_schema_gate, validate_multifactor_deg_result_bundle, validate_multifactor_deg_result_index_entry, validate_multifactor_deg_parameters_manifest
 from .parameter_gate import build_deg_parameter_manifest, validate_deg_parameter_manifest
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
@@ -21,6 +22,7 @@ __all__ = [
     "build_deg_data_quality_gate",
     "build_deg_method_recommendation_gate",
     "build_multifactor_deg_controlled_gate",
+    "build_multifactor_deg_result_schema_gate",
     "build_formal_deg_result_schema_gate",
     "check_deg_backend_dependencies",
     "create_deg_production_audit_package",
@@ -36,4 +38,7 @@ __all__ = [
     "validate_deg_parameter_manifest",
     "validate_deg_parameter_confirmation",
     "validate_formal_deg_result_index_entry",
+    "validate_multifactor_deg_parameters_manifest",
+    "validate_multifactor_deg_result_bundle",
+    "validate_multifactor_deg_result_index_entry",
 ]
