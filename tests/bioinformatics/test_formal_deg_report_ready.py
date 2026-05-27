@@ -6,7 +6,7 @@ from pathlib import Path
 
 from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
 from app.bioinformatics.plots import create_formal_deg_plot_artifact
-from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
+from app.bioinformatics.reports.formal_deg import build_formal_deg_report_production_review_gate, create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import load_registry, register_result
@@ -135,6 +135,31 @@ def test_formal_deg_report_ready_blocks_expired_confirmation_dependency_and_inva
     assert "formal_deg_parameter_confirmation_expired" in gate["blockers"]
     assert "formal_deg_dependency_snapshot_not_passed" in gate["blockers"]
     assert "deg_table:missing_column:adjusted_p_value" in gate["blockers"]
+
+
+def test_formal_deg_report_production_review_requires_audit_and_plot_gate(tmp_path: Path) -> None:
+    table = _write_deg_table(tmp_path)
+    parameters = _parameters()
+    dependency = _dependency()
+    _register_formal(tmp_path, table, parameters=parameters, dependency=dependency)
+    _write_confirmation(tmp_path, parameters=parameters, dependency=dependency)
+    create_formal_deg_plot_artifact(tmp_path, result_id="formal-report", plot_type="volcano_plot")
+
+    blocked = build_formal_deg_report_production_review_gate(tmp_path, result_id="formal-report")
+    passed = build_formal_deg_report_production_review_gate(
+        tmp_path,
+        result_id="formal-report",
+        audit_package_manifest={"status": "deg_production_audit_package_created"},
+        plot_production_gate={"status": "passed", "blockers": []},
+    )
+
+    assert blocked["status"] == "blocked"
+    assert "deg_production_audit_package_missing_or_not_passed" in blocked["blockers"]
+    assert "formal_deg_plot_production_gate_missing" in blocked["blockers"]
+    assert passed["status"] == "passed"
+    assert passed["section_scope"] == "formal_deg_only"
+    assert passed["full_integrated_report_enabled"] is False
+    assert passed["clinical_conclusion_enabled"] is False
 
 
 def _write_deg_table(root: Path) -> Path:

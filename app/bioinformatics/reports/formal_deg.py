@@ -17,6 +17,7 @@ from app.bioinformatics.results.registry import RESULT_INDEX, load_registry, sav
 
 FORMAL_DEG_REPORT_READY_SCHEMA_VERSION = "biomedpilot.formal_deg_report_ready_gate.v1"
 FORMAL_DEG_REPORT_PACKAGE_SCHEMA_VERSION = "biomedpilot.formal_deg_report_ready_package.v1"
+FORMAL_DEG_REPORT_PRODUCTION_REVIEW_SCHEMA_VERSION = "biomedpilot.formal_deg_report_production_review_gate.v1"
 FORMAL_DEG_CONFIRMATION_MAX_AGE_DAYS = 7
 
 
@@ -177,6 +178,50 @@ def create_formal_deg_report_ready_package(
     selected["updated_at"] = _now()
     save_registry(root, entries)
     return manifest
+
+
+def build_formal_deg_report_production_review_gate(
+    project_root: str | Path,
+    *,
+    result_id: str | None = None,
+    audit_package_manifest: dict[str, Any] | None = None,
+    plot_production_gate: dict[str, Any] | None = None,
+    allow_table_only_report: bool = False,
+) -> dict[str, Any]:
+    report_gate = evaluate_formal_deg_report_ready_gate(project_root, result_id=result_id, allow_table_only_report=allow_table_only_report)
+    audit_manifest = audit_package_manifest or {}
+    plot_gate = plot_production_gate or {}
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if report_gate.get("status") != "eligible_for_formal_deg_report_ready":
+        blockers.extend(str(item) for item in report_gate.get("blockers", []) or ["formal_deg_report_ready_gate_not_passed"])
+    if audit_manifest.get("status") != "deg_production_audit_package_created":
+        blockers.append("deg_production_audit_package_missing_or_not_passed")
+    if plot_gate:
+        if plot_gate.get("status") != "passed" and not allow_table_only_report:
+            blockers.extend(str(item) for item in plot_gate.get("blockers", []) or ["formal_deg_plot_production_gate_not_passed"])
+    elif not allow_table_only_report:
+        blockers.append("formal_deg_plot_production_gate_missing")
+    if allow_table_only_report:
+        warnings.append("table_only_report_mode_requires_explicit_user_review")
+    return {
+        "schema_version": FORMAL_DEG_REPORT_PRODUCTION_REVIEW_SCHEMA_VERSION,
+        "created_at": _now(),
+        "status": "blocked" if blockers else "passed",
+        "selected_result_id": report_gate.get("selected_result_id", ""),
+        "report_ready_gate": report_gate,
+        "audit_package_manifest": audit_manifest,
+        "plot_production_gate": plot_gate,
+        "allow_table_only_report": allow_table_only_report,
+        "full_integrated_report_enabled": False,
+        "section_scope": "formal_deg_only",
+        "clinical_conclusion_enabled": False,
+        "gsea_enabled": False,
+        "survival_enabled": False,
+        "limitations_required": _limitations(),
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
 
 
 def _select_formal_deg_entry(entries: list[dict[str, Any]], result_id: str | None) -> dict[str, Any] | None:
