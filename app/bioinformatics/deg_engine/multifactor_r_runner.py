@@ -81,7 +81,7 @@ def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[s
         run_log = _run_limma_rscript(dependency["rscript"]["path"], matrix_path, metadata_path, raw_output)
         if run_log["status"] != "passed":
             return _blocked(*[str(item) for item in run_log.get("blockers", []) or []], parameter_manifest=parameter_manifest, dependency_snapshot=dependency, rscript_log=run_log)
-        rows = _read_limma_rows(raw_output)
+        rows = _read_limma_rows(raw_output, _fixture_group_means(matrix_path))
 
     bundle = {
         "schema_version": MULTIFACTOR_DEG_FIXTURE_SCHEMA_VERSION,
@@ -176,7 +176,7 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
         run_log = _run_deseq2_rscript(dependency["rscript"]["path"], matrix_path, metadata_path, raw_output)
         if run_log["status"] != "passed":
             return _blocked(*[str(item) for item in run_log.get("blockers", []) or []], parameter_manifest=parameter_manifest, dependency_snapshot=dependency, rscript_log=run_log)
-        rows = _read_deseq2_rows(raw_output)
+        rows = _read_deseq2_rows(raw_output, _fixture_group_means(matrix_path))
 
     bundle = {
         "schema_version": MULTIFACTOR_DEG_FIXTURE_SCHEMA_VERSION,
@@ -271,7 +271,7 @@ def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_
         run_log = _run_edger_rscript(dependency["rscript"]["path"], matrix_path, metadata_path, raw_output)
         if run_log["status"] != "passed":
             return _blocked(*[str(item) for item in run_log.get("blockers", []) or []], parameter_manifest=parameter_manifest, dependency_snapshot=dependency, rscript_log=run_log)
-        rows = _read_edger_rows(raw_output)
+        rows = _read_edger_rows(raw_output, _fixture_group_means(matrix_path))
 
     bundle = {
         "schema_version": MULTIFACTOR_DEG_FIXTURE_SCHEMA_VERSION,
@@ -496,7 +496,25 @@ def _write_rows(path: Path, rows: list[list[str]]) -> None:
         writer.writerows(rows)
 
 
-def _read_limma_rows(path: Path) -> list[dict[str, str]]:
+def _fixture_group_means(matrix_path: Path) -> dict[str, dict[str, float]]:
+    control_samples = {"CTRL_1", "CTRL_2", "CTRL_3"}
+    case_samples = {"CASE_1", "CASE_2", "CASE_3"}
+    means: dict[str, dict[str, float]] = {}
+    with matrix_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        samples = reader.fieldnames or []
+        for row in reader:
+            feature_id = str(row.get("feature_id") or "")
+            control_values = [_safe_float(row.get(sample)) for sample in samples if sample in control_samples]
+            case_values = [_safe_float(row.get(sample)) for sample in samples if sample in case_samples]
+            means[feature_id] = {
+                "control": sum(control_values) / len(control_values) if control_values else 0.0,
+                "case": sum(case_values) / len(case_values) if case_values else 0.0,
+            }
+    return means
+
+
+def _read_limma_rows(path: Path, group_means: dict[str, dict[str, float]]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
@@ -509,8 +527,8 @@ def _read_limma_rows(path: Path) -> list[dict[str, str]]:
                     "feature_id": str(raw.get("feature_id") or ""),
                     "gene_symbol": str(raw.get("feature_id") or ""),
                     "base_mean_or_mean_expression": str(raw.get("AveExpr") or ""),
-                    "case_mean": "",
-                    "control_mean": "",
+                    "case_mean": f"{group_means.get(str(raw.get('feature_id') or ''), {}).get('case', 0.0):.8g}",
+                    "control_mean": f"{group_means.get(str(raw.get('feature_id') or ''), {}).get('control', 0.0):.8g}",
                     "log2_fold_change": f"{logfc:.8g}",
                     "statistic": str(raw.get("t") or ""),
                     "p_value": f"{p_value:.8g}",
@@ -522,7 +540,7 @@ def _read_limma_rows(path: Path) -> list[dict[str, str]]:
     return rows
 
 
-def _read_deseq2_rows(path: Path) -> list[dict[str, str]]:
+def _read_deseq2_rows(path: Path, group_means: dict[str, dict[str, float]]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
@@ -535,8 +553,8 @@ def _read_deseq2_rows(path: Path) -> list[dict[str, str]]:
                     "feature_id": str(raw.get("feature_id") or ""),
                     "gene_symbol": str(raw.get("feature_id") or ""),
                     "base_mean_or_mean_expression": str(raw.get("baseMean") or ""),
-                    "case_mean": "",
-                    "control_mean": "",
+                    "case_mean": f"{group_means.get(str(raw.get('feature_id') or ''), {}).get('case', 0.0):.8g}",
+                    "control_mean": f"{group_means.get(str(raw.get('feature_id') or ''), {}).get('control', 0.0):.8g}",
                     "log2_fold_change": f"{logfc:.8g}",
                     "statistic": str(raw.get("stat") or ""),
                     "p_value": f"{p_value:.8g}",
@@ -548,7 +566,7 @@ def _read_deseq2_rows(path: Path) -> list[dict[str, str]]:
     return rows
 
 
-def _read_edger_rows(path: Path) -> list[dict[str, str]]:
+def _read_edger_rows(path: Path, group_means: dict[str, dict[str, float]]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
@@ -561,8 +579,8 @@ def _read_edger_rows(path: Path) -> list[dict[str, str]]:
                     "feature_id": str(raw.get("feature_id") or ""),
                     "gene_symbol": str(raw.get("feature_id") or ""),
                     "base_mean_or_mean_expression": str(raw.get("logCPM") or ""),
-                    "case_mean": "",
-                    "control_mean": "",
+                    "case_mean": f"{group_means.get(str(raw.get('feature_id') or ''), {}).get('case', 0.0):.8g}",
+                    "control_mean": f"{group_means.get(str(raw.get('feature_id') or ''), {}).get('control', 0.0):.8g}",
                     "log2_fold_change": f"{logfc:.8g}",
                     "statistic": str(raw.get("F") or ""),
                     "p_value": f"{p_value:.8g}",

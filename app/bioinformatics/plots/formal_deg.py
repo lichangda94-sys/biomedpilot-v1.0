@@ -145,6 +145,7 @@ def create_formal_deg_plot_artifact(
         task_run_id=str(source.get("task_run_id") or ""),
         parameters_manifest={
             "source_parameters_manifest": source.get("parameters_manifest", {}),
+            "multifactor_design_provenance": _multifactor_design_provenance(source),
             "plot_parameters": parameters or {},
             "plot_policy": "formal_deg_plot_artifact_only_not_report_ready",
         },
@@ -233,6 +234,12 @@ def _is_formal_deg_candidate(entry: dict[str, Any]) -> bool:
 def _source_deg_tables(entry: dict[str, Any]) -> list[dict[str, Any]]:
     artifacts = entry.get("output_artifacts") if isinstance(entry.get("output_artifacts"), list) else []
     return [dict(item) for item in artifacts if isinstance(item, dict) and item.get("artifact_type") == "deg_result_table"]
+
+
+def _multifactor_design_provenance(entry: dict[str, Any]) -> dict[str, Any]:
+    parameters = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
+    keys = ("design_formula", "contrast", "covariates", "batch_variables", "design_rank", "residual_degrees_of_freedom", "contrast_estimability", "backend_method")
+    return {key: parameters.get(key) for key in keys if key in parameters}
 
 
 def _result_options(entries: list[dict[str, Any]]) -> list[dict[str, str]]:

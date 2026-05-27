@@ -9,6 +9,7 @@ from typing import Any
 
 from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION, load_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.models import REQUIRED_DEG_RESULT_COLUMNS
+from app.bioinformatics.deg_engine.multifactor_confirmation import MULTIFACTOR_CONFIRMATION_PATH, MULTIFACTOR_CONFIRMATION_SCHEMA_VERSION, load_multifactor_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.result_schema import validate_deg_result_entry, validate_formal_deg_result_index_entry
 from app.bioinformatics.plots.schema import validate_plot_artifact
 from app.bioinformatics.results.models import normalize_result_semantics
@@ -32,7 +33,7 @@ def evaluate_formal_deg_report_ready_gate(
     registry = load_registry(root)
     entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
     selected = _select_formal_deg_entry(entries, result_id)
-    confirmation = load_deg_parameter_confirmation(root)
+    confirmation = _load_parameter_confirmation_for_entry(root, selected or {})
     blockers: list[str] = []
     warnings: list[str] = []
     checks: dict[str, bool] = {
@@ -85,7 +86,7 @@ def evaluate_formal_deg_report_ready_gate(
         "status": status,
         "selected_result_id": str((selected or {}).get("result_id") or result_id or ""),
         "result_index_path": str(root / RESULT_INDEX),
-        "confirmation_path": str(root / CONFIRMATION_PATH),
+        "confirmation_path": str(_confirmation_path_for_entry(root, selected or {})),
         "confirmation_created_at": str(confirmation.get("created_at") or "") if isinstance(confirmation, dict) else "",
         "dependency_versions": _dependency_versions((selected or {}).get("dependency_snapshot") if isinstance((selected or {}).get("dependency_snapshot"), dict) else {}),
         "allow_table_only_report": allow_table_only_report,
@@ -134,7 +135,9 @@ def create_formal_deg_report_ready_package(
     _write_plot_artifact_files(plots_dir, selected.get("plot_artifacts", []) or [])
     _write_json(manifests_dir / "result_index_snapshot.json", registry)
     _write_json(manifests_dir / "formal_deg_result_entry.json", selected)
-    _write_json(manifests_dir / "formal_deg_parameter_confirmation.json", load_deg_parameter_confirmation(root))
+    parameter_confirmation = _load_parameter_confirmation_for_entry(root, selected)
+    _write_json(manifests_dir / "formal_deg_parameter_confirmation.json", parameter_confirmation)
+    _write_json(manifests_dir / "parameter_confirmation.json", parameter_confirmation)
     _write_json(manifests_dir / "dependency_snapshot.json", selected.get("dependency_snapshot", {}))
     _write_json(manifests_dir / "plot_artifacts.json", selected.get("plot_artifacts", []) or [])
     _write_json(manifests_dir / "plot_quality_summary.json", _plot_quality_summary(selected))
@@ -248,7 +251,8 @@ def _validate_confirmation(confirmation: dict[str, Any], entry: dict[str, Any], 
     warnings: list[str] = []
     if not confirmation:
         return {"not_expired": False, "blockers": ["formal_deg_parameter_confirmation_missing"], "warnings": warnings}
-    if confirmation.get("schema_version") != CONFIRMATION_SCHEMA_VERSION:
+    expected_schema = MULTIFACTOR_CONFIRMATION_SCHEMA_VERSION if _is_multifactor_entry(entry) else CONFIRMATION_SCHEMA_VERSION
+    if confirmation.get("schema_version") != expected_schema:
         blockers.append("formal_deg_parameter_confirmation_schema_mismatch")
     if confirmation.get("status") != "confirmed" or confirmation.get("confirmed_by_user") is not True:
         blockers.append("formal_deg_parameters_not_user_confirmed")
@@ -324,13 +328,15 @@ def _deg_table_path(root: Path, entry: dict[str, Any]) -> Path:
 
 
 def _provenance(entry: dict[str, Any], root: Path) -> dict[str, Any]:
+    confirmation = _load_parameter_confirmation_for_entry(root, entry)
     return {
         "result_id": str(entry.get("result_id") or ""),
         "task_run_id": str(entry.get("task_run_id") or ""),
         "input_package_id": str(entry.get("input_package_id") or ""),
         "source_repository_manifest": str(entry.get("source_repository_manifest") or ""),
-        "parameter_confirmation_path": str(root / CONFIRMATION_PATH),
-        "parameter_confirmation_created_at": str(load_deg_parameter_confirmation(root).get("created_at") or ""),
+        "parameter_confirmation_path": str(_confirmation_path_for_entry(root, entry)),
+        "parameter_confirmation_created_at": str(confirmation.get("created_at") or ""),
+        "multifactor_design": _multifactor_design_provenance(entry),
         "dependency_snapshot_present": bool(entry.get("dependency_snapshot")),
         "dependency_versions": _dependency_versions(entry.get("dependency_snapshot") if isinstance(entry.get("dependency_snapshot"), dict) else {}),
         "result_index_path": str(root / RESULT_INDEX),
@@ -356,6 +362,10 @@ def _formal_deg_report_markdown(entry: dict[str, Any], gate: dict[str, Any]) -> 
         f"- task_run_id: {entry.get('task_run_id', '')}",
         f"- input_package_id: {entry.get('input_package_id', '')}",
         f"- method: {parameters.get('method', '')}",
+        f"- design_formula: {parameters.get('design_formula', '')}",
+        f"- contrast: {parameters.get('contrast', '')}",
+        f"- covariates: {parameters.get('covariates', '')}",
+        f"- batch_variables: {parameters.get('batch_variables', '')}",
         f"- thresholds: log2FC={parameters.get('log2fc_threshold', '')}, p={parameters.get('p_value_threshold', '')}, FDR={parameters.get('fdr_threshold', '')}",
         f"- samples: case={len(parameters.get('case_samples', []) or [])}, control={len(parameters.get('control_samples', []) or [])}",
         "",
@@ -397,7 +407,7 @@ def _limitations() -> list[str]:
 
 def _method_explanation(entry: dict[str, Any]) -> dict[str, Any]:
     parameters = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
-    method = str(parameters.get("method") or "")
+    method = str(parameters.get("method") or parameters.get("backend_method") or "")
     family = str(parameters.get("method_family") or "")
     value_type = str(parameters.get("value_type") or "")
     explanation = [
@@ -409,7 +419,38 @@ def _method_explanation(entry: dict[str, Any]) -> dict[str, Any]:
     ]
     if value_type:
         explanation.append(f"Input value type: {value_type}")
+    multifactor = _multifactor_design_provenance(entry)
+    if multifactor:
+        explanation.extend(
+            [
+                f"Design formula: {multifactor.get('design_formula', '')}",
+                f"Contrast: {multifactor.get('contrast', {})}",
+                f"Covariates: {multifactor.get('covariates', [])}",
+                f"Batch variables: {multifactor.get('batch_variables', [])}",
+            ]
+        )
     return {"method": method, "method_family": family, "value_type": value_type, "explanation": explanation}
+
+
+def _load_parameter_confirmation_for_entry(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
+    if _is_multifactor_entry(entry):
+        return load_multifactor_deg_parameter_confirmation(root)
+    return load_deg_parameter_confirmation(root)
+
+
+def _confirmation_path_for_entry(root: Path, entry: dict[str, Any]) -> Path:
+    return root / (MULTIFACTOR_CONFIRMATION_PATH if _is_multifactor_entry(entry) else CONFIRMATION_PATH)
+
+
+def _is_multifactor_entry(entry: dict[str, Any]) -> bool:
+    parameters = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
+    return any(key in parameters for key in ("design_formula", "contrast", "covariates", "batch_variables")) and str(parameters.get("backend_method") or "") in {"limma", "DESeq2", "edgeR"}
+
+
+def _multifactor_design_provenance(entry: dict[str, Any]) -> dict[str, Any]:
+    parameters = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
+    keys = ("design_formula", "contrast", "covariates", "batch_variables", "design_rank", "residual_degrees_of_freedom", "contrast_estimability", "backend_method")
+    return {key: parameters.get(key) for key in keys if key in parameters}
 
 
 def _plot_quality_summary(entry: dict[str, Any]) -> dict[str, Any]:

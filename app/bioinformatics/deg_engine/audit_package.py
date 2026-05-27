@@ -55,6 +55,7 @@ def create_deg_production_audit_package(
     _write_json(manifests_dir / "data_quality.json", data_quality_gate or {})
     _write_json(manifests_dir / "method_recommendation.json", method_recommendation_gate or {})
     _write_json(manifests_dir / "parameters_manifest.json", entry.get("parameters_manifest", {}))
+    _write_json(manifests_dir / "multifactor_design_provenance.json", _multifactor_design_provenance(entry))
     _write_json(manifests_dir / "dependency_snapshot.json", entry.get("dependency_snapshot", {}))
     _write_json(manifests_dir / "result_index_snapshot.json", registry)
     _write_json(manifests_dir / "formal_deg_result_entry.json", entry)
@@ -78,6 +79,7 @@ def create_deg_production_audit_package(
             "manifests/data_quality.json",
             "manifests/method_recommendation.json",
             "manifests/parameters_manifest.json",
+            "manifests/multifactor_design_provenance.json",
             "manifests/dependency_snapshot.json",
             "manifests/result_index_snapshot.json",
             "manifests/command_manifest.json",
@@ -90,6 +92,7 @@ def create_deg_production_audit_package(
             "task_run_id": str(entry.get("task_run_id") or ""),
             "engine_name": str(entry.get("engine_name") or ""),
             "engine_version": str(entry.get("engine_version") or ""),
+            "multifactor_design": _multifactor_design_provenance(entry),
             "result_index_path": str(root / RESULT_INDEX),
         },
         "blockers": [],
@@ -133,7 +136,14 @@ def _command_manifest(entry: dict[str, Any]) -> dict[str, Any]:
         "engine_version": str(entry.get("engine_version") or ""),
         "parameters_manifest_present": bool(entry.get("parameters_manifest")),
         "dependency_snapshot_present": bool(entry.get("dependency_snapshot")),
+        "multifactor_design_present": bool(_multifactor_design_provenance(entry)),
     }
+
+
+def _multifactor_design_provenance(entry: dict[str, Any]) -> dict[str, Any]:
+    parameters = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
+    keys = ("design_formula", "contrast", "covariates", "batch_variables", "design_rank", "residual_degrees_of_freedom", "contrast_estimability", "backend_method")
+    return {key: parameters.get(key) for key in keys if key in parameters}
 
 
 def _limitations() -> list[str]:
