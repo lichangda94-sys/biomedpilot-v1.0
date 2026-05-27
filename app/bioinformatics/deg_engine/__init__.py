@@ -5,6 +5,7 @@ from .confirmation import load_deg_parameter_confirmation, save_deg_parameter_co
 from .data_quality import build_deg_data_quality_gate
 from .design_quality import build_deg_design_quality_gate
 from .input_adaptation import build_deg_input_adaptation_gate
+from .method_recommendation import build_deg_method_recommendation_gate
 from .parameter_gate import build_deg_parameter_manifest, validate_deg_parameter_manifest
 from .formal_runner import run_formal_controlled_deg
 from .python_backend import run_controlled_deg
@@ -15,6 +16,7 @@ __all__ = [
     "build_deg_input_adaptation_gate",
     "build_deg_design_quality_gate",
     "build_deg_data_quality_gate",
+    "build_deg_method_recommendation_gate",
     "build_formal_deg_result_schema_gate",
     "check_deg_backend_dependencies",
     "load_deg_parameter_confirmation",

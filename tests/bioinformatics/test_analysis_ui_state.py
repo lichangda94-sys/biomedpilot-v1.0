@@ -45,6 +45,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "DEG real-project input adaptation" in formal_gate_text
     assert "DEG batch/design QA" in formal_gate_text
     assert "DEG data quality / repair guidance" in formal_gate_text
+    assert "DEG method recommendation" in formal_gate_text
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
     assert "B9.2 controlled activation" in formal_gate_text
