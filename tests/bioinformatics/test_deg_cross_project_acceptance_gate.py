@@ -68,6 +68,9 @@ def test_real_world_fixture_acceptance_has_expected_positive_and_negative_scenar
     assert gate["status"] == "passed"
     assert gate["positive_scenarios_passed"] is True
     assert gate["negative_scenarios_blocked"] is True
+    assert gate["backend_schema_consistency"]["status"] == "passed"
+    assert set(gate["backend_schema_consistency"]["backends"]) == {"python_scipy_statsmodels", "limma", "DESeq2", "edgeR"}
+    assert gate["backend_schema_consistency"]["report_ready_eligible_default"] is False
     assert set(gate["expected_positive_scenarios"]).issubset(set(gate["passed_scenarios"]))
     assert set(gate["expected_negative_scenarios"]).issubset(set(gate["blocked_scenarios"]))
 

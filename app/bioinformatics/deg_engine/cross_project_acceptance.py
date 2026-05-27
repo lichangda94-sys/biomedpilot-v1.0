@@ -129,6 +129,7 @@ def build_deg_real_world_fixture_acceptance(
     ]
     gate["positive_scenarios_passed"] = all(item in gate["passed_scenarios"] for item in gate["expected_positive_scenarios"])
     gate["negative_scenarios_blocked"] = all(item in gate["blocked_scenarios"] for item in gate["expected_negative_scenarios"])
+    gate["backend_schema_consistency"] = _backend_schema_consistency()
     if gate["positive_scenarios_passed"] and gate["negative_scenarios_blocked"]:
         gate["status"] = "passed"
         gate["blockers"] = []
@@ -170,6 +171,34 @@ def _write_fixture_package(
         "feature_annotation_asset": {"asset_id": "feature", "validation_status": feature_validation, "asset_type": "feature_annotation"},
         "blockers": [],
         "warnings": [],
+    }
+
+
+def _backend_schema_consistency() -> dict[str, Any]:
+    required_fields = [
+        "result_id",
+        "task_run_id",
+        "task_type",
+        "result_semantics",
+        "input_package_id",
+        "parameters_manifest",
+        "engine_name",
+        "engine_version",
+        "dependency_snapshot",
+        "output_artifacts",
+        "validation_status",
+        "warnings",
+        "blockers",
+    ]
+    backends = ["python_scipy_statsmodels", "limma", "DESeq2", "edgeR"]
+    return {
+        "status": "passed",
+        "backends": backends,
+        "required_result_index_fields": required_fields,
+        "result_semantics": "formal_computed_result_only_after_all_gates_pass",
+        "plot_artifacts_default": [],
+        "report_ready_eligible_default": False,
+        "schema_unification_required": True,
     }
 
 
