@@ -3,6 +3,7 @@ from __future__ import annotations
 from .dependency_check import check_deg_backend_dependencies
 from .confirmation import load_deg_parameter_confirmation, save_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from .audit_package import create_deg_production_audit_package
+from .cross_project_acceptance import build_deg_cross_project_acceptance_gate, evaluate_deg_cross_project_scenario
 from .data_quality import build_deg_data_quality_gate
 from .design_quality import build_deg_design_quality_gate
 from .input_adaptation import build_deg_input_adaptation_gate
@@ -21,6 +22,8 @@ __all__ = [
     "build_formal_deg_result_schema_gate",
     "check_deg_backend_dependencies",
     "create_deg_production_audit_package",
+    "build_deg_cross_project_acceptance_gate",
+    "evaluate_deg_cross_project_scenario",
     "load_deg_parameter_confirmation",
     "run_formal_controlled_deg",
     "run_controlled_deg",
