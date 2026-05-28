@@ -24,6 +24,7 @@ from app.shared.local_engines import (
     detect_report_renderer_dependencies,
     external_engines_storage_root,
     load_external_engine_registry,
+    r_enrichment_install_guide_text,
     run_external_enrichment_r_backend_validation,
 )
 
@@ -234,6 +235,18 @@ def test_real_external_enrichment_r_backend_detection_reports_current_runtime(tm
     else:
         validation = run_external_enrichment_r_backend_validation(storage_root=tmp_path)
         assert validation["status"] in {"passed", "blocked"}
+
+
+def test_r_enrichment_install_guide_is_manual_detect_first_content() -> None:
+    text = r_enrichment_install_guide_text()
+
+    assert "ReactomePA" in text
+    assert "msigdbr" in text
+    assert "BiocManager::install" in text
+    assert "install.packages" in text
+    assert "none_detect_first_only" in text
+    assert "external_runtime_not_bundled" in text
+    assert "不会" in text
 
 
 def _r_runner(*, installed: dict[str, str]):

@@ -41,3 +41,21 @@ PADDLEOCR_INSTALL_GUIDE = "\n".join(
 
 def paddleocr_install_guide_text() -> str:
     return PADDLEOCR_INSTALL_GUIDE
+
+
+R_ENRICHMENT_INSTALL_GUIDE = "\n".join(
+    (
+        "外部 R 富集分析后端用于 Bioinformatics 的 ORA / GSEA / Reactome / MSigDB 资源检测与后续受控执行。",
+        "BioMedPilot 只做 detect-first 状态读取：不会在 app runtime 内静默安装、静默下载、打包或更新 R / Bioconductor / CRAN 依赖。",
+        "必需 R 包：clusterProfiler、fgsea、DOSE、enrichplot、ggplot2、AnnotationDbi、org.Hs.eg.db、ReactomePA、msigdbr。",
+        "可选 R 包：pathview、GO.db、KEGGREST；缺失时应作为 warning 或部分能力不可用处理，除非后续策略明确升级为必需。",
+        "推荐由 operator 在 BioMedPilot 外部执行：Rscript -e 'options(repos=c(CRAN=\"https://cloud.r-project.org\")); if (!requireNamespace(\"BiocManager\", quietly=TRUE)) install.packages(\"BiocManager\"); BiocManager::install(c(\"ReactomePA\"), ask=FALSE, update=FALSE); install.packages(\"msigdbr\")'",
+        "可选补充：Rscript -e 'BiocManager::install(c(\"pathview\", \"GO.db\", \"KEGGREST\"), ask=FALSE, update=FALSE)'",
+        "安装后重新运行 external enrichment R backend detection，确认 Rscript 路径、R version、architecture、.libPaths()、package versions、fixture TSV 和 plot smoke metadata。",
+        "确认项：install_action 必须保持 none_detect_first_only，packaging_policy 必须保持 external_runtime_not_bundled；R package library、cache、downloaded source tarballs 不应进入 Git 或 BioMedPilot.app。",
+    )
+)
+
+
+def r_enrichment_install_guide_text() -> str:
+    return R_ENRICHMENT_INSTALL_GUIDE

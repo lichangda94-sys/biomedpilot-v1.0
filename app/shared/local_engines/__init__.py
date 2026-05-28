@@ -79,7 +79,12 @@ from app.shared.local_engines.imagej_fiji_runtime import (
     select_imagej_fiji_download_asset,
     write_imagej_fiji_runtime_manifest,
 )
-from app.shared.local_engines.install_guides import imagej_fiji_install_guide_text, imagej_fiji_setup_prompt_text, paddleocr_install_guide_text
+from app.shared.local_engines.install_guides import (
+    imagej_fiji_install_guide_text,
+    imagej_fiji_setup_prompt_text,
+    paddleocr_install_guide_text,
+    r_enrichment_install_guide_text,
+)
 from app.shared.local_engines.ollama_llm_engine import (
     DEFAULT_OLLAMA_COMMAND_PATHS,
     DEFAULT_OLLAMA_TIMEOUT_SECONDS,
@@ -256,6 +261,7 @@ __all__ = [
     "ollama_model_role_registry_payload",
     "ollama_role_model_mapping",
     "paddleocr_install_guide_text",
+    "r_enrichment_install_guide_text",
     "paddleocr_runtime_manifest_from_dict",
     "paddleocr_runtime_manifest_path",
     "parse_imagej_fiji_version_output",
