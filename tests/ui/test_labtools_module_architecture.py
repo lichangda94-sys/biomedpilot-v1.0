@@ -157,8 +157,9 @@ def test_western_blot_available_page_keeps_image_analysis_disabled(qapp) -> None
 
 
 def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:
-    from PySide6.QtWidgets import QPushButton
+    from PySide6.QtWidgets import QFrame, QPushButton
 
+    from app.labtools.workspace import LabToolsWorkspaceWidget
     from app.shell.main_window import MainWindow
 
     window = MainWindow()
@@ -169,6 +170,7 @@ def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:
         labtools_button.click()
 
         assert window.current_workspace_key() == "labtools"
+        assert isinstance(window._labtools_page, LabToolsWorkspaceWidget)
         assert window._labtools_page.page_keys() == (
             "home",
             "general_calculators",
@@ -179,6 +181,21 @@ def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:
             "pcr_qpcr",
             "elisa_absorbance",
         )
+        assert window._labtools_page.current_page_key() == "home"
+        for object_name in ENTRY_OBJECTS.values():
+            assert window._labtools_page.findChild(QFrame, object_name) is not None
+
+        western_blot = next(
+            item
+            for item in (
+                window._labtools_page.findChildren(QPushButton, "primaryButton")
+                + window._labtools_page.findChildren(QPushButton, "secondaryButton")
+            )
+            if item.property("pageKey") == "western_blot"
+        )
+        western_blot.click()
+
+        assert window._labtools_page.current_page_key() == "western_blot"
     finally:
         window.close()
         window.deleteLater()

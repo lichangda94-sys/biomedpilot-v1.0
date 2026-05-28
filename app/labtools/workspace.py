@@ -439,6 +439,23 @@ if QWidget is not None:
 
         def _show_page(self, key: str) -> None:
             self._stack.setCurrentWidget(self._route_pages[key])
+            self.setProperty("pageKey", key)
+            self.setProperty("semanticKey", self._semantic_key_for_route(key))
+
+        def _semantic_key_for_route(self, key: str) -> str:
+            from app.shared.semantic_keys import PageKey
+
+            semantic_by_route = {
+                "home": PageKey.LABTOOLS_HOME.value,
+                "general_calculators": PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
+                "imagej_fiji": "labtools.page.imagej_fiji",
+                "reagent_records": PageKey.LABTOOLS_REAGENT_PREPARATION.value,
+                "cell_experiments": PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
+                "western_blot": PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+                "pcr_qpcr": PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value,
+                "elisa_absorbance": PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+            }
+            return semantic_by_route.get(key, PageKey.LABTOOLS_HOME.value)
 
         # Backward-compatible route names for existing internal callers.
         def show_calculators(self) -> None:

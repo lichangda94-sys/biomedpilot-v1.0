@@ -6,6 +6,7 @@ try:
 
     from app.labtools.labtools_tool_registry import LabToolsTool, labtools_tool_registry
     from app.shared.local_engines import ImageJFijiBridge
+    from app.shared.semantic_keys import ModuleKey, PageKey
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -89,6 +90,7 @@ if QWidget is not None:
             meta_label.setObjectName("labToolsMeta")
             meta_label.setWordWrap(True)
             button = QPushButton(tool.button_text)
+            page_key, semantic_key = self._route_metadata(tool)
             active_statuses = {
                 "可用",
                 "本地辅助",
@@ -102,7 +104,14 @@ if QWidget is not None:
                 "missing / manual-review",
                 "fallback/manual-review",
             }
-            button.setObjectName("primaryButton" if status in active_statuses else "secondaryButton")
+            entry_style = "primary" if status in active_statuses else "secondary"
+            button.setObjectName("primaryButton" if entry_style == "primary" else "secondaryButton")
+            button.setProperty("entryStyle", entry_style)
+            button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+            button.setProperty("pageKey", page_key)
+            button.setProperty("semanticKey", semantic_key)
+            button.setProperty("toolId", tool.tool_id)
+            button.setProperty("statusKey", tool.status)
             button.clicked.connect(lambda _checked=False, item=tool: self._emit_tool(item))
             layout.addWidget(status_label, alignment=Qt.AlignLeft)
             layout.addWidget(title_label)
@@ -115,6 +124,16 @@ if QWidget is not None:
 
         def _display_status(self, tool: LabToolsTool) -> str:
             return tool.status
+
+        def _route_metadata(self, tool: LabToolsTool) -> tuple[str, str]:
+            semantic_by_tool = {
+                "general_reagent_calculator": PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
+                "western_blot": PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+                "pcr_qpcr": PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value,
+                "elisa_absorbance": PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+                "cell_experiments": PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
+            }
+            return tool.entry_page, semantic_by_tool.get(tool.tool_id, PageKey.LABTOOLS_HOME.value)
 
         def _emit_tool(self, tool: LabToolsTool) -> None:
             self.tool_requested.emit(tool.tool_id)
