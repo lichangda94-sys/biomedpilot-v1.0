@@ -19,7 +19,7 @@ RESULT_INDEX = Path("results") / "summaries" / "result_index.json"
 RESULT_INDEX_SCHEMA_VERSION = "bioinformatics_result_index.v1"
 
 
-def load_result_index(project_root: str | Path) -> dict[str, object]:
+def load_result_index(project_root: str | Path, *, persist_generated: bool = True) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
     index_path = root / RESULT_INDEX
     manager_path = root / RESULT_MANAGER
@@ -45,8 +45,9 @@ def load_result_index(project_root: str | Path) -> dict[str, object]:
         "results": entries,
         "warnings": list(dict.fromkeys(warnings)),
     }
-    _write_json(index_path, generated_index)
-    _write_json(root / RESULT_MANAGER, {"schema_version": "biomedpilot.result_manager.v1", "result_count": len(entries), "item_count": len(items)})
+    if persist_generated:
+        _write_json(index_path, generated_index)
+        _write_json(root / RESULT_MANAGER, {"schema_version": "biomedpilot.result_manager.v1", "result_count": len(entries), "item_count": len(items)})
     return {
         "index": generated_index,
         "manager": manager,

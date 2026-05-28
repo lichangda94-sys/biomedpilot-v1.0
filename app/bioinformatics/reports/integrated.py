@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.registry import RESULT_INDEX, load_registry
@@ -15,14 +17,19 @@ from .gsea import evaluate_gsea_report_ready_gate
 from .ora import evaluate_ora_report_ready_gate
 from .renderer_capability import build_report_renderer_capability_snapshot
 from .renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
-from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate
+from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logrank_report_ready_gate, evaluate_risk_score_report_ready_gate
 
 
 FULL_INTEGRATED_REPORT_READY_SCHEMA_VERSION = "biomedpilot.full_integrated_report_gate.v1"
 FULL_INTEGRATED_REPORT_PACKAGE_SCHEMA_VERSION = "biomedpilot.full_integrated_report_package.v1"
 FULL_INTEGRATED_REPORT_RENDERER_GATE_SCHEMA_VERSION = "biomedpilot.full_integrated_report_renderer_gate.v1"
 FULL_INTEGRATED_DOCX_PREFLIGHT_SCHEMA_VERSION = "biomedpilot.full_integrated_docx_preflight_gate.v1"
+FULL_INTEGRATED_PDF_PREFLIGHT_SCHEMA_VERSION = "biomedpilot.full_integrated_pdf_preflight_gate.v1"
+FULL_INTEGRATED_RENDERED_EXPORTS_SCHEMA_VERSION = "biomedpilot.full_integrated_rendered_exports.v1"
+FULL_INTEGRATED_DOCX_CONVERSION_LOG_SCHEMA_VERSION = "biomedpilot.full_integrated_docx_conversion_log.v1"
+FULL_INTEGRATED_PDF_CONVERSION_LOG_SCHEMA_VERSION = "biomedpilot.full_integrated_pdf_conversion_log.v1"
 REQUIRED_SECTION_IDS = ("formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox")
+OPTIONAL_SECTION_IDS = ("risk_score_validation",)
 PACKAGE_DIRECTORIES = ("sections", "tables", "plots", "manifests", "logs", "provenance")
 PACKAGE_REQUIRED_FILES = (
     "integrated_report.md",
@@ -41,6 +48,7 @@ SECTION_TASK_TYPES = {
     "gsea_preranked": ("gsea_preranked",),
     "survival_km_logrank": ("survival_km_logrank",),
     "cox": ("cox_univariate", "cox_multivariate"),
+    "risk_score_validation": ("risk_score",),
 }
 SECTION_LABELS = {
     "formal_deg": "Formal DEG",
@@ -48,6 +56,7 @@ SECTION_LABELS = {
     "gsea_preranked": "Preranked GSEA",
     "survival_km_logrank": "KM/log-rank survival",
     "cox": "Cox clinical association",
+    "risk_score_validation": "Risk score validation",
 }
 SECTION_PLOT_REQUIREMENTS = {
     "formal_deg": "formal_deg_plot_or_explicit_table_only_mode",
@@ -55,15 +64,18 @@ SECTION_PLOT_REQUIREMENTS = {
     "gsea_preranked": "gsea_plot_or_explicit_table_only_mode",
     "survival_km_logrank": "formal_km_plot_artifact_required_after_survival_report_ready_exists",
     "cox": "formal_cox_plot_artifact_required_after_survival_report_ready_exists",
+    "risk_score_validation": "risk_score_nomogram_calibration_decision_curve_or_explicit_table_only_mode",
 }
 SUPPORTED_EXPORT_FORMATS = ("markdown", "pdf", "docx")
 SURVIVAL_CLINICAL_SECTION_SCOPES = {
-    "survival_km_logrank": "survival_km_logrank_only",
-    "cox": "cox_univariate_only",
+    "survival_km_logrank": ("survival_km_logrank_only",),
+    "cox": ("cox_univariate_only", "cox_multivariate_only"),
+    "risk_score_validation": ("risk_score_validation_only",),
 }
 SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES = {
-    "survival_km_logrank": "km_logrank_report.md",
-    "cox": "cox_univariate_report.md",
+    "survival_km_logrank": {"survival_km_logrank_only": "km_logrank_report.md"},
+    "cox": {"cox_univariate_only": "cox_univariate_report.md", "cox_multivariate_only": "cox_multivariate_report.md"},
+    "risk_score_validation": {"risk_score_validation_only": "risk_score_validation_report.md"},
 }
 SECTION_PACKAGE_REQUIRED_FILES = (
     "README_limitations.md",
@@ -185,6 +197,7 @@ def evaluate_full_integrated_docx_preflight_gate(
     package_path: str | Path,
     *,
     renderer_gate: dict[str, Any] | None = None,
+    include_activation_blocker: bool = True,
 ) -> dict[str, Any]:
     package_dir = Path(package_path).expanduser().resolve()
     renderer_gate = renderer_gate or evaluate_full_integrated_report_renderer_gate("docx")
@@ -224,8 +237,10 @@ def evaluate_full_integrated_docx_preflight_gate(
     blockers.extend(f"docx_source_markdown_forbidden_clinical_conclusion:{term}" for term in forbidden)
     renderer_blockers = [str(item) for item in renderer_gate.get("blockers", []) or []]
     blockers.extend(renderer_blockers)
-    blockers.append("full_integrated_docx_export_activation_required_b24_2")
+    if include_activation_blocker:
+        blockers.append("full_integrated_docx_export_activation_required_b24_2")
     unique_blockers = list(dict.fromkeys(blockers))
+    renderer_checks = renderer_gate.get("checks") if isinstance(renderer_gate.get("checks"), dict) else {}
     checks = {
         "source_package_exists": package_dir.is_dir(),
         "source_manifest_exists": manifest_path.is_file(),
@@ -240,16 +255,21 @@ def evaluate_full_integrated_docx_preflight_gate(
         "local_references_resolve": not any(item.startswith("docx_markdown_local_reference_missing:") for item in unique_blockers),
         "no_forbidden_clinical_conclusion": not any(item.startswith("docx_source_markdown_forbidden_clinical_conclusion:") for item in unique_blockers),
         "pandoc_detected": bool((renderer_gate.get("detected_dependencies", {}).get("pandoc") or {}).get("available")) if isinstance(renderer_gate.get("detected_dependencies"), dict) else False,
-        "renderer_implementation_enabled": False,
+        "renderer_implementation_enabled": bool(renderer_checks.get("implementation_enabled")),
         "detect_first_no_install_action": True,
         "no_conversion_invoked": True,
     }
     preflight_blockers = [item for item in unique_blockers if item != "full_integrated_docx_export_activation_required_b24_2"]
-    preflight_status = "passed_pending_activation" if not preflight_blockers else "blocked"
+    if preflight_blockers:
+        preflight_status = "blocked"
+    elif include_activation_blocker:
+        preflight_status = "passed_pending_activation"
+    else:
+        preflight_status = "passed"
     return {
         "schema_version": FULL_INTEGRATED_DOCX_PREFLIGHT_SCHEMA_VERSION,
         "created_at": _now(),
-        "status": "blocked",
+        "status": "blocked" if unique_blockers else "passed",
         "preflight_status": preflight_status,
         "source_package_path": str(package_dir),
         "source_manifest_path": str(manifest_path),
@@ -277,9 +297,495 @@ def evaluate_full_integrated_docx_preflight_gate(
     }
 
 
-def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown") -> dict[str, Any]:
+def create_full_integrated_docx_rendered_export_skeleton(
+    package_path: str | Path,
+    *,
+    renderer_gate: dict[str, Any] | None = None,
+    failure_reason: str = "full_integrated_docx_conversion_not_enabled_b24_4",
+) -> dict[str, Any]:
+    package_dir = Path(package_path).expanduser().resolve()
+    preflight_gate = evaluate_full_integrated_docx_preflight_gate(package_dir, renderer_gate=renderer_gate)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    output_path = _reserved_export_path(package_dir, "integrated_report", "docx", stamp=stamp)
+    conversion_log_path = _reserved_log_path(package_dir, "docx_renderer", stamp=stamp)
+    blockers = list(dict.fromkeys([*list(preflight_gate.get("blockers", []) or []), failure_reason]))
+    log_payload = _docx_conversion_log_payload(
+        package_dir,
+        preflight_gate=preflight_gate,
+        output_path=output_path,
+        conversion_log_path=conversion_log_path,
+        status="blocked",
+        failure_reason="; ".join(blockers),
+    )
+    _write_json(conversion_log_path, log_payload)
+    manifest = _rendered_exports_manifest(package_dir)
+    attempt = {
+        "artifact_id": f"docx_attempt_{stamp}",
+        "artifact_type": "full_integrated_report_rendered_export_attempt",
+        "source_package_id": _source_package_id(package_dir),
+        "source_markdown_path": "integrated_report.md",
+        "export_format": "docx",
+        "renderer_id": "pandoc_docx",
+        "renderer_version": _renderer_version_from_gate(preflight_gate),
+        "renderer_dependency_snapshot": preflight_gate.get("renderer_gate", {}).get("detected_dependencies", {}),
+        "output_path": str(output_path.relative_to(package_dir)) if _is_relative_to(output_path, package_dir) else str(output_path),
+        "conversion_log_path": str(conversion_log_path.relative_to(package_dir)) if _is_relative_to(conversion_log_path, package_dir) else str(conversion_log_path),
+        "validation_status": "blocked",
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+        "blockers": blockers,
+        "created_at": _now(),
+    }
+    manifest.setdefault("attempts", []).append(attempt)
+    manifest["latest_attempt_status"] = "blocked"
+    manifest["latest_attempt_log_path"] = attempt["conversion_log_path"]
+    _write_json(package_dir / "manifests" / "rendered_exports.json", manifest)
+    _update_package_manifest_rendered_exports(package_dir, manifest)
+    return {
+        "schema_version": "biomedpilot.full_integrated_docx_rendered_export_skeleton.v1",
+        "created_at": _now(),
+        "status": "blocked",
+        "preflight_gate": preflight_gate,
+        "rendered_exports_manifest_path": str(package_dir / "manifests" / "rendered_exports.json"),
+        "conversion_log_path": str(conversion_log_path),
+        "planned_output_path": str(output_path),
+        "artifact_attempt": attempt,
+        "blockers": blockers,
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+    }
+
+
+def evaluate_full_integrated_pdf_preflight_gate(
+    package_path: str | Path,
+    *,
+    renderer_gate: dict[str, Any] | None = None,
+    include_activation_blocker: bool = True,
+) -> dict[str, Any]:
+    package_dir = Path(package_path).expanduser().resolve()
+    renderer_gate = renderer_gate or evaluate_full_integrated_report_renderer_gate("pdf")
+    blockers: list[str] = []
+    warnings: list[str] = []
+    manifest_path = package_dir / "integrated_report_package_manifest.json"
+    markdown_path = package_dir / "integrated_report.md"
+    planned_output_path = package_dir / "exports" / "integrated_report.pdf"
+    conversion_log_path = package_dir / "logs" / "pdf_renderer_preflight.log"
+    manifest = _read_json(manifest_path)
+    markdown = ""
+
+    if not package_dir.is_dir():
+        blockers.append("pdf_source_package_missing")
+    if not manifest_path.is_file():
+        blockers.append("pdf_source_package_manifest_missing")
+    if manifest:
+        if manifest.get("status") != "full_integrated_report_package_created":
+            blockers.append("pdf_source_package_status_not_created")
+        if manifest.get("section_scope") != "full_integrated_report":
+            blockers.append("pdf_source_package_scope_not_full_integrated_report")
+        if manifest.get("export_format") != "markdown":
+            blockers.append("pdf_source_package_must_be_markdown_export")
+        gate = manifest.get("gate") if isinstance(manifest.get("gate"), dict) else {}
+        if gate.get("status") != "eligible_for_full_integrated_report":
+            blockers.append("pdf_source_full_integrated_gate_not_passed")
+    if not markdown_path.is_file():
+        blockers.append("pdf_source_markdown_missing")
+    else:
+        markdown = markdown_path.read_text(encoding="utf-8")
+        if not markdown.strip():
+            blockers.append("pdf_source_markdown_empty")
+    for reference in _markdown_local_references(markdown):
+        if not (package_dir / reference).resolve().is_file():
+            blockers.append(f"pdf_markdown_local_reference_missing:{reference}")
+    forbidden = _forbidden_clinical_conclusion_terms(markdown)
+    blockers.extend(f"pdf_source_markdown_forbidden_clinical_conclusion:{term}" for term in forbidden)
+
+    dependencies = renderer_gate.get("detected_dependencies") if isinstance(renderer_gate.get("detected_dependencies"), dict) else {}
+    pandoc = dependencies.get("pandoc") if isinstance(dependencies.get("pandoc"), dict) else {}
+    xelatex = dependencies.get("xelatex") if isinstance(dependencies.get("xelatex"), dict) else {}
+    wkhtmltopdf = dependencies.get("wkhtmltopdf") if isinstance(dependencies.get("wkhtmltopdf"), dict) else {}
+    renderer_blockers = [str(item) for item in renderer_gate.get("blockers", []) or []]
+    blockers.extend(renderer_blockers)
+    if wkhtmltopdf.get("available"):
+        warnings.append("wkhtmltopdf_detected_but_not_selected_for_formal_full_integrated_pdf")
+    if include_activation_blocker:
+        blockers.append("full_integrated_pdf_export_activation_required_b30_1")
+
+    unique_blockers = list(dict.fromkeys(blockers))
+    renderer_checks = renderer_gate.get("checks") if isinstance(renderer_gate.get("checks"), dict) else {}
+    checks = {
+        "source_package_exists": package_dir.is_dir(),
+        "source_manifest_exists": manifest_path.is_file(),
+        "source_package_full_integrated_markdown": bool(
+            manifest
+            and manifest.get("status") == "full_integrated_report_package_created"
+            and manifest.get("section_scope") == "full_integrated_report"
+            and manifest.get("export_format") == "markdown"
+        ),
+        "source_markdown_exists": markdown_path.is_file(),
+        "source_markdown_nonempty": bool(markdown.strip()),
+        "local_references_resolve": not any(item.startswith("pdf_markdown_local_reference_missing:") for item in unique_blockers),
+        "no_forbidden_clinical_conclusion": not any(item.startswith("pdf_source_markdown_forbidden_clinical_conclusion:") for item in unique_blockers),
+        "pandoc_detected": bool(pandoc.get("available")),
+        "xelatex_detected": bool(xelatex.get("available")),
+        "wkhtmltopdf_detect_only_not_selected": True,
+        "selected_backend": "pandoc_xelatex",
+        "renderer_implementation_enabled": bool(renderer_checks.get("implementation_enabled")),
+        "detect_first_no_install_action": True,
+        "no_conversion_invoked": True,
+    }
+    preflight_blockers = [item for item in unique_blockers if item != "full_integrated_pdf_export_activation_required_b30_1"]
+    if preflight_blockers:
+        preflight_status = "blocked"
+    elif include_activation_blocker:
+        preflight_status = "passed_pending_activation"
+    else:
+        preflight_status = "passed"
+    return {
+        "schema_version": FULL_INTEGRATED_PDF_PREFLIGHT_SCHEMA_VERSION,
+        "created_at": _now(),
+        "status": "blocked" if unique_blockers else "passed",
+        "preflight_status": preflight_status,
+        "source_package_path": str(package_dir),
+        "source_manifest_path": str(manifest_path),
+        "source_markdown_path": str(markdown_path),
+        "export_format": "pdf",
+        "renderer_id": "pandoc_pdf",
+        "selected_backend": "pandoc_xelatex",
+        "renderer_gate": renderer_gate,
+        "runtime_packaging_policy": build_full_integrated_renderer_runtime_packaging_policy(),
+        "planned_output_path": str(planned_output_path),
+        "conversion_log_path": str(conversion_log_path),
+        "overwrite_policy": "create_or_validate_inside_existing_timestamped_package_without_overwriting_markdown_source",
+        "artifact_manifest_preview": {
+            "artifact_type": "full_integrated_report_rendered_export",
+            "source_package_id": str(manifest.get("created_at") or package_dir.name),
+            "source_markdown_path": str(markdown_path),
+            "export_format": "pdf",
+            "renderer_id": "pandoc_pdf",
+            "selected_backend": "pandoc_xelatex",
+            "output_path": str(planned_output_path),
+            "validation_status": "not_created_preflight_only",
+        },
+        "checks": checks,
+        "disabled_reason": "; ".join(unique_blockers),
+        "blockers": unique_blockers,
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def create_full_integrated_pdf_rendered_export_skeleton(
+    package_path: str | Path,
+    *,
+    renderer_gate: dict[str, Any] | None = None,
+    failure_reason: str = "full_integrated_pdf_conversion_not_enabled_b30_1",
+) -> dict[str, Any]:
+    package_dir = Path(package_path).expanduser().resolve()
+    preflight_gate = evaluate_full_integrated_pdf_preflight_gate(package_dir, renderer_gate=renderer_gate)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    output_path = _reserved_export_path(package_dir, "integrated_report", "pdf", stamp=stamp)
+    conversion_log_path = _reserved_log_path(package_dir, "pdf_renderer", stamp=stamp)
+    blockers = list(dict.fromkeys([*list(preflight_gate.get("blockers", []) or []), failure_reason]))
+    log_payload = _pdf_conversion_log_payload(
+        package_dir,
+        preflight_gate=preflight_gate,
+        output_path=output_path,
+        conversion_log_path=conversion_log_path,
+        status="blocked",
+        failure_reason="; ".join(blockers),
+    )
+    _write_json(conversion_log_path, log_payload)
+    manifest = _rendered_exports_manifest(package_dir)
+    attempt = {
+        "artifact_id": f"pdf_attempt_{stamp}",
+        "artifact_type": "full_integrated_report_rendered_export_attempt",
+        "source_package_id": _source_package_id(package_dir),
+        "source_markdown_path": "integrated_report.md",
+        "export_format": "pdf",
+        "renderer_id": "pandoc_pdf",
+        "selected_backend": "pandoc_xelatex",
+        "renderer_version": _renderer_version_from_gate(preflight_gate),
+        "renderer_dependency_snapshot": preflight_gate.get("renderer_gate", {}).get("detected_dependencies", {}),
+        "output_path": str(output_path.relative_to(package_dir)) if _is_relative_to(output_path, package_dir) else str(output_path),
+        "conversion_log_path": str(conversion_log_path.relative_to(package_dir)) if _is_relative_to(conversion_log_path, package_dir) else str(conversion_log_path),
+        "conversion_invoked": False,
+        "validation_status": "blocked",
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+        "blockers": blockers,
+        "created_at": _now(),
+    }
+    manifest.setdefault("attempts", []).append(attempt)
+    manifest["latest_attempt_status"] = "blocked"
+    manifest["latest_attempt_log_path"] = attempt["conversion_log_path"]
+    _write_json(package_dir / "manifests" / "rendered_exports.json", manifest)
+    _update_package_manifest_rendered_exports(package_dir, manifest)
+    return {
+        "schema_version": "biomedpilot.full_integrated_pdf_rendered_export_skeleton.v1",
+        "created_at": _now(),
+        "status": "blocked",
+        "preflight_gate": preflight_gate,
+        "rendered_exports_manifest_path": str(package_dir / "manifests" / "rendered_exports.json"),
+        "conversion_log_path": str(conversion_log_path),
+        "planned_output_path": str(output_path),
+        "artifact_attempt": attempt,
+        "blockers": blockers,
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+    }
+
+
+def create_full_integrated_pdf_rendered_export(
+    package_path: str | Path,
+    *,
+    command_finder: Callable[[str], str | None] | None = None,
+    runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    timeout_seconds: int = 90,
+) -> dict[str, Any]:
+    package_dir = Path(package_path).expanduser().resolve()
+    renderer_gate = evaluate_full_integrated_report_renderer_gate(
+        "pdf",
+        allow_pdf_activation=True,
+        command_finder=command_finder,
+        runner=runner,
+    )
+    preflight_gate = evaluate_full_integrated_pdf_preflight_gate(
+        package_dir,
+        renderer_gate=renderer_gate,
+        include_activation_blocker=False,
+    )
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    output_path = _reserved_export_path(package_dir, "integrated_report", "pdf", stamp=stamp)
+    temp_output_path = package_dir / "exports" / ".tmp" / f"{output_path.stem}.tmp.pdf"
+    conversion_log_path = _reserved_log_path(package_dir, "pdf_renderer", stamp=stamp)
+    if preflight_gate.get("status") != "passed":
+        blockers = list(dict.fromkeys(preflight_gate.get("blockers", []) or ["full_integrated_pdf_preflight_not_passed"]))
+        return _record_pdf_rendered_export_attempt(
+            package_dir,
+            preflight_gate=preflight_gate,
+            output_path=output_path,
+            conversion_log_path=conversion_log_path,
+            status="blocked",
+            failure_reason="; ".join(blockers),
+            blockers=blockers,
+            conversion_invoked=False,
+        )
+
+    dependencies = renderer_gate.get("detected_dependencies", {}) if isinstance(renderer_gate.get("detected_dependencies"), dict) else {}
+    pandoc = dependencies.get("pandoc") if isinstance(dependencies.get("pandoc"), dict) else {}
+    xelatex = dependencies.get("xelatex") if isinstance(dependencies.get("xelatex"), dict) else {}
+    pandoc_command = str(pandoc.get("path") or "pandoc")
+    xelatex_command = str(xelatex.get("path") or "xelatex")
+    markdown_path = package_dir / "integrated_report.md"
+    runner = runner or subprocess.run
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_output_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [pandoc_command, str(markdown_path), f"--pdf-engine={xelatex_command}", "-o", str(temp_output_path)]
+    start = time.monotonic()
+    try:
+        completed = runner(
+            command,
+            cwd=str(package_dir),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except Exception as exc:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        if temp_output_path.exists():
+            temp_output_path.unlink()
+        return _record_pdf_rendered_export_attempt(
+            package_dir,
+            preflight_gate=preflight_gate,
+            output_path=output_path,
+            conversion_log_path=conversion_log_path,
+            status="failed",
+            failure_reason=f"pdf_pandoc_conversion_exception:{type(exc).__name__}",
+            blockers=[f"pdf_pandoc_conversion_exception:{type(exc).__name__}"],
+            conversion_invoked=True,
+            command=command,
+            exit_code=None,
+            stdout_tail="",
+            stderr_tail=str(exc),
+            duration_ms=duration_ms,
+        )
+    duration_ms = int((time.monotonic() - start) * 1000)
+    if completed.returncode != 0 or not temp_output_path.is_file() or temp_output_path.stat().st_size <= 0:
+        if temp_output_path.exists():
+            temp_output_path.unlink()
+        failure = "pdf_pandoc_conversion_failed" if completed.returncode != 0 else "pdf_pandoc_output_missing_or_empty"
+        return _record_pdf_rendered_export_attempt(
+            package_dir,
+            preflight_gate=preflight_gate,
+            output_path=output_path,
+            conversion_log_path=conversion_log_path,
+            status="failed",
+            failure_reason=failure,
+            blockers=[failure],
+            conversion_invoked=True,
+            command=command,
+            exit_code=int(completed.returncode),
+            stdout_tail=_tail_text(completed.stdout),
+            stderr_tail=_tail_text(completed.stderr),
+            duration_ms=duration_ms,
+        )
+    if temp_output_path.read_bytes()[:4] != b"%PDF":
+        temp_output_path.unlink()
+        return _record_pdf_rendered_export_attempt(
+            package_dir,
+            preflight_gate=preflight_gate,
+            output_path=output_path,
+            conversion_log_path=conversion_log_path,
+            status="failed",
+            failure_reason="pdf_pandoc_output_header_invalid",
+            blockers=["pdf_pandoc_output_header_invalid"],
+            conversion_invoked=True,
+            command=command,
+            exit_code=int(completed.returncode),
+            stdout_tail=_tail_text(completed.stdout),
+            stderr_tail=_tail_text(completed.stderr),
+            duration_ms=duration_ms,
+        )
+
+    shutil.move(str(temp_output_path), str(output_path))
+    return _record_pdf_rendered_export_attempt(
+        package_dir,
+        preflight_gate=preflight_gate,
+        output_path=output_path,
+        conversion_log_path=conversion_log_path,
+        status="passed",
+        failure_reason="",
+        blockers=[],
+        conversion_invoked=True,
+        command=command,
+        exit_code=int(completed.returncode),
+        stdout_tail=_tail_text(completed.stdout),
+        stderr_tail=_tail_text(completed.stderr),
+        duration_ms=duration_ms,
+    )
+
+
+def create_full_integrated_docx_rendered_export(
+    package_path: str | Path,
+    *,
+    command_finder: Callable[[str], str | None] | None = None,
+    runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    timeout_seconds: int = 60,
+) -> dict[str, Any]:
+    package_dir = Path(package_path).expanduser().resolve()
+    renderer_gate = evaluate_full_integrated_report_renderer_gate(
+        "docx",
+        allow_docx_activation=True,
+        command_finder=command_finder,
+        runner=runner,
+    )
+    preflight_gate = evaluate_full_integrated_docx_preflight_gate(
+        package_dir,
+        renderer_gate=renderer_gate,
+        include_activation_blocker=False,
+    )
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    output_path = _reserved_export_path(package_dir, "integrated_report", "docx", stamp=stamp)
+    temp_output_path = package_dir / "exports" / ".tmp" / f"{output_path.stem}.tmp.docx"
+    conversion_log_path = _reserved_log_path(package_dir, "docx_renderer", stamp=stamp)
+    if preflight_gate.get("status") != "passed":
+        blockers = list(dict.fromkeys(preflight_gate.get("blockers", []) or ["full_integrated_docx_preflight_not_passed"]))
+        return _record_docx_rendered_export_attempt(
+            package_dir,
+            preflight_gate=preflight_gate,
+            output_path=output_path,
+            conversion_log_path=conversion_log_path,
+            status="blocked",
+            failure_reason="; ".join(blockers),
+            blockers=blockers,
+            conversion_invoked=False,
+        )
+
+    markdown_path = package_dir / "integrated_report.md"
+    pandoc = renderer_gate.get("detected_dependencies", {}).get("pandoc", {}) if isinstance(renderer_gate.get("detected_dependencies"), dict) else {}
+    pandoc_command = str(pandoc.get("path") or "pandoc")
+    runner = runner or subprocess.run
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_output_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [pandoc_command, str(markdown_path), "-o", str(temp_output_path)]
+    start = time.monotonic()
+    try:
+        completed = runner(
+            command,
+            cwd=str(package_dir),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except Exception as exc:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        if temp_output_path.exists():
+            temp_output_path.unlink()
+        return _record_docx_rendered_export_attempt(
+            package_dir,
+            preflight_gate=preflight_gate,
+            output_path=output_path,
+            conversion_log_path=conversion_log_path,
+            status="failed",
+            failure_reason=f"docx_pandoc_conversion_exception:{type(exc).__name__}",
+            blockers=[f"docx_pandoc_conversion_exception:{type(exc).__name__}"],
+            conversion_invoked=True,
+            command=command,
+            exit_code=None,
+            stdout_tail="",
+            stderr_tail=str(exc),
+            duration_ms=duration_ms,
+        )
+    duration_ms = int((time.monotonic() - start) * 1000)
+    if completed.returncode != 0 or not temp_output_path.is_file() or temp_output_path.stat().st_size <= 0:
+        if temp_output_path.exists():
+            temp_output_path.unlink()
+        failure = "docx_pandoc_conversion_failed" if completed.returncode != 0 else "docx_pandoc_output_missing_or_empty"
+        return _record_docx_rendered_export_attempt(
+            package_dir,
+            preflight_gate=preflight_gate,
+            output_path=output_path,
+            conversion_log_path=conversion_log_path,
+            status="failed",
+            failure_reason=failure,
+            blockers=[failure],
+            conversion_invoked=True,
+            command=command,
+            exit_code=int(completed.returncode),
+            stdout_tail=_tail_text(completed.stdout),
+            stderr_tail=_tail_text(completed.stderr),
+            duration_ms=duration_ms,
+        )
+
+    shutil.move(str(temp_output_path), str(output_path))
+    return _record_docx_rendered_export_attempt(
+        package_dir,
+        preflight_gate=preflight_gate,
+        output_path=output_path,
+        conversion_log_path=conversion_log_path,
+        status="passed",
+        failure_reason="",
+        blockers=[],
+        conversion_invoked=True,
+        command=command,
+        exit_code=int(completed.returncode),
+        stdout_tail=_tail_text(completed.stdout),
+        stderr_tail=_tail_text(completed.stderr),
+        duration_ms=duration_ms,
+    )
+
+
+def evaluate_full_integrated_report_renderer_gate(
+    export_format: str = "markdown",
+    *,
+    allow_docx_activation: bool = False,
+    allow_pdf_activation: bool = False,
+    command_finder: Callable[[str], str | None] | None = None,
+    runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+) -> dict[str, Any]:
     canonical = _canonical_export_format(export_format)
-    capability_snapshot = build_report_renderer_capability_snapshot(commands=("pandoc", "xelatex", "wkhtmltopdf"))
+    capability_snapshot = build_report_renderer_capability_snapshot(
+        commands=("pandoc", "xelatex", "wkhtmltopdf"),
+        command_finder=command_finder,
+        runner=runner,
+    )
     capabilities = capability_snapshot.get("capabilities", {}) if isinstance(capability_snapshot.get("capabilities"), dict) else {}
     runtime_policy = build_full_integrated_renderer_runtime_packaging_policy()
     blockers: list[str] = []
@@ -299,7 +805,10 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
         detected_dependencies = {name: dict(capabilities.get(name, {})) for name in required_dependencies}
         if not detected_dependencies["pandoc"]["available"]:
             blockers.append("renderer_dependency_missing:pandoc")
-        blockers.append("full_integrated_docx_renderer_not_enabled_in_b23_4")
+        if allow_docx_activation:
+            implementation_enabled = bool(detected_dependencies["pandoc"]["available"])
+        else:
+            blockers.append("full_integrated_docx_renderer_not_enabled_in_b23_4")
     elif canonical == "pdf":
         renderer_id = "pandoc_pdf"
         pandoc = dict(capabilities.get("pandoc", {}))
@@ -313,7 +822,10 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
             blockers.append("renderer_dependency_missing:xelatex")
         if wkhtmltopdf.get("available"):
             warnings.append("wkhtmltopdf_detected_but_not_selected_for_formal_full_integrated_pdf")
-        blockers.append("full_integrated_pdf_renderer_not_enabled_in_b23_4")
+        if allow_pdf_activation:
+            implementation_enabled = bool(pandoc.get("available")) and bool(latex.get("available"))
+        else:
+            blockers.append("full_integrated_pdf_renderer_not_enabled_in_b23_4")
     dependency_checks_passed = all(item.get("available") for item in detected_dependencies.values()) if canonical == "docx" else (
         bool(detected_dependencies.get("pandoc", {}).get("available"))
         and bool(detected_dependencies.get("xelatex", {}).get("available"))
@@ -338,6 +850,8 @@ def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown
             "format_supported": canonical in SUPPORTED_EXPORT_FORMATS,
             "dependencies_detected": dependency_checks_passed,
             "implementation_enabled": implementation_enabled,
+            "docx_activation_requested": allow_docx_activation if canonical == "docx" else False,
+            "pdf_activation_requested": allow_pdf_activation if canonical == "pdf" else False,
             "detect_first_no_install_action": True,
             "external_renderers_bundled": False,
         },
@@ -358,14 +872,14 @@ def evaluate_full_integrated_report_gate(
     root = Path(project_root).expanduser().resolve()
     registry = load_registry(root)
     entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
-    section_ids = tuple(include_sections or REQUIRED_SECTION_IDS)
     explicit = section_result_ids or {}
+    section_ids = _requested_section_ids(include_sections=include_sections, explicit_result_ids=explicit)
     blockers: list[str] = []
     warnings: list[str] = []
     section_rows: list[dict[str, Any]] = []
     checks = {
         "result_index_exists": bool(entries),
-        "all_required_section_ids_requested": set(section_ids) == set(REQUIRED_SECTION_IDS),
+        "all_required_section_ids_requested": set(REQUIRED_SECTION_IDS).issubset(set(section_ids)),
         "required_sections_present": True,
         "all_sections_formal_computed": True,
         "all_sections_have_result_index_v2_fields": True,
@@ -420,11 +934,14 @@ def evaluate_full_integrated_report_gate(
         "allow_markdown_only": allow_markdown_only,
         "allow_missing_optional_sections": allow_missing_optional_sections,
         "required_sections": list(section_ids),
+        "required_section_ids": list(REQUIRED_SECTION_IDS),
+        "optional_section_ids": list(OPTIONAL_SECTION_IDS),
+        "included_optional_sections": [section_id for section_id in section_ids if section_id in OPTIONAL_SECTION_IDS],
         "section_rows": section_rows,
         "prerequisite_rows": prerequisite_rows,
         "prerequisite_summary": prerequisite_summary,
         "survival_clinical_report_ready_required": True,
-        "survival_clinical_section_package_policy": "KM/Cox section-only packages may satisfy section prerequisites only after package integrity validation passes; they do not enable full integrated export by themselves.",
+        "survival_clinical_section_package_policy": "KM/Cox/risk-score section-only packages may satisfy section prerequisites only after package integrity validation passes; they do not enable clinical conclusions by themselves.",
         "export_activation_status": "eligible_for_markdown_export" if status == "eligible_for_full_integrated_report" else "blocked_until_full_integrated_section_prerequisites_pass",
         "export_activation_blocker": export_activation_blocker,
         "enabled_export_formats": ["markdown"] if status == "eligible_for_full_integrated_report" else [],
@@ -449,6 +966,17 @@ def evaluate_full_integrated_report_gate(
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
+
+
+def _requested_section_ids(*, include_sections: list[str] | None, explicit_result_ids: dict[str, str]) -> tuple[str, ...]:
+    requested: list[str] = []
+    for section_id in include_sections or list(REQUIRED_SECTION_IDS):
+        if section_id and section_id not in requested:
+            requested.append(section_id)
+    for section_id, result_id in explicit_result_ids.items():
+        if section_id and result_id and section_id not in requested:
+            requested.append(section_id)
+    return tuple(requested)
 
 
 def _section_row(root: Path, entries: list[dict[str, Any]], section_id: str, explicit_result_id: str) -> dict[str, Any]:
@@ -558,6 +1086,8 @@ def _section_report_gate(root: Path, section_id: str, result_id: str) -> dict[st
         return evaluate_km_logrank_report_ready_gate(root, result_id=result_id)
     if section_id == "cox":
         return evaluate_cox_report_ready_gate(root, result_id=result_id)
+    if section_id == "risk_score_validation":
+        return evaluate_risk_score_report_ready_gate(root, result_id=result_id)
     return {
         "schema_version": "biomedpilot.survival_clinical_report_ready_gate.placeholder.v1",
         "status": "blocked",
@@ -574,6 +1104,7 @@ def _section_report_status(section_id: str, gate: dict[str, Any]) -> str:
         "gsea_preranked": "eligible_for_gsea_report_ready",
         "survival_km_logrank": "eligible_for_km_logrank_report_ready",
         "cox": "eligible_for_cox_report_ready",
+        "risk_score_validation": "eligible_for_risk_score_report_ready",
     }
     return "passed" if gate.get("status") == passing.get(section_id) else "blocked"
 
@@ -597,7 +1128,7 @@ def _full_integrated_prerequisite_rows(section_rows: list[dict[str, Any]], *, se
             blockers.append(f"full_integrated_prerequisite_source_table_missing:{section_id}")
         if section.get("section_report_ready_status") != "passed":
             blockers.append(f"full_integrated_prerequisite_section_report_ready_not_passed:{section_id}")
-        if section_id in {"survival_km_logrank", "cox"}:
+        if section_id in SURVIVAL_CLINICAL_SECTION_SCOPES:
             package_validation = section.get("section_package_validation") if isinstance(section.get("section_package_validation"), dict) else {}
             if package_validation.get("status") != "passed":
                 blockers.append(f"full_integrated_prerequisite_survival_clinical_section_package_not_passed:{section_id}")
@@ -690,18 +1221,19 @@ def _section_only_package_satisfies_prerequisite(section_id: str, section: dict[
 
 
 def _survival_clinical_section_package_validation(root: Path, entry: dict[str, Any], section_id: str) -> dict[str, Any]:
-    expected_scope = SURVIVAL_CLINICAL_SECTION_SCOPES.get(section_id)
-    if not expected_scope:
+    expected_scopes = SURVIVAL_CLINICAL_SECTION_SCOPES.get(section_id, ())
+    if not expected_scopes:
         return {"status": "not_required", "blockers": [], "warnings": []}
     blockers: list[str] = []
     warnings: list[str] = []
     result_id = str(entry.get("result_id") or "")
     artifacts = [artifact for artifact in entry.get("report_artifacts", []) or [] if isinstance(artifact, dict)]
-    matching = [artifact for artifact in artifacts if str(artifact.get("section_scope") or "") == expected_scope]
+    matching = [artifact for artifact in artifacts if str(artifact.get("section_scope") or "") in expected_scopes]
     if not matching:
-        blockers.append(f"section_package_artifact_missing:{section_id}:{expected_scope}")
-        return _section_package_validation_payload(section_id, expected_scope, "", "", blockers, warnings, {})
+        blockers.append(f"section_package_artifact_missing:{section_id}:{'|'.join(expected_scopes)}")
+        return _section_package_validation_payload(section_id, "|".join(expected_scopes), "", "", blockers, warnings, {})
     artifact = matching[-1]
+    expected_scope = str(artifact.get("section_scope") or "")
     manifest_path = _artifact_path(root, artifact)
     if not manifest_path.is_file():
         blockers.append(f"section_package_manifest_missing:{section_id}:{expected_scope}")
@@ -723,7 +1255,7 @@ def _survival_clinical_section_package_validation(root: Path, entry: dict[str, A
         blockers.append(f"section_package_clinical_conclusion_flag_not_false:{section_id}")
     if manifest.get("full_integrated_report_enabled") is not False:
         blockers.append(f"section_package_full_integrated_flag_not_false:{section_id}")
-    required_files = [SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES[section_id], *SECTION_PACKAGE_REQUIRED_FILES]
+    required_files = [SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES[section_id][expected_scope], *SECTION_PACKAGE_REQUIRED_FILES]
     missing_files = [relative for relative in required_files if not (package_dir / relative).is_file()]
     blockers.extend(f"section_package_required_file_missing:{section_id}:{relative}" for relative in missing_files)
     for dirname in ("tables", "plots", "manifests", "logs", "provenance"):
@@ -924,6 +1456,383 @@ def _package_inventory(package_dir: Path) -> dict[str, Any]:
     }
 
 
+def _rendered_exports_manifest(package_dir: Path) -> dict[str, Any]:
+    path = package_dir / "manifests" / "rendered_exports.json"
+    existing = _read_json(path)
+    if existing:
+        existing.setdefault("exports", [])
+        existing.setdefault("attempts", [])
+        return existing
+    return {
+        "schema_version": FULL_INTEGRATED_RENDERED_EXPORTS_SCHEMA_VERSION,
+        "package_scope": "full_integrated_report",
+        "source_package_id": _source_package_id(package_dir),
+        "source_package_path": str(package_dir),
+        "exports": [],
+        "attempts": [],
+        "created_at": _now(),
+        "updated_at": _now(),
+        "policy": {
+            "rendered_exports_are_package_artifacts_not_analysis_results": True,
+            "do_not_write_formal_computed_result": True,
+            "docx_conversion_enabled": False,
+            "pdf_conversion_enabled": False,
+        },
+    }
+
+
+def _docx_conversion_log_payload(
+    package_dir: Path,
+    *,
+    preflight_gate: dict[str, Any],
+    output_path: Path,
+    conversion_log_path: Path,
+    status: str,
+    failure_reason: str,
+    conversion_invoked: bool = False,
+    command: list[str] | None = None,
+    exit_code: int | None = None,
+    stdout_tail: str = "",
+    stderr_tail: str = "",
+    duration_ms: int = 0,
+) -> dict[str, Any]:
+    renderer_gate = preflight_gate.get("renderer_gate") if isinstance(preflight_gate.get("renderer_gate"), dict) else {}
+    pandoc = renderer_gate.get("detected_dependencies", {}).get("pandoc", {}) if isinstance(renderer_gate.get("detected_dependencies"), dict) else {}
+    return {
+        "schema_version": FULL_INTEGRATED_DOCX_CONVERSION_LOG_SCHEMA_VERSION,
+        "created_at": _now(),
+        "source_package_path": str(package_dir),
+        "source_markdown_path": str(package_dir / "integrated_report.md"),
+        "requested_export_format": "docx",
+        "renderer_id": "pandoc_docx",
+        "renderer_command": " ".join(command) if command else str(pandoc.get("path") or "pandoc"),
+        "renderer_version": str(pandoc.get("version") or ""),
+        "environment": str(preflight_gate.get("renderer_gate", {}).get("renderer_capability_snapshot", {}).get("environment") or ""),
+        "working_directory": str(package_dir),
+        "output_path": str(output_path),
+        "exit_code": exit_code,
+        "stdout_tail": stdout_tail,
+        "stderr_tail": stderr_tail,
+        "duration_ms": duration_ms,
+        "status": status,
+        "failure_reason": failure_reason,
+        "preflight_status": str(preflight_gate.get("preflight_status") or ""),
+        "preflight_blockers": list(preflight_gate.get("blockers", []) or []),
+        "conversion_invoked": conversion_invoked,
+        "temporary_output_removed": status != "passed",
+        "markdown_package_preserved": True,
+    }
+
+
+def _pdf_conversion_log_payload(
+    package_dir: Path,
+    *,
+    preflight_gate: dict[str, Any],
+    output_path: Path,
+    conversion_log_path: Path,
+    status: str,
+    failure_reason: str,
+    conversion_invoked: bool = False,
+    command: list[str] | None = None,
+    exit_code: int | None = None,
+    stdout_tail: str = "",
+    stderr_tail: str = "",
+    duration_ms: int = 0,
+) -> dict[str, Any]:
+    renderer_gate = preflight_gate.get("renderer_gate") if isinstance(preflight_gate.get("renderer_gate"), dict) else {}
+    dependencies = renderer_gate.get("detected_dependencies") if isinstance(renderer_gate.get("detected_dependencies"), dict) else {}
+    pandoc = dependencies.get("pandoc") if isinstance(dependencies.get("pandoc"), dict) else {}
+    xelatex = dependencies.get("xelatex") if isinstance(dependencies.get("xelatex"), dict) else {}
+    return {
+        "schema_version": FULL_INTEGRATED_PDF_CONVERSION_LOG_SCHEMA_VERSION,
+        "created_at": _now(),
+        "source_package_path": str(package_dir),
+        "source_markdown_path": str(package_dir / "integrated_report.md"),
+        "requested_export_format": "pdf",
+        "renderer_id": "pandoc_pdf",
+        "selected_backend": "pandoc_xelatex",
+        "renderer_command": " ".join(command) if command else str(pandoc.get("path") or "pandoc"),
+        "renderer_version": str(pandoc.get("version") or ""),
+        "backend_command": str(xelatex.get("path") or "xelatex"),
+        "backend_version": str(xelatex.get("version") or ""),
+        "environment": str(preflight_gate.get("renderer_gate", {}).get("renderer_capability_snapshot", {}).get("environment") or ""),
+        "working_directory": str(package_dir),
+        "output_path": str(output_path),
+        "exit_code": exit_code,
+        "stdout_tail": stdout_tail,
+        "stderr_tail": stderr_tail,
+        "duration_ms": duration_ms,
+        "status": status,
+        "failure_reason": failure_reason,
+        "preflight_status": str(preflight_gate.get("preflight_status") or ""),
+        "preflight_blockers": list(preflight_gate.get("blockers", []) or []),
+        "conversion_invoked": conversion_invoked,
+        "temporary_output_removed": status != "passed",
+        "markdown_package_preserved": True,
+    }
+
+
+def _record_docx_rendered_export_attempt(
+    package_dir: Path,
+    *,
+    preflight_gate: dict[str, Any],
+    output_path: Path,
+    conversion_log_path: Path,
+    status: str,
+    failure_reason: str,
+    blockers: list[str],
+    conversion_invoked: bool,
+    command: list[str] | None = None,
+    exit_code: int | None = None,
+    stdout_tail: str = "",
+    stderr_tail: str = "",
+    duration_ms: int = 0,
+) -> dict[str, Any]:
+    validation_status = "passed" if status == "passed" else status
+    log_payload = _docx_conversion_log_payload(
+        package_dir,
+        preflight_gate=preflight_gate,
+        output_path=output_path,
+        conversion_log_path=conversion_log_path,
+        status=status,
+        failure_reason=failure_reason,
+        conversion_invoked=conversion_invoked,
+        command=command,
+        exit_code=exit_code,
+        stdout_tail=stdout_tail,
+        stderr_tail=stderr_tail,
+        duration_ms=duration_ms,
+    )
+    _write_json(conversion_log_path, log_payload)
+    manifest = _rendered_exports_manifest(package_dir)
+    manifest.setdefault("policy", {})["docx_conversion_enabled"] = status == "passed" or bool(manifest.get("policy", {}).get("docx_conversion_enabled"))
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    attempt = {
+        "artifact_id": f"docx_attempt_{stamp}",
+        "artifact_type": "full_integrated_report_rendered_export_attempt",
+        "source_package_id": _source_package_id(package_dir),
+        "source_markdown_path": "integrated_report.md",
+        "export_format": "docx",
+        "renderer_id": "pandoc_docx",
+        "renderer_version": _renderer_version_from_gate(preflight_gate),
+        "renderer_dependency_snapshot": preflight_gate.get("renderer_gate", {}).get("detected_dependencies", {}),
+        "output_path": str(output_path.relative_to(package_dir)) if _is_relative_to(output_path, package_dir) else str(output_path),
+        "conversion_log_path": str(conversion_log_path.relative_to(package_dir)) if _is_relative_to(conversion_log_path, package_dir) else str(conversion_log_path),
+        "conversion_invoked": conversion_invoked,
+        "validation_status": validation_status,
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+        "blockers": list(dict.fromkeys(blockers)),
+        "created_at": _now(),
+    }
+    manifest.setdefault("attempts", []).append(attempt)
+    export_artifact: dict[str, Any] | None = None
+    if status == "passed":
+        export_artifact = {
+            "artifact_id": f"docx_export_{stamp}",
+            "artifact_type": "full_integrated_report_rendered_export",
+            "source_package_id": _source_package_id(package_dir),
+            "source_markdown_path": "integrated_report.md",
+            "export_format": "docx",
+            "renderer_id": "pandoc_docx",
+            "renderer_version": _renderer_version_from_gate(preflight_gate),
+            "renderer_dependency_snapshot": preflight_gate.get("renderer_gate", {}).get("detected_dependencies", {}),
+            "output_path": str(output_path.relative_to(package_dir)) if _is_relative_to(output_path, package_dir) else str(output_path),
+            "conversion_log_path": str(conversion_log_path.relative_to(package_dir)) if _is_relative_to(conversion_log_path, package_dir) else str(conversion_log_path),
+            "validation_status": "passed",
+            "warnings": list(preflight_gate.get("warnings", []) or []),
+            "blockers": [],
+            "created_at": _now(),
+        }
+        manifest.setdefault("exports", []).append(export_artifact)
+    manifest["latest_attempt_status"] = validation_status
+    manifest["latest_attempt_log_path"] = attempt["conversion_log_path"]
+    manifest["updated_at"] = _now()
+    _write_json(package_dir / "manifests" / "rendered_exports.json", manifest)
+    _update_package_manifest_rendered_exports(package_dir, manifest)
+    result_status = "full_integrated_docx_rendered_export_created" if status == "passed" else status
+    return {
+        "schema_version": "biomedpilot.full_integrated_docx_rendered_export.v1",
+        "created_at": _now(),
+        "status": result_status,
+        "preflight_gate": preflight_gate,
+        "rendered_exports_manifest_path": str(package_dir / "manifests" / "rendered_exports.json"),
+        "conversion_log_path": str(conversion_log_path),
+        "output_path": str(output_path) if status == "passed" else "",
+        "planned_output_path": str(output_path),
+        "artifact_attempt": attempt,
+        "export_artifact": export_artifact or {},
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+    }
+
+
+def _record_pdf_rendered_export_attempt(
+    package_dir: Path,
+    *,
+    preflight_gate: dict[str, Any],
+    output_path: Path,
+    conversion_log_path: Path,
+    status: str,
+    failure_reason: str,
+    blockers: list[str],
+    conversion_invoked: bool,
+    command: list[str] | None = None,
+    exit_code: int | None = None,
+    stdout_tail: str = "",
+    stderr_tail: str = "",
+    duration_ms: int = 0,
+) -> dict[str, Any]:
+    validation_status = "passed" if status == "passed" else status
+    log_payload = _pdf_conversion_log_payload(
+        package_dir,
+        preflight_gate=preflight_gate,
+        output_path=output_path,
+        conversion_log_path=conversion_log_path,
+        status=status,
+        failure_reason=failure_reason,
+        conversion_invoked=conversion_invoked,
+        command=command,
+        exit_code=exit_code,
+        stdout_tail=stdout_tail,
+        stderr_tail=stderr_tail,
+        duration_ms=duration_ms,
+    )
+    _write_json(conversion_log_path, log_payload)
+    manifest = _rendered_exports_manifest(package_dir)
+    manifest.setdefault("policy", {})["pdf_conversion_enabled"] = status == "passed" or bool(manifest.get("policy", {}).get("pdf_conversion_enabled"))
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    attempt = {
+        "artifact_id": f"pdf_attempt_{stamp}",
+        "artifact_type": "full_integrated_report_rendered_export_attempt",
+        "source_package_id": _source_package_id(package_dir),
+        "source_markdown_path": "integrated_report.md",
+        "export_format": "pdf",
+        "renderer_id": "pandoc_pdf",
+        "selected_backend": "pandoc_xelatex",
+        "renderer_version": _renderer_version_from_gate(preflight_gate),
+        "renderer_dependency_snapshot": preflight_gate.get("renderer_gate", {}).get("detected_dependencies", {}),
+        "output_path": str(output_path.relative_to(package_dir)) if _is_relative_to(output_path, package_dir) else str(output_path),
+        "conversion_log_path": str(conversion_log_path.relative_to(package_dir)) if _is_relative_to(conversion_log_path, package_dir) else str(conversion_log_path),
+        "conversion_invoked": conversion_invoked,
+        "validation_status": validation_status,
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+        "blockers": list(dict.fromkeys(blockers)),
+        "created_at": _now(),
+    }
+    manifest.setdefault("attempts", []).append(attempt)
+    export_artifact: dict[str, Any] | None = None
+    if status == "passed":
+        export_artifact = {
+            "artifact_id": f"pdf_export_{stamp}",
+            "artifact_type": "full_integrated_report_rendered_export",
+            "source_package_id": _source_package_id(package_dir),
+            "source_markdown_path": "integrated_report.md",
+            "export_format": "pdf",
+            "renderer_id": "pandoc_pdf",
+            "selected_backend": "pandoc_xelatex",
+            "renderer_version": _renderer_version_from_gate(preflight_gate),
+            "renderer_dependency_snapshot": preflight_gate.get("renderer_gate", {}).get("detected_dependencies", {}),
+            "output_path": str(output_path.relative_to(package_dir)) if _is_relative_to(output_path, package_dir) else str(output_path),
+            "conversion_log_path": str(conversion_log_path.relative_to(package_dir)) if _is_relative_to(conversion_log_path, package_dir) else str(conversion_log_path),
+            "validation_status": "passed",
+            "warnings": list(preflight_gate.get("warnings", []) or []),
+            "blockers": [],
+            "created_at": _now(),
+        }
+        manifest.setdefault("exports", []).append(export_artifact)
+    manifest["latest_attempt_status"] = validation_status
+    manifest["latest_attempt_log_path"] = attempt["conversion_log_path"]
+    manifest["updated_at"] = _now()
+    _write_json(package_dir / "manifests" / "rendered_exports.json", manifest)
+    _update_package_manifest_rendered_exports(package_dir, manifest)
+    result_status = "full_integrated_pdf_rendered_export_created" if status == "passed" else status
+    return {
+        "schema_version": "biomedpilot.full_integrated_pdf_rendered_export.v1",
+        "created_at": _now(),
+        "status": result_status,
+        "preflight_gate": preflight_gate,
+        "rendered_exports_manifest_path": str(package_dir / "manifests" / "rendered_exports.json"),
+        "conversion_log_path": str(conversion_log_path),
+        "output_path": str(output_path) if status == "passed" else "",
+        "planned_output_path": str(output_path),
+        "artifact_attempt": attempt,
+        "export_artifact": export_artifact or {},
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(preflight_gate.get("warnings", []) or []),
+    }
+
+
+def _tail_text(value: str | None, *, max_chars: int = 4000) -> str:
+    text = value or ""
+    if len(text) <= max_chars:
+        return text
+    return text[-max_chars:]
+
+
+def _reserved_export_path(package_dir: Path, stem: str, suffix: str, *, stamp: str) -> Path:
+    exports_dir = package_dir / "exports"
+    candidate = exports_dir / f"{stem}_{stamp}.{suffix}"
+    counter = 1
+    while candidate.exists():
+        candidate = exports_dir / f"{stem}_{stamp}_{counter}.{suffix}"
+        counter += 1
+    return candidate
+
+
+def _reserved_log_path(package_dir: Path, stem: str, *, stamp: str) -> Path:
+    candidate = package_dir / "logs" / f"{stem}_{stamp}.log"
+    counter = 1
+    while candidate.exists():
+        candidate = package_dir / "logs" / f"{stem}_{stamp}_{counter}.log"
+        counter += 1
+    return candidate
+
+
+def _source_package_id(package_dir: Path) -> str:
+    manifest = _read_json(package_dir / "integrated_report_package_manifest.json")
+    return str(manifest.get("created_at") or package_dir.name)
+
+
+def _renderer_version_from_gate(preflight_gate: dict[str, Any]) -> str:
+    renderer_gate = preflight_gate.get("renderer_gate") if isinstance(preflight_gate.get("renderer_gate"), dict) else {}
+    dependencies = renderer_gate.get("detected_dependencies") if isinstance(renderer_gate.get("detected_dependencies"), dict) else {}
+    pandoc = dependencies.get("pandoc") if isinstance(dependencies.get("pandoc"), dict) else {}
+    return str(pandoc.get("version") or "")
+
+
+def _update_package_manifest_rendered_exports(package_dir: Path, rendered_exports: dict[str, Any]) -> None:
+    manifest_path = package_dir / "integrated_report_package_manifest.json"
+    manifest = _read_json(manifest_path)
+    if not manifest:
+        return
+    manifest["rendered_exports_manifest"] = "manifests/rendered_exports.json"
+    manifest["rendered_exports_summary"] = {
+        "exports_count": len(rendered_exports.get("exports", []) or []),
+        "attempts_count": len(rendered_exports.get("attempts", []) or []),
+        "latest_attempt_status": rendered_exports.get("latest_attempt_status", ""),
+        "docx_conversion_enabled": any(
+            item.get("export_format") == "docx" and item.get("validation_status") == "passed"
+            for item in rendered_exports.get("exports", []) or []
+            if isinstance(item, dict)
+        ),
+        "pdf_conversion_enabled": any(
+            item.get("export_format") == "pdf" and item.get("validation_status") == "passed"
+            for item in rendered_exports.get("exports", []) or []
+            if isinstance(item, dict)
+        ),
+    }
+    manifest["package_inventory"] = _package_inventory(package_dir)
+    _write_json(manifest_path, manifest)
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
 def _section_id_from_task(task_type: str) -> str:
     if task_type == "deg":
         return "formal_deg"
@@ -935,6 +1844,8 @@ def _section_id_from_task(task_type: str) -> str:
         return "survival_km"
     if task_type in {"cox_univariate", "cox_multivariate"}:
         return "cox"
+    if task_type == "risk_score":
+        return "risk_score"
     return _safe_name(task_type or "section")
 
 

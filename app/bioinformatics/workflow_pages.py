@@ -42,6 +42,11 @@ from app.shared.ui_components.specialized import ExportFormatAction, ExportGateC
 from app.shared.ui_components.dense_workbench import make_preview_card
 
 from app.bioinformatics.analysis_task_runs import create_deg_task_run, list_analysis_task_runs, task_run_status_label
+from app.bioinformatics.analysis_connection_matrix import (
+    CONNECTION_ROWS,
+    execute_bioinformatics_release_action,
+    write_bioinformatics_connection_matrix,
+)
 from app.bioinformatics.analysis_ui.labels import label_status
 from app.bioinformatics.analysis_ui.state import build_analysis_center_state
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
@@ -6431,6 +6436,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._render_analysis_task_gate({}, state)
             self._render_analysis_task_visual_state({})
             return None
+        write_bioinformatics_connection_matrix(self._project_root)
         center = load_analysis_task_center(self._project_root)
         self._render(center)
         return center
@@ -6609,6 +6615,26 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._status_label.setText("已打开免疫浸润 / TME评分；该模块仅生成探索性 bulk signature score。")
         return {"next_page": "immune_tme_scoring", "project_root": str(self._project_root)}
 
+    def execute_release_connection_action(self, action_id: str) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        try:
+            result = execute_bioinformatics_release_action(self._project_root, action_id)
+        except Exception as exc:
+            result = {"action_id": action_id, "status": "error", "error": str(exc)}
+            self._status_label.setText(f"Release 接线失败：{action_id} · {exc}")
+            self._records.setPlainText(_json(result))
+            return result
+        status = str(result.get("status") or "")
+        artifact = str(result.get("action_artifact_path") or "")
+        disabled_reason = str(result.get("disabled_reason") or "")
+        suffix = f"；disabled reason：{disabled_reason}" if disabled_reason else ""
+        self.refresh_task_center()
+        self._status_label.setText(f"Release 接线：{action_id} · {status}{suffix}；artifact：{artifact}")
+        self._records.setPlainText(_json({"release_connection_action": result}))
+        return result
+
     def status_message(self) -> str:
         return self._status_label.text()
 
@@ -6625,6 +6651,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._status_label.setVisible(False)
         root.addWidget(self._status_label)
         root.addWidget(self._build_analysis_task_gate_card())
+        root.addWidget(self._build_release_connection_panel())
         actions = QHBoxLayout()
         actions.addWidget(_button("刷新任务中心", "secondaryButton", self.refresh_task_center, role="secondary"))
         self._task_type_input = QLineEdit()
@@ -6963,6 +6990,39 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._analysis_task_gate_summary.setProperty("resultSemanticKey", "preflight_only")
         layout.addWidget(self._analysis_task_gate_summary)
         self._render_analysis_task_gate({}, build_analysis_center_state(None))
+        return card
+
+    def _build_release_connection_panel(self) -> QFrame:
+        card, layout = _card("Release 接线矩阵 / Bioinformatics wiring")
+        card.setObjectName("bioinformaticsReleaseConnectionMatrixCard")
+        card.setProperty("uiPrimitive", "workbench_section")
+        card.setProperty("layoutPolishNoOverlap", True)
+        layout.addWidget(_muted("UI 页面 -> 后端能力 -> 分支来源 -> 测试；每个动作按钮会调用真实 service 链，并写入 connection artifact。"))
+        self._release_connection_table = _table(["UI Page", "Backend Capability", "Branch Source", "Test", "Action"])
+        self._release_connection_table.setObjectName("bioinformaticsReleaseConnectionMatrixTable")
+        self._release_connection_table.setProperty("schemaVersion", "biomedpilot.bioinformatics_release_connection_matrix.v1")
+        self._release_connection_table.setRowCount(len(CONNECTION_ROWS))
+        for row_index, row in enumerate(CONNECTION_ROWS):
+            values = [row.ui_page, row.backend_capability, row.branch_source, row.expected_test]
+            for column_index, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                item.setData(Qt.UserRole, row.to_dict())
+                self._release_connection_table.setItem(row_index, column_index, item)
+            button = _button(
+                row.button_label,
+                "bioinformaticsReleaseActionButton",
+                lambda _checked=False, action_id=row.action_id: self.execute_release_connection_action(action_id),
+                role="secondary",
+                small=True,
+            )
+            button.setProperty("actionId", row.action_id)
+            button.setProperty("expectedTest", row.expected_test)
+            button.setProperty("branchSource", row.branch_source)
+            button.setProperty("formalActionEnabled", True)
+            button.setToolTip(row.expected_test)
+            self._release_connection_table.setCellWidget(row_index, 4, button)
+        self._release_connection_table.resizeColumnsToContents()
+        layout.addWidget(self._release_connection_table)
         return card
 
     def open_group_design(self) -> None:
@@ -8630,6 +8690,10 @@ def _dataset_source_label(row: RegisteredSourceRow, metadata: dict[str, object])
     return "当前项目"
 
 def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], metadata: dict[str, object]) -> str:
+    if metadata.get("download_status") == "tcga_expression_matrix_built" and metadata.get("ready_for_recognition") == "pending_data_check":
+        return "TCGA 表达矩阵已构建，等待数据检查与准备"
+    if metadata.get("download_status") == "gtex_expression_matrix_built" and metadata.get("ready_for_recognition") == "pending_data_check":
+        return "GTEx 表达矩阵已构建，等待数据检查与准备"
     if row.source_type_key in GEO_SOURCE_TYPES or str(metadata.get("source") or "") == "geo":
         asset_summary = metadata.get("asset_manifest_summary")
         if isinstance(asset_summary, dict):
@@ -8676,6 +8740,8 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
 def _dataset_missing_content(row: RegisteredSourceRow, status: str, metadata: dict[str, object]) -> str:
     if row.source_type_key == "local_import":
         return "无" if status in {"已导入", "待识别"} else "待识别确认"
+    if metadata.get("ready_for_recognition") == "pending_data_check":
+        return "统一数据检查与准备"
     raw_status = row.status
     missing: list[str] = []
     if "表达矩阵待确认" in raw_status or "表达矩阵待下载" in raw_status or status == "未下载":
@@ -9533,8 +9599,13 @@ def _geo_asset_status_text(metadata: dict[str, object]) -> str:
 
 
 def _record_ready_for_recognition(payload: dict[str, object], metadata: dict[str, object]) -> bool:
-    if metadata.get("ready_for_recognition") == "ready" or metadata.get("download_status") == "downloaded":
+    if metadata.get("download_status") == "tcga_clinical_metadata_built" or metadata.get("clinical_gate_status"):
+        return False
+    ready_state = str(metadata.get("ready_for_recognition") or "")
+    if ready_state in {"ready", "pending_data_check"} or metadata.get("download_status") == "downloaded":
         return True
+    if ready_state:
+        return False
     if payload.get("strategy") != "plan_only":
         return True
     return False
