@@ -7,6 +7,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -32,9 +33,14 @@ REPORT_RENDERER_ENGINE_FAMILY = "report_renderer"
 
 R_BIOCONDUCTOR_SNAPSHOT_FILENAME = "r_bioconductor_snapshot.json"
 R_RUNTIME_SNAPSHOT_FILENAME = "r_runtime_snapshot.json"
+R_ENRICHMENT_BACKEND_DETECTION_FILENAME = "r_enrichment_backend_detection.json"
+R_ENRICHMENT_ORA_FIXTURE_FILENAME = "r_enrichment_ora_fixture.tsv"
+R_ENRICHMENT_GSEA_FIXTURE_FILENAME = "r_enrichment_gsea_fixture.tsv"
 PYTHON_STATISTICAL_SNAPSHOT_FILENAME = "python_statistical_snapshot.json"
 REPORT_RENDERER_SNAPSHOT_FILENAME = "report_renderer_snapshot.json"
 CAPABILITY_REGISTRY_SNAPSHOT_FILENAME = "capability_registry_snapshot.json"
+
+R_ENRICHMENT_BACKEND_DETECTION_SCHEMA_VERSION = "biomedpilot.external_enrichment_r_backend_detection.v1"
 
 CommandFinder = Callable[[str], str | None]
 SubprocessRunner = Callable[..., subprocess.CompletedProcess[str]]
@@ -60,6 +66,58 @@ R_PACKAGE_REQUIREMENTS: tuple[PackageRequirement, ...] = (
     PackageRequirement("glmnet", "package.r.glmnet.available", ("penalized_regression_runtime",)),
     PackageRequirement("ggplot2", "package.r.ggplot2.available", ("r_plot_runtime",)),
     PackageRequirement("survminer", "package.r.survminer.available", ("survival_plot_runtime",)),
+)
+
+R_ENRICHMENT_REQUIRED_PACKAGES: tuple[str, ...] = (
+    "clusterProfiler",
+    "fgsea",
+    "DOSE",
+    "enrichplot",
+    "ggplot2",
+    "AnnotationDbi",
+    "org.Hs.eg.db",
+    "ReactomePA",
+    "msigdbr",
+)
+
+R_ENRICHMENT_OPTIONAL_PACKAGES: tuple[str, ...] = (
+    "pathview",
+    "GO.db",
+    "KEGGREST",
+)
+
+R_ENRICHMENT_CAPABILITY_REQUIREMENTS: dict[str, tuple[str, ...]] = {
+    "ora_enricher": ("clusterProfiler",),
+    "ora_go": ("clusterProfiler", "AnnotationDbi", "org.Hs.eg.db"),
+    "ora_kegg": ("clusterProfiler", "KEGGREST"),
+    "ora_reactome": ("ReactomePA",),
+    "gsea_preranked_fgsea": ("fgsea",),
+    "gsea_preranked_clusterprofiler": ("clusterProfiler",),
+    "enrichment_plot_dotplot": ("enrichplot", "ggplot2"),
+    "enrichment_plot_barplot": ("enrichplot", "ggplot2"),
+    "gsea_plot_curve": ("enrichplot", "ggplot2", "clusterProfiler"),
+}
+
+R_ENRICHMENT_ORA_COLUMNS: tuple[str, ...] = (
+    "ID",
+    "Description",
+    "GeneRatio",
+    "BgRatio",
+    "pvalue",
+    "p.adjust",
+    "qvalue",
+    "geneID",
+    "Count",
+)
+
+R_ENRICHMENT_GSEA_COLUMNS: tuple[str, ...] = (
+    "pathway",
+    "ES",
+    "NES",
+    "pval",
+    "padj",
+    "leadingEdge",
+    "size",
 )
 
 PYTHON_PACKAGE_REQUIREMENTS: tuple[PackageRequirement, ...] = (
@@ -215,6 +273,159 @@ def detect_r_bioconductor_dependencies(
     _write_optional_snapshot(snapshot, snapshot_path, write_snapshot)
     _write_optional_snapshot(_r_runtime_snapshot_from(snapshot), r_runtime_snapshot_path, write_snapshot)
     return snapshot
+
+
+def detect_external_enrichment_r_backend(
+    *,
+    storage_root: str | Path | None = None,
+    command_finder: CommandFinder = shutil.which,
+    runner: SubprocessRunner = subprocess.run,
+    rscript_path: str | Path | None = None,
+    write_snapshot: bool = True,
+) -> dict[str, Any]:
+    created_at = utc_now()
+    snapshot_path = external_engines_storage_root(storage_root) / R_ENRICHMENT_BACKEND_DETECTION_FILENAME
+    resolved_rscript = str(rscript_path) if rscript_path else (command_finder("Rscript") or "")
+    rscript = {
+        "available": bool(resolved_rscript),
+        "path": resolved_rscript,
+        "version": "",
+        "architecture": "unknown",
+        "library_paths": [],
+    }
+    package_names = R_ENRICHMENT_REQUIRED_PACKAGES + R_ENRICHMENT_OPTIONAL_PACKAGES
+    package_statuses = {name: _r_enrichment_missing_package(name, "missing_r_runtime", "Rscript is not available") for name in package_names}
+    blockers: list[dict[str, Any]] = []
+    warnings: list[str] = []
+
+    if not resolved_rscript:
+        blockers.append(_blocker("missing_r_runtime", "Rscript is not available", required_by=("external_enrichment_r_backend",)))
+        detection = _r_enrichment_detection_payload(
+            created_at=created_at,
+            rscript=rscript,
+            package_statuses=package_statuses,
+            blockers=blockers,
+            warnings=warnings,
+        )
+        _write_optional_snapshot(detection, snapshot_path, write_snapshot)
+        return detection
+
+    runtime_result = _run_checked(
+        runner,
+        [resolved_rscript, "-e", "cat(R.version.string, '\\n'); cat(R.version$arch, '\\n'); cat(paste(.libPaths(), collapse='\\n'))"],
+        timeout=12,
+    )
+    if runtime_result["returncode"] != 0:
+        message = runtime_result["stderr"] or runtime_result["stdout"] or "Rscript runtime detection failed"
+        rscript["available"] = False
+        blockers.append(_blocker("r_runtime_error", message, required_by=("external_enrichment_r_backend",)))
+        package_statuses = {name: _r_enrichment_missing_package(name, "r_runtime_error", message) for name in package_names}
+        detection = _r_enrichment_detection_payload(
+            created_at=created_at,
+            rscript=rscript,
+            package_statuses=package_statuses,
+            blockers=blockers,
+            warnings=warnings,
+        )
+        _write_optional_snapshot(detection, snapshot_path, write_snapshot)
+        return detection
+
+    runtime_lines = [line.strip() for line in runtime_result["stdout"].splitlines() if line.strip()]
+    rscript["version"] = runtime_lines[0] if runtime_lines else "R version unknown"
+    rscript["architecture"] = _normalize_r_arch(runtime_lines[1] if len(runtime_lines) > 1 else "")
+    rscript["library_paths"] = runtime_lines[2:] if len(runtime_lines) > 2 else []
+
+    package_statuses = _detect_r_enrichment_package_statuses(resolved_rscript, runner, package_names)
+    for name in R_ENRICHMENT_REQUIRED_PACKAGES:
+        status = package_statuses[name]
+        if not status["available"] or not status["importable"]:
+            blockers.append(
+                _blocker(
+                    "missing_required_r_package",
+                    str(status.get("missing_reason") or f"{name} is not importable"),
+                    package=name,
+                    required_by=_r_enrichment_required_by(name),
+                )
+            )
+    for name in R_ENRICHMENT_OPTIONAL_PACKAGES:
+        status = package_statuses[name]
+        if not status["available"] or not status["importable"]:
+            warnings.append(f"optional_r_package_missing:{name}:{status.get('missing_reason') or 'not_importable'}")
+
+    detection = _r_enrichment_detection_payload(
+        created_at=created_at,
+        rscript=rscript,
+        package_statuses=package_statuses,
+        blockers=blockers,
+        warnings=warnings,
+    )
+    _write_optional_snapshot(detection, snapshot_path, write_snapshot)
+    return detection
+
+
+def run_external_enrichment_r_backend_validation(
+    *,
+    storage_root: str | Path | None = None,
+    command_finder: CommandFinder = shutil.which,
+    runner: SubprocessRunner = subprocess.run,
+    rscript_path: str | Path | None = None,
+    write_outputs: bool = True,
+    timeout_seconds: int = 90,
+) -> dict[str, Any]:
+    output_root = external_engines_storage_root(storage_root)
+    detection_path = output_root / R_ENRICHMENT_BACKEND_DETECTION_FILENAME
+    ora_path = output_root / R_ENRICHMENT_ORA_FIXTURE_FILENAME
+    gsea_path = output_root / R_ENRICHMENT_GSEA_FIXTURE_FILENAME
+    detection = detect_external_enrichment_r_backend(
+        storage_root=storage_root,
+        command_finder=command_finder,
+        runner=runner,
+        rscript_path=rscript_path,
+        write_snapshot=False,
+    )
+    detection["fixture_outputs"] = {
+        "ora_fixture_tsv": "",
+        "gsea_fixture_tsv": "",
+    }
+    detection["plot_smoke"] = []
+    if detection["status"] != "passed" and not _can_run_r_enrichment_fixtures(detection):
+        if write_outputs:
+            _write_json(detection_path, detection)
+        return detection
+
+    resolved_rscript = str(detection["rscript"]["path"])
+    output_root.mkdir(parents=True, exist_ok=True)
+    fixture_result = _run_checked(
+        runner,
+        [resolved_rscript, "--vanilla", "-e", _r_enrichment_fixture_script(), str(ora_path), str(gsea_path)],
+        timeout=timeout_seconds,
+    )
+    if fixture_result["returncode"] != 0:
+        message = fixture_result["stderr"] or fixture_result["stdout"] or "R enrichment fixture execution failed"
+        detection["status"] = "blocked"
+        detection["blockers"].append(_blocker("r_enrichment_fixture_failed", message, required_by=("external_enrichment_r_backend_validation",)))
+        if write_outputs:
+            _write_json(detection_path, detection)
+        return detection
+
+    ora_gate = _validate_tsv_columns(ora_path, R_ENRICHMENT_ORA_COLUMNS)
+    gsea_gate = _validate_tsv_columns(gsea_path, R_ENRICHMENT_GSEA_COLUMNS)
+    detection["plot_smoke"] = _parse_plot_smoke(fixture_result["stdout"])
+    detection["fixture_outputs"] = {
+        "ora_fixture_tsv": str(ora_path) if ora_gate["status"] == "passed" else "",
+        "gsea_fixture_tsv": str(gsea_path) if gsea_gate["status"] == "passed" else "",
+    }
+    detection["fixture_validation"] = {
+        "ora": ora_gate,
+        "gsea": gsea_gate,
+    }
+    fixture_blockers = [item for gate in (ora_gate, gsea_gate) for item in gate.get("blockers", [])]
+    if fixture_blockers:
+        detection["status"] = "blocked"
+        detection["blockers"].extend(fixture_blockers)
+    if write_outputs:
+        _write_json(detection_path, detection)
+    return detection
 
 
 def detect_python_statistical_dependencies(
@@ -474,6 +685,223 @@ def _r_runtime_snapshot_from(snapshot: dict[str, Any]) -> dict[str, Any]:
         key: snapshot.get(key, "")
         for key in ("schema_version", "engine_family", "engine_name", "status", "runtime_path", "version", "architecture", "checked_at", "snapshot_path", "blockers", "install_guidance")
     } | {"snapshot_path": str(external_engines_storage_root(Path(snapshot.get("snapshot_path", "")).parents[1] if snapshot.get("snapshot_path") else None) / R_RUNTIME_SNAPSHOT_FILENAME)}
+
+
+def _r_enrichment_detection_payload(
+    *,
+    created_at: str,
+    rscript: dict[str, Any],
+    package_statuses: dict[str, dict[str, Any]],
+    blockers: list[dict[str, Any]],
+    warnings: list[str],
+) -> dict[str, Any]:
+    packages = {name: package_statuses.get(name, _r_enrichment_missing_package(name, "not_checked", "Package was not checked")) for name in R_ENRICHMENT_REQUIRED_PACKAGES}
+    optional_packages = {
+        name: package_statuses.get(name, _r_enrichment_missing_package(name, "not_checked", "Package was not checked"))
+        for name in R_ENRICHMENT_OPTIONAL_PACKAGES
+    }
+    all_packages = packages | optional_packages
+    return {
+        "schema_version": R_ENRICHMENT_BACKEND_DETECTION_SCHEMA_VERSION,
+        "created_at": created_at,
+        "status": "blocked" if blockers else "passed",
+        "rscript": rscript,
+        "packages": packages,
+        "optional_packages": optional_packages,
+        "capabilities": _r_enrichment_capabilities(all_packages),
+        "blockers": blockers,
+        "warnings": list(dict.fromkeys(warnings)),
+        "install_action": "none_detect_first_only",
+        "packaging_policy": "external_runtime_not_bundled",
+    }
+
+
+def _detect_r_enrichment_package_statuses(rscript_path: str, runner: SubprocessRunner, package_names: Iterable[str]) -> dict[str, dict[str, Any]]:
+    names = tuple(dict.fromkeys(package_names))
+    script = (
+        "pkgs <- c("
+        + ", ".join(json.dumps(name) for name in names)
+        + ")\n"
+        "cat('package\\tavailable\\tversion\\timportable\\tmissing_reason\\n')\n"
+        "for (pkg in pkgs) {\n"
+        "  available <- requireNamespace(pkg, quietly=TRUE)\n"
+        "  version <- ''\n"
+        "  reason <- ''\n"
+        "  if (available) {\n"
+        "    version <- as.character(utils::packageVersion(pkg))\n"
+        "  } else {\n"
+        "    reason <- paste0('package_not_installed_or_not_on_libpaths:', pkg)\n"
+        "  }\n"
+        "  cat(pkg, available, version, available, reason, sep='\\t')\n"
+        "  cat('\\n')\n"
+        "}\n"
+    )
+    result = _run_checked(runner, [rscript_path, "-e", script], timeout=30)
+    if result["returncode"] != 0:
+        message = result["stderr"] or result["stdout"] or "R package detection failed"
+        return {name: _r_enrichment_missing_package(name, "r_package_detection_error", message) for name in names}
+    rows: dict[str, dict[str, Any]] = {}
+    for line in result["stdout"].splitlines():
+        if not line.strip() or line.startswith("package\t"):
+            continue
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        name, available, version, importable, missing_reason = parts[:5]
+        rows[name] = {
+            "available": available.upper() == "TRUE",
+            "version": version,
+            "importable": importable.upper() == "TRUE",
+            "missing_reason": missing_reason,
+        }
+    return {name: rows.get(name, _r_enrichment_missing_package(name, "package_not_reported", f"{name} was not returned by R package detection")) for name in names}
+
+
+def _r_enrichment_missing_package(name: str, code: str, message: str) -> dict[str, Any]:
+    reason = message if code in {"missing_r_runtime", "r_runtime_error", "r_package_detection_error"} else f"{code}:{name}"
+    return {
+        "available": False,
+        "version": "",
+        "importable": False,
+        "missing_reason": reason,
+    }
+
+
+def _r_enrichment_required_by(package_name: str) -> tuple[str, ...]:
+    return tuple(key for key, package_names in R_ENRICHMENT_CAPABILITY_REQUIREMENTS.items() if package_name in package_names)
+
+
+def _r_enrichment_capabilities(package_statuses: dict[str, dict[str, Any]]) -> dict[str, bool]:
+    return {
+        capability: all(package_statuses.get(package, {}).get("available") and package_statuses.get(package, {}).get("importable") for package in packages)
+        for capability, packages in R_ENRICHMENT_CAPABILITY_REQUIREMENTS.items()
+    }
+
+
+def _can_run_r_enrichment_fixtures(detection: dict[str, Any]) -> bool:
+    if not (isinstance(detection.get("rscript"), dict) and detection["rscript"].get("available") and detection["rscript"].get("path")):
+        return False
+    packages = detection.get("packages") if isinstance(detection.get("packages"), dict) else {}
+    required = ("clusterProfiler", "fgsea", "enrichplot", "ggplot2")
+    return all(isinstance(packages.get(name), dict) and packages[name].get("available") and packages[name].get("importable") for name in required)
+
+
+def _normalize_r_arch(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized in {"aarch64", "arm64"}:
+        return "arm64"
+    if normalized in {"x86_64", "amd64"}:
+        return "x86_64"
+    return normalized or "unknown"
+
+
+def _validate_tsv_columns(path: Path, required_columns: Iterable[str]) -> dict[str, Any]:
+    if not path.exists():
+        return {"status": "blocked", "columns": [], "blockers": [_blocker("fixture_output_missing", f"{path.name} was not created")]}
+    try:
+        with path.open(encoding="utf-8", newline="") as handle:
+            reader = csv.reader(handle, delimiter="\t")
+            columns = next(reader, [])
+    except OSError as exc:
+        return {"status": "blocked", "columns": [], "blockers": [_blocker("fixture_output_read_error", f"{exc.__class__.__name__}: {exc}")]}
+    missing = [column for column in required_columns if column not in columns]
+    blockers = [_blocker("fixture_output_missing_columns", f"{path.name} missing required columns: {', '.join(missing)}")] if missing else []
+    return {"status": "blocked" if blockers else "passed", "columns": columns, "blockers": blockers}
+
+
+def _parse_plot_smoke(stdout: str) -> list[dict[str, Any]]:
+    lines = stdout.splitlines()
+    try:
+        start = lines.index("PLOT_SMOKE_BEGIN") + 1
+        end = lines.index("PLOT_SMOKE_END")
+    except ValueError:
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in lines[start:end]:
+        if not line.strip() or line.startswith("check\t"):
+            continue
+        parts = line.split("\t")
+        if len(parts) < 4:
+            continue
+        rows.append({"check": parts[0], "ok": parts[1].upper() == "TRUE", "class": parts[2], "error": parts[3]})
+    return rows
+
+
+def _r_enrichment_fixture_script() -> str:
+    return r"""
+args <- commandArgs(trailingOnly=TRUE)
+ora_path <- args[[1]]
+gsea_path <- args[[2]]
+suppressPackageStartupMessages({
+  library(clusterProfiler)
+  library(fgsea)
+})
+term2gene <- data.frame(
+  term = c(rep("Pathway_A", 5), rep("Pathway_B", 4), rep("Pathway_C", 4)),
+  gene = c("G1", "G2", "G3", "G4", "G5", "G1", "G6", "G7", "G8", "G9", "G10", "G11", "G12"),
+  stringsAsFactors = FALSE
+)
+ora <- clusterProfiler::enricher(
+  gene = c("G1", "G2", "G3"),
+  TERM2GENE = term2gene,
+  pvalueCutoff = 1,
+  qvalueCutoff = 1,
+  minGSSize = 1,
+  maxGSSize = 500
+)
+ora_df <- as.data.frame(ora)
+ora_cols <- c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", "qvalue", "geneID", "Count")
+missing_ora <- setdiff(ora_cols, colnames(ora_df))
+if (length(missing_ora) > 0) stop(paste("ORA fixture missing columns", paste(missing_ora, collapse=",")))
+write.table(ora_df[, ora_cols, drop=FALSE], file=ora_path, sep="\t", quote=FALSE, row.names=FALSE)
+
+stats <- c(G1=4.0, G2=3.2, G3=2.5, G4=1.6, G5=0.9, G6=-0.2, G7=-0.8, G8=-1.4, G9=-2.1, G10=-3.5)
+pathways <- list(Pathway_A=c("G1","G2","G3","G4"), Pathway_B=c("G7","G8","G9","G10"), Pathway_C=c("G2","G5","G8"))
+set.seed(20260528)
+gsea <- fgsea::fgsea(pathways=pathways, stats=stats, minSize=1, maxSize=500, eps=0)
+gsea_df <- as.data.frame(gsea)
+gsea_df$leadingEdge <- vapply(gsea$leadingEdge, paste, character(1), collapse="/")
+gsea_cols <- c("pathway", "ES", "NES", "pval", "padj", "leadingEdge", "size")
+missing_gsea <- setdiff(gsea_cols, colnames(gsea_df))
+if (length(missing_gsea) > 0) stop(paste("GSEA fixture missing columns", paste(missing_gsea, collapse=",")))
+write.table(gsea_df[, gsea_cols, drop=FALSE], file=gsea_path, sep="\t", quote=FALSE, row.names=FALSE)
+
+plot_rows <- data.frame(check=character(), ok=logical(), class=character(), error=character(), stringsAsFactors=FALSE)
+if (requireNamespace("enrichplot", quietly=TRUE) && requireNamespace("ggplot2", quietly=TRUE)) {
+  suppressPackageStartupMessages({
+    library(enrichplot)
+    library(ggplot2)
+  })
+  plot_checks <- list(
+    ora_dotplot = function() enrichplot::dotplot(ora),
+    ora_barplot = function() barplot(ora),
+    gsea_curve = function() {
+      cp_gsea <- clusterProfiler::GSEA(
+        geneList = sort(stats, decreasing=TRUE),
+        TERM2GENE = term2gene,
+        pvalueCutoff = 1,
+        minGSSize = 1,
+        maxGSSize = 500,
+        verbose = FALSE,
+        seed = TRUE
+      )
+      enrichplot::gseaplot2(cp_gsea, geneSetID=1)
+    }
+  )
+  for (name in names(plot_checks)) {
+    result <- tryCatch(plot_checks[[name]](), error=function(e) e)
+    if (inherits(result, "error")) {
+      plot_rows <- rbind(plot_rows, data.frame(check=name, ok=FALSE, class="", error=conditionMessage(result), stringsAsFactors=FALSE))
+    } else {
+      ok <- inherits(result, "ggplot") || inherits(result, "gglist") || inherits(result, "gtable")
+      plot_rows <- rbind(plot_rows, data.frame(check=name, ok=ok, class=paste(class(result), collapse="/"), error="", stringsAsFactors=FALSE))
+    }
+  }
+}
+cat("PLOT_SMOKE_BEGIN\n")
+write.table(plot_rows, file=stdout(), sep="\t", quote=FALSE, row.names=FALSE)
+cat("PLOT_SMOKE_END\n")
+"""
 
 
 def _detect_r_package_versions(rscript_path: str, runner: SubprocessRunner) -> dict[str, str]:
