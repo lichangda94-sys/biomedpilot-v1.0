@@ -49,6 +49,67 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
     assert "KM/log-rank" in _row(rows, "km_cox_logrank")["label"]
+    assert _row(rows, "controlled_ora")["enabled"] is False
+    assert _row(rows, "controlled_gsea_preranked")["enabled"] is False
+
+
+def test_enrichment_actions_enable_only_after_execution_gates_and_keep_section_scope() -> None:
+    gate_state = {
+        "execution_gates": {
+            "ora": {"status": "passed", "blockers": [], "parameter_manifest": {"status": "passed"}, "confirmation_gate": {"status": "passed"}},
+            "gsea_preranked": {"status": "passed", "blockers": [], "parameter_manifest": {"status": "passed"}, "confirmation_gate": {"status": "passed"}},
+        },
+        "review": {"status": "passed", "blockers": []},
+        "plot_gate": {"status": "passed", "blockers": []},
+        "section_report_gate": {"status": "eligible_for_enrichment_section_report_ready", "blockers": []},
+    }
+
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        enrichment_gate_state=gate_state,
+    )
+
+    assert _row(rows, "enrichment_parameter_confirmation")["state"] == "confirmed"
+    assert _row(rows, "controlled_ora")["enabled"] is True
+    assert _row(rows, "controlled_ora")["button_behavior"] == "enabled_controlled_ora_r_adapter"
+    assert _row(rows, "controlled_gsea_preranked")["enabled"] is True
+    assert _row(rows, "controlled_gsea_preranked")["button_behavior"] == "enabled_controlled_fgsea_adapter"
+    assert _row(rows, "enrichment_result_review")["button_behavior"] == "enabled_review_only"
+    assert _row(rows, "enrichment_plot_artifact")["button_behavior"] == "enabled_formal_enrichment_plot_artifact_only"
+    assert _row(rows, "enrichment_section_report")["button_behavior"] == "enabled_enrichment_section_report_gate_passed"
+    assert "section only" in _row(rows, "enrichment_section_report")["next_action"]
+
+
+def test_enrichment_actions_show_resource_backend_and_confirmation_disabled_reasons() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        enrichment_gate_state={
+            "execution_gates": {
+                "ora": {
+                    "status": "blocked",
+                    "blockers": ["enrichment_resource_not_selected", "enrichment_parameter_confirmation_missing"],
+                    "parameter_manifest": {"status": "blocked", "blockers": ["enrichment_resource_not_selected"]},
+                    "confirmation_gate": {"status": "blocked", "blockers": ["enrichment_parameter_confirmation_missing"]},
+                },
+                "gsea_preranked": {"status": "blocked", "blockers": ["missing_required_r_package:msigdbr"], "parameter_manifest": {"status": "blocked"}},
+            },
+            "review": {"status": "blocked", "blockers": ["formal_enrichment_result_not_found"]},
+            "plot_gate": {"status": "blocked", "blockers": ["formal_enrichment_result_not_found"]},
+            "section_report_gate": {"status": "blocked", "blockers": ["enrichment_section_report_gate_not_passed"]},
+        },
+    )
+
+    assert _row(rows, "controlled_ora")["state"] == "blocked_missing_enrichment_resource"
+    assert "enrichment_resource_not_selected" in _row(rows, "controlled_ora")["disabled_reason"]
+    assert _row(rows, "controlled_gsea_preranked")["state"] == "blocked_missing_backend"
+    assert "missing_required_r_package:msigdbr" in _row(rows, "controlled_gsea_preranked")["disabled_reason"]
+    assert "formal_enrichment_result_not_found" in _row(rows, "enrichment_result_review")["disabled_reason"]
 
 
 def test_legacy_asset_pipeline_action_is_review_only() -> None:

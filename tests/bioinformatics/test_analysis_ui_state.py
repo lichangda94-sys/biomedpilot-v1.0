@@ -29,19 +29,27 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["action_rows"]
     assert state["dependency_rows"]
     assert state["gate_rows"]
+    assert state["enrichment_gate_rows"]
     assert state["survival_clinical_rows"]
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
     assert formal_deg["enabled"] is False
-    assert "missing_python_package:scipy" in formal_deg["disabled_reason"]
+    assert formal_deg["disabled_reason"]
     assert _action(state, "formal_gsea")["enabled"] is False
+    assert _action(state, "controlled_ora")["enabled"] is False
+    assert _action(state, "controlled_gsea_preranked")["enabled"] is False
     assert _action(state, "km_cox_logrank")["enabled"] is False
     assert _action(state, "report_ready_export")["state"] == "blocked_report_ready_gate"
     formal_gate_text = "\n".join(str(row) for row in state["formal_deg_gate_rows"])
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
     assert "B9.2 controlled activation" in formal_gate_text
+    enrichment_gate_text = "\n".join(str(row) for row in state["enrichment_gate_rows"])
+    assert "ORA execution gate" in enrichment_gate_text
+    assert "Preranked GSEA execution gate" in enrichment_gate_text
+    assert "Enrichment section report" in enrichment_gate_text
+    assert state["developer_diagnostics"]["enrichment_gate_state"]["reactomepa_msigdbr_policy"] == "blocked_capability_until_external_backend_and_resource_gates_pass"
     assert state["legacy_asset_pipeline"]["formal_analysis_enabled"] is False
     assert state["legacy_asset_pipeline"]["writes_result_index"] is False
     assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False

@@ -24,7 +24,7 @@ def build_enrichment_result_review(
     top_n: int = 50,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
-    index = load_result_index(root)
+    index = load_result_index(root, persist_generated=False)
     entries = [item for item in index.get("entries", []) or [] if isinstance(item, dict)]
     formal_entries = [_formal_enrichment_entry(root, entry) for entry in entries]
     formal_entries = [entry for entry in formal_entries if entry is not None]
@@ -207,7 +207,7 @@ def _selected_table(root: Path, result_id: str) -> Path | None:
     review = build_enrichment_result_review(root, result_id=result_id, top_n=0)
     if review.get("status") != "passed":
         return None
-    for entry in load_result_index(root).get("entries", []) or []:
+    for entry in load_result_index(root, persist_generated=False).get("entries", []) or []:
         if isinstance(entry, dict) and str(entry.get("result_id") or "") == result_id:
             return _result_table_path(root, entry)
     return None
