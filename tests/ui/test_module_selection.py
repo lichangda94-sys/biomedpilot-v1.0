@@ -225,7 +225,7 @@ def test_main_window_module_buttons_enter_expected_workspaces(qt_app) -> None:
 
 
 def test_about_and_test_feedback_shells_are_reachable(qt_app) -> None:
-    from app.shell.main_window import MainWindow
+    from app.shell.main_window import ABOUT_BIOMEDPILOT_TEXT, MainWindow
 
     window = MainWindow()
     try:
@@ -233,9 +233,10 @@ def test_about_and_test_feedback_shells_are_reachable(qt_app) -> None:
 
         window.show_about()
         assert window.current_workspace_key() == "about"
-        about_labels = "\n".join(label.text() for label in window.findChildren(QLabel))
-        assert "About / 关于" in about_labels
-        assert "萤火虫 / Firefly" in about_labels
+        about_labels = [label.text() for label in window._about_page.findChildren(QLabel)]
+        assert about_labels == [ABOUT_BIOMEDPILOT_TEXT]
+        assert "关于 BioMedPilot / 医研智析" in about_labels[0]
+        assert "有一分热，发一分光" in about_labels[0]
 
         window.show_test_feedback()
         assert window.current_workspace_key() == "test_feedback"

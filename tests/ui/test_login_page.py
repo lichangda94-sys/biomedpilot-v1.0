@@ -7,7 +7,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QLineEdit, QPushButton, QTabBar, QToolButton
 
     from app.shell.login import BioMedPilotLoginWidget, LocalSession
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
@@ -34,15 +34,20 @@ def test_welcome_widget_instantiates(qt_app) -> None:
 def test_welcome_page_uses_existing_icons_without_replacing_resources(qt_app) -> None:
     widget = BioMedPilotLoginWidget()
 
-    brand_icon = widget.findChild(QLabel, "loginBrandIcon")
+    hero_image = widget.findChild(QLabel, "welcomeHeroImage")
     enter_button = widget.findChild(QPushButton, "primaryButton")
+    about_button = widget.findChild(QPushButton, "aboutButton")
 
-    assert brand_icon is not None
-    assert brand_icon.pixmap() is not None and not brand_icon.pixmap().isNull()
+    assert hero_image is not None
+    assert hero_image.pixmap() is not None and not hero_image.pixmap().isNull()
     assert enter_button is not None and not enter_button.icon().isNull()
+    assert enter_button.text() == "进入本地工作台"
     assert enter_button.isDefault()
     assert enter_button.accessibleName() == "Enter local workspace"
     assert enter_button.property("usabilityRole") == "primary_entry_action"
+    assert about_button is not None
+    assert about_button.text() == "关于"
+    assert about_button.property("usabilityRole") == "secondary_entry_action"
 
 
 def test_welcome_page_removes_visible_credential_flow(qt_app) -> None:
@@ -52,8 +57,8 @@ def test_welcome_page_removes_visible_credential_flow(qt_app) -> None:
     username_input = widget.findChild(QLineEdit, "usernameInput")
     password_input = widget.findChild(QLineEdit, "passwordInput")
 
-    assert "萤火虫 / Firefly" in labels
-    assert "BioMedPilot / 医研智析" in labels
+    assert "萤火虫 / Firefly" not in labels
+    assert "BioMedPilot / 医研智析" not in labels
     assert "账号" not in labels
     assert "VIP" not in labels
     assert username_input is not None and username_input.isHidden()
@@ -97,6 +102,30 @@ def test_main_window_starts_at_welcome_and_enters_dashboard(qt_app) -> None:
     assert window.current_session() == session
 
 
+def test_welcome_buttons_click_to_expected_workspaces(qt_app) -> None:
+    from app.shell.main_window import MainWindow
+
+    window = MainWindow()
+    try:
+        about_button = window._welcome_page.findChild(QPushButton, "aboutButton")
+        assert about_button is not None
+        about_button.click()
+        assert window.current_workspace_key() == "about"
+        assert window.current_session() is not None
+    finally:
+        window.close()
+
+    window = MainWindow()
+    try:
+        enter_button = window._welcome_page.findChild(QPushButton, "primaryButton")
+        assert enter_button is not None
+        enter_button.click()
+        assert window.current_workspace_key() == "dashboard"
+        assert window.current_session() is not None
+    finally:
+        window.close()
+
+
 def test_settings_page_displays_icon_asset_details(qt_app) -> None:
     from app.shell.main_window import MainWindow
 
@@ -104,9 +133,17 @@ def test_settings_page_displays_icon_asset_details(qt_app) -> None:
     window._welcome_page.enter_workspace()
     window.show_settings()
 
-    labels = "\n".join(label.text() for label in window.findChildren(QLabel))
+    nav = window.findChild(QTabBar, "settingsSecondaryNav")
+    assert nav is not None
+    nav.setCurrentIndex(4)
+    toggle = window.findChild(QToolButton, "developerDiagnosticsToggle")
+    panel = window.findChild(QFrame, "developerDiagnosticsPanel")
+    assert toggle is not None
+    assert panel is not None
+    toggle.click()
+
+    labels = "\n".join(label.text() for label in panel.findChildren(QLabel))
 
     assert "图标资源状态" in labels
-    assert "图标槽位" in labels
-    assert "已生成" in labels
-    assert "待生成" in labels
+    assert "Settings resource diagnostics" in labels
+    assert "Settings audit log" in labels

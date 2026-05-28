@@ -77,6 +77,23 @@ _SETTINGS_RESOURCE_SEMANTIC_KEYS = {
     "resource_developer_diagnostics": PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value,
 }
 
+ABOUT_BIOMEDPILOT_TEXT = """关于 BioMedPilot / 医研智析
+
+BioMedPilot / 医研智析 是一个面向生物医学研究的软件工具，围绕生信分析、Meta 分析和实验辅助工具，帮助研究者更高效地整理信息、完成分析、记录实验过程，并减少重复性工作。
+
+我们希望它不只是一个工具，也是一位安静、可靠的研究助手。它可以帮助用户理清思路、规范流程、提高效率，但不会替代研究者的专业判断。重要的分析结果、实验计算和研究结论，仍应由使用者结合专业知识和实际场景进行复核。
+
+BioMedPilot / 医研智析 希望继承开放协作与知识共享的精神。像开源社区一样，我们相信工具应当在共同使用、共同修正、共同贡献中成长；也相信科研知识和研究工具不应被过高的门槛隔开，不应只照亮少数拥有充足资源的人。
+
+因此，我们会尽可能将大部分基础功能免费开放，让更多学生、青年研究者、基层实验人员和独立探索者，都能在自己的研究道路上少一些重复消耗，多一点清晰和支持。
+
+如果未来接入联网 AI、云端模型等需要长期成本的能力，相关功能可能会设置必要且合理的费用，用于维持服务运行。但我们会尽量保持克制、透明和节制，不让成本成为阻断普通研究者使用基础工具的高墙。
+我们也欢迎有相关经验和想法的人一起参与完善：无论是生物医学研究、生信分析、Meta 分析、实验流程、软件开发、界面设计、文档写作，还是对科研工具使用体验的建议，都可能帮助 BioMedPilot 变得更清晰、更实用、更贴近真实科研工作。
+
+如果你愿意贡献一个想法、指出一个问题、补充一个场景、优化一句提示，都是这个项目继续成长的一部分。
+
+“有一分热，发一分光，就令萤火一般，也可以在黑暗里发一点光，不必等候炬火。”鲁迅"""
+
 LABTOOLS_HOME_TOKENS = {
     "background": "#F5F6FA",
     "surface": "#FFFFFF",
@@ -4816,35 +4833,51 @@ class MainWindow(QMainWindow):
     def _build_about_page(self) -> QWidget:
         page = QWidget()
         page.setObjectName("aboutPage")
+        page.setStyleSheet(
+            """
+            QWidget#aboutPage {
+                background: #0D1B2D;
+                color: #E7EEF8;
+            }
+            QWidget#aboutTextContent {
+                background: transparent;
+            }
+            QScrollArea#aboutTextScroll {
+                background: transparent;
+                border: 0;
+            }
+            QScrollArea#aboutTextScroll > QWidget > QWidget {
+                background: transparent;
+            }
+            QLabel#aboutTextLabel {
+                color: #E7EEF8;
+                font-size: 15px;
+                line-height: 150%;
+                background: transparent;
+            }
+            """
+        )
         root = QVBoxLayout(page)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(14)
-        title = QLabel("About / 关于")
-        title.setObjectName("aboutTitle")
-        title.setStyleSheet("font-size: 24px; font-weight: 700;")
-        root.addWidget(title)
-        root.addWidget(
-            self._list_card(
-                "品牌关系",
-                [
-                    "主入口显示：萤火虫 / Firefly",
-                    "当前 bundle 与工程名：BioMedPilot / 医研智析",
-                    "模块：Bioinformatics、Meta Analysis、LabTools",
-                ],
-            )
-        )
-        root.addWidget(
-            self._list_card(
-                "阶段边界",
-                [
-                    "UI-B2 只重建全局低保真壳层。",
-                    "Bioinformatics、Meta Analysis、LabTools 业务能力仍按各自 Developer Preview / planned 状态呈现。",
-                    "本阶段不替换资源、不打包、不运行 packaged app。",
-                ],
-            )
-        )
-        root.addWidget(self._icon_asset_status_card(detailed=False))
-        root.addStretch(1)
+        root.setContentsMargins(40, 34, 40, 34)
+        root.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setObjectName("aboutTextScroll")
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        content.setObjectName("aboutTextContent")
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        text = QLabel(ABOUT_BIOMEDPILOT_TEXT)
+        text.setObjectName("aboutTextLabel")
+        text.setWordWrap(True)
+        text.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        text.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        content_layout.addWidget(text)
+        content_layout.addStretch(1)
+        scroll.setWidget(content)
+        root.addWidget(scroll, 1)
         return page
 
     def _create_project_and_open(self, project_type: str) -> None:

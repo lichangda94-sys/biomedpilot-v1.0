@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -16,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.app_identity import load_app_icon, load_ui01_login_icon, load_ui01_login_pixmap
+from app.app_identity import load_app_icon, load_ui01_login_icon, load_ui01_login_pixmap, load_welcome_hero_pixmap
 from app.ui_style_tokens import SPACING, login_stylesheet
 
 
@@ -27,6 +28,34 @@ class LocalSession:
     tier: str
     license_status: str
     login_time: str
+
+
+class _ScaledPixmapLabel(QLabel):
+    def __init__(self, pixmap: QPixmap, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._source_pixmap = QPixmap()
+        self.setAlignment(Qt.AlignCenter)
+        self.setMinimumSize(320, 255)
+        self.setMaximumSize(832, 663)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.set_hero_pixmap(pixmap)
+
+    def set_hero_pixmap(self, pixmap: QPixmap) -> None:
+        self._source_pixmap = pixmap
+        self._update_pixmap()
+
+    def resizeEvent(self, event) -> None:  # type: ignore[override]
+        super().resizeEvent(event)
+        self._update_pixmap()
+
+    def _update_pixmap(self) -> None:
+        if self._source_pixmap.isNull():
+            self.clear()
+            return
+        target = self.contentsRect().size()
+        if target.width() <= 0 or target.height() <= 0:
+            return
+        self.setPixmap(self._source_pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
 
 class BioMedPilotLoginWidget(QWidget):
@@ -96,15 +125,22 @@ class BioMedPilotLoginWidget(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        root.addWidget(self._build_top_bar())
-
         main = QWidget()
         main.setObjectName("loginMainContent")
-        main_layout = QHBoxLayout(main)
-        main_layout.setContentsMargins(20, 18, 20, 18)
-        main_layout.setSpacing(18)
-        main_layout.addWidget(self._build_brand_panel(), 5)
-        main_layout.addWidget(self._build_welcome_card(), 4)
+        main_layout = QVBoxLayout(main)
+        main_layout.setContentsMargins(40, 34, 40, 34)
+        main_layout.setSpacing(24)
+        main_layout.addStretch(1)
+
+        hero = _ScaledPixmapLabel(load_welcome_hero_pixmap())
+        hero.setObjectName("welcomeHeroImage")
+        hero.setAccessibleName("Welcome firefly laboratory image")
+        if hero.pixmap() is None or hero.pixmap().isNull():
+            hero.setText("萤火虫 / Firefly")
+            hero.setObjectName("loginBrandIcon")
+        main_layout.addWidget(hero, 7, alignment=Qt.AlignHCenter | Qt.AlignBottom)
+        main_layout.addWidget(self._build_welcome_card(), 0, alignment=Qt.AlignHCenter | Qt.AlignTop)
+        main_layout.addStretch(1)
         root.addWidget(main, 1)
 
     def _build_top_bar(self) -> QFrame:
@@ -210,24 +246,12 @@ class BioMedPilotLoginWidget(QWidget):
     def _build_welcome_card(self) -> QFrame:
         card = QFrame()
         card.setObjectName("loginCard")
-        card.setMinimumWidth(330)
-        card.setMaximumWidth(520)
-        card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        card.setFixedWidth(260)
+        card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(30, 28, 30, 24)
-        layout.setSpacing(SPACING["sm"])
-
-        title = QLabel("Welcome / 欢迎")
-        title.setObjectName("loginTitle")
-        title.setAlignment(Qt.AlignCenter)
-        hint = QLabel("进入本地工作台，查看 Dashboard、Sidebar、About 与 Test Feedback 壳层。")
-        hint.setObjectName("loginHint")
-        hint.setAlignment(Qt.AlignCenter)
-        hint.setWordWrap(True)
-        layout.addWidget(title)
-        layout.addWidget(hint)
-        layout.addSpacing(SPACING["md"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(11)
 
         self._username_input = QLineEdit()
         self._username_input.setObjectName("usernameInput")
@@ -252,33 +276,21 @@ class BioMedPilotLoginWidget(QWidget):
         enter_button.setAccessibleName("Enter local workspace")
         enter_button.setProperty("usabilityRole", "primary_entry_action")
         enter_button.setDefault(True)
-        enter_button.setIcon(load_ui01_login_icon("login"))
-        enter_button.setIconSize(QSize(22, 22))
+        enter_button.setIcon(load_ui01_login_icon("welcome_enter"))
+        enter_button.setIconSize(QSize(16, 16))
+        enter_button.setFixedSize(260, 47)
         enter_button.clicked.connect(self.enter_workspace)
         layout.addWidget(enter_button)
 
-        actions = QHBoxLayout()
-        actions.setContentsMargins(0, 4, 0, 0)
-        settings_button = QPushButton("设置中心")
-        settings_button.setObjectName("linkButton")
-        settings_button.setAccessibleName("Open settings")
-        settings_button.setProperty("usabilityRole", "secondary_entry_action")
-        settings_button.setIcon(load_ui01_login_icon("preview"))
-        settings_button.clicked.connect(self.settings_requested.emit)
         about_button = QPushButton("关于")
-        about_button.setObjectName("linkButton")
+        about_button.setObjectName("aboutButton")
         about_button.setAccessibleName("Open about")
         about_button.setProperty("usabilityRole", "secondary_entry_action")
-        about_button.setIcon(load_ui01_login_icon("brand"))
+        about_button.setIcon(load_ui01_login_icon("welcome_about"))
+        about_button.setIconSize(QSize(14, 14))
+        about_button.setFixedSize(260, 42)
         about_button.clicked.connect(self.about_requested.emit)
-        actions.addWidget(settings_button)
-        actions.addStretch(1)
-        actions.addWidget(about_button)
-        layout.addLayout(actions)
-
-        layout.addSpacing(SPACING["sm"])
-        layout.addWidget(self._build_scope_panel())
-        layout.addStretch(1)
+        layout.addWidget(about_button)
         return card
 
     def _build_scope_panel(self) -> QFrame:

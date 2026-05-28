@@ -351,8 +351,8 @@ def global_app_stylesheet() -> str:
 def login_stylesheet() -> str:
     return f"""
     QWidget#loginPage, QWidget#welcomePage {{
-        background: {COLORS["background"]};
-        color: {COLORS["text"]};
+        background: #0D1B2D;
+        color: #E7EEF8;
         font-size: {FONT_SIZE["body"]}px;
     }}
     QFrame#loginTopBar {{
@@ -389,7 +389,11 @@ def login_stylesheet() -> str:
         min-height: 0;
     }}
     QWidget#loginMainContent {{
-        background: {COLORS["background"]};
+        background: #0D1B2D;
+    }}
+    QLabel#welcomeHeroImage {{
+        background: transparent;
+        border: 0;
     }}
     QFrame#loginBrandPanel {{
         background: qlineargradient(
@@ -439,9 +443,9 @@ def login_stylesheet() -> str:
         font-weight: 700;
     }}
     QFrame#loginCard {{
-        background: {COLORS["surface"]};
-        border: 1px solid #D5DDE7;
-        border-radius: 18px;
+        background: transparent;
+        border: 0;
+        border-radius: 0px;
     }}
     QLabel#loginTitle {{
         color: {COLORS["bio"]};
@@ -517,42 +521,44 @@ def login_stylesheet() -> str:
         border: 1px solid {COLORS["bio_accent"]};
     }}
     QPushButton {{
-        background: {COLORS["surface"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: {RADIUS["sm"]}px;
+        background: #1A2638;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
         padding: 8px 12px;
         min-height: {CONTROL_HEIGHT["button"] - 18}px;
+        color: #CBD5E1;
         font-size: {FONT_SIZE["body"]}px;
     }}
     QPushButton:hover {{
-        background: {COLORS["surface_muted"]};
+        background: #223149;
     }}
     QPushButton:disabled {{
-        color: {COLORS["muted"]};
-        background: {COLORS["surface_muted"]};
+        color: #718096;
+        background: #152132;
     }}
     QPushButton#primaryButton {{
-        color: #FFFFFF;
-        background: {COLORS["bio_accent"]};
-        border: 1px solid {COLORS["bio_accent"]};
+        color: #111827;
+        background: #F59E0B;
+        border: 1px solid #F59E0B;
+        border-radius: 10px;
         min-height: 34px;
         font-size: 15px;
-        font-weight: 700;
+        font-weight: 800;
     }}
     QPushButton#primaryButton:hover {{
-        background: #129E91;
+        background: #FBB116;
+        border-color: #FBB116;
     }}
-    QPushButton#linkButton {{
-        color: {COLORS["bio_accent"]};
-        background: transparent;
-        border: 0;
-        padding: 4px 0;
-        text-align: left;
+    QPushButton#aboutButton {{
+        color: #C7D2E1;
+        background: #1B2638;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 8px;
         font-weight: 700;
     }}
-    QPushButton#linkButton:disabled {{
-        color: {COLORS["bio_accent"]};
-        background: transparent;
+    QPushButton#aboutButton:hover {{
+        background: #243247;
+        border-color: rgba(255, 255, 255, 0.22);
     }}
     """
 
