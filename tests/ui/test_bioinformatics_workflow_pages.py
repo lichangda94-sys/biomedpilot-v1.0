@@ -3021,6 +3021,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "controlled_standardization_artifact_write_no_formal_execution" in action_text
     assert "Confirm formal DEG parameters" in action_text
     assert "Run controlled two-group DEG" in action_text
+    assert "Run controlled ORA" in action_text
+    assert "Run controlled preranked GSEA" in action_text
+    assert "Review ORA/GSEA result" in action_text
     assert "disabled" in action_text
     assert "Run formal GSEA" not in action_text
     assert "KM/Cox/log-rank" not in action_text
@@ -3043,6 +3046,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "User parameter confirmation" in formal_deg_gate_text
     assert "Result schema gate" in formal_deg_gate_text
     assert "B9.2 controlled activation" in formal_deg_gate_text
+    assert "ORA execution gate" in formal_deg_gate_text
+    assert "Preranked GSEA execution gate" in formal_deg_gate_text
+    assert "Enrichment section report" in formal_deg_gate_text
 
     confirmation_table = widget.findChild(QTableWidget, "analysisFormalDegConfirmationTable")
     assert confirmation_table is not None

@@ -28,6 +28,10 @@ from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confir
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
+from app.bioinformatics.enrichment_execution_gate import build_enrichment_execution_gate
+from app.bioinformatics.enrichment_plot_report import build_enrichment_plot_gate, evaluate_enrichment_section_report_ready_gate
+from app.bioinformatics.enrichment_result_review import build_enrichment_result_review
+from app.bioinformatics.gene_set_resources import GENE_SET_REGISTRY
 from app.bioinformatics.survival_clinical import (
     audit_cox_multivariate_design,
     build_cox_univariate_parameter_manifest,
@@ -66,6 +70,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
     multifactor_deg_gates = build_multifactor_deg_gate_state(packages=packages, project_root=root)
     survival_gates = build_km_logrank_gate_state(packages=packages, survival_dependency=survival_dependency, project_root=root)
+    enrichment_gates = build_enrichment_ui_gate_state(project_root=root, result_entries=result_entries)
     legacy_pipeline = build_legacy_asset_pipeline_state(root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
@@ -90,6 +95,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         legacy_asset_pipeline=legacy_pipeline,
+        enrichment_gate_state=enrichment_gates,
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
@@ -116,6 +122,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "result_rows": result_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
+        "enrichment_gate_rows": enrichment_gates["gate_rows"],
         "top_blockers": blockers[:8],
         "top_warnings": warnings[:8],
         "developer_diagnostics": {
@@ -129,6 +136,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "legacy_asset_pipeline": legacy_pipeline,
             "survival_dependency_snapshot": survival_dependency,
             "enrichment_backend_gate": enrichment_backend_gate,
+            "enrichment_gate_state": enrichment_gates,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,
             "km_logrank_gate_state": survival_gates,
@@ -674,6 +682,108 @@ def build_km_logrank_gate_state(*, packages: list[dict[str, Any]], survival_depe
         "cox_parameter_confirmation": cox_confirmation,
         "cox_multivariate_design": cox_multivariate_design,
         "gate_rows": gate_rows,
+    }
+
+
+def build_enrichment_ui_gate_state(*, project_root: str | Path, result_entries: list[dict[str, Any]]) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    source = _select_formal_deg_source_for_enrichment(result_entries)
+    source_result_id = str(source.get("result_id") or "") if source else ""
+    source_semantics = str(source.get("result_semantics") or "") if source else ""
+    if (root / GENE_SET_REGISTRY).is_file():
+        ora_gate = build_enrichment_execution_gate(root, analysis_type="ora", source_result_id=source_result_id, source_result_semantics=source_semantics)
+        gsea_gate = build_enrichment_execution_gate(root, analysis_type="gsea_preranked", source_result_id=source_result_id, source_result_semantics=source_semantics)
+    else:
+        source_blockers = [] if source_result_id else ["enrichment_source_result_id_missing"]
+        ora_gate = _blocked_enrichment_execution_gate("ora", source_result_id, [*source_blockers, "enrichment_resource_not_selected"])
+        gsea_gate = _blocked_enrichment_execution_gate("gsea_preranked", source_result_id, [*source_blockers, "enrichment_resource_not_selected"])
+    review = build_enrichment_result_review(root)
+    selected_enrichment_id = str(review.get("selected_result_id") or "")
+    selected_task_type = str(review.get("task_type") or "")
+    plot_type = "gsea_preranked_plot" if selected_task_type == "gsea_preranked" else "ora_dotplot"
+    plot_gate = build_enrichment_plot_gate(root, result_id=selected_enrichment_id or None, plot_type=plot_type)
+    section_report_gate = evaluate_enrichment_section_report_ready_gate(root, result_id=selected_enrichment_id or None, allow_table_only_report=False)
+    gate_rows = [
+        _formal_deg_gate_row("Enrichment DEG source", "passed" if source_result_id else "blocked", [] if source_result_id else ["formal_deg_source_result_missing"], basis=f"source_result_id={source_result_id or 'missing'}"),
+        _formal_deg_gate_row("ORA execution gate", ora_gate.get("status"), ora_gate.get("blockers", []), ora_gate.get("warnings", []), basis=_enrichment_gate_basis(ora_gate)),
+        _formal_deg_gate_row("Preranked GSEA execution gate", gsea_gate.get("status"), gsea_gate.get("blockers", []), gsea_gate.get("warnings", []), basis=_enrichment_gate_basis(gsea_gate)),
+        _formal_deg_gate_row("Enrichment result review", review.get("status"), review.get("blockers", []), review.get("warnings", []), basis=f"selected_result_id={selected_enrichment_id or 'missing'}"),
+        _formal_deg_gate_row("Enrichment plot artifact", plot_gate.get("status"), plot_gate.get("blockers", []), plot_gate.get("warnings", []), basis=f"plot_type={plot_type}"),
+        _formal_deg_gate_row("Enrichment section report", section_report_gate.get("status"), section_report_gate.get("blockers", []), section_report_gate.get("warnings", []), basis="section_scope=formal_enrichment_only"),
+    ]
+    blockers = _dedupe(
+        [
+            *[str(item) for item in ora_gate.get("blockers", []) or []],
+            *[str(item) for item in gsea_gate.get("blockers", []) or []],
+            *[str(item) for item in review.get("blockers", []) or []],
+            *[str(item) for item in plot_gate.get("blockers", []) or []],
+            *[str(item) for item in section_report_gate.get("blockers", []) or []],
+        ]
+    )
+    warnings = _dedupe(
+        [
+            *[str(item) for item in ora_gate.get("warnings", []) or []],
+            *[str(item) for item in gsea_gate.get("warnings", []) or []],
+            *[str(item) for item in review.get("warnings", []) or []],
+            *[str(item) for item in plot_gate.get("warnings", []) or []],
+            *[str(item) for item in section_report_gate.get("warnings", []) or []],
+        ]
+    )
+    return {
+        "schema_version": "biomedpilot.enrichment_analysis_ui_gate_state.v1",
+        "status": "blocked" if blockers else "passed",
+        "source_result_id": source_result_id,
+        "execution_gates": {"ora": ora_gate, "gsea_preranked": gsea_gate},
+        "review": review,
+        "plot_gate": plot_gate,
+        "section_report_gate": section_report_gate,
+        "gate_rows": gate_rows,
+        "reactomepa_msigdbr_policy": "blocked_capability_until_external_backend_and_resource_gates_pass",
+        "formal_ui_activation_boundary": "B88 wires controls only; handlers must still call B84-B87 gates.",
+        "blockers": blockers,
+        "warnings": warnings,
+    }
+
+
+def _select_formal_deg_source_for_enrichment(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
+    candidates = [
+        entry
+        for entry in entries
+        if normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics"), default="") == "formal_computed_result"
+        and str(entry.get("task_type") or "").lower() == "deg"
+    ]
+    return candidates[-1] if candidates else None
+
+
+def _enrichment_gate_basis(gate: dict[str, Any]) -> str:
+    manifest = gate.get("parameter_manifest") if isinstance(gate.get("parameter_manifest"), dict) else {}
+    return f"source={manifest.get('source_result_id', '') or 'missing'}; resource={manifest.get('resource_id', '') or 'missing'}; capability={manifest.get('required_backend_capability', '') or 'missing'}"
+
+
+def _blocked_enrichment_execution_gate(analysis_type: str, source_result_id: str, blockers: list[str]) -> dict[str, Any]:
+    capability = "ora_enricher" if analysis_type == "ora" else "gsea_preranked_fgsea"
+    manifest = {
+        "schema_version": "biomedpilot.enrichment_parameter_manifest.v2",
+        "status": "blocked",
+        "analysis_type": analysis_type,
+        "source_result_id": source_result_id,
+        "resource_id": "",
+        "required_backend_capability": capability,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": [],
+    }
+    return {
+        "schema_version": "biomedpilot.enrichment_execution_gate.v1",
+        "status": "blocked",
+        "analysis_type": analysis_type,
+        "parameter_manifest": manifest,
+        "confirmation_gate": {"status": "blocked", "blockers": ["enrichment_parameter_confirmation_missing"], "warnings": []},
+        "can_execute_controlled_r_adapter": False,
+        "formal_ui_button_enabled": False,
+        "disabled_reason": "; ".join(dict.fromkeys(blockers)),
+        "boundary": "read_only_ui_state_no_gene_set_registry",
+        "blockers": list(dict.fromkeys([*blockers, "enrichment_parameter_confirmation_missing"])),
+        "warnings": [],
     }
 
 

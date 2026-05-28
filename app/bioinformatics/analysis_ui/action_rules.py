@@ -31,6 +31,7 @@ def build_action_rows(
     report_gate: dict[str, Any] | None = None,
     formal_deg_report_gate: dict[str, Any] | None = None,
     legacy_asset_pipeline: dict[str, Any] | None = None,
+    enrichment_gate_state: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -53,6 +54,7 @@ def build_action_rows(
     report_gate = report_gate or {}
     formal_deg_report_gate = formal_deg_report_gate or {}
     legacy_asset_pipeline = legacy_asset_pipeline or {}
+    enrichment_gate_state = enrichment_gate_state or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -66,7 +68,13 @@ def build_action_rows(
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate, input_adaptation_gate, design_quality_gate, data_quality_gate, method_recommendation_gate))
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate, input_adaptation_gate, design_quality_gate, data_quality_gate, method_recommendation_gate))
     rows.append(_multifactor_deg_action(multifactor_gate_state))
-    rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
+    rows.append(_enrichment_confirmation_action(enrichment_gate_state))
+    rows.append(_controlled_ora_action(enrichment_gate_state))
+    rows.append(_controlled_gsea_action(enrichment_gate_state))
+    rows.append(_enrichment_review_action(enrichment_gate_state))
+    rows.append(_enrichment_plot_action(enrichment_gate_state))
+    rows.append(_enrichment_section_report_action(enrichment_gate_state))
+    rows.append(_constant_disabled_action("formal_gsea", "Full formal GSEA modes", "hidden_until_ready", "Full GSEA modes beyond controlled preranked GSEA remain disabled; use controlled_gsea_preranked when gates pass."))
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
@@ -328,6 +336,140 @@ def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str,
             "next_action": "Review external result with imported_external_result semantics.",
         }
     return _disabled("imported_deg_review", "Review imported DEG", "blocked_missing_input_package", "missing imported DEG package/result", "Import an external DEG result if needed.")
+
+
+def _enrichment_confirmation_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    gate = _enrichment_gate(gate_state, "ora")
+    blockers = _list(gate.get("blockers"))
+    manifest = gate.get("parameter_manifest") if isinstance(gate.get("parameter_manifest"), dict) else {}
+    confirmation = gate.get("confirmation_gate") if isinstance(gate.get("confirmation_gate"), dict) else {}
+    non_confirmation_blockers = [item for item in blockers if item != "enrichment_parameter_confirmation_missing"]
+    if non_confirmation_blockers:
+        return _disabled("enrichment_parameter_confirmation", "Confirm ORA/GSEA parameters", "blocked_missing_parameters", "; ".join(dict.fromkeys(non_confirmation_blockers)), "Resolve enrichment source, resource and backend gates before confirmation.")
+    if manifest.get("status") == "passed" and confirmation.get("status") == "passed":
+        return {
+            "action_id": "enrichment_parameter_confirmation",
+            "label": "Confirm ORA/GSEA parameters",
+            "state": "confirmed",
+            "button_behavior": "enabled_reconfirm_parameters_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Parameters are confirmed; re-confirm if source result, resource, thresholds or dependency snapshot changed.",
+        }
+    if manifest.get("status") == "passed":
+        return {
+            "action_id": "enrichment_parameter_confirmation",
+            "label": "Confirm ORA/GSEA parameters",
+            "state": "requires_user_confirmation",
+            "button_behavior": "enabled_parameter_confirmation_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review formal DEG source, gene-set resource, thresholds, backend versions and no-clinical-conclusion acknowledgement.",
+        }
+    return _disabled("enrichment_parameter_confirmation", "Confirm ORA/GSEA parameters", "blocked_missing_parameters", "; ".join(dict.fromkeys(blockers or ["enrichment_parameter_manifest_not_passed"])), "Resolve enrichment parameter manifest first.")
+
+
+def _controlled_ora_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    return _controlled_enrichment_action(
+        "controlled_ora",
+        "Run controlled ORA",
+        _enrichment_gate(gate_state, "ora"),
+        "enabled_controlled_ora",
+        "enabled_controlled_ora_r_adapter",
+        "Run B83 controlled ORA with confirmed resource/backend gates; no Reactome/MSigDB bypass, plot/report remain separate.",
+    )
+
+
+def _controlled_gsea_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    return _controlled_enrichment_action(
+        "controlled_gsea_preranked",
+        "Run controlled preranked GSEA",
+        _enrichment_gate(gate_state, "gsea_preranked"),
+        "enabled_controlled_gsea_preranked",
+        "enabled_controlled_fgsea_adapter",
+        "Run B83 controlled preranked GSEA with confirmed resource/backend gates; no full GSEA modes or clinical interpretation.",
+    )
+
+
+def _controlled_enrichment_action(action_id: str, label: str, gate: dict[str, Any], enabled_state: str, button_behavior: str, next_action: str) -> dict[str, Any]:
+    blockers = _list(gate.get("blockers"))
+    if gate.get("status") == "passed" and not blockers:
+        return {
+            "action_id": action_id,
+            "label": label,
+            "state": enabled_state,
+            "button_behavior": button_behavior,
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": next_action,
+        }
+    state = "blocked_enrichment_gate"
+    if any("source_result" in item for item in blockers):
+        state = "blocked_missing_formal_deg_source"
+    elif any("resource" in item for item in blockers):
+        state = "blocked_missing_enrichment_resource"
+    elif any("missing_required_r_package" in item or "backend" in item or "rscript" in item for item in blockers):
+        state = "blocked_missing_backend"
+    elif any("confirmation" in item for item in blockers):
+        state = "blocked_missing_user_confirmation"
+    return _disabled(action_id, label, state, "; ".join(dict.fromkeys(blockers or ["enrichment_execution_gate_not_passed"])), "Resolve enrichment source, resource, backend, parameter confirmation and result schema gates.")
+
+
+def _enrichment_review_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    review = gate_state.get("review") if isinstance(gate_state.get("review"), dict) else {}
+    if review.get("status") == "passed":
+        return {
+            "action_id": "enrichment_result_review",
+            "label": "Review ORA/GSEA result",
+            "state": "available",
+            "button_behavior": "enabled_review_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review formal ORA/GSEA terms and provenance; exports are table-only and not report-ready.",
+        }
+    return _disabled("enrichment_result_review", "Review ORA/GSEA result", "blocked_missing_result_schema", "; ".join(_list(review.get("blockers")) or ["formal_enrichment_result_not_found"]), "Run controlled ORA/GSEA or select a formal enrichment result.")
+
+
+def _enrichment_plot_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    gate = gate_state.get("plot_gate") if isinstance(gate_state.get("plot_gate"), dict) else {}
+    if gate.get("status") == "passed":
+        return {
+            "action_id": "enrichment_plot_artifact",
+            "label": "Generate enrichment plot artifact",
+            "state": "available",
+            "button_behavior": "enabled_formal_enrichment_plot_artifact_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Generate ORA/GSEA SVG artifact from formal enrichment result only; report-ready remains a separate gate.",
+        }
+    return _disabled("enrichment_plot_artifact", "Generate enrichment plot artifact", "blocked_missing_result_schema", "; ".join(_list(gate.get("blockers")) or ["formal_enrichment_result_not_found"]), "Select a formal ORA/GSEA result before creating enrichment plots.")
+
+
+def _enrichment_section_report_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    gate = gate_state.get("section_report_gate") if isinstance(gate_state.get("section_report_gate"), dict) else {}
+    if gate.get("status") == "eligible_for_enrichment_section_report_ready":
+        return {
+            "action_id": "enrichment_section_report",
+            "label": "Export enrichment section package",
+            "state": "available",
+            "button_behavior": "enabled_enrichment_section_report_gate_passed",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Export formal enrichment section only; full integrated report and clinical interpretation remain disabled.",
+        }
+    return _disabled("enrichment_section_report", "Export enrichment section package", "blocked_report_ready_gate", "; ".join(_list(gate.get("blockers")) or ["enrichment_section_report_gate_not_passed"]), "Resolve formal enrichment result, dependency, plot/table-only and section report gates.")
+
+
+def _enrichment_gate(gate_state: dict[str, Any], analysis_type: str) -> dict[str, Any]:
+    gates = gate_state.get("execution_gates") if isinstance(gate_state.get("execution_gates"), dict) else {}
+    gate = gates.get(analysis_type)
+    return gate if isinstance(gate, dict) else {}
 
 
 def _immune_action(package: dict[str, Any] | None, tasks: list[dict[str, Any]]) -> dict[str, Any]:
