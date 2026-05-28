@@ -74,6 +74,7 @@ def build_action_rows(
     rows.append(_enrichment_review_action(enrichment_gate_state))
     rows.append(_enrichment_plot_action(enrichment_gate_state))
     rows.append(_enrichment_section_report_action(enrichment_gate_state))
+    rows.append(_enrichment_production_audit_preview_action(enrichment_gate_state))
     rows.append(_constant_disabled_action("formal_gsea", "Full formal GSEA modes", "hidden_until_ready", "Full GSEA modes beyond controlled preranked GSEA remain disabled; use controlled_gsea_preranked when gates pass."))
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_immune_action(immune_package, tasks))
@@ -464,6 +465,28 @@ def _enrichment_section_report_action(gate_state: dict[str, Any]) -> dict[str, A
             "next_action": "Export formal enrichment section only; full integrated report and clinical interpretation remain disabled.",
         }
     return _disabled("enrichment_section_report", "Export enrichment section package", "blocked_report_ready_gate", "; ".join(_list(gate.get("blockers")) or ["enrichment_section_report_gate_not_passed"]), "Resolve formal enrichment result, dependency, plot/table-only and section report gates.")
+
+
+def _enrichment_production_audit_preview_action(gate_state: dict[str, Any]) -> dict[str, Any]:
+    gate = gate_state.get("production_audit_preview") if isinstance(gate_state.get("production_audit_preview"), dict) else {}
+    if gate.get("status") == "passed":
+        return {
+            "action_id": "enrichment_production_audit_preview",
+            "label": "Preview enrichment production audit package",
+            "state": "preview_ready",
+            "button_behavior": "enabled_review_only_no_package_write",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review B93-B97 readiness only; package creation remains an explicit audited export and does not create report-ready output.",
+        }
+    return _disabled(
+        "enrichment_production_audit_preview",
+        "Preview enrichment production audit package",
+        "blocked_enrichment_production_gate",
+        "; ".join(_list(gate.get("blockers")) or ["enrichment_production_audit_preview_not_passed"]),
+        "Resolve resource lock, background, identifier, statistical policy and formal enrichment result schema gates.",
+    )
 
 
 def _enrichment_gate(gate_state: dict[str, Any], analysis_type: str) -> dict[str, Any]:

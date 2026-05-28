@@ -58,9 +58,23 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Multi-factor R dependency" in multifactor_gate_text
     assert "Multi-factor user confirmation" in multifactor_gate_text
     enrichment_gate_text = "\n".join(str(row) for row in state["enrichment_gate_rows"])
+    assert "Enrichment resource lock" in enrichment_gate_text
+    assert "Enrichment library capability" in enrichment_gate_text
+    assert "Enrichment background universe" in enrichment_gate_text
+    assert "Enrichment identifier compatibility" in enrichment_gate_text
+    assert "Enrichment statistical policy" in enrichment_gate_text
     assert "ORA execution gate" in enrichment_gate_text
     assert "Preranked GSEA execution gate" in enrichment_gate_text
+    assert "Enrichment result schema" in enrichment_gate_text
     assert "Enrichment section report" in enrichment_gate_text
+    assert "Enrichment production audit package" in enrichment_gate_text
+    assert "Enrichment cross-library acceptance" in enrichment_gate_text
+    assert _action(state, "enrichment_production_audit_preview")["enabled"] is False
+    enrichment_state = state["developer_diagnostics"]["enrichment_gate_state"]
+    assert enrichment_state["production_preview_status"] == "blocked"
+    assert enrichment_state["resource_lock"]["semantic_boundary"] == "resource_lock_only_not_enrichment_execution"
+    assert enrichment_state["production_audit_preview"]["semantic_boundary"] == "preview_only_no_package_write_no_report_ready_upgrade"
+    assert enrichment_state["cross_library_acceptance"]["status"] == "passed"
     assert state["developer_diagnostics"]["enrichment_gate_state"]["reactomepa_msigdbr_policy"] == "blocked_capability_until_external_backend_and_resource_gates_pass"
     multifactor_action = _action(state, "multifactor_deg")
     assert multifactor_action["enabled"] is False

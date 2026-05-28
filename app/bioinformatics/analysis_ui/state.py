@@ -28,9 +28,13 @@ from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confir
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
+from app.bioinformatics.enrichment_acceptance import build_enrichment_cross_library_acceptance_gate
 from app.bioinformatics.enrichment_execution_gate import build_enrichment_execution_gate
+from app.bioinformatics.enrichment_input_contract import build_enrichment_input_contract_gate
 from app.bioinformatics.enrichment_plot_report import build_enrichment_plot_gate, evaluate_enrichment_section_report_ready_gate
 from app.bioinformatics.enrichment_result_review import build_enrichment_result_review
+from app.bioinformatics.enrichment_result_schema import build_enrichment_statistical_policy, validate_enrichment_result_schema_gate
+from app.bioinformatics.enrichment_resources import build_enrichment_library_policy, build_enrichment_resource_lock
 from app.bioinformatics.gene_set_resources import GENE_SET_REGISTRY
 from app.bioinformatics.survival_clinical import (
     audit_cox_multivariate_design,
@@ -690,7 +694,8 @@ def build_enrichment_ui_gate_state(*, project_root: str | Path, result_entries: 
     source = _select_formal_deg_source_for_enrichment(result_entries)
     source_result_id = str(source.get("result_id") or "") if source else ""
     source_semantics = str(source.get("result_semantics") or "") if source else ""
-    if (root / GENE_SET_REGISTRY).is_file():
+    registry_exists = (root / GENE_SET_REGISTRY).is_file()
+    if registry_exists:
         ora_gate = build_enrichment_execution_gate(root, analysis_type="ora", source_result_id=source_result_id, source_result_semantics=source_semantics)
         gsea_gate = build_enrichment_execution_gate(root, analysis_type="gsea_preranked", source_result_id=source_result_id, source_result_semantics=source_semantics)
     else:
@@ -703,43 +708,95 @@ def build_enrichment_ui_gate_state(*, project_root: str | Path, result_entries: 
     plot_type = "gsea_preranked_plot" if selected_task_type == "gsea_preranked" else "ora_dotplot"
     plot_gate = build_enrichment_plot_gate(root, result_id=selected_enrichment_id or None, plot_type=plot_type)
     section_report_gate = evaluate_enrichment_section_report_ready_gate(root, result_id=selected_enrichment_id or None, allow_table_only_report=False)
+    preview_analysis_type = selected_task_type if selected_task_type in {"ora", "gsea_preranked"} else "ora"
+    preview_execution_gate = ora_gate if preview_analysis_type == "ora" else gsea_gate
+    preview_manifest = preview_execution_gate.get("parameter_manifest") if isinstance(preview_execution_gate.get("parameter_manifest"), dict) else {}
+    preview_resource_id = str(preview_manifest.get("resource_id") or "")
+    if registry_exists:
+        resource_lock = build_enrichment_resource_lock(root, analysis_type=preview_analysis_type, resource_id=preview_resource_id)
+        library_policy = build_enrichment_library_policy(root, analysis_type=preview_analysis_type, resource_id=preview_resource_id)
+        input_contract_gate = build_enrichment_input_contract_gate(root, analysis_type=preview_analysis_type, source_result_id=source_result_id, resource_id=preview_resource_id)
+    else:
+        resource_lock = _blocked_enrichment_resource_lock_preview(preview_analysis_type, preview_resource_id)
+        library_policy = _blocked_enrichment_library_policy_preview(preview_analysis_type, preview_resource_id)
+        input_contract_gate = _blocked_enrichment_input_contract_preview(preview_analysis_type, source_result_id, preview_resource_id)
+    background_universe = input_contract_gate.get("background_universe") if isinstance(input_contract_gate.get("background_universe"), dict) else {}
+    identifier_gate = input_contract_gate.get("identifier_compatibility_gate") if isinstance(input_contract_gate.get("identifier_compatibility_gate"), dict) else {}
+    statistical_policy = build_enrichment_statistical_policy(analysis_type=preview_analysis_type)
+    result_schema_gate = (
+        validate_enrichment_result_schema_gate(root, result_id=selected_enrichment_id)
+        if selected_enrichment_id
+        else _blocked_enrichment_preview_gate("result_schema", ["formal_enrichment_result_not_found"])
+    )
+    production_audit_preview = _enrichment_production_audit_preview(result_schema_gate)
+    cross_library_acceptance = build_enrichment_cross_library_acceptance_gate(root)
     gate_rows = [
         _formal_deg_gate_row("Enrichment DEG source", "passed" if source_result_id else "blocked", [] if source_result_id else ["formal_deg_source_result_missing"], basis=f"source_result_id={source_result_id or 'missing'}"),
+        _formal_deg_gate_row("Enrichment resource lock", resource_lock.get("status"), resource_lock.get("blockers", []), resource_lock.get("warnings", []), basis=f"analysis_type={preview_analysis_type}; resource={resource_lock.get('resource_id') or 'missing'}; library={resource_lock.get('collection_type') or 'missing'}"),
+        _formal_deg_gate_row("Enrichment library capability", library_policy.get("status"), library_policy.get("blockers", []), library_policy.get("warnings", []), basis=f"collection={library_policy.get('selected_collection_type') or 'missing'}; policy=no_download_no_install"),
+        _formal_deg_gate_row("Enrichment background universe", background_universe.get("status"), background_universe.get("blockers", []), background_universe.get("warnings", []), basis=f"strategy={background_universe.get('background_strategy') or 'missing'}; genes={background_universe.get('gene_count', 0)}"),
+        _formal_deg_gate_row("Enrichment identifier compatibility", identifier_gate.get("status"), identifier_gate.get("blockers", []), identifier_gate.get("warnings", []), basis=f"source_gene_id_type={identifier_gate.get('source_gene_id_type') or 'missing'}; resource_gene_id_type={identifier_gate.get('resource_gene_id_type') or 'missing'}"),
+        _formal_deg_gate_row("Enrichment statistical policy", statistical_policy.get("status"), statistical_policy.get("blockers", []), statistical_policy.get("warnings", []), basis=f"method={statistical_policy.get('p_adjust_method')}; boundary=statistical_research_only"),
         _formal_deg_gate_row("ORA execution gate", ora_gate.get("status"), ora_gate.get("blockers", []), ora_gate.get("warnings", []), basis=_enrichment_gate_basis(ora_gate)),
         _formal_deg_gate_row("Preranked GSEA execution gate", gsea_gate.get("status"), gsea_gate.get("blockers", []), gsea_gate.get("warnings", []), basis=_enrichment_gate_basis(gsea_gate)),
         _formal_deg_gate_row("Enrichment result review", review.get("status"), review.get("blockers", []), review.get("warnings", []), basis=f"selected_result_id={selected_enrichment_id or 'missing'}"),
+        _formal_deg_gate_row("Enrichment result schema", result_schema_gate.get("status"), result_schema_gate.get("blockers", []), result_schema_gate.get("warnings", []), basis=f"selected_result_id={selected_enrichment_id or 'missing'}"),
         _formal_deg_gate_row("Enrichment plot artifact", plot_gate.get("status"), plot_gate.get("blockers", []), plot_gate.get("warnings", []), basis=f"plot_type={plot_type}"),
         _formal_deg_gate_row("Enrichment section report", section_report_gate.get("status"), section_report_gate.get("blockers", []), section_report_gate.get("warnings", []), basis="section_scope=formal_enrichment_only"),
+        _formal_deg_gate_row("Enrichment production audit package", production_audit_preview.get("status"), production_audit_preview.get("blockers", []), production_audit_preview.get("warnings", []), basis="preview_only_no_package_write"),
+        _formal_deg_gate_row("Enrichment cross-library acceptance", cross_library_acceptance.get("status"), cross_library_acceptance.get("blockers", []), cross_library_acceptance.get("warnings", []), basis=f"scenarios={cross_library_acceptance.get('passed_scenario_count', 0)}/{cross_library_acceptance.get('scenario_count', 0)}"),
     ]
     blockers = _dedupe(
         [
+            *[str(item) for item in resource_lock.get("blockers", []) or []],
+            *[str(item) for item in library_policy.get("blockers", []) or []],
+            *[str(item) for item in input_contract_gate.get("blockers", []) or []],
+            *[str(item) for item in statistical_policy.get("blockers", []) or []],
             *[str(item) for item in ora_gate.get("blockers", []) or []],
             *[str(item) for item in gsea_gate.get("blockers", []) or []],
             *[str(item) for item in review.get("blockers", []) or []],
+            *[str(item) for item in result_schema_gate.get("blockers", []) or []],
             *[str(item) for item in plot_gate.get("blockers", []) or []],
             *[str(item) for item in section_report_gate.get("blockers", []) or []],
+            *[str(item) for item in production_audit_preview.get("blockers", []) or []],
+            *[str(item) for item in cross_library_acceptance.get("blockers", []) or []],
         ]
     )
     warnings = _dedupe(
         [
+            *[str(item) for item in resource_lock.get("warnings", []) or []],
+            *[str(item) for item in library_policy.get("warnings", []) or []],
+            *[str(item) for item in input_contract_gate.get("warnings", []) or []],
+            *[str(item) for item in statistical_policy.get("warnings", []) or []],
             *[str(item) for item in ora_gate.get("warnings", []) or []],
             *[str(item) for item in gsea_gate.get("warnings", []) or []],
             *[str(item) for item in review.get("warnings", []) or []],
+            *[str(item) for item in result_schema_gate.get("warnings", []) or []],
             *[str(item) for item in plot_gate.get("warnings", []) or []],
             *[str(item) for item in section_report_gate.get("warnings", []) or []],
+            *[str(item) for item in production_audit_preview.get("warnings", []) or []],
+            *[str(item) for item in cross_library_acceptance.get("warnings", []) or []],
         ]
     )
     return {
         "schema_version": "biomedpilot.enrichment_analysis_ui_gate_state.v1",
         "status": "blocked" if blockers else "passed",
         "source_result_id": source_result_id,
+        "production_preview_status": "blocked" if blockers else "passed",
+        "resource_lock": resource_lock,
+        "library_policy": library_policy,
+        "input_contract_gate": input_contract_gate,
+        "statistical_policy": statistical_policy,
         "execution_gates": {"ora": ora_gate, "gsea_preranked": gsea_gate},
         "review": review,
+        "result_schema_gate": result_schema_gate,
         "plot_gate": plot_gate,
         "section_report_gate": section_report_gate,
+        "production_audit_preview": production_audit_preview,
+        "cross_library_acceptance": cross_library_acceptance,
         "gate_rows": gate_rows,
         "reactomepa_msigdbr_policy": "blocked_capability_until_external_backend_and_resource_gates_pass",
-        "formal_ui_activation_boundary": "B88 wires controls only; handlers must still call B84-B87 gates.",
+        "formal_ui_activation_boundary": "B98 previews B93-B97 production gates only; handlers must still call audited gates before writing artifacts.",
         "blockers": blockers,
         "warnings": warnings,
     }
@@ -784,6 +841,79 @@ def _blocked_enrichment_execution_gate(analysis_type: str, source_result_id: str
         "boundary": "read_only_ui_state_no_gene_set_registry",
         "blockers": list(dict.fromkeys([*blockers, "enrichment_parameter_confirmation_missing"])),
         "warnings": [],
+    }
+
+
+def _blocked_enrichment_preview_gate(gate_name: str, blockers: list[str]) -> dict[str, Any]:
+    return {
+        "schema_version": f"biomedpilot.enrichment_{gate_name}_preview.v1",
+        "status": "blocked",
+        "semantic_boundary": "ui_preview_only_no_artifact_write",
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": [],
+    }
+
+
+def _blocked_enrichment_resource_lock_preview(analysis_type: str, resource_id: str) -> dict[str, Any]:
+    return {
+        "schema_version": "biomedpilot.enrichment_resource_lock.v1",
+        "status": "blocked",
+        "analysis_type": analysis_type,
+        "resource_id": resource_id,
+        "collection_type": "",
+        "semantic_boundary": "resource_lock_only_not_enrichment_execution",
+        "network_downloads": False,
+        "auto_install": False,
+        "blockers": ["enrichment_resource_registry_missing", "enrichment_resource_not_selected"],
+        "warnings": [],
+    }
+
+
+def _blocked_enrichment_library_policy_preview(analysis_type: str, resource_id: str) -> dict[str, Any]:
+    return {
+        "schema_version": "biomedpilot.enrichment_library_policy.v1",
+        "status": "blocked",
+        "analysis_type": analysis_type,
+        "selected_resource_id": resource_id,
+        "selected_collection_type": "",
+        "policy_boundary": "library_policy_only_no_download_no_execution",
+        "network_downloads": False,
+        "auto_install": False,
+        "blockers": ["enrichment_resource_registry_missing"],
+        "warnings": [],
+    }
+
+
+def _blocked_enrichment_input_contract_preview(analysis_type: str, source_result_id: str, resource_id: str) -> dict[str, Any]:
+    background = _blocked_enrichment_preview_gate("background_universe", ["background_universe_empty"])
+    background.update({"source_result_id": source_result_id, "background_strategy": "formal_deg_result_table_all_features", "gene_count": 0})
+    compatibility = _blocked_enrichment_preview_gate("identifier_compatibility", ["resource_gene_id_type_unknown"])
+    compatibility.update({"source_gene_id_type": "unknown", "resource_gene_id_type": "unknown", "required_gene_id_type": "symbol"})
+    return {
+        "schema_version": "biomedpilot.enrichment_input_contract_gate.v1",
+        "status": "blocked",
+        "analysis_type": analysis_type,
+        "source_result_id": source_result_id,
+        "resource_id": resource_id,
+        "background_universe": background,
+        "identifier_compatibility_gate": compatibility,
+        "semantic_boundary": "input_contract_only_not_enrichment_execution",
+        "blockers": ["enrichment_resource_registry_missing", "enrichment_resource_not_selected", *_list(background.get("blockers")), *_list(compatibility.get("blockers"))],
+        "warnings": [],
+    }
+
+
+def _enrichment_production_audit_preview(result_schema_gate: dict[str, Any]) -> dict[str, Any]:
+    blockers = _list(result_schema_gate.get("blockers"))
+    if result_schema_gate.get("status") != "passed":
+        blockers = blockers or ["enrichment_result_schema_gate_not_passed"]
+    return {
+        "schema_version": "biomedpilot.enrichment_production_audit_preview.v1",
+        "status": "blocked" if blockers else "passed",
+        "semantic_boundary": "preview_only_no_package_write_no_report_ready_upgrade",
+        "required_gate": "B96 create_enrichment_production_audit_package requires B95 result schema gate to pass before writing.",
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": _list(result_schema_gate.get("warnings")),
     }
 
 

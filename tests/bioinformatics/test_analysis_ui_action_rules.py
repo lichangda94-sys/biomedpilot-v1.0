@@ -62,6 +62,7 @@ def test_enrichment_actions_enable_only_after_execution_gates_and_keep_section_s
         "review": {"status": "passed", "blockers": []},
         "plot_gate": {"status": "passed", "blockers": []},
         "section_report_gate": {"status": "eligible_for_enrichment_section_report_ready", "blockers": []},
+        "production_audit_preview": {"status": "passed", "blockers": []},
     }
 
     rows = build_action_rows(
@@ -81,6 +82,8 @@ def test_enrichment_actions_enable_only_after_execution_gates_and_keep_section_s
     assert _row(rows, "enrichment_plot_artifact")["button_behavior"] == "enabled_formal_enrichment_plot_artifact_only"
     assert _row(rows, "enrichment_section_report")["button_behavior"] == "enabled_enrichment_section_report_gate_passed"
     assert "section only" in _row(rows, "enrichment_section_report")["next_action"]
+    assert _row(rows, "enrichment_production_audit_preview")["button_behavior"] == "enabled_review_only_no_package_write"
+    assert "does not create report-ready output" in _row(rows, "enrichment_production_audit_preview")["next_action"]
 
 
 def test_enrichment_actions_show_resource_backend_and_confirmation_disabled_reasons() -> None:
@@ -102,6 +105,7 @@ def test_enrichment_actions_show_resource_backend_and_confirmation_disabled_reas
             "review": {"status": "blocked", "blockers": ["formal_enrichment_result_not_found"]},
             "plot_gate": {"status": "blocked", "blockers": ["formal_enrichment_result_not_found"]},
             "section_report_gate": {"status": "blocked", "blockers": ["enrichment_section_report_gate_not_passed"]},
+            "production_audit_preview": {"status": "blocked", "blockers": ["enrichment_result_schema_gate_not_passed"]},
         },
     )
 
@@ -110,6 +114,8 @@ def test_enrichment_actions_show_resource_backend_and_confirmation_disabled_reas
     assert _row(rows, "controlled_gsea_preranked")["state"] == "blocked_missing_backend"
     assert "missing_required_r_package:msigdbr" in _row(rows, "controlled_gsea_preranked")["disabled_reason"]
     assert "formal_enrichment_result_not_found" in _row(rows, "enrichment_result_review")["disabled_reason"]
+    assert _row(rows, "enrichment_production_audit_preview")["state"] == "blocked_enrichment_production_gate"
+    assert "enrichment_result_schema_gate_not_passed" in _row(rows, "enrichment_production_audit_preview")["disabled_reason"]
 
 
 def test_legacy_asset_pipeline_action_is_review_only() -> None:
