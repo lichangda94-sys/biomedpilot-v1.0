@@ -1,0 +1,10 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_kegg</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <path d='M32 12l12 7v14l-12 7-12-7V19z' fill='#F5FAFF' stroke='#35506B' stroke-width='3' stroke-linejoin='round'/>
+      <path d='M18 44l14-8 14 8M20 20l12 7 12-7' fill='none' stroke='#1DA6A8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/>
+      <circle cx='18' cy='44' r='3.5' fill='#2F80ED'/><circle cx='46' cy='44' r='3.5' fill='#7A5AF8'/>
+
+  </g>
+</svg>

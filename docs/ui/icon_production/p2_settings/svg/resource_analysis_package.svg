@@ -1,0 +1,10 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_analysis_package</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <path d='M18 22l14-8 14 8v18l-14 8-14-8z' fill='#F5FAFF' stroke='#35506B' stroke-width='3' stroke-linejoin='round'/>
+      <path d='M18 22l14 8 14-8M32 30v18' fill='none' stroke='#6B7C93' stroke-width='3' stroke-linejoin='round'/>
+      <path d='M25 39h14M25 34h8' stroke='#2F80ED' stroke-width='3' stroke-linecap='round'/>
+
+  </g>
+</svg>

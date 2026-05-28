@@ -1,0 +1,10 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_local_model</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <rect x='15' y='17' width='34' height='30' rx='7' fill='#F5FAFF' stroke='#35506B' stroke-width='3'/>
+      <path d='M23 17v-5M32 17v-5M41 17v-5M23 52v-5M32 52v-5M41 52v-5M15 25h-5M15 39h-5M54 25h-5M54 39h-5' stroke='#6B7C93' stroke-width='3' stroke-linecap='round'/>
+      <path d='M24 35c3-8 13-8 16 0M24 35c3 8 13 8 16 0' fill='none' stroke='#7A5AF8' stroke-width='3' stroke-linecap='round'/>
+
+  </g>
+</svg>

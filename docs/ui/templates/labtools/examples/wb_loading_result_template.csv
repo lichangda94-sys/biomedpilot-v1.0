@@ -1,0 +1,4 @@
+sample_id,protein_concentration,concentration_unit,target_protein,final_volume,sample_volume,buffer_volume,water_volume,status,warning
+S1,2.0,ug/uL,20 ug,20 uL,10.0 uL,5.0 uL,5.0 uL,OK,
+S2,1.5,ug/uL,20 ug,20 uL,13.3 uL,5.0 uL,1.7 uL,OK,
+S3,0.8,ug/uL,20 ug,20 uL,25.0 uL,5.0 uL,-10.0 uL,Warning,sample volume exceeds final volume

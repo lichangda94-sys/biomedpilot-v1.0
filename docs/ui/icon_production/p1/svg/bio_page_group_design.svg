@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">bio_page_group_design</title>
+  <desc id="desc">Production candidate vector icon for bio_pages; transparent background.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="25" fill="#DCFCE7" stroke="#059669" stroke-width="1.5" opacity="0.65"/>
+    <circle cx="24" cy="26" r="5" fill="none" stroke="#059669" stroke-width="2.8"/>
+    <circle cx="40" cy="26" r="5" fill="none" stroke="#059669" stroke-width="2.8"/>
+    <path d="M15 44 C17 35 31 35 33 44" stroke="#059669" stroke-width="3"/>
+    <path d="M31 44 C33 35 47 35 49 44" stroke="#059669" stroke-width="3"/>
+  </g>
+</svg>

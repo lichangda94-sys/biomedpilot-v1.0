@@ -14,10 +14,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(_strip_launchservices_args(argv))
 
 
-def _strip_launchservices_args(argv: list[str] | None) -> list[str]:
+def _strip_launchservices_args(argv: list[str] | None = None) -> list[str] | None:
     if argv is None:
         argv = sys.argv[1:]
-    return [arg for arg in argv if not arg.startswith("-psn_")]
+    return [argument for argument in argv if not argument.startswith("-psn_")]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,16 +32,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"launch_mode={version.launch_mode}")
         print(f"app_root={version.app_root}")
         print(f"git_head={version.git_head}")
-        workspace_count = sum(
-            1
-            for features in (
-                dashboard.bioinformatics_features,
-                dashboard.meta_analysis_features,
-                dashboard.labtools_features,
-            )
-            if features
-        )
-        print(f"workspace_entries={workspace_count}")
+        print(f"workspace_entries=3")
         print(f"bioinformatics_features={len(dashboard.bioinformatics_features)}")
         print(f"meta_analysis_features={len(dashboard.meta_analysis_features)}")
         print(f"labtools_features={len(dashboard.labtools_features)}")
@@ -62,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"reason={exc.__class__.__name__}: {exc}")
         print(f"bioinformatics_features={len(dashboard.bioinformatics_features)}")
         print(f"meta_analysis_features={len(dashboard.meta_analysis_features)}")
+        print(f"labtools_features={len(dashboard.labtools_features)}")
         print(f"python={environment.python_executable}")
         return 0
 

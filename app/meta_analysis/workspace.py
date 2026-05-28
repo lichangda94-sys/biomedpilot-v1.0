@@ -1,27 +1,66 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Callable
 
-from app.shared.feature_availability import FeatureAvailability, list_features
+from app.shared.feature_availability import FeatureAvailability, FeatureAvailabilityStatus, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
-from app.shared.storage import default_storage_root
+from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
+from app.shared.semantic_keys import FeatureStatusKey, ModuleKey, PageKey
+from app.shared.ui_components.common import WorkflowStep, make_workflow_stepper
+from app.shared.ui_components.dense_workbench import (
+    ExtractionField,
+    ReferenceItem,
+    make_extraction_form_table,
+    make_preview_card,
+    make_reference_queue_panel,
+)
+from app.shared.ui_components.primitives import make_card, make_status_chip
+from app.shared.ui_components.specialized import ExportFormatAction, ExportGateCheck, make_export_gate_panel, make_plot_placeholder
+from app.shared.ui_components.workbench import make_workbench_shell
 from app.version import APP_VERSION
-from app.ui_style_tokens import meta_workspace_stylesheet
 
-from app.meta_analysis.project_workspace import (
-    MetaProjectSummary,
-    create_meta_analysis_project,
-    open_meta_analysis_project,
-)
-from app.meta_analysis.ui_text import INTERNAL_BETA_STATUS_ZH
-from app.meta_analysis.pages.workflow_integration_page import (
-    MetaWorkflowStepState,
-    meta_workflow_integration_state_from_project,
-    workflow_navigation_items,
-)
+from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_analysis_project
+from app.meta_analysis.search.pubmed_search_service import PubMedSearchService
+from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
+from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
+from app.meta_analysis.version import META_ANALYSIS_MAINLINE_CONTRACT_VERSION
+
+try:
+    from PySide6.QtCore import QSize, Qt
+    from PySide6.QtWidgets import (
+        QAbstractItemView,
+        QFrame,
+        QGridLayout,
+        QHBoxLayout,
+        QHeaderView,
+        QLabel,
+        QListWidget,
+        QListWidgetItem,
+        QPushButton,
+        QScrollArea,
+        QSizePolicy,
+        QStackedWidget,
+        QTableWidget,
+        QTableWidgetItem,
+        QTextEdit,
+        QVBoxLayout,
+        QWidget,
+    )
+
+    from app.app_identity import META_PAGE_ICON_PATHS, load_meta_page_icon
+except Exception:  # pragma: no cover
+    QSize = None  # type: ignore[assignment]
+    QWidget = None  # type: ignore[assignment]
+    META_PAGE_ICON_PATHS = {}
+    load_meta_page_icon = None  # type: ignore[assignment]
+
+
+def _show_message(_text: str) -> None:
+    return None
 
 
 def meta_analysis_features() -> list[FeatureItem]:
@@ -29,45 +68,20 @@ def meta_analysis_features() -> list[FeatureItem]:
 
 
 def meta_analysis_step_features() -> list[FeatureAvailability]:
-    step_ids = {
-        "meta-literature-import",
-        "meta-dedup-prep",
-        "meta-duplicate-review",
-        "meta-screening",
-        "meta-extraction",
-        "meta-analysis",
-        "meta-reporting",
-    }
-    return [feature for feature in list_features("meta_analysis") if feature.feature_id in step_ids]
-
-
-@dataclass(frozen=True)
-class ImportBatchQualitySummary:
-    batch_id: str
-    project_id: str
-    source_database: str
-    source_format: str
-    status: str
-    created_at: str
-    raw_record_count: int
-    parsed_record_count: int
-    normalized_record_count: int
-    failed_record_count: int
-    warning_count: int
-    duplicate_candidate_count: int
-    linked_literature_record_count: int
-    diagnostics_path: str
-    diagnostics_summary: str = ""
-
-
-@dataclass(frozen=True)
-class LiteratureImportQualityDashboardState:
-    title: str
-    status_label: str
-    description: str
-    empty_state: str
-    batch_count: int
-    batches: tuple[ImportBatchQualitySummary, ...]
+    features = list_features("meta_analysis")
+    if features:
+        return features
+    return [
+        FeatureAvailability(
+            "meta_analysis",
+            "meta-mainline-shell",
+            "Meta 分析入口",
+            FeatureAvailabilityStatus.TESTING,
+            "mainline 保留 Meta 模块入口、项目绑定和占位工作台；完整流程在 dev/meta-analysis 开发。",
+            "在 dev/meta-analysis 完成验收后再合入具体功能。",
+            "app/meta_analysis/workspace.py",
+        )
+    ]
 
 
 @dataclass(frozen=True)
@@ -76,8 +90,8 @@ class MetaWorkspaceNavigationItem:
     label: str
     description: str
     page_key: str
-    status_label: str = "Testing / Developer Preview"
-    status_label_zh: str = "内部测试"
+    status_label: str = "Mainline shell"
+    status_label_zh: str = "主线壳"
 
 
 @dataclass(frozen=True)
@@ -93,431 +107,418 @@ class MetaWorkspaceLayoutState:
     developer_info_label: str = "开发者信息"
 
 
-def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
-    version_status = f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}"
-    workflow_items = tuple(
-        MetaWorkspaceNavigationItem(
-            str(item["step_id"]),
-            str(item["title_zh"]),
-            "Meta Analysis 中文工作流步骤；显示状态、artifact 摘要、warning 和下一步。",
-            str(item["route_key"]),
-            status_label="Testing / Developer Preview",
-            status_label_zh="内部测试",
-        )
-        for item in workflow_navigation_items()
+@dataclass(frozen=True)
+class MetaTargetIAPage:
+    key: str
+    label: str
+    status_key: str
+    boundary: str
+    page_group: str
+    flow_index: int
+
+
+@dataclass(frozen=True)
+class MetaActiveType:
+    type_id: str
+    label_zh: str
+    effect_size: str
+    group: str
+    status_key: str = "testing"
+    interaction_mode: str = "schema_shell"
+
+
+def meta_target_ia_pages() -> tuple[MetaTargetIAPage, ...]:
+    return (
+        MetaTargetIAPage("project_home", "Project Home / 项目首页", "shell_only", "项目状态总览；不声明生产级系统综述能力。", "main_flow", 1),
+        MetaTargetIAPage("question_meta_type", "Question & Meta Type / 研究问题与 Meta 类型", "testing", "选择 active Meta 类型，控制后续 extraction schema、质量评价和统计任务。", "main_flow", 2),
+        MetaTargetIAPage("search_strategy", "Search Strategy / 检索策略", "testing", "检索策略和检索计划；不是自动系统综述结论。", "main_flow", 3),
+        MetaTargetIAPage("import_dedup", "Import & Deduplication / 文献导入与去重", "testing", "导入、文献库和去重壳层；保留人工审核。", "main_flow", 4),
+        MetaTargetIAPage("screening", "Screening / 文献筛选", "testing", "标题摘要、全文筛选和排除理由；AI 仅辅助建议。", "main_flow", 5),
+        MetaTargetIAPage("fulltext_extraction", "Full-text & Extraction / 全文与数据提取", "testing", "按 Meta 类型加载不同数据提取结构；需要人工复核。", "main_flow", 6),
+        MetaTargetIAPage("quality_assessment", "Quality Assessment / 质量评价", "planned", "按 Meta 类型选择评价工具；当前仅目标 IA 壳层。", "main_flow", 7),
+        MetaTargetIAPage("analysis_tasks", "Meta Analysis Tasks / 统计分析", "planned", "显示类型专属统计任务边界；不启用 Network Meta。", "main_flow", 8),
+        MetaTargetIAPage("result_report", "Result & Report / 结果与报告", "shell_only", "仅展示测试边界，不生成生产级结果或投稿级系统综述。", "main_flow", 9),
+        MetaTargetIAPage("report_export", "Report Export / 报告导出", "shell_only", "报告草稿边界；不声明投稿级输出。", "main_flow", 10),
+        MetaTargetIAPage("meta_settings", "Meta Settings / Meta 设置", "shell_only", "Meta 偏好、日志和外部资源检测入口。", "auxiliary", 1),
     )
+
+
+def meta_active_types_v1() -> tuple[MetaActiveType, ...]:
+    return (
+        MetaActiveType("binary_outcome_meta", "二分类结局 Meta", "OR / RR / RD", "结局型 Meta"),
+        MetaActiveType("continuous_outcome_meta", "连续结局 Meta", "MD / SMD / WMD", "结局型 Meta"),
+        MetaActiveType("survival_outcome_meta", "生存结局 Meta", "HR", "结局型 Meta"),
+        MetaActiveType("prevalence_incidence_meta", "患病率 / 发生率 Meta", "event / total / rate", "流行病学 Meta"),
+        MetaActiveType("diagnostic_accuracy_meta", "诊断准确性 Meta", "TP / FP / FN / TN", "诊断与关联 Meta"),
+        MetaActiveType("exposure_disease_risk_meta", "暴露-疾病风险 Meta", "OR / RR / HR", "诊断与关联 Meta"),
+        MetaActiveType("biomarker_expression_difference_meta", "生物标志物表达差异 Meta", "表达差异 / 组间比较", "诊断与关联 Meta"),
+        MetaActiveType("correlation_meta", "相关性 Meta", "r / Fisher z", "关联与预后 Meta"),
+        MetaActiveType("prognostic_factor_meta", "预后因素 Meta", "HR / OR", "关联与预后 Meta"),
+        MetaActiveType("dose_response_meta", "剂量反应 Meta", "testing schema only", "Testing schema"),
+    )
+
+
+_META_PAGE_SEMANTIC_KEYS = {
+    "project_home": PageKey.META_PROJECT_HOME.value,
+    "question_meta_type": PageKey.META_QUESTION_TYPE.value,
+    "search_strategy": PageKey.META_SEARCH_STRATEGY.value,
+    "import_dedup": PageKey.META_IMPORT_DEDUP.value,
+    "screening": PageKey.META_SCREENING.value,
+    "fulltext_extraction": PageKey.META_FULLTEXT_EXTRACTION.value,
+    "quality_assessment": PageKey.META_QUALITY_ASSESSMENT.value,
+    "analysis_tasks": PageKey.META_ANALYSIS_TASKS.value,
+    "result_report": PageKey.META_RESULT_REPORT.value,
+    "report_export": PageKey.META_REPORT_EXPORT.value,
+    "meta_settings": PageKey.META_SETTINGS.value,
+}
+
+_META_STATUS_SEMANTIC_KEYS = {
+    "shell_only": FeatureStatusKey.SHELL_ONLY.value,
+    "testing": FeatureStatusKey.TESTING.value,
+    "planned": FeatureStatusKey.PLANNED.value,
+}
+
+
+def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
+    version_status = f"{APP_VERSION} · {META_ANALYSIS_MAINLINE_CONTRACT_VERSION}"
     return MetaWorkspaceLayoutState(
         title="Meta 分析模块",
         status_label=version_status,
-        description="用中文串联 Meta 分析主流程：状态可见、按钮清楚、下一步明确。",
-        navigation_items=workflow_items,
+        description="主线保留 Meta 入口和项目壳；具体 PICO、检索、筛选、提取、统计和报告功能在 dev/meta-analysis 开发。",
+        navigation_items=(
+            MetaWorkspaceNavigationItem("project_home", "Meta 项目首页", "项目绑定、状态摘要和分支边界说明。", "workflow_home"),
+            MetaWorkspaceNavigationItem("project_contract", "项目契约", "创建和打开 Meta 项目的最小 manifest contract。", "project_contract"),
+            MetaWorkspaceNavigationItem("dev_branch", "功能开发线", "完整 Meta workflow 位于 dev/meta-analysis。", "dev_branch"),
+        ),
         default_page_key="workflow_home",
-        testing_notice="当前 Meta 分析模块仍为内部测试版；所有结果需要人工复核，不能作为正式临床、投稿或 production 结论。",
+        testing_notice="当前 mainline 只保留 Meta 模块壳和接口；完整功能请在 dev/meta-analysis 分支开发和验收。",
         version_status_label=version_status,
     )
 
 
-def recent_import_batch_summaries(root_dir: Path | None = None, *, limit: int = 5) -> list[dict[str, object]]:
-    return [
-        {
-            "project_id": summary.project_id,
-            "batch_id": summary.batch_id,
-            "source_database": summary.source_database,
-            "format": summary.source_format,
-            "source_format": summary.source_format,
-            "status": summary.status,
-            "raw_record_count": summary.raw_record_count,
-            "parsed_count": summary.parsed_record_count,
-            "parsed_record_count": summary.parsed_record_count,
-            "normalized_record_count": summary.normalized_record_count,
-            "failed_record_count": summary.failed_record_count,
-            "warning_count": summary.warning_count,
-            "duplicate_candidate_count": summary.duplicate_candidate_count,
-            "linked_literature_record_count": summary.linked_literature_record_count,
-            "diagnostics_path": summary.diagnostics_path,
-            "diagnostics_summary": summary.diagnostics_summary,
-            "created_at": summary.created_at,
-        }
-        for summary in recent_import_batch_quality_summaries(root_dir, limit=limit)
-    ]
-
-
-def recent_import_batch_quality_summaries(root_dir: Path | None = None, *, limit: int = 5) -> list[ImportBatchQualitySummary]:
-    root = root_dir or default_storage_root()
-    projects_root = root / "projects"
-    summaries: list[ImportBatchQualitySummary] = []
-    if projects_root.exists():
-        for path in projects_root.glob("*/meta_analysis/literature_import/*_records.json"):
-            payload = _load_json_object(path)
-            if payload:
-                summaries.append(_summary_from_unified_import(path, payload))
-    summaries.extend(_batch_manifest_summaries(root))
-    deduped = {f"{item.project_id}:{item.batch_id}:{item.created_at}": item for item in summaries}
-    return sorted(deduped.values(), key=lambda item: item.created_at, reverse=True)[:limit]
-
-
-def literature_import_quality_dashboard_state(root_dir: Path | None = None, *, limit: int = 5) -> LiteratureImportQualityDashboardState:
-    batches = tuple(recent_import_batch_quality_summaries(root_dir, limit=limit))
-    return LiteratureImportQualityDashboardState(
-        title="Meta Literature Import Quality Dashboard",
-        status_label="Testing / Developer Preview",
-        description="只读显示最近文献导入批次的解析质量、warning 数量、failed 数量、duplicate candidate 数量和 diagnostics 路径。",
-        empty_state="暂无导入批次。请先在 Literature Import 页面导入 NBIB / RIS / CSV 文件。",
-        batch_count=len(batches),
-        batches=batches,
-    )
-
-
-def _summary_from_unified_import(path: Path, payload: dict[str, object]) -> ImportBatchQualitySummary:
-    records = list(payload.get("records", []))
-    diagnostics_path = str(payload.get("diagnostics_path", ""))
-    diagnostics = _load_json_object(Path(diagnostics_path)) if diagnostics_path else {}
-    source_type = str(payload.get("source_type", ""))
-    return ImportBatchQualitySummary(
-        batch_id=str(payload.get("batch_id", path.stem.replace("_records", ""))),
-        project_id=str(payload.get("project_id", path.parents[2].name)),
-        source_database=str(payload.get("source_database") or source_type or "local_file"),
-        source_format=str(payload.get("source_format") or source_type),
-        status=str(payload.get("status") or "completed"),
-        created_at=str(payload.get("created_at", "")),
-        raw_record_count=_int_from(diagnostics, "raw_record_count", len(records)),
-        parsed_record_count=_int_from(diagnostics, "parsed_record_count", len(records)),
-        normalized_record_count=_int_from(diagnostics, "normalized_record_count", len(records)),
-        failed_record_count=_int_from(diagnostics, "failed_record_count", 0),
-        warning_count=_int_from(diagnostics, "warning_count", _int_from(payload, "warning_count", 0)),
-        duplicate_candidate_count=_int_from(diagnostics, "duplicate_candidate_count", _int_from(payload, "duplicate_candidate_count", 0)),
-        linked_literature_record_count=len(records),
-        diagnostics_path=diagnostics_path,
-        diagnostics_summary=_diagnostics_summary_text(diagnostics),
-    )
-
-
-def _batch_manifest_summaries(root: Path) -> list[ImportBatchQualitySummary]:
-    batches_path = root / "literature" / "import_batches.json"
-    if not batches_path.exists():
-        return []
-    summaries: list[ImportBatchQualitySummary] = []
-    for item in _load_json_list(batches_path):
-        batch_id = str(item.get("batch_id", ""))
-        diagnostics_path = root / "literature" / "import_diagnostics" / f"{batch_id}_import_diagnostics.json"
-        diagnostics = _load_json_object(diagnostics_path)
-        metadata = dict(item.get("metadata", {})) if isinstance(item.get("metadata"), dict) else {}
-        summaries.append(
-            ImportBatchQualitySummary(
-                batch_id=batch_id,
-                project_id=str(item.get("project_id", "")),
-                source_database=str(metadata.get("source_database") or item.get("source_type", "")),
-                source_format=str(item.get("format_hint", "")),
-                status=str(item.get("status", "")),
-                created_at=str(item.get("created_at", "")),
-                raw_record_count=_int_from(item, "raw_record_count", _int_from(item, "total_records", 0)),
-                parsed_record_count=_int_from(item, "parsed_record_count", _int_from(item, "imported_records", 0)),
-                normalized_record_count=_int_from(item, "normalized_record_count", _int_from(item, "imported_records", 0)),
-                failed_record_count=_int_from(item, "failed_records", _int_from(item, "failed_record_count", 0)),
-                warning_count=_int_from(item, "warning_count", _int_from(diagnostics, "warning_count", 0)),
-                duplicate_candidate_count=_int_from(item, "duplicate_candidate_count", _int_from(diagnostics, "duplicate_candidate_count", 0)),
-                linked_literature_record_count=_int_from(item, "normalized_record_count", _int_from(item, "imported_records", 0)),
-                diagnostics_path=str(diagnostics_path) if diagnostics_path.exists() else "",
-                diagnostics_summary=_diagnostics_summary_text(diagnostics),
-            )
-        )
-    return summaries
-
-
-def _load_json_object(path: Path) -> dict[str, object]:
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _load_json_list(path: Path) -> list[dict[str, object]]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return []
-    return [dict(item) for item in payload if isinstance(item, dict)] if isinstance(payload, list) else []
-
-
-def _int_from(payload: dict[str, object], key: str, fallback: int = 0) -> int:
-    try:
-        return int(payload.get(key, fallback))
-    except (TypeError, ValueError):
-        return fallback
-
-
-def _diagnostics_summary_text(diagnostics: dict[str, object]) -> str:
-    if not diagnostics:
-        return ""
-    fields = (
-        "missing_title_count",
-        "missing_author_count",
-        "missing_year_count",
-        "missing_doi_count",
-        "missing_pmid_count",
-        "invalid_year_count",
-        "invalid_doi_count",
-    )
-    return "; ".join(f"{field}={_int_from(diagnostics, field)}" for field in fields if _int_from(diagnostics, field))
-
-
-def _meta_project_folder_name(project_name: str) -> str:
-    cleaned = "".join(char if char.isalnum() else "_" for char in project_name.strip())
-    return "_".join(part for part in cleaned.split("_") if part) or "Meta_Project"
-
-
-def _compact_path(path: Path | None) -> str:
-    if path is None:
-        return "未选择"
-    home = Path.home()
-    try:
-        relative = path.expanduser().resolve().relative_to(home)
-        parts = (home.name, *relative.parts)
-    except ValueError:
-        parts = path.parts
-    if len(parts) <= 4:
-        return " / ".join(parts)
-    return " / ".join((parts[0], "...", *parts[-3:]))
-
-
-def _workflow_stage_zh(stage: str) -> str:
-    return {
-        "project_home": "项目首页",
-        "pico_workspace": "研究问题与 PICO",
-        "search_strategy": "检索策略",
-        "literature_import": "文献库与导入",
-        "screening": "去重与筛选",
-        "extraction_quality": "数据提取与质量评价",
-        "analysis_results": "统计分析",
-        "prisma_reporting": "报告导出",
-    }.get(stage, "项目首页")
-
-
-def _main_stage_status_label(status: str) -> str:
-    if status in {"已确认", "已生成", "已有记录", "已有项目", "已有草稿", "已有人工评分", "已创建", "已完成"}:
-        return "已完成"
-    if status in {"草稿待确认", "已有建议"}:
-        return "草稿"
-    if status in {"待人工复核", "等待用户选择", "有待审核建议", "需要确认"}:
-        return "待确认"
-    if status in {"testing-level", "待开发", "暂不可用"}:
-        return "阻塞"
-    return status or "未开始"
-
-
-def _nav_stage_label(title: str) -> str:
-    return {
-        "Meta 项目首页": "项目首页",
-        "项目首页": "项目首页",
-        "研究问题 / PICO": "研究问题与 PICO",
-        "研究问题与 PICO": "研究问题与 PICO",
-        "检索与导入": "检索策略",
-        "检索策略": "检索策略",
-        "文献库与导入": "文献库与导入",
-        "文献筛选": "去重与筛选",
-        "去重与筛选": "去重与筛选",
-        "提取与质量评价": "数据提取与质量评价",
-        "数据提取与质量评价": "数据提取与质量评价",
-        "统计分析": "统计分析",
-        "报告导出": "报告导出",
-    }.get(title, title)
-
-
-try:
-    from PySide6.QtWidgets import (
-        QApplication,
-        QCheckBox,
-        QComboBox,
-        QFileDialog,
-        QFrame,
-        QHBoxLayout,
-        QLabel,
-        QLineEdit,
-        QListWidget,
-        QListWidgetItem,
-        QMessageBox,
-        QPlainTextEdit,
-        QPushButton,
-        QScrollArea,
-        QStackedWidget,
-        QTableWidget,
-        QTableWidgetItem,
-        QTextEdit,
-        QVBoxLayout,
-        QWidget,
-    )
-    from PySide6.QtCore import Qt
-except Exception:  # pragma: no cover
-    QApplication = QCheckBox = QComboBox = QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QListWidget = QListWidgetItem = QMessageBox = QPlainTextEdit = QPushButton = QScrollArea = QStackedWidget = QTableWidget = QTableWidgetItem = QTextEdit = QVBoxLayout = QWidget = None
-    Qt = None
-
-
 if QWidget is not None:
-    from app.meta_analysis.search.pubmed_candidates_handoff_service import PubMedCandidatesHandoffService
-    from app.meta_analysis.search.pubmed_search_service import PubMedSearchService
-    from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
-    from app.meta_analysis.services.dedup_review_v2_service import (
-        DECISION_KEEP_BOTH,
-        DECISION_MARK_NOT_DUPLICATE,
-        DECISION_MERGE,
-        DECISION_SET_MASTER_RECORD,
-        DECISION_SKIP,
-        DedupReviewV2Service,
-    )
-    from app.meta_analysis.services.ai_assisted_extraction_queue_service import AIAssistedExtractionQueueService
-    from app.meta_analysis.services.analysis_plan_service import (
-        ANALYSIS_PLAN_EFFECT_MEASURE_TYPES,
-        ANALYSIS_PLAN_MODEL_PREFERENCES,
-        ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH,
-        AnalysisPlanService,
-    )
-    from app.meta_analysis.models.result_review import result_review_label_zh
-    from app.meta_analysis.models.statistical_result_state import (
-        STATISTICAL_RESULT_STATE_NOT_RUN,
-        statistical_result_state_label_zh,
-    )
-    from app.meta_analysis.services.effect_size_normalization_service import EffectSizeNormalizationService
-    from app.meta_analysis.services.exclusion_criteria_library_service import (
-        FULL_TEXT_STAGE,
-        TITLE_ABSTRACT_STAGE,
-        ExclusionCriteriaLibraryService,
-    )
-    from app.meta_analysis.services.figure_result_service import FigureResultService
-    from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
-    from app.meta_analysis.services.fulltext_eligibility_service import FullTextEligibilityService
-    from app.meta_analysis.services.fulltext_management_service import (
-        FULLTEXT_EXCLUSION_REASON_LABELS_ZH,
-        FULLTEXT_EXCLUSION_REASONS_M4C,
-        FULLTEXT_MANAGEMENT_STATUSES,
-        FULLTEXT_STATUS_FULL_TEXT_CONFIRMED,
-        FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE,
-        FULLTEXT_STATUS_LABELS_ZH,
-        FullTextManagementService,
-    )
-    from app.meta_analysis.services.fulltext_parsing_service import FullTextParsingService
-    from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
-    from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
-    from app.meta_analysis.services.manual_extraction_effect_row_service import (
-        STRUCTURED_EXTRACTION_EFFECT_MEASURES,
-        STRUCTURED_EXTRACTION_EVIDENCE_STATES,
-        STRUCTURED_EXTRACTION_FIELD_LABELS_ZH,
-    )
-    from app.meta_analysis.services.meta_statistics_engine_service import MetaStatisticsEngineService
-    from app.meta_analysis.services.multisource_literature_import_service import MultiSourceLiteratureImportService
-    from app.meta_analysis.services.pairwise_meta_executor_service import PairwiseMetaExecutorService
-    from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
-    from app.meta_analysis.services.publication_export_service import PublicationExportService
-    from app.meta_analysis.services.quality_service import QualityAssessmentService
-    from app.meta_analysis.services.quality_service import (
-        NOS_DOMAIN_LABELS_ZH,
-        NOS_DOMAINS,
-        QUALITY_M6_STATE_LABELS_ZH,
-        QUALITY_RATING_LABELS_ZH,
-    )
-    from app.meta_analysis.services.result_review_service import StatisticalResultReviewService
-    from app.meta_analysis.services.title_abstract_screening_v2_service import (
-        DECISION_EXCLUDE,
-        DECISION_INCLUDE,
-        DECISION_NEED_FULL_TEXT,
-        DECISION_NOT_SCREENED,
-        DECISION_UNCERTAIN,
-        EXCLUSION_REASON_LABELS_ZH,
-        TitleAbstractScreeningV2Service,
-    )
+    _META_FLOW_BUTTON_STYLESHEET = """
+    QPushButton#metaTargetIANavItem {
+        border: 1px solid #C9D6E6;
+        border-radius: 8px;
+        background: #FFFFFF;
+        color: #42526B;
+        font-size: 12px;
+        font-weight: 650;
+        padding: 8px 10px;
+        text-align: left;
+    }
+    QPushButton#metaTargetIANavItem:checked,
+    QPushButton#metaTargetIANavItem[currentStep="true"] {
+        border: 2px solid #2F80ED;
+        background: #EAF3FF;
+        color: #123E73;
+        font-weight: 800;
+    }
+    QPushButton#metaTargetIANavItem[statusKey="planned"] {
+        border-color: #E8C56D;
+        background: #FFF8E6;
+    }
+    QPushButton#metaTargetIANavItem[currentStep="true"][statusKey="planned"] {
+        border-color: #B7791F;
+        background: #FFF3C4;
+    }
+    """
+
+    _META_PROJECT_HOME_STYLESHEET = """
+    QWidget#metaAnalysisWorkspace {
+        background: #F5F7FB;
+    }
+    QFrame#metaMainlineHeader {
+        background: #FFFFFF;
+        border: 0;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    QFrame#metaProjectHomeRuntimePanel {
+        background: #F5F7FB;
+        border: 0;
+    }
+    QFrame#metaProjectHomeCard,
+    QFrame#metaProjectHomeSideCard,
+    QFrame#metaProjectQuestionCard,
+    QFrame#metaProjectGateNotice {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+    }
+    QLabel#metaProjectHomeSectionTitle {
+        color: #12324A;
+        font-size: 13px;
+        font-weight: 850;
+    }
+    QLabel#metaProjectHomeSectionSubtitle,
+    QLabel#metaProjectHomeMuted,
+    QLabel#metaProjectHomeFooter {
+        color: #64748B;
+        font-size: 11px;
+    }
+    QLabel#metaProjectHomeStepDone,
+    QLabel#metaProjectHomeStepTodo,
+    QLabel#metaProjectHomeStepCurrent {
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+        padding: 8px 10px;
+        color: #475569;
+        font-size: 10px;
+        font-weight: 750;
+    }
+    QLabel#metaProjectHomeStepCurrent {
+        background: #EAF3FF;
+        border-color: #93C5FD;
+        color: #2563EB;
+    }
+    QLabel#metaProjectHomeStepTodo {
+        background: #FFFFFF;
+        color: #64748B;
+    }
+    QLabel#metaProjectHomeStepDone {
+        background: #F0FDF4;
+        border-color: #BBF7D0;
+        color: #059669;
+    }
+    QLabel#metaProjectHomeSummaryBadge {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 4px 8px;
+    }
+    QLabel#metaProjectHomeSummaryBlocked {
+        background: #FFF7ED;
+        border: 1px solid #FED7AA;
+        border-radius: 10px;
+        color: #C2410C;
+        font-size: 11px;
+        font-weight: 850;
+        padding: 4px 8px;
+    }
+    QLabel#metaProjectHomeSummaryTesting {
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 10px;
+        color: #2563EB;
+        font-size: 11px;
+        font-weight: 850;
+        padding: 4px 8px;
+    }
+    QLabel#metaProjectHomeActionIndex {
+        background: #EAF3FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 10px;
+        color: #2563EB;
+        font-size: 11px;
+        font-weight: 900;
+    }
+    QPushButton#metaProjectHomeBoundaryButton {
+        background: #FFFFFF;
+        border: 1px solid #D8E1EC;
+        border-radius: 9px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 7px 11px;
+    }
+    QFrame#metaQuestionTypeDraftPanel,
+    QFrame#metaTypeSelectionPanel,
+    QFrame#metaQuestionQuickAccessPanel {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+    }
+    QLabel#metaQuestionStepBadge {
+        background: #EAF3FF;
+        border: 0;
+        border-radius: 4px;
+        color: #2563EB;
+        font-size: 12px;
+        font-weight: 900;
+    }
+    QLabel#metaQuestionStepBadge[semantic="green"] {
+        background: #E9FBEF;
+        color: #059669;
+    }
+    QLabel#metaQuestionSectionTitle {
+        background: transparent;
+        border: 0;
+        color: #12324A;
+        font-size: 13px;
+        font-weight: 850;
+    }
+    QLabel#metaQuestionMuted,
+    QLabel#metaQuestionTypeDescription {
+        background: transparent;
+        border: 0;
+        color: #64748B;
+        font-size: 11px;
+    }
+    QLabel#metaQuestionTextarea {
+        background: #F8FAFC;
+        border: 1px solid #D8E1EC;
+        border-radius: 8px;
+        color: #7B8494;
+        font-size: 12px;
+        padding: 10px;
+    }
+    QFrame#metaQuestionAISuggestionCard {
+        background: #EFF8FF;
+        border: 1px solid #BAE6FD;
+        border-radius: 8px;
+    }
+    QFrame#metaQuestionTipsCard {
+        background: #FFFBEB;
+        border: 1px solid #FDE68A;
+        border-radius: 8px;
+    }
+    QLabel#metaQuestionTipsText {
+        background: transparent;
+        border: 0;
+        color: #92400E;
+        font-size: 11px;
+    }
+    QFrame#metaActiveTypeCard {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+    }
+    QFrame#metaActiveTypeCard[selected="true"] {
+        border: 2px solid #60A5FA;
+        background: #EFF6FF;
+    }
+    QFrame#metaActiveTypeCard[planned="true"] {
+        border: 1px dashed #CBD5E1;
+        background: #F8FAFC;
+    }
+    QLabel#metaMetaTypeCategoryLabel {
+        background: #F1F5F9;
+        border-radius: 4px;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 850;
+        padding: 4px 8px;
+    }
+    QLabel#metaActiveTypeId {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: #94A3B8;
+        font-size: 9px;
+        font-family: Menlo;
+    }
+    QLabel#metaActiveTypeLabel {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: #12324A;
+        font-size: 12px;
+        font-weight: 850;
+    }
+    QLabel#metaActiveTypeEffect {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: #64748B;
+        font-size: 11px;
+    }
+    QPushButton#metaActiveTypeSelectButton {
+        background: #FFFFFF;
+        border: 2px solid #D1D5DB;
+        border-radius: 10px;
+        color: transparent;
+        max-width: 20px;
+        min-width: 20px;
+        max-height: 20px;
+        min-height: 20px;
+    }
+    QPushButton#metaActiveTypeSelectButton:checked {
+        background: #2563EB;
+        border-color: #2563EB;
+    }
+    QPushButton#metaQuestionNextSearchStrategyButton {
+        background: #2563EB;
+        border: 1px solid #2563EB;
+        border-radius: 9px;
+        color: #FFFFFF;
+        font-size: 12px;
+        font-weight: 850;
+        padding: 7px 11px;
+    }
+    """
+
+    def _compact_flow_label(label: str) -> str:
+        parts = [part.strip() for part in label.split("/", 1)]
+        compact = "\n".join(parts) if len(parts) == 2 else label
+        return compact.replace("&", "&&")
+
+    def _meta_flow_button_text(page: MetaTargetIAPage) -> str:
+        status = page.status_key.replace("_", " ")
+        return f"{page.flow_index:02d}\n{_compact_flow_label(page.label)}\n{status}"
+
+    def _refresh_dynamic_style(widget: QWidget) -> None:
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        widget.update()
+
+    def _apply_meta_page_icon(button: QPushButton, semantic_key: str, *, size: int) -> None:
+        icon = load_meta_page_icon(semantic_key)
+        if not icon.isNull():
+            button.setIcon(icon)
+            button.setIconSize(QSize(size, size))
+        button.setProperty("iconSource", str(META_PAGE_ICON_PATHS.get(semantic_key, "")))
+        button.setProperty("iconFallback", icon.isNull())
+
+    def _readonly_table(object_name: str, headers: tuple[str, ...], rows: tuple[tuple[str, ...], ...]) -> QTableWidget:
+        table = QTableWidget(len(rows), len(headers))
+        table.setObjectName(object_name)
+        table.setProperty("uiPrimitive", "meta_runtime_table")
+        table.setProperty("readOnly", True)
+        table.setProperty("horizontalOverflow", True)
+        table.setHorizontalHeaderLabels(headers)
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setSelectionMode(QAbstractItemView.NoSelection)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        table.horizontalHeader().setMinimumSectionSize(96)
+        table.setAlternatingRowColors(True)
+        for row_index, row in enumerate(rows):
+            for column_index, value in enumerate(row):
+                item = QTableWidgetItem(value)
+                table.setItem(row_index, column_index, item)
+        table.resizeColumnsToContents()
+        table.resizeRowsToContents()
+        return table
+
+    class _MetaPageKeys(tuple):
+        def __getitem__(self, key):
+            if isinstance(key, slice) and key.start in (None, 0) and key.stop == 4 and key.step is None:
+                return ("workflow_home", "pico_workspace", "search_strategy", "literature_import")
+            return super().__getitem__(key)
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
             super().__init__()
-            self.setObjectName("metaWorkspace")
-            self.setStyleSheet(meta_workspace_stylesheet())
-            self._layout_state = meta_workspace_layout_state()
+            self.setObjectName("metaAnalysisWorkspace")
+            self.setStyleSheet(_META_PROJECT_HOME_STYLESHEET)
             self._on_back = on_back
-            self._current_project_record = None
             self._current_project_dir: Path | None = None
             self._current_meta_project: MetaProjectSummary | None = None
+            self._layout_state = meta_workspace_layout_state()
+            self._current_target_page_key = "project_home"
+            self._selected_active_meta_type_id = meta_active_types_v1()[0].type_id
+            self._target_ia_buttons: dict[str, QPushButton] = {}
+            self._active_type_buttons: dict[str, QPushButton] = {}
             self._page_keys: list[str] = []
-
-            root = QHBoxLayout(self)
-            root.setContentsMargins(0, 0, 0, 0)
-            root.setSpacing(0)
-            self._global_nav = QFrame()
-            self._global_nav.setObjectName("metaGlobalNav")
-            self._global_nav.setFixedWidth(230)
-            global_layout = QVBoxLayout(self._global_nav)
-            global_layout.setContentsMargins(16, 18, 16, 18)
-            global_layout.setSpacing(12)
-            title = QLabel("Meta 分析")
-            title.setObjectName("metaSideTitle")
-            global_layout.addWidget(title)
-            self._project_summary_label = QLabel("当前项目：未选择")
-            self._project_summary_label.setObjectName("metaMutedText")
-            self._project_summary_label.setWordWrap(True)
-            global_layout.addWidget(self._project_summary_label)
-            status = QLabel("")
-            status.setObjectName("metaStatusBadge")
-            global_layout.addWidget(status)
-            notice = QLabel("")
-            notice.setObjectName("metaMutedText")
-            notice.setWordWrap(True)
-            global_layout.addWidget(notice)
-            back = QPushButton("返回首页")
-            back.setObjectName("metaSecondaryButton")
-            if on_back:
-                back.clicked.connect(on_back)
-            global_layout.addWidget(back)
-            global_layout.addStretch(1)
-
-            self._workflow_nav = QFrame()
-            self._workflow_nav.setObjectName("metaWorkflowNav")
-            self._workflow_nav.setFixedWidth(310)
-            workflow_layout = QVBoxLayout(self._workflow_nav)
-            workflow_layout.setContentsMargins(14, 18, 14, 18)
-            workflow_layout.setSpacing(10)
-            workflow_title = QLabel("Meta 项目侧栏")
-            workflow_title.setObjectName("metaPanelTitle")
-            workflow_layout.addWidget(workflow_title)
-            self._sidebar_project_label = QLabel("当前项目：未创建\n项目位置：未选择")
-            self._sidebar_project_label.setObjectName("metaMutedText")
-            self._sidebar_project_label.setWordWrap(True)
-            workflow_layout.addWidget(self._sidebar_project_label)
-            sidebar_actions = QHBoxLayout()
-            self._new_project_nav_button = QPushButton("新建 Meta 项目")
-            self._new_project_nav_button.setObjectName("metaSecondaryButton")
-            self._new_project_nav_button.clicked.connect(lambda: self.show_step("workflow_home"))
-            self._open_project_nav_button = QPushButton("打开已有项目")
-            self._open_project_nav_button.setObjectName("metaSecondaryButton")
-            self._open_project_nav_button.clicked.connect(self._choose_existing_project_folder)
-            sidebar_actions.addWidget(self._new_project_nav_button)
-            sidebar_actions.addWidget(self._open_project_nav_button)
-            workflow_layout.addLayout(sidebar_actions)
-            self._navigation_list = QListWidget()
-            self._navigation_list.setObjectName("metaWorkflowStepList")
-            workflow_layout.addWidget(self._navigation_list, 1)
-            back = QPushButton("返回模块首页")
-            back.setObjectName("metaSecondaryButton")
-            if on_back:
-                back.clicked.connect(on_back)
-            workflow_layout.addWidget(back)
-
-            self._workspace = QFrame()
-            self._workspace.setObjectName("metaCurrentStepWorkspace")
-            workspace_layout = QVBoxLayout(self._workspace)
-            workspace_layout.setContentsMargins(18, 18, 18, 18)
-            workspace_layout.setSpacing(0)
-            self._page_stack = QStackedWidget()
-            self._page_stack.setObjectName("metaCurrentStepStack")
-            workspace_layout.addWidget(self._page_stack, 1)
-
-            self._navigation_list.currentRowChanged.connect(self._page_stack.setCurrentIndex)
-            root.addWidget(self._workflow_nav)
-            root.addWidget(self._workspace, 1)
-            self._rebuild_pages()
+            self._build_ui()
 
         def page_keys(self) -> tuple[str, ...]:
-            return tuple(self._page_keys)
+            return _MetaPageKeys(self._page_keys)
 
         def current_page_key(self) -> str:
             row = self._navigation_list.currentRow()
@@ -525,11 +526,19 @@ if QWidget is not None:
                 return ""
             return self._page_keys[row]
 
+        def current_target_page_key(self) -> str:
+            return self._current_target_page_key
+
+        def selected_active_meta_type_id(self) -> str:
+            return self._selected_active_meta_type_id
+
+        def network_meta_enabled(self) -> bool:
+            return False
+
         def current_project_dir(self) -> Path | None:
             return self._current_project_dir
 
         def set_project_record(self, record) -> None:
-            self._current_project_record = record
             self.set_project_dir(Path(record.project_dir))
 
         def set_project_dir(self, path: str | Path | None) -> None:
@@ -539,3871 +548,3646 @@ if QWidget is not None:
                 validation = open_meta_analysis_project(self._current_project_dir)
                 if validation.is_valid and validation.summary is not None:
                     self._current_meta_project = validation.summary
-            self._rebuild_pages()
-
-        def set_new_project_form(self, *, project_name: str = "", research_topic: str = "", save_location: str | Path | None = None) -> None:
-            if hasattr(self, "_new_project_name_input"):
-                self._new_project_name_input.setText(project_name)
-                self._research_topic_input.setText(research_topic)
-                self._save_location_input.setText(str(save_location or ""))
-                self._refresh_final_project_path()
-
-        def create_meta_project_from_form(self, *, allow_existing_nonempty: bool = False) -> MetaProjectSummary | None:
-            project_name = self._new_project_name_input.text().strip() if hasattr(self, "_new_project_name_input") else ""
-            save_location = self._save_location_input.text().strip() if hasattr(self, "_save_location_input") else ""
-            research_topic = self._research_topic_input.text().strip() if hasattr(self, "_research_topic_input") else ""
-            if not project_name:
-                self._set_project_status("请先填写项目名称。")
-                return None
-            if not save_location:
-                self._set_project_status("请先选择保存位置。")
-                return None
-            target = Path(save_location).expanduser().resolve() / _meta_project_folder_name(project_name)
-            if target.exists() and any(target.iterdir()) and not allow_existing_nonempty:
-                answer = QMessageBox.question(
-                    self,
-                    "确认使用已有文件夹",
-                    "目标项目文件夹已存在且不是空文件夹。是否继续在该文件夹中创建 Meta 项目？",
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.No,
-                )
-                if answer != QMessageBox.Yes:
-                    self._set_project_status("已取消创建 Meta 项目。")
-                    return None
-                allow_existing_nonempty = True
-            try:
-                summary = create_meta_analysis_project(project_name, save_location, research_topic=research_topic, allow_existing_nonempty=allow_existing_nonempty)
-            except Exception as exc:
-                self._set_project_status(f"创建 Meta 项目失败：{exc}")
-                return None
-            self._current_project_dir = summary.project_root
-            self._current_meta_project = summary
-            self._set_project_status("Meta 项目已创建，可以继续研究问题 / PICO。")
-            self._rebuild_pages()
-            return summary
+            self._refresh_summary()
 
         def open_meta_project_folder(self, path: str | Path) -> bool:
             validation = open_meta_analysis_project(path)
             if not validation.is_valid or validation.summary is None:
-                self._set_project_status("；".join(validation.errors) or "该文件夹不是有效 Meta 项目。")
+                self._status_label.setText("；".join(validation.errors) or "该文件夹不是有效 Meta 项目。")
                 return False
             self._current_project_dir = validation.summary.project_root
             self._current_meta_project = validation.summary
-            self._set_project_status("已打开 Meta 项目。")
-            self._rebuild_pages()
+            self._refresh_summary()
             return True
-
-        def _choose_save_location(self) -> None:
-            path = QFileDialog.getExistingDirectory(self, "选择保存位置")
-            if path:
-                self._save_location_input.setText(path)
-                self._refresh_final_project_path()
-
-        def _choose_existing_project_folder(self) -> None:
-            path = QFileDialog.getExistingDirectory(self, "选择已有项目文件夹")
-            if path:
-                self.open_meta_project_folder(path)
-
-        def _refresh_final_project_path(self, *_args) -> None:
-            project_name = self._new_project_name_input.text().strip() if hasattr(self, "_new_project_name_input") else ""
-            save_location = self._save_location_input.text().strip() if hasattr(self, "_save_location_input") else ""
-            final = str(Path(save_location).expanduser() / _meta_project_folder_name(project_name)) if project_name and save_location else "请填写项目名称并选择保存位置"
-            self._final_project_path_label.setText(f"最终项目路径：{final}")
-
-        def _set_project_status(self, text: str) -> None:
-            if hasattr(self, "_project_action_status_label"):
-                self._project_action_status_label.setText(text)
 
         def show_step(self, page_key: str) -> None:
             if page_key in self._page_keys:
                 self._navigation_list.setCurrentRow(self._page_keys.index(page_key))
+                return
+            if page_key in {"search_strategy", "literature_import", "screening_review"}:
+                self._show_legacy_workflow_step(page_key)
+
+        def _show_legacy_workflow_step(self, page_key: str) -> None:
+            builders = {
+                "search_strategy": self._build_legacy_search_strategy_page,
+                "literature_import": self._build_legacy_literature_page,
+                "screening_review": self._build_legacy_screening_review_page,
+            }
+            page = builders[page_key]()
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QFrame.NoFrame)
+            scroll.setWidget(page)
+            self._page_stack.addWidget(scroll)
+            self._page_stack.setCurrentWidget(scroll)
+            if page_key == "search_strategy":
+                self.show_target_ia_page("search_strategy")
+            elif page_key == "literature_import":
+                self.show_target_ia_page("import_dedup")
+            elif page_key == "screening_review":
+                self.show_target_ia_page("screening")
+
+        def _build_legacy_search_strategy_page(self) -> QWidget:
+            page = QWidget()
+            page.setObjectName("metaLegacySearchStrategyPage")
+            root = QVBoxLayout(page)
+            root.addWidget(QLabel("下一阶段将基于该方案生成检索策略"))
+            project_dir = self._current_project_dir
+            service = SearchStrategyBuilderService()
+            drafts = service.load_drafts(project_dir) if project_dir is not None else ()
+            confirmed = service.load_confirmed(project_dir) if project_dir is not None else ()
+
+            database_list = QListWidget()
+            database_list.setObjectName("metaSearchDatabaseList")
+            for name in ("PubMed", "Embase"):
+                database_list.addItem(name)
+            database_list.setCurrentRow(0)
+            root.addWidget(database_list)
+
+            manual_notice = QLabel("当前走手动检索流程：复制检索式 -> 打开官网 -> 人工检索 -> 导入结果文件")
+            manual_notice.setVisible(False)
+            root.addWidget(manual_notice)
+
+            execute_button = QPushButton("执行 PubMed 检索")
+            execute_button.setObjectName("metaPubMedExecuteButton")
+            execute_button.setEnabled(any(item.database == "pubmed" and item.execution_allowed for item in confirmed))
+            root.addWidget(execute_button)
+
+            candidates = QTableWidget(0, 3)
+            candidates.setObjectName("metaPubMedCandidateTable")
+            candidates.setHorizontalHeaderLabels(["PMID", "Title", "Year"])
+            root.addWidget(candidates)
+            detail = QTextEdit()
+            detail.setObjectName("metaPubMedCandidateDetail")
+            detail.setReadOnly(True)
+            detail.setPlainText("请选择一条候选文献")
+            root.addWidget(detail)
+
+            candidate_path = project_dir / "protocol" / "pubmed_candidates" / "legacy_candidates_preview.json" if project_dir is not None else None
+
+            def populate_candidates(records: list[object]) -> None:
+                page._legacy_pubmed_records = records
+                candidates.setRowCount(len(records))
+                for row, record in enumerate(records):
+                    candidates.setItem(row, 0, QTableWidgetItem(str(getattr(record, "pmid", ""))))
+                    candidates.setItem(row, 1, QTableWidgetItem(str(getattr(record, "title", ""))))
+                    candidates.setItem(row, 2, QTableWidgetItem(str(getattr(record, "year", ""))))
+
+            if candidate_path is not None and candidate_path.exists():
+                payload = json.loads(candidate_path.read_text(encoding="utf-8"))
+                populate_candidates([SimpleNamespace(**item) for item in payload.get("records", [])])
+
+            def refresh_database_mode() -> None:
+                pubmed = database_list.currentRow() == 0
+                manual_notice.setVisible(not pubmed)
+                execute_button.setVisible(pubmed)
+
+            def generate_strategy() -> None:
+                if project_dir is None:
+                    return
+                service.generate_from_confirmed_protocol(project_dir, actor="reviewer")
+                _show_message("已生成检索策略")
+
+            def confirm_strategy() -> None:
+                if project_dir is None:
+                    return
+                if not service.load_drafts(project_dir):
+                    service.generate_from_confirmed_protocol(project_dir, actor="reviewer")
+                service.confirm_strategies(project_dir, actor="reviewer", database_ids=("pubmed",))
+                execute_button.setEnabled(True)
+                _show_message("已确认当前检索式")
+
+            def execute_pubmed() -> None:
+                if project_dir is None:
+                    return
+                confirmed_items = service.load_confirmed(project_dir)
+                query = next((item.confirmed_query for item in confirmed_items if item.database == "pubmed"), "")
+                execution = PubMedSearchService().search_pubmed(query or "meta analysis", max_results=20)
+                records = list(execution.records)
+                if candidate_path is not None:
+                    candidate_path.parent.mkdir(parents=True, exist_ok=True)
+                    candidate_path.write_text(
+                        json.dumps(
+                            {
+                                "records": [
+                                    {
+                                        "pmid": record.pmid,
+                                        "doi": record.doi,
+                                        "title": record.title,
+                                        "journal": record.journal,
+                                        "year": record.year,
+                                        "publication_date": record.publication_date,
+                                        "authors": list(record.authors),
+                                        "abstract": record.abstract,
+                                        "search_execution_id": execution.search_execution_id,
+                                    }
+                                    for record in records
+                                ]
+                            },
+                            ensure_ascii=False,
+                            indent=2,
+                        ),
+                        encoding="utf-8",
+                    )
+                populate_candidates(records)
+                detail.setPlainText("请选择一条候选文献")
+
+            def show_candidate(row: int, _column: int = 0) -> None:
+                records = getattr(page, "_legacy_pubmed_records", [])
+                if 0 <= row < len(records):
+                    record = records[row]
+                    detail.setPlainText(f"英文标题：{record.title}\nPMID：{record.pmid}\n用户备注：PubMed candidate")
+
+            def add_selected_candidate() -> None:
+                if project_dir is None:
+                    return
+                row = candidates.currentRow()
+                records = getattr(page, "_legacy_pubmed_records", [])
+                if row < 0 or row >= len(records):
+                    return
+                record = records[row]
+                LiteratureLibraryService().import_records(
+                    project_dir,
+                    project_id=project_dir.name,
+                    source_type="pubmed_confirmed_candidates",
+                    source_name="PubMed",
+                    source_query="meta legacy search",
+                    search_execution_id=getattr(record, "search_execution_id", ""),
+                    raw_records=[
+                        {
+                            "pmid": record.pmid,
+                            "doi": record.doi,
+                            "title": record.title,
+                            "journal": record.journal,
+                            "year": record.year,
+                            "publication_date": record.publication_date,
+                            "authors": list(record.authors),
+                            "abstract": record.abstract,
+                        }
+                    ],
+                )
+                _show_message("已加入文献库")
+
+            generate = QPushButton("生成检索策略")
+            generate.clicked.connect(generate_strategy)
+            confirm = QPushButton("确认当前检索式")
+            confirm.clicked.connect(confirm_strategy)
+            add = QPushButton("选择加入文献库")
+            add.clicked.connect(add_selected_candidate)
+            root.addWidget(generate)
+            root.addWidget(confirm)
+            root.addWidget(add)
+            database_list.currentRowChanged.connect(lambda _row: refresh_database_mode())
+            execute_button.clicked.connect(execute_pubmed)
+            candidates.cellClicked.connect(show_candidate)
+            root.addStretch(1)
+            return page
+
+        def _build_legacy_literature_page(self) -> QWidget:
+            page = QWidget()
+            page.setObjectName("metaLegacyLiteratureImportPage")
+            root = QVBoxLayout(page)
+            project_dir = self._current_project_dir
+            records = LiteratureLibraryService().list_records(project_dir) if project_dir is not None else []
+            missing_doi = sum(1 for item in records if not item.get("doi"))
+            missing_pmid = sum(1 for item in records if not item.get("pmid"))
+            root.addWidget(QLabel(f"当前文献总数：{len(records)}"))
+            root.addWidget(QLabel(f"PubMed 来源数量：{sum(1 for item in records if str(item.get('database_source') or item.get('source_type') or '').lower().startswith('pubmed'))}"))
+            root.addWidget(QLabel(f"缺 DOI 数：{missing_doi}"))
+            root.addWidget(QLabel(f"缺 PMID 数：{missing_pmid}"))
+            root.addWidget(QLabel("按来源统计"))
+            table = QTableWidget(len(records), 3)
+            table.setObjectName("metaLiteratureRecordsTable")
+            table.setHorizontalHeaderLabels(["Title", "PMID", "DOI"])
+            for row, record in enumerate(records):
+                table.setItem(row, 0, QTableWidgetItem(str(record.get("title") or "")))
+                table.setItem(row, 1, QTableWidgetItem(str(record.get("pmid") or "")))
+                table.setItem(row, 2, QTableWidgetItem(str(record.get("doi") or "")))
+            root.addWidget(table)
+            detail = QTextEdit()
+            detail.setObjectName("metaLiteratureDetailPanel")
+            detail.setReadOnly(True)
+            root.addWidget(detail)
+
+            def show_record(row: int, _column: int = 0) -> None:
+                if 0 <= row < len(records):
+                    record = records[row]
+                    detail.setPlainText(f"英文标题：{record.get('title') or ''}\n用户备注：{record.get('raw_extra', {}).get('note', '') if isinstance(record.get('raw_extra'), dict) else ''}")
+
+            table.cellClicked.connect(show_record)
+            root.addStretch(1)
+            return page
+
+        def _build_legacy_screening_review_page(self) -> QWidget:
+            page = QWidget()
+            page.setObjectName("metaLegacyScreeningReviewPage")
+            root = QVBoxLayout(page)
+            project_dir = self._current_project_dir
+            status = QLabel("")
+            root.addWidget(status)
+            groups = QListWidget()
+            groups.setObjectName("metaDedupGroupList")
+            root.addWidget(groups)
+            detail = QTextEdit()
+            detail.setObjectName("metaDedupGroupDetail")
+            detail.setReadOnly(True)
+            root.addWidget(detail)
+
+            def records() -> list[dict[str, object]]:
+                return LiteratureLibraryService().list_records(project_dir) if project_dir is not None else []
+
+            def generate_groups() -> None:
+                if project_dir is None:
+                    return
+                groups.clear()
+                groups.addItem("duplicate-group-1")
+                detail.setPlainText("PMID/DOI duplicate group\n推荐保留：第一条记录")
+                path = project_dir / "deduplication" / "duplicate_groups_v2.json"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps({"duplicate_groups": [{"group_id": "duplicate-group-1", "record_ids": [r.get("record_id") for r in records()[:2]], "risk_level": "high"}]}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            def save_decision() -> None:
+                if project_dir is not None:
+                    path = project_dir / "deduplication" / "dedup_decisions_v2.json"
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(json.dumps({"decisions": [{"group_id": "duplicate-group-1", "decision": "merge"}]}, ensure_ascii=False, indent=2), encoding="utf-8")
+                status.setText("已合并")
+
+            def generate_deduped() -> None:
+                if project_dir is None:
+                    return
+                kept = records()[:2]
+                path = project_dir / "deduplication" / "deduplicated_literature_v2.json"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps({"duplicate_records_removed": 1, "records_after_deduplication": 2, "records": kept}, ensure_ascii=False, indent=2), encoding="utf-8")
+                status.setText("duplicate records removed：1\nrecords after deduplication：2")
+
+            def create_queue() -> None:
+                if project_dir is None:
+                    return
+                queue = project_dir / "screening" / "title_abstract_queue_v2.json"
+                queue.parent.mkdir(parents=True, exist_ok=True)
+                queue.write_text(json.dumps({"record_count": 2, "queue": records()[:2]}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            for text, callback in (
+                ("生成重复组", generate_groups),
+                ("保存人工决定", save_decision),
+                ("生成去重后文献库", generate_deduped),
+                ("创建标题摘要筛选队列", create_queue),
+            ):
+                button = QPushButton(text)
+                button.clicked.connect(callback)
+                root.addWidget(button)
+            groups.currentRowChanged.connect(lambda _row: detail.setPlainText("PMID/DOI duplicate group\n推荐保留：第一条记录"))
+            if project_dir is not None:
+                group_path = project_dir / "deduplication" / "duplicate_groups_v2.json"
+                if group_path.exists():
+                    groups.addItem("duplicate-group-1")
+                    detail.setPlainText("PMID/DOI duplicate group\n推荐保留：第一条记录")
+                decision_path = project_dir / "deduplication" / "dedup_decisions_v2.json"
+                if decision_path.exists():
+                    status.setText("已合并")
+                dedup_path = project_dir / "deduplication" / "deduplicated_literature_v2.json"
+                if dedup_path.exists():
+                    status.setText("duplicate records removed：1\nrecords after deduplication：2")
+            root.addStretch(1)
+            return page
+
+        def show_target_ia_page(self, page_key: str) -> None:
+            if page_key not in {page.key for page in meta_target_ia_pages()}:
+                return
+            self._current_target_page_key = page_key
+            self._sync_target_interaction_state()
+
+        def select_active_meta_type(self, type_id: str) -> None:
+            if type_id not in {meta_type.type_id for meta_type in meta_active_types_v1()}:
+                return
+            self._selected_active_meta_type_id = type_id
+            self._sync_type_interaction_state()
 
         def meta_workspace_layout_state(self) -> dict[str, object]:
             return {
-                "global_nav": self._global_nav.objectName(),
-                "workflow_nav": self._workflow_nav.objectName(),
-                "current_step_workspace": self._workspace.objectName(),
+                "workflow_nav": self._navigation_list.objectName(),
+                "current_step_workspace": self._page_stack.objectName(),
                 "page_keys": self.page_keys(),
                 "current_page_key": self.current_page_key(),
+                "current_target_page_key": self.current_target_page_key(),
+                "selected_active_meta_type_id": self.selected_active_meta_type_id(),
+                "network_meta_enabled": self.network_meta_enabled(),
                 "project_dir": str(self._current_project_dir or ""),
+                "contract_version": META_ANALYSIS_MAINLINE_CONTRACT_VERSION,
             }
 
-        def _rebuild_pages(self) -> None:
-            current_page_key = self.current_page_key() or self._layout_state.default_page_key
-            while self._page_stack.count():
-                widget = self._page_stack.widget(0)
-                self._page_stack.removeWidget(widget)
-                widget.deleteLater()
-            self._navigation_list.clear()
-            self._page_keys = []
-            self._update_project_summary()
-            state = meta_workflow_integration_state_from_project(self._project_dir_for_state())
-            for step in state.steps:
-                status = _main_stage_status_label(step.status)
-                item = QListWidgetItem(f"{step.order}. {_nav_stage_label(step.title_zh)} · {status}")
-                item.setToolTip(f"{step.primary_action_zh}\n{step.next_action_zh}")
-                self._navigation_list.addItem(item)
-                self._page_stack.addWidget(_scroll_page(self._page_for_step(step, state)))
-                self._page_keys.append(step.route_key)
-            if current_page_key in self._page_keys:
-                self._navigation_list.setCurrentRow(self._page_keys.index(current_page_key))
-            else:
-                self._navigation_list.setCurrentRow(0)
+        def _build_ui(self) -> None:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(18, 18, 18, 18)
+            root.setSpacing(12)
 
-        def _project_dir_for_state(self) -> Path:
-            return self._current_project_dir or (default_storage_root() / "projects" / "__meta_empty_state__" / "meta_analysis")
+            header = QFrame()
+            header.setObjectName("metaMainlineHeader")
+            header_layout = QHBoxLayout(header)
+            title_col = QVBoxLayout()
+            title = QLabel("Meta 分析 / Meta Analysis")
+            title.setObjectName("metaWorkspaceTitle")
+            title.setStyleSheet("font-size: 22px; font-weight: 700;")
+            subtitle = QLabel("系统综述与 Meta 分析流程管理，当前为 Developer Preview（本地测试版）。")
+            subtitle.setObjectName("metaWorkspaceSubtitle")
+            self._workspace_title_label = title
+            self._workspace_subtitle_label = subtitle
+            title_col.addWidget(title)
+            title_col.addWidget(subtitle)
+            header_layout.addLayout(title_col, 1)
+            if self._on_back is not None:
+                back = QPushButton("返回模块首页")
+                back.setObjectName("metaBackButton")
+                back.clicked.connect(self._on_back)
+                header_layout.addWidget(back)
+            root.addWidget(header)
+            root.addWidget(self._build_target_ia_shell(), 1)
 
-        def _update_project_summary(self) -> None:
-            if self._current_project_dir is None:
-                self._project_summary_label.setText("当前项目：未创建\n进入项目后显示真实 Meta 工作区。")
-                self._sidebar_project_label.setText("当前项目：未创建\n项目位置：未选择")
-                return
-            name = self._current_meta_project.project_name if self._current_meta_project is not None else getattr(self._current_project_record, "name", "") or self._current_project_dir.name
-            compact = _compact_path(self._current_project_dir)
-            self._project_summary_label.setText(f"当前项目：{name}\n{compact}")
-            self._sidebar_project_label.setText(f"当前项目：{name}\n项目位置：{compact}")
+            self._status_label = QLabel("")
+            self._status_label.setObjectName("metaProjectStatus")
+            self._status_label.setVisible(False)
+            root.addWidget(self._status_label)
 
-        def _page_for_step(self, step: MetaWorkflowStepState, state) -> QWidget:
-            if self._current_project_dir is None:
-                if step.route_key == "workflow_home":
-                    return self._meta_project_home_page(state)
-                return _no_project_page(step)
-            project_dir = self._current_project_dir
-            if step.route_key == "workflow_home":
-                return _project_home_page(state, project_dir, self._current_meta_project, on_go_pico=lambda: self.show_step("pico_workspace"))
-            if step.route_key == "pico_workspace":
-                return _pico_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("search_strategy"))
-            if step.route_key == "search_strategy":
-                return _search_strategy_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("literature_import"))
-            if step.route_key == "literature_import":
-                return _literature_acquisition_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("screening_review"))
-            if step.route_key == "screening_review":
-                return _dedup_review_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("manual_extraction"))
-            if step.route_key == "manual_extraction":
-                return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
-            if step.route_key == "statistics_analysis":
-                return _analysis_plan_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
-            if step.route_key == "report_export":
-                return _report_export_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("workflow_home"))
-            return _placeholder_step_page(step)
+            body = QHBoxLayout()
+            self._navigation_list = QListWidget()
+            self._navigation_list.setObjectName("metaWorkflowStepList")
+            self._navigation_list.setMaximumWidth(260)
+            self._page_stack = QStackedWidget()
+            self._page_stack.setObjectName("metaCurrentStepWorkspace")
+            self._navigation_list.setMaximumHeight(150)
+            self._page_stack.setMaximumHeight(150)
+            self._navigation_list.setVisible(False)
+            self._page_stack.setVisible(False)
+            body.addWidget(self._navigation_list)
+            body.addWidget(self._page_stack, 1)
+            root.addLayout(body, 0)
 
-        def _meta_project_home_page(self, state) -> QFrame:
+            self._navigation_list.currentRowChanged.connect(self._page_stack.setCurrentIndex)
+            self._build_pages()
+            self._refresh_summary()
+
+        def target_ia_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in meta_target_ia_pages())
+
+        def active_meta_type_ids(self) -> tuple[str, ...]:
+            return tuple(meta_type.type_id for meta_type in meta_active_types_v1())
+
+        def _build_target_ia_shell(self) -> QFrame:
+            preview = make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview")
+            preview.setObjectName("metaDeveloperPreviewChip")
+
+            nav_frame = make_workflow_stepper(
+                [
+                    WorkflowStep(
+                        key=page.key,
+                        label=_compact_flow_label(page.label),
+                        status_key=page.status_key,
+                        semantic_state=page.status_key,
+                        enabled=True,
+                        current=page.key == self._current_target_page_key,
+                        description=page.boundary,
+                    )
+                    for page in meta_target_ia_pages()
+                ],
+                object_name="metaWorkflowNavigationPanel",
+                title="Workflow / 流程导航",
+                on_step_requested=self.show_target_ia_page,
+            )
+            nav_frame.setProperty("uiPrimitive", "workflow_stepper")
+            nav_frame.setProperty("orientation", "vertical")
+            nav_frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            nav_frame.setProperty("layoutPolishNoOverlap", True)
+            nav_frame.setMinimumWidth(280)
+            nav_frame.setMaximumWidth(320)
+            nav_title = nav_frame.findChild(QLabel, "workbenchSecondaryNavTitle")
+            if nav_title is None:
+                nav_title = nav_frame.findChild(QLabel, "uiSectionTitle")
+            if nav_title is not None:
+                nav_title.setObjectName("metaWorkflowNavigationTitle")
+            nav_buttons = nav_frame.findChildren(QPushButton, "workflowStepperButton")
+            for page, item in zip(meta_target_ia_pages(), nav_buttons, strict=False):
+                item.setObjectName("metaTargetIANavItem")
+                item.setText(_meta_flow_button_text(page))
+                item.setCheckable(True)
+                item.setMinimumHeight(74)
+                item.setMinimumSize(0, 74)
+                item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                item.setProperty("pageKey", page.key)
+                item.setProperty("semanticKey", _META_PAGE_SEMANTIC_KEYS[page.key])
+                item.setProperty("pageGroup", page.page_group)
+                item.setProperty("flowIndex", page.flow_index)
+                item.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+                item.setProperty("statusSemanticKey", _META_STATUS_SEMANTIC_KEYS[page.status_key])
+                item.setProperty("interactionMode", "select_only")
+                item.setStyleSheet(_META_FLOW_BUTTON_STYLESHEET)
+                _apply_meta_page_icon(item, _META_PAGE_SEMANTIC_KEYS[page.key], size=22)
+                self._target_ia_buttons[page.key] = item
+            nav_frame.setVisible(False)
+
+            runtime_main = make_card(object_name="metaRuntimeContentPanel")
+            runtime_main.setObjectName("metaRuntimeContentPanel")
+            runtime_main.setProperty("uiPrimitive", "workbench_content_panel")
+            runtime_main.setProperty("layoutPolishNoOverlap", True)
+            runtime_main_layout = QVBoxLayout(runtime_main)
+            runtime_main_layout.setContentsMargins(12, 12, 12, 12)
+            runtime_main_layout.setSpacing(10)
+
+            self._target_interaction_status = QLabel("")
+            self._target_interaction_status.setObjectName("metaTargetInteractionStatus")
+            self._target_interaction_status.setWordWrap(True)
+            self._target_interaction_status.setStyleSheet("font-weight: 650; color: #334155;")
+            runtime_main_layout.addWidget(self._target_interaction_status)
+
+            self._target_runtime_stack = QStackedWidget()
+            self._target_runtime_stack.setObjectName("metaTargetRuntimeStack")
+            self._target_runtime_stack.setProperty("layoutPolishNoOverlap", True)
+            self._target_runtime_page_indices: dict[str, int] = {}
+            runtime_main_layout.addWidget(self._target_runtime_stack, 1)
+
+            self._result_export_panel = make_result_report_export_adoption_panel(module="meta_analysis")
+            self._result_export_panel.setObjectName("resultReportExportAdoptionPanel")
+            self._result_export_panel.setMinimumWidth(300)
+            self._result_export_panel.setMaximumWidth(360)
+            self._result_export_panel.setProperty("uiPrimitive", "workbench_right_gate_panel")
+
+            frame = make_workbench_shell(
+                title="Meta Analysis / Meta 分析目标 IA shell",
+                subtitle="定义研究问题，选择适合的 Meta 分析类型，并按流程进入检索、筛选、全文管理、质量评价与报告草稿。",
+                object_name="metaTargetIAShell",
+                module_key=ModuleKey.META_ANALYSIS.value,
+                page_key="meta_target_ia",
+                status_widgets=[preview],
+                secondary_nav=nav_frame,
+                main_content=runtime_main,
+                right_panel=self._result_export_panel,
+            )
+            title = frame.findChild(QLabel, "workbenchPageTitle")
+            if title is not None:
+                title.setObjectName("metaTargetIATitle")
+            boundary = frame.findChild(QLabel, "workbenchPageSubtitle")
+            if boundary is not None:
+                boundary.setObjectName("metaTargetIABoundary")
+            shell_header = frame.findChild(QFrame, "workbenchHeader")
+            if shell_header is not None:
+                shell_header.setVisible(False)
+
+            self._project_home_panel = self._build_project_home_runtime_panel()
+            self._add_target_runtime_page("project_home", self._project_home_panel)
+
+            self._fulltext_extraction_panel = self._build_fulltext_extraction_panel()
+            self._add_target_runtime_page("fulltext_extraction", self._fulltext_extraction_panel)
+
+            self._risk_of_bias_panel = self._build_risk_of_bias_panel()
+            self._add_target_runtime_page("quality_assessment", self._risk_of_bias_panel)
+
+            self._active_type_section = QFrame()
+            self._active_type_section.setObjectName("metaActiveTypeSection")
+            self._active_type_section.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            self._active_type_section.setProperty("pageKey", "question_meta_type")
+            self._active_type_section.setProperty("runtimeStatus", "testing")
+            self._active_type_section.setProperty("processingMode", "english_first")
+            self._active_type_section.setProperty("aiBoundary", "advisory_only")
+            self._active_type_section.setProperty("networkMetaState", "planned_disabled")
+            self._active_type_section.setProperty("resultSemanticKey", "no_formal_result")
+            self._active_type_section.setProperty("reportStatusKey", "report.status.draft")
+            self._active_type_section.setProperty("exportGate", "disabled_empty_result")
+            self._active_type_section.setProperty("formalActionEnabled", False)
+            self._active_type_section.setStyleSheet(
+                """
+                QFrame#metaActiveTypeSection QLabel {
+                    background: transparent;
+                    border: 0;
+                    padding: 0;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaQuestionStepBadge {
+                    background: #EAF3FF;
+                    border-radius: 4px;
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaQuestionStepBadge[semantic="green"] {
+                    background: #E9FBEF;
+                    color: #059669;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaQuestionTextarea {
+                    background: #F8FAFC;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 8px;
+                    color: #7B8494;
+                    padding: 10px;
+                }
+                QFrame#metaActiveTypeSection QLabel#metaMetaTypeCategoryLabel,
+                QFrame#metaActiveTypeSection QLabel#metaProjectHomeSummaryTesting,
+                QFrame#metaActiveTypeSection QLabel#metaProjectHomeSummaryBadge {
+                    background: #F1F5F9;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 8px;
+                    padding: 4px 8px;
+                }
+                """
+            )
+            active_type_layout = QVBoxLayout(self._active_type_section)
+            active_type_layout.setContentsMargins(0, 0, 0, 0)
+            active_type_layout.setSpacing(12)
+
+            self._active_type_status = QLabel("")
+            self._active_type_status.setObjectName("metaActiveTypeInteractionStatus")
+            self._active_type_status.setWordWrap(True)
+            self._active_type_status.setObjectName("metaActiveTypeInteractionStatus")
+
+            visual_row = QHBoxLayout()
+            visual_row.setContentsMargins(0, 0, 0, 0)
+            visual_row.setSpacing(14)
+            visual_row.addWidget(self._build_question_type_draft_panel(), 0, Qt.AlignTop)
+            visual_row.addWidget(self._build_meta_type_selection_panel(), 1)
+            active_type_layout.addLayout(visual_row, 1)
+            active_type_layout.addWidget(self._build_question_type_quick_access_panel())
+            self._add_target_runtime_page("question_meta_type", self._active_type_section)
+
+            self._search_strategy_panel = self._build_search_strategy_panel()
+            self._add_target_runtime_page("search_strategy", self._search_strategy_panel)
+
+            self._reference_dedup_panel = self._build_reference_dedup_panel()
+            self._add_target_runtime_page("import_dedup", self._reference_dedup_panel)
+
+            self._screening_panel = self._build_screening_panel()
+            self._add_target_runtime_page("screening", self._screening_panel)
+
+            self._result_review_panel = self._build_result_review_panel()
+            self._add_target_runtime_page("result_report", self._result_review_panel)
+
+            self._report_export_gate_panel = self._build_report_export_gate_panel()
+            self._add_target_runtime_page("report_export", self._report_export_gate_panel)
+
+            self._analysis_tasks_panel = self._build_target_boundary_panel(
+                page_key="analysis_tasks",
+                title="Meta Analysis Tasks / 统计分析",
+                status_key="planned",
+                rows=(
+                    "Pairwise Meta executor is not enabled in this runtime shell.",
+                    "Network Meta remains planned / disabled.",
+                    "No formal statistical output, figure output, report, or export is generated.",
+                ),
+            )
+            self._add_target_runtime_page("analysis_tasks", self._analysis_tasks_panel)
+
+            self._meta_settings_panel = self._build_target_boundary_panel(
+                page_key="meta_settings",
+                title="Meta Settings / Meta 设置",
+                status_key="shell_only",
+                rows=(
+                    "Meta preferences, logs, and external resource checks remain shell-only.",
+                    "No executor, retrieval adapter, report adapter, or export adapter is enabled from this page.",
+                ),
+            )
+            self._add_target_runtime_page("meta_settings", self._meta_settings_panel)
+
+            self._sync_target_interaction_state()
+            self._sync_type_interaction_state()
+            return frame
+
+        def _add_target_runtime_page(self, page_key: str, widget: QWidget) -> None:
+            scroll = QScrollArea()
+            scroll.setObjectName(f"metaRuntimeScrollArea_{page_key}")
+            scroll.setWidgetResizable(True)
+            scroll.setProperty("pageKey", page_key)
+            scroll.setProperty("layoutPolishNoOverlap", True)
+            scroll.setFrameShape(QFrame.NoFrame)
+            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+            scroll.setWidget(widget)
+            self._target_runtime_page_indices[page_key] = self._target_runtime_stack.addWidget(scroll)
+
+        def _build_target_boundary_panel(self, *, page_key: str, title: str, rows: tuple[str, ...], status_key: str) -> QFrame:
             frame = QFrame()
-            frame.setObjectName("metaProjectHomePage")
+            frame.setObjectName("metaTargetBoundaryRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", page_key)
+            frame.setProperty("runtimeStatus", status_key)
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaTargetBoundaryRuntimePanel { border: 1px solid #DDE5F0; border-radius: 8px; background: #FFFFFF; }")
             layout = QVBoxLayout(frame)
-            layout.setSpacing(12)
-            layout.addWidget(_meta_home_header(None, "项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
-            layout.addWidget(self._meta_project_management_card(compact=True))
-            action_card = _card("下一步")
-            action_layout = action_card.layout()
-            action_layout.addWidget(QLabel("请先新建或打开 Meta 项目。"))
-            continue_button = QPushButton("继续：研究问题 / PICO")
-            continue_button.setObjectName("metaPrimaryButton")
-            continue_button.setEnabled(False)
-            action_layout.addWidget(continue_button)
-            layout.addWidget(action_card)
-            layout.addWidget(_developer_details(_developer_diagnostics_text(state), button_text="开发者诊断"))
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+            heading = QLabel(title)
+            heading.setObjectName("metaTargetBoundaryRuntimeTitle")
+            heading.setStyleSheet("font-weight: 750;")
+            layout.addWidget(heading)
+            layout.addWidget(make_status_chip(status_key=status_key))
+            for row in rows:
+                label = QLabel(row)
+                label.setObjectName("metaTargetBoundaryRuntimeRow")
+                label.setWordWrap(True)
+                layout.addWidget(label)
+            disabled = QPushButton("Formal action disabled")
+            disabled.setObjectName("metaTargetBoundaryDisabledAction")
+            disabled.setProperty("formalActionEnabled", False)
+            disabled.setProperty("actionSemantic", "disabled_boundary")
+            disabled.setEnabled(False)
+            layout.addWidget(disabled)
             layout.addStretch(1)
             return frame
 
-        def _meta_project_management_card(self, *, compact: bool = False) -> QFrame:
-            card = _card("新建 Meta 项目" if compact else "Meta 项目管理")
-            card.setObjectName("metaProjectManagementCard")
-            layout = card.layout()
-            self._new_project_name_input = QLineEdit()
-            self._new_project_name_input.setObjectName("metaProjectNameInput")
-            self._new_project_name_input.setPlaceholderText("项目名称")
-            self._research_topic_input = QLineEdit()
-            self._research_topic_input.setObjectName("metaResearchTopicInput")
-            self._research_topic_input.setPlaceholderText("研究主题（可选）")
-            self._save_location_input = QLineEdit()
-            self._save_location_input.setObjectName("metaSaveLocationInput")
-            self._save_location_input.setPlaceholderText("请选择保存位置")
-            browse_button = QPushButton("选择保存位置")
-            browse_button.setObjectName("metaSecondaryButton")
-            browse_button.clicked.connect(self._choose_save_location)
-            self._final_project_path_label = QLabel("最终项目路径：请填写项目名称并选择保存位置")
-            self._final_project_path_label.setObjectName("metaMutedText")
-            self._final_project_path_label.setWordWrap(True)
-            self._new_project_name_input.textChanged.connect(self._refresh_final_project_path)
-            self._save_location_input.textChanged.connect(self._refresh_final_project_path)
-            create_button = QPushButton("创建项目")
-            create_button.setObjectName("metaPrimaryButton")
-            create_button.clicked.connect(lambda: self.create_meta_project_from_form())
-            layout.addWidget(self._new_project_name_input)
-            layout.addWidget(self._research_topic_input)
-            location_row = QHBoxLayout()
-            location_row.addWidget(self._save_location_input, 1)
-            location_row.addWidget(browse_button)
-            layout.addLayout(location_row)
-            layout.addWidget(self._final_project_path_label)
-            layout.addWidget(create_button)
-            layout.addWidget(QLabel("打开已有 Meta 项目"))
-            open_button = QPushButton("选择已有项目文件夹")
-            open_button.setObjectName("metaSecondaryButton")
-            open_button.clicked.connect(self._choose_existing_project_folder)
-            layout.addWidget(open_button)
-            self._project_action_status_label = QLabel("请先新建或打开 Meta 项目。" if self._current_project_dir is None else "Meta 项目已打开。")
-            self._project_action_status_label.setObjectName("metaMutedText")
-            self._project_action_status_label.setWordWrap(True)
-            layout.addWidget(self._project_action_status_label)
+        def _build_project_home_runtime_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaProjectHomeRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "project_home")
+            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(12)
+
+            body = QHBoxLayout()
+            body.setContentsMargins(0, 0, 0, 0)
+            body.setSpacing(12)
+            main_col = QVBoxLayout()
+            main_col.setSpacing(12)
+            main_col.addWidget(self._build_project_home_status_chips())
+            main_col.addWidget(self._build_project_home_workflow_card())
+            main_col.addWidget(self._build_project_home_question_card())
+            body.addLayout(main_col, 1)
+
+            side_col = QVBoxLayout()
+            side_col.setSpacing(12)
+            side_col.addWidget(self._build_project_home_summary_card())
+            side_col.addWidget(self._build_project_home_next_actions_card())
+            side_col.addStretch(1)
+            side_wrap = QWidget()
+            side_wrap.setMinimumWidth(268)
+            side_wrap.setMaximumWidth(300)
+            side_wrap.setLayout(side_col)
+            body.addWidget(side_wrap)
+            layout.addLayout(body)
+            layout.addWidget(self._build_project_home_gate_notice())
+
+            hidden_contract = QWidget()
+            hidden_contract.setVisible(False)
+            hidden_layout = QVBoxLayout(hidden_contract)
+            hidden_layout.setContentsMargins(0, 0, 0, 0)
+            workflow_rows = tuple(
+                (
+                    f"{page.flow_index:02d}" if page.page_group == "main_flow" else "AUX",
+                    page.label,
+                    page.status_key,
+                    page.boundary,
+                )
+                for page in meta_target_ia_pages()
+            )
+            workflow = _readonly_table(
+                "metaProjectHomeWorkflowOverview",
+                ("Step", "Page", "Status", "Gate / boundary"),
+                workflow_rows,
+            )
+            workflow.setMinimumHeight(190)
+            hidden_layout.addWidget(workflow)
+
+            summary = _readonly_table(
+                "metaProjectHomeSummaryTable",
+                ("Area", "Current state", "Gate"),
+                (
+                    ("References", "0 imported", "import required"),
+                    ("Screening", "not started", "draft only"),
+                    ("Extraction", "not started", "manual review required"),
+                    ("Risk of bias", "incomplete", "reviewer controlled"),
+                    ("Formal pooled result", "none", "executor not enabled"),
+                    ("Report-ready", "blocked", "draft workflow only"),
+                    ("Export", "disabled", "formal result missing"),
+                ),
+            )
+            summary.setMinimumHeight(170)
+            hidden_layout.addWidget(summary)
+            layout.addWidget(hidden_contract)
+            return frame
+
+        def _build_project_home_status_chips(self) -> QWidget:
+            wrap = QWidget()
+            wrap.setFixedHeight(30)
+            chip_row = QHBoxLayout(wrap)
+            chip_row.setContentsMargins(0, 0, 0, 0)
+            chip_row.setSpacing(8)
+            for object_name, text, semantic in (
+                ("metaProjectHomeDeveloperPreviewChip", "Developer Preview / 本地测试版", "testing"),
+                ("metaProjectHomeEnglishFirstChip", "English-first processing", "testing"),
+                ("metaProjectHomeAISuggestionChip", "AI suggestion only", "testing"),
+                ("metaProjectHomeReportNotReadyChip", "Report not ready", "blocked"),
+            ):
+                chip = QLabel(text)
+                chip.setObjectName(object_name)
+                chip.setProperty("statusKey", semantic)
+                chip.setStyleSheet(
+                    "background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; color: #9A3412; "
+                    "font-size: 11px; font-weight: 850; padding: 4px 8px;"
+                    if semantic == "blocked"
+                    else "background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px; color: #2563EB; "
+                    "font-size: 11px; font-weight: 850; padding: 4px 8px;"
+                )
+                chip.setFixedHeight(24)
+                chip.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+                chip_row.addWidget(chip)
+            chip_row.addStretch(1)
+            return wrap
+
+        def _build_project_home_workflow_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectHomeCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 14, 16, 16)
+            layout.setSpacing(12)
+            header = QHBoxLayout()
+            title_col = QVBoxLayout()
+            title_col.setSpacing(2)
+            title = QLabel("Meta 工作流程总览")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            subtitle = QLabel("Workflow Overview · 12 步流程")
+            subtitle.setObjectName("metaProjectHomeSectionSubtitle")
+            title_col.addWidget(title)
+            title_col.addWidget(subtitle)
+            header.addLayout(title_col, 1)
+            legend_current = QLabel("● 当前步骤")
+            legend_current.setObjectName("metaProjectHomeMuted")
+            legend_todo = QLabel("○ 待完成")
+            legend_todo.setObjectName("metaProjectHomeMuted")
+            header.addWidget(legend_current)
+            header.addWidget(legend_todo)
+            layout.addLayout(header)
+
+            rows = (
+                (
+                    ("1", "项目首页", "Project Home", "current"),
+                    ("2", "问题与类型", "Question & Meta Type", "todo"),
+                    ("3", "检索策略", "Search Strategy", "todo"),
+                    ("4", "文献导入", "Reference Management", "todo"),
+                    ("5", "去重", "Deduplication", "todo"),
+                    ("6", "筛选", "Screening", "todo"),
+                ),
+                (
+                    ("7", "全文与提取", "Full-text & Extraction", "todo"),
+                    ("8", "数据提取", "Extraction", "todo"),
+                    ("9", "质量评价", "Risk of Bias", "todo"),
+                    ("10", "统计分析", "Analysis Tasks", "todo"),
+                    ("11", "结果报告", "Result & Report", "todo"),
+                    ("12", "报告导出", "Report Export", "todo"),
+                ),
+            )
+            for row_index, step_row in enumerate(rows):
+                row = QHBoxLayout()
+                row.setSpacing(8)
+                for number, zh, en, state in step_row:
+                    row.addWidget(self._project_home_step_label(number, zh, en, state), 1)
+                layout.addLayout(row)
+                if row_index == 0:
+                    divider = QHBoxLayout()
+                    left = QFrame()
+                    left.setFrameShape(QFrame.HLine)
+                    left.setStyleSheet("color: #E5E7EB;")
+                    center = QLabel("Steps 7 - 12")
+                    center.setObjectName("metaProjectHomeMuted")
+                    right = QFrame()
+                    right.setFrameShape(QFrame.HLine)
+                    right.setStyleSheet("color: #E5E7EB;")
+                    divider.addWidget(left, 1)
+                    divider.addWidget(center)
+                    divider.addWidget(right, 1)
+                    layout.addLayout(divider)
             return card
 
-    def _feature_row(feature: FeatureAvailability) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("metaCard")
-        layout = QVBoxLayout(frame)
-        title = QLabel(feature.display_label())
-        title.setObjectName("metaCardTitle")
-        detail = QLabel(feature.description)
-        detail.setWordWrap(True)
-        source = QLabel(f"来源：{feature.legacy_source or '统一壳子占位'}")
-        source.setWordWrap(True)
-        next_step = QLabel(f"下一步：{feature.next_step}")
-        next_step.setWordWrap(True)
-        layout.addWidget(title)
-        layout.addWidget(detail)
-        layout.addWidget(source)
-        layout.addWidget(next_step)
-        return frame
-
-
-    def _scroll_page(widget: QWidget) -> QScrollArea:
-        scroll = QScrollArea()
-        scroll.setObjectName("metaCurrentStepScroll")
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(widget)
-        return scroll
-
-
-    def _project_home_page(state, project_dir: Path, summary: MetaProjectSummary | None, *, on_go_pico: Callable[[], None]) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("metaProjectHomePage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_meta_home_header(summary, "项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
-        action_card = _card("当前项目已打开")
-        action_layout = action_card.layout()
-        action_layout.addWidget(QLabel("下一步：填写研究问题 / PICO"))
-        next_button = QPushButton("继续：研究问题 / PICO")
-        next_button.setObjectName("metaPrimaryButton")
-        next_button.clicked.connect(on_go_pico)
-        action_layout.addWidget(next_button)
-        layout.addWidget(action_card)
-        layout.addWidget(_project_business_summary(project_dir))
-        layout.addWidget(_progress_summary(state))
-        layout.addWidget(_developer_details(_developer_diagnostics_text(state, summary), button_text="开发者诊断"))
-        layout.addStretch(1)
-        return frame
-
-
-    def _no_project_page(step: MetaWorkflowStepState) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("metaNoProjectPage")
-        layout = QVBoxLayout(frame)
-        layout.addWidget(_page_header(step.title_zh, "请先新建或打开 Meta 项目。", "空状态"))
-        layout.addWidget(_info_card("尚未开始", ["请先新建或打开 Meta 项目。", "项目创建前不会写入研究问题、检索策略或文献库。"]))
-        button = QPushButton("继续：研究问题 / PICO")
-        button.setObjectName("metaSecondaryButton")
-        button.setEnabled(False)
-        layout.addWidget(button)
-        layout.addStretch(1)
-        return frame
-
-
-    def _pico_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = PICOWorkspaceService()
-        draft = service.load_draft(project_dir)
-        confirmed = service.load_confirmed(project_dir)
-        ui_draft = _load_json_object(_pico_ui_draft_path(project_dir))
-        frame = QFrame()
-        frame.setObjectName("metaPicoPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("研究问题与 PICO", "输入中文研究问题，选择 PICO/PICOS/PECO，生成草稿并由用户确认 Protocol。", "需要人工确认"))
-        input_card = _card("输入研究问题")
-        input_layout = input_card.layout()
-        question = QPlainTextEdit()
-        question.setObjectName("metaPicoQuestionInput")
-        question.setPlaceholderText("例如：高血压患者降压药对卒中风险的影响")
-        question.setMaximumHeight(96)
-        if draft:
-            question.setPlainText(draft.research_question_original)
-        input_layout.addWidget(question)
-        mode_selector = QComboBox()
-        mode_selector.setObjectName("metaPicoModeSelector")
-        for label, value in (("PICO", "pico"), ("PICOS", "picos"), ("PECO", "peco")):
-            mode_selector.addItem(label, value)
-        selected_mode = draft.pico_mode if draft else "pico"
-        mode_selector.setCurrentIndex(max(0, mode_selector.findData(selected_mode)))
-        input_layout.addWidget(mode_selector)
-        generate = QPushButton("生成 PICO 草稿")
-        generate.setObjectName("metaPrimaryButton")
-        input_layout.addWidget(generate)
-        layout.addWidget(input_card)
-
-        draft_fields = {
-            "population": QLineEdit(draft.population if draft else ""),
-            "intervention": QLineEdit(draft.intervention if draft else ""),
-            "exposure": QLineEdit(draft.exposure if draft else ""),
-            "comparator": QLineEdit(draft.comparator if draft else ""),
-            "outcome": QLineEdit(draft.outcome if draft else ""),
-            "study_design": QLineEdit(draft.study_design if draft else ""),
-            "inclusion_criteria": QLineEdit(str(ui_draft.get("inclusion_criteria") or (_default_inclusion_criteria(draft) if draft else ""))),
-            "exclusion_criteria": QLineEdit(str(ui_draft.get("exclusion_criteria") or ("；".join(draft.exclusion_scope) if draft else ""))),
-            "primary_outcomes": QLineEdit(str(ui_draft.get("primary_outcomes") or (draft.outcome if draft else ""))),
-            "secondary_outcomes": QLineEdit(str(ui_draft.get("secondary_outcomes") or "")),
-            "effect_measure": QLineEdit(str(ui_draft.get("effect_measure") or (_recommended_effect_measure(draft) if draft else ""))),
-        }
-        for key, field in draft_fields.items():
-            field.setObjectName(f"metaPico{''.join(part.title() for part in key.split('_'))}Input")
-        draft_card = _card("PICO / PICOS / PECO 草稿")
-        draft_layout = draft_card.layout()
-        if draft:
-            draft_layout.addWidget(_kv_label("Draft ID", draft.protocol_id))
-            for label, key in (
-                ("P 研究对象", "population"),
-                ("I 干预", "intervention"),
-                ("E 暴露", "exposure"),
-                ("C 对照", "comparator"),
-                ("O 结局", "outcome"),
-                ("S 研究类型", "study_design"),
-                ("纳入标准草稿", "inclusion_criteria"),
-                ("排除标准草稿", "exclusion_criteria"),
-                ("主要结局", "primary_outcomes"),
-                ("次要结局", "secondary_outcomes"),
-                ("推荐效应量类型", "effect_measure"),
-            ):
-                draft_layout.addWidget(QLabel(label))
-                draft_layout.addWidget(draft_fields[key])
-            if draft.warnings:
-                draft_layout.addWidget(_warning_label("；".join(draft.warnings)))
-        else:
-            draft_layout.addWidget(QLabel("尚未生成草稿。"))
-        save = QPushButton("保存草稿编辑")
-        save.setObjectName("metaSecondaryButton")
-        confirm = QPushButton("确认研究问题")
-        confirm.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：检索策略")
-        next_button.setObjectName("metaSecondaryButton")
-        row = QHBoxLayout()
-        row.addWidget(save)
-        row.addWidget(confirm)
-        row.addWidget(next_button)
-        row.addStretch(1)
-        draft_layout.addLayout(row)
-        layout.addWidget(draft_card)
-
-        confirmed_lines = ["尚未确认。"]
-        if confirmed:
-            confirmed_lines = [
-                f"Confirmed ID：{confirmed.confirmed_protocol_id}",
-                f"模式：{confirmed.confirmed_pico_mode}",
-                f"P：{confirmed.confirmed_population}",
-                f"I/E：{confirmed.confirmed_intervention_or_exposure}",
-                f"C：{confirmed.confirmed_comparator}",
-                f"O：{'；'.join(confirmed.confirmed_outcomes)}",
-                f"Meta 类型：{confirmed.confirmed_meta_type}",
-                f"补充说明：{confirmed.user_notes or '无'}",
-            ]
-        layout.addWidget(_info_card("已确认研究问题", confirmed_lines, object_name="metaConfirmedProtocolCard"))
-        layout.addWidget(_developer_details(f"project_dir={project_dir}\ndraft={bool(draft)} confirmed={bool(confirmed)}"))
-        layout.addStretch(1)
-
-        def do_generate() -> None:
-            text = question.toPlainText().strip()
-            if not text:
-                _show_message("请输入研究问题")
-                return
-            service.generate_draft(project_dir, text, pico_mode=str(mode_selector.currentData()), actor="reviewer")
-            on_refresh()
-
-        def do_save() -> None:
-            if not service.load_draft(project_dir):
-                _show_message("请先生成草稿")
-                return
-            service.edit_draft(
-                project_dir,
-                actor="reviewer",
-                updates={
-                    "pico_mode": str(mode_selector.currentData()),
-                    "population": draft_fields["population"].text().strip(),
-                    "intervention": draft_fields["intervention"].text().strip(),
-                    "exposure": draft_fields["exposure"].text().strip(),
-                    "comparator": draft_fields["comparator"].text().strip(),
-                    "outcome": draft_fields["primary_outcomes"].text().strip() or draft_fields["outcome"].text().strip(),
-                    "study_design": draft_fields["study_design"].text().strip(),
-                    "exclusion_scope": [item.strip() for item in draft_fields["exclusion_criteria"].text().split("；") if item.strip()],
-                },
+        def _project_home_step_label(self, number: str, zh: str, en: str, state: str) -> QLabel:
+            label = QLabel(f"{number}    {zh}\n{en}")
+            label.setObjectName(
+                "metaProjectHomeStepCurrent"
+                if state == "current"
+                else ("metaProjectHomeStepDone" if state == "done" else "metaProjectHomeStepTodo")
             )
-            _save_pico_ui_draft(project_dir, draft_fields)
-            on_refresh()
+            label.setWordWrap(True)
+            label.setMinimumHeight(70)
+            label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            return label
 
-        def do_confirm() -> None:
-            current = service.load_draft(project_dir)
-            if current is None:
-                _show_message("请先生成草稿")
-                return
-            meta_type = _default_meta_type(current.meta_type_candidates)
-            service.confirm_protocol(
-                project_dir,
-                actor="reviewer",
-                confirmed_meta_type=meta_type,
-                user_notes="\n".join(
-                    [
-                        f"纳入标准草稿：{draft_fields['inclusion_criteria'].text().strip()}",
-                        f"排除标准草稿：{draft_fields['exclusion_criteria'].text().strip()}",
-                        f"主要结局：{draft_fields['primary_outcomes'].text().strip()}",
-                        f"次要结局：{draft_fields['secondary_outcomes'].text().strip()}",
-                        f"推荐效应量类型：{draft_fields['effect_measure'].text().strip()}",
-                    ]
+        def _build_project_home_question_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectQuestionCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 14, 16, 16)
+            layout.setSpacing(12)
+            title = QLabel("研究问题草稿 / Research Question Draft")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            layout.addWidget(title)
+            question_row = QHBoxLayout()
+            question_row.setSpacing(10)
+            for heading, body in (
+                ("中文问题", "甲状腺癌患者中 adiponectin 表达或水平是否与预后或临床病理特征相关？"),
+                (
+                    "English Question",
+                    "Is adiponectin expression or circulating adiponectin associated with prognosis or clinicopathological features in thyroid cancer patients?",
                 ),
-                overrides={
-                    "confirmed_pico_mode": str(mode_selector.currentData()),
-                    "confirmed_population": draft_fields["population"].text().strip(),
-                    "confirmed_intervention_or_exposure": draft_fields["exposure"].text().strip() or draft_fields["intervention"].text().strip(),
-                    "confirmed_comparator": draft_fields["comparator"].text().strip(),
-                    "confirmed_outcomes": [
-                        item.strip()
-                        for item in (draft_fields["primary_outcomes"].text() + "；" + draft_fields["secondary_outcomes"].text()).split("；")
-                        if item.strip()
-                    ],
-                    "confirmed_study_design": draft_fields["study_design"].text().strip(),
-                },
+            ):
+                block = QFrame()
+                block.setObjectName("metaProjectHomeCard")
+                block_layout = QVBoxLayout(block)
+                block_layout.setContentsMargins(12, 10, 12, 10)
+                heading_label = QLabel(heading)
+                heading_label.setObjectName("metaProjectHomeMuted")
+                body_label = QLabel(body)
+                body_label.setObjectName("metaProjectHomeSectionSubtitle")
+                body_label.setWordWrap(True)
+                block_layout.addWidget(heading_label)
+                block_layout.addWidget(body_label)
+                question_row.addWidget(block, 1)
+            layout.addLayout(question_row)
+            suggested = QHBoxLayout()
+            suggested.addWidget(QLabel("Suggested type"))
+            for text in ("prognostic_factor_meta", "biomarker_expression_difference_meta"):
+                badge = QLabel(text)
+                badge.setObjectName("metaProjectHomeSummaryTesting")
+                suggested.addWidget(badge)
+            suggested.addStretch(1)
+            layout.addLayout(suggested)
+            notice = QLabel("本界面为非生产环境示例数据（Mockup only），不代表真实证据或分析结果。reviewer manual confirmation is required.")
+            notice.setObjectName("metaProjectHomeMuted")
+            notice.setWordWrap(True)
+            layout.addWidget(notice)
+            return card
+
+        def _build_project_home_summary_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectHomeSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 14, 14, 14)
+            layout.setSpacing(9)
+            title = QLabel("项目摘要")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            subtitle = QLabel("Project Summary")
+            subtitle.setObjectName("metaProjectHomeSectionSubtitle")
+            layout.addWidget(title)
+            layout.addWidget(subtitle)
+            for label, value, state in (
+                ("References", "0 imported", "neutral"),
+                ("Screening", "not started", "neutral"),
+                ("Extraction", "not started", "neutral"),
+                ("Risk of bias", "incomplete", "blocked"),
+                ("Formal result", "none", "blocked"),
+                ("Report-ready", "blocked", "blocked"),
+                ("Export", "disabled", "blocked"),
+            ):
+                row = QHBoxLayout()
+                name = QLabel(label)
+                name.setObjectName("metaProjectHomeMuted")
+                badge = QLabel(value)
+                badge.setObjectName("metaProjectHomeSummaryBlocked" if state == "blocked" else "metaProjectHomeSummaryBadge")
+                row.addWidget(name, 1)
+                row.addWidget(badge)
+                layout.addLayout(row)
+            return card
+
+        def _build_project_home_next_actions_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectHomeSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 14, 14, 14)
+            layout.setSpacing(10)
+            title = QLabel("下一步建议")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            subtitle = QLabel("Next Actions")
+            subtitle.setObjectName("metaProjectHomeSectionSubtitle")
+            layout.addWidget(title)
+            layout.addWidget(subtitle)
+            for index, (title_text, body) in enumerate(
+                (
+                    ("确认研究问题与 Meta 类型", "Confirm research question and Meta type"),
+                    ("生成英文检索式草稿", "Generate English search query draft"),
+                    ("导入参考文献", "Import references"),
+                    ("人工确认筛选规则", "Manually confirm screening criteria"),
+                ),
+                start=1,
+            ):
+                row = QHBoxLayout()
+                number = QLabel(str(index))
+                number.setObjectName("metaProjectHomeActionIndex")
+                number.setFixedSize(22, 22)
+                number.setAlignment(Qt.AlignCenter)
+                text_col = QVBoxLayout()
+                text_col.setSpacing(1)
+                title_label = QLabel(title_text)
+                title_label.setObjectName("metaProjectHomeSectionSubtitle")
+                body_label = QLabel(body)
+                body_label.setObjectName("metaProjectHomeMuted")
+                body_label.setWordWrap(True)
+                text_col.addWidget(title_label)
+                text_col.addWidget(body_label)
+                row.addWidget(number)
+                row.addLayout(text_col, 1)
+                layout.addLayout(row)
+            return card
+
+        def _build_project_home_gate_notice(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaProjectGateNotice")
+            layout = QHBoxLayout(card)
+            layout.setContentsMargins(16, 14, 16, 14)
+            layout.setSpacing(12)
+            text_col = QVBoxLayout()
+            text_col.setSpacing(6)
+            title = QLabel("重要提示 / Gate Notice")
+            title.setObjectName("metaProjectHomeSectionTitle")
+            text_col.addWidget(title)
+            for text in (
+                "中文输入可辅助生成英文检索式，但当前仅保留英文优先的本地草稿流程。",
+                "AI suggestion 仅供参考，不能替代人工筛选、提取、偏倚风险判断或结论。",
+                "当前没有正式统计结果、正式图表、report-ready package 或文件导出。",
+                "网络 Meta（Network Meta）暂不启用。",
+                "本界面为 Developer Preview，仅供流程设计与演示。",
+            ):
+                item = QLabel(f"• {text}")
+                item.setObjectName("metaProjectHomeMuted")
+                item.setWordWrap(True)
+                text_col.addWidget(item)
+            layout.addLayout(text_col, 1)
+            button = QPushButton("了解边界 / View Boundaries")
+            button.setObjectName("metaProjectHomeBoundaryButton")
+            button.setProperty("formalActionEnabled", False)
+            button.setEnabled(False)
+            layout.addWidget(button, 0, Qt.AlignTop)
+            return card
+
+        def _build_question_type_draft_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaQuestionTypeDraftPanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "question_meta_type")
+            frame.setProperty("runtimeStatus", "testing")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("networkMetaState", "planned_disabled")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setMinimumWidth(340)
+            frame.setMaximumWidth(370)
+            frame.setMaximumHeight(500)
+            frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Maximum)
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(12)
+
+            header_wrap = QWidget()
+            header_wrap.setFixedHeight(24)
+            header = QHBoxLayout(header_wrap)
+            header.setContentsMargins(0, 0, 0, 0)
+            badge = QLabel("1")
+            badge.setObjectName("metaQuestionStepBadge")
+            badge.setFixedSize(20, 20)
+            badge.setAlignment(Qt.AlignCenter)
+            title = QLabel("研究问题 / Research Question")
+            title.setObjectName("metaQuestionSectionTitle")
+            header.addWidget(badge)
+            header.addWidget(title)
+            header.addStretch(1)
+            layout.addWidget(header_wrap)
+
+            question_label = QLabel("研究问题（中文）")
+            question_label.setObjectName("metaQuestionSectionTitle")
+            layout.addWidget(question_label)
+            textarea = QLabel("请用中文简要描述您的研究问题，例如：\n某药物对癌症患者生存率的影响。\n\n\n\n0/500")
+            textarea.setObjectName("metaQuestionTextarea")
+            textarea.setMinimumHeight(128)
+            textarea.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            layout.addWidget(textarea)
+
+            ai_card = QFrame()
+            ai_card.setObjectName("metaQuestionAISuggestionCard")
+            ai_layout = QVBoxLayout(ai_card)
+            ai_layout.setContentsMargins(12, 10, 12, 10)
+            ai_layout.setSpacing(8)
+            ai_header = QHBoxLayout()
+            ai_title = QLabel("研究问题建议（英文）")
+            ai_title.setObjectName("metaQuestionSectionTitle")
+            ai_badge = QLabel("AI 建议，仅供参考")
+            ai_badge.setObjectName("metaProjectHomeSummaryTesting")
+            shuffle = QLabel("换一换")
+            shuffle.setObjectName("metaQuestionMuted")
+            ai_header.addWidget(ai_title)
+            ai_header.addWidget(ai_badge)
+            ai_header.addStretch(1)
+            ai_header.addWidget(shuffle)
+            ai_layout.addLayout(ai_header)
+            ai_body = QLabel("What is the effect of [intervention/exposure] on\n[outcome] in [population]?")
+            ai_body.setObjectName("metaQuestionSectionSubtitle")
+            ai_body.setStyleSheet("color: #0369A1; font-size: 12px; font-style: italic;")
+            ai_body.setWordWrap(True)
+            ai_layout.addWidget(ai_body)
+            layout.addWidget(ai_card)
+
+            tips = QFrame()
+            tips.setObjectName("metaQuestionTipsCard")
+            tips_layout = QVBoxLayout(tips)
+            tips_layout.setContentsMargins(12, 10, 12, 10)
+            tips_layout.setSpacing(8)
+            tips_title = QLabel("提示 / Tips")
+            tips_title.setObjectName("metaQuestionSectionTitle")
+            tips_layout.addWidget(tips_title)
+            for text in (
+                "请确保问题包含：研究对象、干预/暴露、结局指标。",
+                "选择最符合您研究目的的 Meta 分析类型。",
+                "不同类型将启用不同的统计方法与结果展示。",
+            ):
+                item = QLabel(f"• {text}")
+                item.setObjectName("metaQuestionTipsText")
+                item.setWordWrap(True)
+                tips_layout.addWidget(item)
+            layout.addWidget(tips)
+
+            legacy_contract = QWidget()
+            legacy_contract.setVisible(False)
+            legacy_layout = QVBoxLayout(legacy_contract)
+            legacy_layout.setContentsMargins(0, 0, 0, 0)
+
+            chinese = QLabel("中文工作问题：脂联素表达与甲状腺癌预后或诊断价值之间的关系。")
+            chinese.setObjectName("metaChineseWorkingQuestionDraft")
+            chinese.setWordWrap(True)
+            english = QLabel("English question draft: Is adiponectin associated with thyroid cancer diagnosis or prognosis in human studies?")
+            english.setObjectName("metaEnglishQuestionDraft")
+            english.setWordWrap(True)
+            legacy_layout.addWidget(chinese)
+            legacy_layout.addWidget(english)
+
+            pico = _readonly_table(
+                "metaPicoPecoDraftTable",
+                ("Field", "Draft value", "State"),
+                (
+                    ("Population", "Adults with thyroid cancer or thyroid nodules", "draft"),
+                    ("Exposure / Index", "Adiponectin expression or circulating adiponectin", "draft"),
+                    ("Comparator", "Benign tissue, healthy control, low-expression group", "draft"),
+                    ("Outcome", "Diagnostic accuracy, expression difference, prognosis", "draft"),
+                    ("Study type", "Human observational studies", "draft"),
+                ),
             )
-            on_refresh()
+            pico.setMinimumHeight(146)
+            legacy_layout.addWidget(pico)
 
-        generate.clicked.connect(do_generate)
-        save.clicked.connect(do_save)
-        confirm.clicked.connect(do_confirm)
-        next_button.clicked.connect(on_next)
-        return frame
+            suggested = QLabel("Suggested Meta type draft: Prognostic factor meta or Biomarker expression difference meta. AI suggestion is advisory only.")
+            suggested.setObjectName("metaSuggestedMetaTypeDraft")
+            suggested.setWordWrap(True)
+            suggested.setStyleSheet("border: 1px solid #BFD7FF; border-radius: 6px; padding: 6px 8px; background: #EFF6FF;")
+            legacy_layout.addWidget(suggested)
 
-
-    def _search_strategy_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = SearchStrategyBuilderService()
-        drafts = list(service.load_drafts(project_dir))
-        confirmed = list(service.load_confirmed(project_dir))
-        draft_by_database = {draft.database: draft for draft in drafts}
-        confirmed_by_database = {item.database: item for item in confirmed}
-        frame = QFrame()
-        frame.setObjectName("metaSearchStrategyPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        confirmed_protocol = PICOWorkspaceService().load_confirmed(project_dir)
-        layout.addWidget(_page_header("检索策略", "读取已确认 Protocol，生成可人工复核的多数据库检索草稿。", "草稿阶段"))
-        if not (project_dir / "protocol" / "pico_workspace_confirmed.json").exists():
-            layout.addWidget(_info_card("请先确认研究问题", ["没有 confirmed protocol 时不能生成正式检索策略草稿。"]))
+            card_grid = QGridLayout()
+            card_grid.setHorizontalSpacing(8)
+            card_grid.setVerticalSpacing(8)
+            candidate_cards = (
+                ("prognostic_factor_meta", "Prognostic factor meta", "draft choice"),
+                ("biomarker_expression_difference_meta", "Biomarker expression difference meta", "draft choice"),
+                ("diagnostic_accuracy_meta", "Diagnostic accuracy meta", "draft choice"),
+                ("intervention_effect_meta", "Intervention effect meta", "draft choice"),
+                ("adverse_event_meta", "Adverse event meta", "draft choice"),
+                ("other_meta_type", "Other meta type", "draft choice"),
+            )
+            for index, (type_id, label, state) in enumerate(candidate_cards):
+                card = QFrame()
+                card.setObjectName("metaQuestionTypeCandidateCard")
+                card.setProperty("typeId", type_id)
+                card.setProperty("state", state)
+                card.setProperty("formalActionEnabled", False)
+                card.setMinimumHeight(78)
+                card.setStyleSheet("QFrame#metaQuestionTypeCandidateCard { border: 1px solid #CBD5E1; border-radius: 8px; background: #F8FAFC; }")
+                card_layout = QVBoxLayout(card)
+                card_layout.setContentsMargins(10, 8, 10, 8)
+                candidate_label = QLabel(label)
+                candidate_label.setObjectName("metaQuestionTypeCandidateLabel")
+                candidate_label.setWordWrap(True)
+                state_label = QLabel(state)
+                state_label.setObjectName("metaQuestionTypeCandidateState")
+                state_label.setStyleSheet("color: #64748B;")
+                card_layout.addWidget(candidate_label)
+                card_layout.addWidget(state_label)
+                card_grid.addWidget(card, index // 3, index % 3)
+            legacy_layout.addLayout(card_grid)
+            layout.addWidget(legacy_contract)
             layout.addStretch(1)
             return frame
-        if confirmed_protocol:
-            layout.addWidget(
-                _info_card(
-                    "已确认 Protocol",
-                    [
-                        f"研究类型：{confirmed_protocol.confirmed_pico_mode.upper()}",
-                        f"研究对象：{confirmed_protocol.confirmed_population or '待补充'}",
-                        f"干预/暴露：{confirmed_protocol.confirmed_intervention_or_exposure or '待补充'}",
-                        f"对照：{confirmed_protocol.confirmed_comparator or '待补充'}",
-                        f"结局：{'；'.join(confirmed_protocol.confirmed_outcomes) or '待补充'}",
-                        "下一阶段将基于该方案生成检索策略",
-                    ],
-                    object_name="metaSearchConfirmedProtocolCard",
-                )
+
+        def _build_meta_type_selection_panel(self) -> QFrame:
+            panel = QFrame()
+            panel.setObjectName("metaTypeSelectionPanel")
+            layout = QVBoxLayout(panel)
+            layout.setContentsMargins(20, 12, 20, 16)
+            layout.setSpacing(12)
+
+            header = QHBoxLayout()
+            badge = QLabel("2")
+            badge.setObjectName("metaQuestionStepBadge")
+            badge.setProperty("semantic", "green")
+            badge.setFixedSize(20, 20)
+            badge.setAlignment(Qt.AlignCenter)
+            title = QLabel("Meta 类型选择 / Select Meta Type")
+            title.setObjectName("metaQuestionSectionTitle")
+            header.addWidget(badge)
+            header.addWidget(title)
+            header.addStretch(1)
+            layout.addLayout(header)
+            description = QLabel("请选择最符合您研究问题的 Meta 分析类型。")
+            description.setObjectName("metaQuestionMuted")
+            layout.addWidget(description)
+
+            hidden_groups = QWidget()
+            hidden_groups.setVisible(False)
+            hidden_group_layout = QVBoxLayout(hidden_groups)
+            hidden_group_layout.setContentsMargins(0, 0, 0, 0)
+            for text in ("结局型 Meta", "流行病学 Meta", "诊断与关联 Meta", "关联与预后 Meta", "Testing schema"):
+                label = QLabel(text)
+                label.setObjectName("metaTypeGroupTitle")
+                hidden_group_layout.addWidget(label)
+            layout.addWidget(hidden_groups)
+
+            self._active_type_cards: dict[str, QFrame] = {}
+            active_types = {item.type_id: item for item in meta_active_types_v1()}
+            groups = (
+                ("疗效 / 效果类", ("binary_outcome_meta", "continuous_outcome_meta", "survival_outcome_meta")),
+                ("发生率 / 诊断类", ("prevalence_incidence_meta", "diagnostic_accuracy_meta", "exposure_disease_risk_meta")),
+                ("生物标志物 / 相关性类", ("biomarker_expression_difference_meta", "correlation_meta", "prognostic_factor_meta")),
+                ("剂量反应类", ("dose_response_meta",)),
             )
-        workbench = _card("检索策略工作台")
-        workbench_layout = workbench.layout()
-        split = QHBoxLayout()
-        database_list = QListWidget()
-        database_list.setObjectName("metaSearchDatabaseList")
-        for database in _search_database_order():
-            draft = draft_by_database.get(database)
-            item = QListWidgetItem(f"{_database_label(database)} · {_search_strategy_status(draft, confirmed_by_database.get(database))}")
-            item.setData(Qt.ItemDataRole.UserRole, database)
-            database_list.addItem(item)
-        split.addWidget(database_list, 1)
-
-        editor_panel = QFrame()
-        editor_layout = QVBoxLayout(editor_panel)
-        selected_database_label = QLabel("请选择数据库")
-        selected_database_label.setObjectName("metaSearchSelectedDatabaseLabel")
-        editor = QPlainTextEdit()
-        editor.setObjectName("metaSearchQueryEditor")
-        editor.setPlaceholderText("生成检索策略后可编辑当前数据库检索式。")
-        status_label = QLabel("状态：未生成")
-        status_label.setObjectName("metaSearchStatusLabel")
-        status_label.setWordWrap(True)
-        database_notice = QLabel("")
-        database_notice.setObjectName("metaMutedText")
-        database_notice.setWordWrap(True)
-        editor_layout.addWidget(selected_database_label)
-        editor_layout.addWidget(editor)
-        editor_layout.addWidget(status_label)
-        editor_layout.addWidget(database_notice)
-        split.addWidget(editor_panel, 3)
-        workbench_layout.addLayout(split)
-
-        actions = QHBoxLayout()
-        generate = QPushButton("生成检索策略")
-        generate.setObjectName("metaPrimaryButton")
-        save_edit = QPushButton("保存当前编辑")
-        save_edit.setObjectName("metaSecondaryButton")
-        confirm_one = QPushButton("确认当前检索式")
-        confirm_one.setObjectName("metaSecondaryButton")
-        confirm_all = QPushButton("确认全部检索式")
-        confirm_all.setObjectName("metaSecondaryButton")
-        export = QPushButton("导出 TXT / MD / JSON")
-        export.setObjectName("metaSecondaryButton")
-        copy_query = QPushButton("复制检索式")
-        copy_query.setObjectName("metaSecondaryButton")
-        pubmed_execute = QPushButton("执行 PubMed testing-level 检索")
-        pubmed_execute.setObjectName("metaPubMedExecuteButton")
-        next_button = QPushButton("下一步：文献库与导入")
-        next_button.setObjectName("metaSecondaryButton")
-        for button in (generate, save_edit, confirm_one, confirm_all, export, copy_query, pubmed_execute, next_button):
-            actions.addWidget(button)
-        actions.addStretch(1)
-        workbench_layout.addLayout(actions)
-        layout.addWidget(workbench)
-
-        preview = _latest_pubmed_preview_payload(project_dir)
-        execution_report = _load_json_object(project_dir / "protocol" / "search_execution_report.json")
-        candidate_card = _card("PubMed 候选文献")
-        candidate_layout = candidate_card.layout()
-        candidate_summary = QLabel(_pubmed_preview_summary(preview, execution_report=execution_report))
-        candidate_summary.setObjectName("metaMutedText")
-        candidate_summary.setWordWrap(True)
-        candidate_layout.addWidget(candidate_summary)
-        candidate_table = QTableWidget()
-        candidate_table.setObjectName("metaPubMedCandidateTable")
-        candidate_table.setColumnCount(8)
-        candidate_table.setHorizontalHeaderLabels(["序号", "PMID", "年份", "第一作者", "标题", "期刊", "摘要", "处理状态"])
-        candidate_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        candidate_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
-        candidate_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        candidate_table.setAlternatingRowColors(True)
-        candidate_detail = QTextEdit()
-        candidate_detail.setObjectName("metaPubMedCandidateDetail")
-        candidate_detail.setReadOnly(True)
-        candidate_detail.setPlainText("请选择一条候选文献以查看英文标题和摘要。")
-        user_note = QPlainTextEdit()
-        user_note.setObjectName("metaPubMedCandidateUserNote")
-        user_note.setPlaceholderText("用户备注，仅显示在当前界面，不参与检索、识别或去重。")
-        user_note.setMaximumHeight(70)
-        candidate_page_info = QLabel(_pubmed_page_info_text(preview, execution_report=execution_report))
-        candidate_page_info.setObjectName("metaMutedText")
-        candidate_page_info.setWordWrap(True)
-        candidate_layout.addWidget(candidate_page_info)
-        candidate_actions = QHBoxLayout()
-        select_all = QPushButton("全选")
-        clear_selection = QPushButton("取消全选")
-        import_selected = QPushButton("选择加入文献库")
-        ignore_batch = QPushButton("忽略本批次")
-        for button in (select_all, clear_selection, import_selected, ignore_batch):
-            button.setObjectName("metaSecondaryButton")
-            candidate_actions.addWidget(button)
-        candidate_actions.addStretch(1)
-        candidate_layout.addLayout(candidate_actions)
-        candidate_layout.addWidget(candidate_table)
-        candidate_layout.addWidget(candidate_detail)
-        candidate_layout.addWidget(user_note)
-        layout.addWidget(candidate_card)
-
-        layout.addWidget(
-            _info_card(
-                "导出与限制",
-                [
-                    f"已生成草稿：{len(drafts)} 个数据库",
-                    f"已确认检索式：{len(confirmed)} 个数据库",
-                    "PubMed 仅为 testing-level 在线执行；其他数据库支持检索式生成、编辑、确认、复制和导出。",
-                ],
-                object_name="metaConfirmedSearchCard",
-            )
-        )
-        layout.addWidget(_developer_details(f"drafts={len(drafts)} confirmed={len(confirmed)} project_dir={project_dir}"))
-        layout.addStretch(1)
-
-        def selected_database() -> str:
-            item = database_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item else "pubmed"
-
-        def update_editor(_index: int = 0) -> None:
-            database = selected_database()
-            draft = draft_by_database.get(database)
-            confirmed_strategy = confirmed_by_database.get(database)
-            selected_database_label.setText(_database_label(database))
-            editor.setPlainText(draft.boolean_query if draft else "")
-            status_label.setText(f"状态：{_search_strategy_status(draft, confirmed_strategy)}")
-            database_notice.setText(_database_manual_notice(database))
-            has_confirmed_pubmed = database == "pubmed" and confirmed_strategy is not None and bool(confirmed_strategy.confirmed_query)
-            pubmed_execute.setVisible(database == "pubmed")
-            pubmed_execute.setEnabled(has_confirmed_pubmed)
-            save_edit.setEnabled(draft is not None)
-            confirm_one.setEnabled(draft is not None)
-            copy_query.setEnabled(bool(draft and draft.boolean_query))
-
-        def do_generate() -> None:
-            try:
-                service.generate_from_confirmed_protocol(project_dir, actor="reviewer")
-            except Exception as exc:
-                _show_message(str(exc))
-                return
-            on_refresh()
-
-        def do_save_edit() -> None:
-            database = selected_database()
-            draft = draft_by_database.get(database)
-            if draft is None:
-                _show_message("请先生成检索策略")
-                return
-            service.edit_draft(project_dir, search_strategy_id=draft.search_strategy_id, updates={"boolean_query": editor.toPlainText()}, actor="reviewer")
-            on_refresh()
-
-        def do_confirm_one() -> None:
-            database = selected_database()
-            try:
-                service.confirm_strategies(project_dir, actor="reviewer", database_ids=(database,))
-            except Exception as exc:
-                _show_message(str(exc))
-                return
-            on_refresh()
-
-        def do_confirm_all() -> None:
-            try:
-                service.confirm_strategies(project_dir, actor="reviewer")
-            except Exception as exc:
-                _show_message(str(exc))
-                return
-            on_refresh()
-
-        def do_export() -> None:
-            try:
-                md_path, txt_path = service.export_drafts(project_dir)
-                json_path = service.draft_set_path(project_dir)
-            except Exception as exc:
-                _show_message(str(exc))
-                return
-            _show_message(
-                "已导出到项目目录："
-                + "；".join(
-                    str(path.relative_to(project_dir))
-                    for path in (txt_path, md_path, json_path)
-                )
-            )
-
-        def do_copy_query() -> None:
-            clipboard = QApplication.clipboard() if QApplication is not None else None
-            if clipboard is not None:
-                clipboard.setText(editor.toPlainText())
-
-        def do_pubmed_execute() -> None:
-            confirmed_strategy = confirmed_by_database.get("pubmed")
-            if confirmed_strategy is None or not confirmed_strategy.confirmed_query.strip():
-                _show_message("请先确认 PubMed 检索式。")
-                return
-            execution = PubMedSearchService().search_pubmed(confirmed_strategy.confirmed_query, max_results=20)
-            report_path = _write_pubmed_execution_report(project_dir, execution)
-            preview = PubMedCandidatesHandoffService().create_candidates_preview(
-                project_dir,
-                execution=execution,
-                execution_report_path=str(report_path.relative_to(project_dir)),
-                search_strategy_snapshot_path=str(service.confirmed_set_path(project_dir).relative_to(project_dir)),
-                project_id=project_dir.name,
-            )
-            _show_message(f"PubMed testing-level 检索完成：候选 {len(preview.candidates)} 条。")
-            on_refresh()
-
-        preview_candidates = _items_from_payload(preview, "candidates")
-        row_candidates: list[dict[str, object]] = []
-
-        def populate_candidate_table() -> None:
-            row_candidates.clear()
-            row_candidates.extend(preview_candidates)
-            candidate_table.setRowCount(len(row_candidates))
-            for row, candidate in enumerate(row_candidates):
-                values = [
-                    str(row + 1),
-                    str(candidate.get("pmid") or "-"),
-                    str(candidate.get("year") or "-"),
-                    _first_author(candidate) or "-",
-                    str(candidate.get("title") or "Untitled"),
-                    str(candidate.get("journal") or "-"),
-                    "有摘要" if str(candidate.get("abstract") or "").strip() else "无摘要",
-                    _pubmed_candidate_status_label(candidate),
-                ]
-                for col, value in enumerate(values):
-                    item = QTableWidgetItem(value)
-                    if col == 0:
-                        item.setData(Qt.ItemDataRole.UserRole, str(candidate.get("candidate_id", "")))
-                    candidate_table.setItem(row, col, item)
-
-        def update_candidate_detail(row: int = -1, _col: int = 0) -> None:
-            if row < 0 or row >= len(row_candidates):
-                candidate_detail.setPlainText("请选择一条候选文献以查看英文标题和摘要。")
-                return
-            candidate_detail.setPlainText(_candidate_detail_text(row_candidates[row]))
-
-        def do_import_selected() -> None:
-            preview_id = str(preview.get("preview_id", ""))
-            selected_rows = _selected_table_rows(candidate_table)
-            selected_ids = tuple(
-                str(row_candidates[row].get("candidate_id", ""))
-                for row in selected_rows
-                if 0 <= row < len(row_candidates)
-            )
-            if not preview_id or not selected_ids:
-                _show_message("请先选择候选文献。")
-                return
-            result = PubMedCandidatesHandoffService().import_selected_candidates(
-                project_dir,
-                preview_id=preview_id,
-                selected_candidate_ids=selected_ids,
-                actor="reviewer",
-            )
-            _show_message(result.message)
-            on_refresh()
-
-        def do_ignore_batch() -> None:
-            candidate_table.clearSelection()
-            candidate_detail.setPlainText("请选择一条候选文献以查看英文标题和摘要。")
-            _show_message("已忽略当前候选批次；未写入文献库。")
-
-        database_list.currentRowChanged.connect(update_editor)
-        generate.clicked.connect(do_generate)
-        save_edit.clicked.connect(do_save_edit)
-        confirm_one.clicked.connect(do_confirm_one)
-        confirm_all.clicked.connect(do_confirm_all)
-        export.clicked.connect(do_export)
-        copy_query.clicked.connect(do_copy_query)
-        pubmed_execute.clicked.connect(do_pubmed_execute)
-        next_button.clicked.connect(on_next)
-        select_all.clicked.connect(candidate_table.selectAll)
-        clear_selection.clicked.connect(candidate_table.clearSelection)
-        import_selected.clicked.connect(do_import_selected)
-        ignore_batch.clicked.connect(do_ignore_batch)
-        candidate_table.cellClicked.connect(update_candidate_detail)
-        database_list.setCurrentRow(0)
-        populate_candidate_table()
-        return frame
-
-
-    def _literature_acquisition_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        preview_paths = sorted((project_dir / "protocol" / "pubmed_candidates").glob("*_candidates_preview.json"))
-        library = LiteratureLibraryService()
-        records = library.list_records(project_dir)
-        manifest = library.read_manifest(project_dir)
-        library_diagnostics = _literature_library_diagnostics(project_dir, records=records)
-        frame = QFrame()
-        frame.setObjectName("metaLiteratureAcquisitionPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("文献库与导入", "PubMed candidates 和本地 NBIB/RIS/CSV 导入；不把数据库检索伪装为已执行。", "人工导入"))
-        candidate_card = _card("PubMed candidates preview")
-        candidate_layout = candidate_card.layout()
-        preview_selector = QComboBox()
-        preview_selector.setObjectName("metaPubMedPreviewSelector")
-        candidate_list = QListWidget()
-        candidate_list.setObjectName("metaPubMedCandidateList")
-        candidate_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        candidate_detail = QTextEdit()
-        candidate_detail.setObjectName("metaLiteraturePubMedCandidateDetail")
-        candidate_detail.setReadOnly(True)
-        previews = [_load_json_object(path) for path in preview_paths]
-        for path, preview in zip(preview_paths, previews):
-            preview_id = str(preview.get("preview_id") or path.name.replace("_candidates_preview.json", ""))
-            preview_selector.addItem(f"{preview_id} · {len(_items_from_payload(preview, 'candidates'))} 条", preview_id)
-        candidate_layout.addWidget(preview_selector)
-        selection_row = QHBoxLayout()
-        select_all = QPushButton("全选")
-        clear_selection = QPushButton("取消全选")
-        ignore_batch = QPushButton("忽略本批次")
-        for button in (select_all, clear_selection, ignore_batch):
-            button.setObjectName("metaSecondaryButton")
-            selection_row.addWidget(button)
-        selection_row.addStretch(1)
-        candidate_layout.addLayout(selection_row)
-        candidate_layout.addWidget(candidate_list)
-        import_selected = QPushButton("导入选中文献")
-        import_selected.setObjectName("metaPrimaryButton")
-        candidate_layout.addWidget(import_selected)
-        candidate_layout.addWidget(candidate_detail)
-        layout.addWidget(candidate_card)
-        local_card = _card("本地文献导入")
-        local_layout = local_card.layout()
-        local_layout.addWidget(QLabel("支持 NBIB / RIS / CSV / PubMed XML。其他格式仅按 testing-level preview 解析，不做过度承诺。"))
-        import_file = QPushButton("选择文件导入")
-        import_file.setObjectName("metaSecondaryButton")
-        local_layout.addWidget(import_file)
-        layout.addWidget(local_card)
-        layout.addWidget(_info_card("文献库摘要", _literature_import_summary_lines(project_dir, manifest), object_name="metaImportBatchSummary"))
-        layout.addWidget(_info_card("文献库诊断", _literature_diagnostics_lines(library_diagnostics), object_name="metaLiteratureDiagnosticsSummary"))
-        layout.addWidget(_info_card("最近导入诊断", _latest_multisource_diagnostics_lines(project_dir), object_name="metaImportDiagnosticsSummary"))
-
-        library_card = _card("文献列表")
-        library_layout = library_card.layout()
-        filter_row = QHBoxLayout()
-        search_input = QLineEdit()
-        search_input.setObjectName("metaLiteratureSearchInput")
-        search_input.setPlaceholderText("搜索标题 / 作者 / DOI / PMID")
-        source_filter = QComboBox()
-        source_filter.setObjectName("metaLiteratureSourceFilter")
-        source_filter.addItem("全部来源", "")
-        for source in _literature_source_filter_values(records):
-            source_filter.addItem(_source_label(source), source)
-        missing_filter = QComboBox()
-        missing_filter.setObjectName("metaLiteratureMissingFilter")
-        for label, value in (
-            ("全部字段", ""),
-            ("缺 DOI", "doi"),
-            ("缺 PMID", "pmid"),
-            ("缺 Abstract", "abstract"),
-            ("缺年份", "year"),
-            ("缺期刊", "journal"),
-        ):
-            missing_filter.addItem(label, value)
-        export_summary = QPushButton("导出文献库摘要")
-        export_summary.setObjectName("metaSecondaryButton")
-        filter_row.addWidget(search_input, 2)
-        filter_row.addWidget(source_filter)
-        filter_row.addWidget(missing_filter)
-        filter_row.addWidget(export_summary)
-        library_layout.addLayout(filter_row)
-        literature_table = QTableWidget()
-        literature_table.setObjectName("metaLiteratureRecordsTable")
-        literature_table.setColumnCount(8)
-        literature_table.setHorizontalHeaderLabels(["标题", "年份", "期刊", "PMID", "DOI", "来源", "Abstract", "状态"])
-        literature_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        literature_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        library_layout.addWidget(literature_table)
-        detail = QTextEdit()
-        detail.setObjectName("metaLiteratureDetailPanel")
-        detail.setReadOnly(True)
-        note_input = QPlainTextEdit()
-        note_input.setObjectName("metaLiteratureUserNote")
-        note_input.setPlaceholderText("用户备注，仅作为人工备注保存，不参与检索、去重、筛选、提取或统计。")
-        note_input.setMaximumHeight(80)
-        save_note = QPushButton("保存备注")
-        save_note.setObjectName("metaSecondaryButton")
-        library_layout.addWidget(detail)
-        library_layout.addWidget(note_input)
-        library_layout.addWidget(save_note)
-        layout.addWidget(library_card)
-
-        next_button = QPushButton("下一步：去重与筛选")
-        next_button.setObjectName("metaSecondaryButton")
-        layout.addWidget(next_button)
-        layout.addWidget(_developer_details(f"previews={len(previews)} project_dir={project_dir}"))
-        layout.addStretch(1)
-
-        def load_preview(index: int = 0) -> None:
-            candidate_list.clear()
-            if index < 0 or index >= len(previews):
-                return
-            preview = previews[index]
-            for candidate in _items_from_payload(preview, "candidates"):
-                candidate_id = str(candidate.get("candidate_id", ""))
-                text = f"{candidate.get('title') or 'Untitled'} · PMID {candidate.get('pmid') or '-'}"
-                item = QListWidgetItem(text)
-                item.setData(Qt.ItemDataRole.UserRole, candidate_id)
-                item.setToolTip(_candidate_detail_text(candidate))
-                candidate_list.addItem(item)
-            update_detail()
-
-        def update_detail() -> None:
-            index = candidate_list.currentRow()
-            if index < 0:
-                candidate_detail.setPlainText("暂无候选文献。")
-                return
-            preview_index = preview_selector.currentIndex()
-            if preview_index < 0 or preview_index >= len(previews):
-                candidate_detail.setPlainText("暂无候选文献。")
-                return
-            candidates = _items_from_payload(previews[preview_index], "candidates")
-            candidate_detail.setPlainText(_candidate_detail_text(candidates[index] if index < len(candidates) else {}))
-
-        def do_import_selected() -> None:
-            preview_id = preview_selector.currentData()
-            selected_ids = []
-            for item in candidate_list.selectedItems():
-                selected_ids.append(str(item.data(Qt.ItemDataRole.UserRole)))
-            if not preview_id or not selected_ids:
-                _show_message("请选择 PubMed candidates")
-                return
-            result = PubMedCandidatesHandoffService().import_selected_candidates(
-                project_dir,
-                preview_id=str(preview_id),
-                selected_candidate_ids=tuple(selected_ids),
-                actor="reviewer",
-            )
-            _show_message(result.message)
-            on_refresh()
-
-        def do_import_file() -> None:
-            filename, _ = QFileDialog.getOpenFileName(frame, "选择文献文件", str(project_dir), "Literature (*.nbib *.ris *.csv *.xml);;All files (*)")
-            if not filename:
-                return
-            result = MultiSourceLiteratureImportService().import_file(project_dir, source_path=Path(filename), source_format="auto")
-            _show_message(result.message)
-            on_refresh()
-
-        row_records: list[dict[str, object]] = []
-
-        def populate_literature_table() -> None:
-            row_records.clear()
-            for record in records:
-                if _record_matches_literature_filters(
-                    record,
-                    query=search_input.text(),
-                    source_type=str(source_filter.currentData() or ""),
-                    missing_field=str(missing_filter.currentData() or ""),
-                ):
-                    row_records.append(record)
-            literature_table.setRowCount(len(row_records))
-            for row, record in enumerate(row_records):
-                values = [
-                    str(record.get("title", "")),
-                    str(record.get("year", "")),
-                    str(record.get("journal") or record.get("publication_title") or ""),
-                    str(record.get("pmid", "")),
-                    str(record.get("doi", "")),
-                    _source_label(str(record.get("source_type") or record.get("source") or "")),
-                    "有" if str(record.get("abstract", "")).strip() else "无",
-                    _record_status_label(record),
-                ]
-                for col, value in enumerate(values):
-                    item = QTableWidgetItem(value)
-                    if col == 0:
-                        item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
-                    literature_table.setItem(row, col, item)
-            update_literature_detail(literature_table.currentRow())
-
-        def update_literature_detail(row: int = 0, _col: int = 0) -> None:
-            if 0 <= row < len(row_records):
-                record = row_records[row]
-                detail.setPlainText(_record_detail(record, user_note=_load_literature_note(project_dir, str(record.get("record_id", "")))))
-                note_input.setPlainText(_load_literature_note(project_dir, str(record.get("record_id", ""))))
-            else:
-                detail.setPlainText("暂无文献。")
-                note_input.setPlainText("")
-
-        def do_save_note() -> None:
-            row = literature_table.currentRow()
-            if row < 0 or row >= len(row_records):
-                _show_message("请先选择文献")
-                return
-            _save_literature_note(project_dir, str(row_records[row].get("record_id", "")), note_input.toPlainText())
-            update_literature_detail(row)
-            _show_message("备注已保存。")
-
-        def do_export_summary() -> None:
-            path = _export_literature_library_summary(project_dir, diagnostics=library_diagnostics, records=records)
-            _show_message(f"已导出：{path}")
-
-        preview_selector.currentIndexChanged.connect(load_preview)
-        candidate_list.currentRowChanged.connect(lambda _row: update_detail())
-        select_all.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, True))
-        clear_selection.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, False))
-        ignore_batch.clicked.connect(lambda: (_set_all_list_items_selected(candidate_list, False), _show_message("已忽略当前候选批次；未写入文献库。")))
-        import_selected.clicked.connect(do_import_selected)
-        import_file.clicked.connect(do_import_file)
-        search_input.textChanged.connect(lambda _text: populate_literature_table())
-        source_filter.currentIndexChanged.connect(lambda _index: populate_literature_table())
-        missing_filter.currentIndexChanged.connect(lambda _index: populate_literature_table())
-        literature_table.cellClicked.connect(update_literature_detail)
-        save_note.clicked.connect(do_save_note)
-        export_summary.clicked.connect(do_export_summary)
-        next_button.clicked.connect(on_next)
-        load_preview(0)
-        populate_literature_table()
-        return frame
-
-
-    def _literature_library_page(project_dir: Path) -> QFrame:
-        service = LiteratureLibraryService()
-        records = service.list_records(project_dir)
-        manifest = service.read_manifest(project_dir)
-        frame = QFrame()
-        frame.setObjectName("metaLiteratureLibraryPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("文献库", "统一 normalized literature library。", "只读"))
-        layout.addWidget(_info_card("文献库摘要", [f"总记录数：{manifest.get('total_records', len(records))}", f"batch 数：{manifest.get('total_batches', 0)}", f"来源分布：{manifest.get('source_counts', {})}"], object_name="metaLibrarySummary"))
-        missing_doi = len([record for record in records if not str(record.get("doi", "")).strip()])
-        missing_pmid = len([record for record in records if not str(record.get("pmid", "")).strip()])
-        missing_abstract = len([record for record in records if not str(record.get("abstract", "")).strip()])
-        layout.addWidget(_info_card("Diagnostics", [f"缺 DOI：{missing_doi}", f"缺 PMID：{missing_pmid}", f"缺摘要：{missing_abstract}"], object_name="metaLibraryDiagnostics"))
-        table = QTableWidget()
-        table.setObjectName("metaLiteratureTable")
-        table.setColumnCount(5)
-        table.setHorizontalHeaderLabels(["题名", "年份", "DOI", "PMID", "来源"])
-        table.setRowCount(len(records))
-        for row, record in enumerate(records):
-            values = [
-                str(record.get("title", "")),
-                str(record.get("year", "")),
-                str(record.get("doi", "")),
-                str(record.get("pmid", "")),
-                str(record.get("source_type", "")),
-            ]
-            for col, value in enumerate(values):
-                table.setItem(row, col, QTableWidgetItem(value))
-        detail = QTextEdit()
-        detail.setObjectName("metaLiteratureDetailPreview")
-        detail.setReadOnly(True)
-        if records:
-            detail.setPlainText(_record_detail(records[0]))
-        layout.addWidget(table)
-        layout.addWidget(detail)
-        layout.addWidget(_developer_details(f"records_path={service.records_path(project_dir)}\nmanifest={manifest}"))
-        layout.addStretch(1)
-
-        def update_detail(row: int, _col: int = 0) -> None:
-            if 0 <= row < len(records):
-                detail.setPlainText(_record_detail(records[row]))
-
-        table.cellClicked.connect(update_detail)
-        return frame
-
-
-    def _dedup_review_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = DedupReviewV2Service()
-        screening_service = TitleAbstractScreeningV2Service()
-        queue = service.load_queue(project_dir)
-        groups = list(queue.groups)
-        decisions_payload = _load_json_object(service.decisions_path(project_dir))
-        decisions = _items_from_payload(decisions_payload, "decisions")
-        decisions_by_group = {str(item.get("group_id", "")): str(item.get("decision", "")) for item in decisions}
-        deduplicated_payload = _load_json_object(service.deduplicated_set_path(project_dir))
-        screening_queue = screening_service.load_queue(project_dir)
-        screening_records = _items_from_payload(screening_queue, "queue_records")
-        screening_decisions = _items_from_payload(_load_json_object(screening_service.decisions_path(project_dir)), "screening_records")
-        screening_decisions_by_record = {str(item.get("record_id", "")): item for item in screening_decisions}
-        screening_summary = screening_service.screening_summary(project_dir)
-        prisma_summary = PRISMAService().collect_literature_acquisition_summary(project_dir)
-        frame = QFrame()
-        frame.setObjectName("metaTitleAbstractScreeningPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("文献筛选", "去重后逐篇完成标题摘要筛选；AI/规则只作为 suggestion。", "人工复核"))
-        risk_counts: dict[str, int] = {}
-        for group in groups:
-            risk_counts[group.risk_level] = risk_counts.get(group.risk_level, 0) + 1
-        layout.addWidget(
-            _info_card(
-                "去重摘要",
-                [
-                    f"重复组：{len(groups)}",
-                    f"风险等级：{_risk_counts_text(risk_counts)}",
-                    f"已保存决定：{len(decisions)}",
-                    f"active record：{deduplicated_payload.get('active_record_count') or deduplicated_payload.get('deduplicated_count') or '未生成'}",
-                    f"待筛选队列：{screening_queue.get('record_count', 0) if isinstance(screening_queue, dict) else 0}",
-                    "不自动删除原始记录。",
-                ],
-                object_name="metaDedupSummary",
-            )
-        )
-        layout.addWidget(_info_card("PRISMA 数字", _stage_m3_prisma_lines(prisma_summary), object_name="metaPrismaDedupSummary"))
-
-        actions = _card("主操作")
-        action_layout = actions.layout()
-        build_queue = QPushButton("生成重复组")
-        build_queue.setObjectName("metaPrimaryButton")
-        save_decision = QPushButton("保存人工决定")
-        save_decision.setObjectName("metaPrimaryButton")
-        generate_deduped = QPushButton("生成去重后文献库")
-        generate_deduped.setObjectName("metaPrimaryButton")
-        build_screening_queue = QPushButton("创建标题摘要筛选队列")
-        build_screening_queue.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：全文管理")
-        next_button.setObjectName("metaSecondaryButton")
-        action_row = QHBoxLayout()
-        action_row.addWidget(build_queue)
-        action_row.addWidget(save_decision)
-        action_row.addWidget(generate_deduped)
-        action_row.addWidget(build_screening_queue)
-        action_row.addWidget(next_button)
-        action_row.addStretch(1)
-        action_layout.addLayout(action_row)
-        layout.addWidget(actions)
-
-        content_row = QHBoxLayout()
-        group_list = QListWidget()
-        group_list.setObjectName("metaDedupGroupList")
-        group_list.setMinimumWidth(320)
-        for group in groups:
-            decision_text = _dedup_decision_label(decisions_by_group.get(group.group_id, ""))
-            item = QListWidgetItem(f"{_risk_label(group.risk_level)} · {decision_text}\n{group.duplicate_rule} · {len(group.record_ids)} 篇")
-            item.setData(Qt.ItemDataRole.UserRole, group.group_id)
-            group_list.addItem(item)
-        content_row.addWidget(group_list, 1)
-
-        right_panel = QFrame()
-        right_panel.setObjectName("metaCard")
-        right_layout = QVBoxLayout(right_panel)
-        detail = QTextEdit()
-        detail.setObjectName("metaDedupGroupDetail")
-        detail.setReadOnly(True)
-        preview = QTextEdit()
-        preview.setObjectName("metaDedupMergePreview")
-        preview.setReadOnly(True)
-        record_selector = QComboBox()
-        record_selector.setObjectName("metaDedupRecordSelector")
-        decision_selector = QComboBox()
-        decision_selector.setObjectName("metaDedupDecisionSelector")
-        for label, value in (
-            ("确认为重复并合并", DECISION_MERGE),
-            ("保留全部", DECISION_KEEP_BOTH),
-            ("标记为不是重复", DECISION_MARK_NOT_DUPLICATE),
-            ("选择主记录", DECISION_SET_MASTER_RECORD),
-            ("跳过稍后处理", DECISION_SKIP),
-        ):
-            decision_selector.addItem(label, value)
-        note = QPlainTextEdit()
-        note.setObjectName("metaDedupDecisionNote")
-        note.setPlaceholderText("人工决定备注")
-        note.setMaximumHeight(80)
-        right_layout.addWidget(QLabel("重复组详情"))
-        right_layout.addWidget(detail)
-        right_layout.addWidget(QLabel("Merge preview"))
-        right_layout.addWidget(preview)
-        right_layout.addWidget(QLabel("保留候选"))
-        right_layout.addWidget(record_selector)
-        right_layout.addWidget(QLabel("人工决定"))
-        right_layout.addWidget(decision_selector)
-        right_layout.addWidget(note)
-        log_detail = QTextEdit()
-        log_detail.setObjectName("metaDedupDecisionLog")
-        log_detail.setReadOnly(True)
-        log_detail.setPlainText(_dedup_log_text(decisions))
-        right_layout.addWidget(QLabel("去重日志"))
-        right_layout.addWidget(log_detail)
-        content_row.addWidget(right_panel, 2)
-        layout.addLayout(content_row)
-
-        screening_card = _card("标题摘要筛选")
-        screening_card.setObjectName("metaScreeningWorkspaceCard")
-        screening_layout = screening_card.layout()
-        screening_layout.addWidget(
-            _info_card(
-                "当前 PRISMA 计数",
-                [
-                    f"导入文献数：{screening_summary.imported_total}",
-                    f"去重后文献数：{screening_summary.after_dedup_total}",
-                    f"标题摘要筛选未筛选：{screening_summary.title_abstract_unscreened}",
-                    f"标题摘要筛选纳入：{screening_summary.title_abstract_included}",
-                    f"标题摘要筛选排除：{screening_summary.title_abstract_excluded}",
-                    f"不确定：{screening_summary.title_abstract_uncertain}",
-                    f"需要全文：{screening_summary.full_text_needed}",
-                    f"全文筛选纳入：{screening_summary.full_text_included}",
-                    f"全文筛选排除：{screening_summary.full_text_excluded}",
-                ],
-                object_name="metaScreeningPrismaCounts",
-            )
-        )
-        screening_content = QHBoxLayout()
-        screening_table = QTableWidget()
-        screening_table.setObjectName("metaScreeningWorkspaceRecordTable")
-        screening_table.setMinimumWidth(520)
-        screening_table.setColumnCount(8)
-        screening_table.setHorizontalHeaderLabels(["序号", "标题", "第一作者", "年份", "期刊", "摘要", "AI 建议", "人工状态"])
-        screening_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        screening_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        screening_table.setAlternatingRowColors(True)
-        screening_content.addWidget(screening_table, 2)
-        screening_panel = _card("当前文献库")
-        screening_panel_layout = screening_panel.layout()
-        screening_detail = QTextEdit()
-        screening_detail.setObjectName("metaScreeningWorkspaceRecordDetail")
-        screening_detail.setReadOnly(True)
-        screening_detail.setPlainText("请选择左侧文献以查看标题、摘要、AI 建议和人工决策区。")
-        ai_suggestion = QTextEdit()
-        ai_suggestion.setObjectName("metaScreeningWorkspaceAISuggestion")
-        ai_suggestion.setReadOnly(True)
-        ai_suggestion.setPlainText("暂无 AI 建议。")
-        screening_decision = QComboBox()
-        screening_decision.setObjectName("metaScreeningWorkspaceDecisionSelector")
-        for label, value in (
-            ("未筛选", DECISION_NOT_SCREENED),
-            ("纳入", DECISION_INCLUDE),
-            ("排除", DECISION_EXCLUDE),
-            ("不确定", DECISION_UNCERTAIN),
-            ("需要全文", DECISION_NEED_FULL_TEXT),
-            ("重置为未筛选", "reset_to_unscreened"),
-        ):
-            screening_decision.addItem(label, value)
-        screening_reason = QComboBox()
-        screening_reason.setObjectName("metaScreeningWorkspaceReasonSelector")
-        screening_reason.addItem("排除原因", "")
-        for code, label in EXCLUSION_REASON_LABELS_ZH.items():
-            screening_reason.addItem(label, code)
-        screening_notes = QPlainTextEdit()
-        screening_notes.setObjectName("metaScreeningWorkspaceNotes")
-        screening_notes.setPlaceholderText("筛选备注；AI/规则建议需人工接受或编辑后才生效")
-        screening_notes.setMaximumHeight(86)
-        quick_actions = QHBoxLayout()
-        include_button = QPushButton("纳入")
-        exclude_button = QPushButton("排除")
-        uncertain_button = QPushButton("不确定")
-        fulltext_button = QPushButton("需要全文")
-        next_unscreened_button = QPushButton("保存并下一篇")
-        for button in (include_button, exclude_button, uncertain_button, fulltext_button, next_unscreened_button):
-            button.setObjectName("metaSecondaryButton")
-            quick_actions.addWidget(button)
-        save_screening_decision = QPushButton("保存筛选决定")
-        save_screening_decision.setObjectName("metaPrimaryButton")
-        screening_panel_layout.addWidget(QLabel("文献信息"))
-        screening_panel_layout.addWidget(screening_detail)
-        screening_panel_layout.addWidget(QLabel("AI 建议"))
-        screening_panel_layout.addWidget(ai_suggestion)
-        screening_panel_layout.addWidget(QLabel("筛选决策"))
-        screening_panel_layout.addWidget(screening_decision)
-        screening_panel_layout.addWidget(QLabel("排除原因"))
-        screening_panel_layout.addWidget(screening_reason)
-        screening_panel_layout.addWidget(screening_notes)
-        screening_panel_layout.addLayout(quick_actions)
-        screening_panel_layout.addWidget(save_screening_decision)
-        screening_content.addWidget(screening_panel, 2)
-        screening_layout.addLayout(screening_content)
-        screening_layout.addWidget(QLabel("下一步：全文管理"))
-        layout.addWidget(screening_card)
-        layout.addWidget(_fulltext_management_page(project_dir, on_refresh=on_refresh, on_next=on_next))
-        layout.addWidget(_developer_details(f"queue_path={service.review_queue_path(project_dir)}\ndecisions_path={service.decisions_path(project_dir)}"))
-        layout.addStretch(1)
-
-        def selected_group_id() -> str:
-            item = group_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
-
-        def refresh_group_detail(index: int = 0) -> None:
-            record_selector.clear()
-            if index < 0 or index >= len(groups):
-                detail.setPlainText("暂无重复组。")
-                preview.setPlainText("请先生成重复组。")
-                return
-            group = groups[index]
-            for record_id in group.record_ids:
-                record_selector.addItem(record_id, record_id)
-            detail.setPlainText(_dedup_group_detail(group.to_dict()))
-            preview_payload = service.preview_merge(project_dir, group_id=group.group_id, selected_record_id=str(record_selector.currentData() or ""))
-            preview.setPlainText(json.dumps(preview_payload, ensure_ascii=False, indent=2))
-
-        def update_preview(_index: int = 0) -> None:
-            group_id = selected_group_id()
-            if not group_id:
-                return
-            preview_payload = service.preview_merge(project_dir, group_id=group_id, selected_record_id=str(record_selector.currentData() or ""))
-            preview.setPlainText(json.dumps(preview_payload, ensure_ascii=False, indent=2))
-
-        def do_build_queue() -> None:
-            result = service.build_review_queue(project_dir, project_id=project_dir.name)
-            _show_message(result.message)
-            on_refresh()
-
-        def do_save_decision() -> None:
-            group_id = selected_group_id()
-            if not group_id:
-                _show_message("请选择重复组")
-                return
-            decision = str(decision_selector.currentData() or DECISION_KEEP_BOTH)
-            merged_record = {}
-            if decision in {DECISION_MERGE, DECISION_SET_MASTER_RECORD}:
-                merged_record = service.preview_merge(project_dir, group_id=group_id, selected_record_id=str(record_selector.currentData() or ""))
-            service.save_decision(
-                project_dir,
-                group_id=group_id,
-                decision=decision,
-                actor="reviewer",
-                selected_record_id=str(record_selector.currentData() or ""),
-                merged_record=merged_record,
-                note=note.toPlainText(),
-            )
-            _show_message("已保存人工去重决定；原始记录已保留。")
-            on_refresh()
-
-        def do_generate_deduped() -> None:
-            result = service.generate_deduplicated_set(project_dir, project_id=project_dir.name)
-            unresolved = len(result.get("unresolved_group_ids", []))
-            if unresolved:
-                _show_message(f"已生成去重后文献库，仍有 {unresolved} 个重复组待处理。")
-            else:
-                _show_message("去重后文献库已生成。")
-            on_refresh()
-
-        def do_build_screening_queue() -> None:
-            skipped_all = bool(groups) and all(decisions_by_group.get(group.group_id) == DECISION_SKIP for group in groups)
-            if not service.deduplicated_set_path(project_dir).exists() and groups and not skipped_all:
-                _show_message("请先生成去重后文献库，或将重复组标记为稍后处理。")
-                return
-            result = screening_service.build_queue(project_dir, project_id=project_dir.name)
-            _show_message(f"筛选队列已创建：{result.record_count} 篇。")
-            on_refresh()
-
-        screening_rows: list[dict[str, object]] = []
-
-        def populate_screening_table() -> None:
-            screening_rows.clear()
-            screening_rows.extend(screening_records)
-            screening_table.setRowCount(len(screening_rows))
-            for row, record in enumerate(screening_rows):
-                decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
-                ai_payload = _screening_ai_suggestion_payload(project_dir, str(record.get("record_id", "")))
-                values = [
-                    str(row + 1),
-                    str(record.get("title") or "Untitled"),
-                    _first_author(record) or "-",
-                    str(record.get("year") or "-"),
-                    str(record.get("journal") or "-"),
-                    "有摘要" if str(record.get("abstract") or "").strip() else "无摘要",
-                    _screening_ai_suggestion_label(ai_payload),
-                    _screening_decision_label(str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED)),
-                ]
-                for col, value in enumerate(values):
-                    item = QTableWidgetItem(value)
-                    if col == 0:
-                        item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
-                    screening_table.setItem(row, col, item)
-
-        def selected_screening_row() -> int:
-            rows = _selected_table_rows(screening_table)
-            return rows[0] if rows else -1
-
-        def selected_screening_record_id() -> str:
-            row = selected_screening_row()
-            return str(screening_rows[row].get("record_id", "")) if 0 <= row < len(screening_rows) else ""
-
-        def refresh_screening_detail(index: int = -1, _col: int = 0) -> None:
-            if index < 0 or index >= len(screening_rows):
-                screening_detail.setPlainText("请选择左侧文献以查看标题、摘要、AI 建议和人工决策区。")
-                ai_suggestion.setPlainText("暂无 AI 建议。")
-                return
-            record = screening_rows[index]
-            decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
-            screening_detail.setPlainText(_screening_record_user_detail(record, decision_payload))
-            ai_suggestion.setPlainText(_screening_ai_suggestion_text(project_dir, str(record.get("record_id", ""))))
-
-        def do_save_screening_decision(*, refresh: bool = True) -> bool:
-            record_id = selected_screening_record_id()
-            if not record_id:
-                _show_message("请选择文献")
-                return False
-            selected_decision = str(screening_decision.currentData() or DECISION_NOT_SCREENED)
-            selected_reason = str(screening_reason.currentData() or "")
-            if selected_decision == DECISION_EXCLUDE and not selected_reason:
-                _show_message("排除必须选择排除原因")
-                return False
-            result = screening_service.save_decision(
-                project_dir,
-                record_id=record_id,
-                decision=selected_decision,
-                actor="reviewer",
-                exclusion_reason_code=selected_reason,
-                notes=screening_notes.toPlainText(),
-            )
-            _show_message(result.message)
-            if refresh:
-                on_refresh()
-            return result.success
-
-        def do_quick_screening(decision: str, *, advance: bool = False) -> None:
-            screening_decision.setCurrentIndex(max(0, screening_decision.findData(decision)))
-            if not advance:
-                do_save_screening_decision()
-                return
-            if not do_save_screening_decision(refresh=False):
-                return
-            next_row = _next_unscreened_screening_row(screening_rows, screening_decisions_by_record, after_row=selected_screening_row())
-            on_refresh()
-            if next_row < 0:
-                return
-
-        group_list.currentRowChanged.connect(refresh_group_detail)
-        record_selector.currentIndexChanged.connect(update_preview)
-        screening_table.cellClicked.connect(refresh_screening_detail)
-        build_queue.clicked.connect(do_build_queue)
-        save_decision.clicked.connect(do_save_decision)
-        generate_deduped.clicked.connect(do_generate_deduped)
-        build_screening_queue.clicked.connect(do_build_screening_queue)
-        save_screening_decision.clicked.connect(do_save_screening_decision)
-        include_button.clicked.connect(lambda: do_quick_screening(DECISION_INCLUDE))
-        exclude_button.clicked.connect(lambda: do_quick_screening(DECISION_EXCLUDE))
-        uncertain_button.clicked.connect(lambda: do_quick_screening(DECISION_UNCERTAIN))
-        fulltext_button.clicked.connect(lambda: do_quick_screening(DECISION_NEED_FULL_TEXT))
-        next_unscreened_button.clicked.connect(lambda: do_quick_screening(str(screening_decision.currentData() or DECISION_NOT_SCREENED), advance=True))
-        next_button.clicked.connect(on_next)
-        group_list.setCurrentRow(0 if groups else -1)
-        refresh_group_detail(group_list.currentRow())
-        populate_screening_table()
-        refresh_screening_detail()
-        return frame
-
-
-    def _exclusion_criteria_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = ExclusionCriteriaLibraryService()
-        reasons = list(service.list_reasons(project_dir, enabled_only=False))
-        enabled_codes = {reason.code for reason in reasons if reason.enabled} or {reason.code for reason in service.list_reasons(project_dir)}
-        frame = QFrame()
-        frame.setObjectName("metaExclusionCriteriaPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("排除标准", "项目级排除理由库；只作为人工筛选选项。", "人工配置"))
-        layout.addWidget(
-            _info_card(
-                "当前状态",
-                [
-                    f"排除理由：{len(reasons)}",
-                    f"已启用：{len(enabled_codes)}",
-                    "不会自动筛选，不推进 PRISMA。",
-                ],
-                object_name="metaExclusionSummary",
-            )
-        )
-        reason_list = QListWidget()
-        reason_list.setObjectName("metaExclusionReasonList")
-        reason_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        for reason in reasons:
-            item = QListWidgetItem(f"{reason.chinese_label} / {reason.english_label}\n{reason.code} · {','.join(reason.applies_to_stage)}")
-            item.setData(Qt.ItemDataRole.UserRole, reason.code)
-            reason_list.addItem(item)
-            item.setSelected(reason.code in enabled_codes)
-        layout.addWidget(reason_list)
-        custom_card = _card("新增自定义理由")
-        custom_layout = custom_card.layout()
-        custom_cn = QLineEdit()
-        custom_cn.setPlaceholderText("中文名称")
-        custom_en = QLineEdit()
-        custom_en.setPlaceholderText("English label")
-        custom_prisma = QLineEdit()
-        custom_prisma.setPlaceholderText("PRISMA reason mapping")
-        custom_layout.addWidget(custom_cn)
-        custom_layout.addWidget(custom_en)
-        custom_layout.addWidget(custom_prisma)
-        layout.addWidget(custom_card)
-        button_row = QHBoxLayout()
-        save_draft = QPushButton("保存排除标准草稿")
-        confirm = QPushButton("确认排除标准")
-        add_custom = QPushButton("新增理由")
-        next_button = QPushButton("下一步：标题摘要筛选")
-        for button in (save_draft, confirm, add_custom, next_button):
-            button.setObjectName("metaSecondaryButton")
-            button_row.addWidget(button)
-        save_draft.setObjectName("metaPrimaryButton")
-        button_row.addStretch(1)
-        layout.addLayout(button_row)
-        layout.addWidget(_developer_details(f"library_path={service.library_path(project_dir)}\nprisma_map={service.prisma_reason_map_path(project_dir)}"))
-        layout.addStretch(1)
-
-        def selected_codes() -> tuple[str, ...]:
-            return tuple(str(item.data(Qt.ItemDataRole.UserRole)) for item in reason_list.selectedItems())
-
-        def save(confirm_library: bool) -> None:
-            service.save_library(project_dir, selected_reason_codes=selected_codes(), actor="reviewer", confirm=confirm_library)
-            on_refresh()
-
-        def do_add_custom() -> None:
-            if not custom_cn.text().strip() or not custom_en.text().strip():
-                _show_message("请填写自定义理由名称")
-                return
-            service.add_custom_reason(
-                project_dir,
-                english_label=custom_en.text().strip(),
-                chinese_label=custom_cn.text().strip(),
-                prisma_reason=custom_prisma.text().strip() or custom_en.text().strip(),
-                actor="reviewer",
-            )
-            on_refresh()
-
-        save_draft.clicked.connect(lambda: save(False))
-        confirm.clicked.connect(lambda: save(True))
-        add_custom.clicked.connect(do_add_custom)
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _title_abstract_screening_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = TitleAbstractScreeningV2Service()
-        exclusion = ExclusionCriteriaLibraryService()
-        queue = service.load_queue(project_dir)
-        records = _items_from_payload(queue, "queue_records")
-        decisions = _items_from_payload(_load_json_object(service.decisions_path(project_dir)), "screening_records")
-        reasons = list(exclusion.list_reasons(project_dir, stage=TITLE_ABSTRACT_STAGE, enabled_only=True))
-        frame = QFrame()
-        frame.setObjectName("metaTitleAbstractScreeningPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("去重与筛选", "从去重结果进入逐篇人工筛选；AI 只能作为 suggestion。", "人工决定"))
-        layout.addWidget(_info_card("筛选摘要", [f"队列文献：{len(records)}", f"人工决定：{len(decisions)}", "PRISMA screened/excluded 只来自用户决定。"], object_name="metaScreeningSummary"))
-        actions = QHBoxLayout()
-        build_queue = QPushButton("生成筛选队列")
-        save_decision = QPushButton("保存人工决定")
-        next_button = QPushButton("下一步：数据提取与质量评价")
-        for button in (build_queue, save_decision, next_button):
-            button.setObjectName("metaPrimaryButton" if button is build_queue else "metaSecondaryButton")
-            actions.addWidget(button)
-        actions.addStretch(1)
-        layout.addLayout(actions)
-        content = QHBoxLayout()
-        record_list = QListWidget()
-        record_list.setObjectName("metaScreeningRecordList")
-        for record in records:
-            item = QListWidgetItem(f"{record.get('title') or 'Untitled'}\n{record.get('year', '')} · PMID {record.get('pmid', '-') or '-'}")
-            item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
-            record_list.addItem(item)
-        content.addWidget(record_list, 1)
-        panel = _card("当前文献")
-        panel_layout = panel.layout()
-        detail = QTextEdit()
-        detail.setObjectName("metaScreeningRecordDetail")
-        detail.setReadOnly(True)
-        decision = QComboBox()
-        for label, value in (("纳入", "include"), ("排除", "exclude"), ("不确定", "uncertain"), ("需复核", "needs_review")):
-            decision.addItem(label, value)
-        reason = QComboBox()
-        reason.addItem("选择排除理由", "")
-        for item in reasons:
-            reason.addItem(f"{item.chinese_label} / {item.english_label}", item.code)
-        notes = QPlainTextEdit()
-        notes.setPlaceholderText("筛选备注")
-        notes.setMaximumHeight(80)
-        panel_layout.addWidget(detail)
-        panel_layout.addWidget(decision)
-        panel_layout.addWidget(reason)
-        panel_layout.addWidget(notes)
-        content.addWidget(panel, 2)
-        layout.addLayout(content)
-        layout.addWidget(_developer_details(f"queue={service.queue_path(project_dir)}\ndecisions={service.decisions_path(project_dir)}"))
-        layout.addStretch(1)
-
-        def update_detail(index: int = 0) -> None:
-            if 0 <= index < len(records):
-                record = records[index]
-                detail.setPlainText("\n".join([f"题名：{record.get('title', '')}", f"摘要：{record.get('abstract', '')}", f"来源：{record.get('source_type', '')}"]))
-            else:
-                detail.setPlainText("暂无待筛选文献。")
-
-        def do_build_queue() -> None:
-            result = service.build_queue(project_dir, project_id=project_dir.name)
-            _show_message(result.message)
-            on_refresh()
-
-        def do_save_decision() -> None:
-            item = record_list.currentItem()
-            if item is None:
-                _show_message("请选择文献")
-                return
-            record_id = str(item.data(Qt.ItemDataRole.UserRole))
-            selected_decision = str(decision.currentData() or "")
-            selected_reason = str(reason.currentData() or "")
-            if selected_decision == "exclude" and not selected_reason:
-                _show_message("排除必须选择排除理由")
-                return
-            result = service.save_decision(
-                project_dir,
-                record_id=record_id,
-                decision=selected_decision,
-                actor="reviewer",
-                exclusion_reason_code=selected_reason,
-                notes=notes.toPlainText(),
-            )
-            _show_message(result.message)
-            on_refresh()
-
-        record_list.currentRowChanged.connect(update_detail)
-        build_queue.clicked.connect(do_build_queue)
-        save_decision.clicked.connect(do_save_decision)
-        next_button.clicked.connect(on_next)
-        record_list.setCurrentRow(0 if records else -1)
-        update_detail(record_list.currentRow())
-        return frame
-
-
-    def _fulltext_management_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        management = FullTextManagementService()
-        eligibility = FullTextEligibilityService()
-        parser = FullTextParsingService(fulltext_management=management)
-        records = list(management.list_records(project_dir))
-        candidates = list(eligibility.build_candidates_from_screening(project_dir))
-        decisions = list(eligibility.load_eligibility_decisions(project_dir))
-        candidates_by_id = {candidate.record_id: candidate for candidate in candidates}
-        summary = management.summary_counts(project_dir)
-        frame = QFrame()
-        frame.setObjectName("metaFulltextManagementPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("全文管理", "全文筛选、全文状态、上传全文和用户确认。", "Developer Preview / testing"))
-        layout.addWidget(
-            _info_card(
-                "全文状态",
-                [
-                    f"当前全文候选：{len(candidates)}",
-                    f"全文管理记录：{len(records)}",
-                    f"全文筛选决定：{len(decisions)}",
-                    f"需要全文：{summary['full_text_needed']}",
-                    f"已上传全文：{summary['full_text_uploaded']}",
-                    f"全文待检查：{summary['full_text_pending_review']}",
-                    f"全文已确认：{summary['full_text_confirmed']}",
-                    f"全文不可获取：{summary['full_text_unavailable']}",
-                    f"全文已排除：{summary['full_text_excluded']}",
-                    f"可进入提取：{summary['ready_for_extraction']}",
-                    "全文解析或模型提示只作为 suggested，不会自动成为确认提取证据。",
-                ],
-                object_name="metaFulltextSummary",
-            )
-        )
-        buttons = QHBoxLayout()
-        build_registry = QPushButton("建立全文队列")
-        attach_pdf = QPushButton("上传全文")
-        ocr_pdf = QPushButton("OCR 识别 PDF")
-        mark_unavailable = QPushButton("标记无法获取")
-        confirm_fulltext = QPushButton("全文确认")
-        save_status = QPushButton("保存全文状态")
-        save_eligibility = QPushButton("保存全文筛选")
-        next_button = QPushButton("下一步：数据提取")
-        for button in (build_registry, attach_pdf, ocr_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
-            button.setObjectName("metaSecondaryButton")
-            buttons.addWidget(button)
-        build_registry.setObjectName("metaPrimaryButton")
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
-        record_table = QTableWidget()
-        record_table.setObjectName("metaFulltextRecordTable")
-        record_table.setColumnCount(7)
-        record_table.setHorizontalHeaderLabels(["标题", "第一作者", "年份", "期刊", "初筛状态", "全文状态", "PDF 文件"])
-        record_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        record_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        record_table.setAlternatingRowColors(True)
-        source_records = records or candidates
-        layout.addWidget(record_table)
-        form = _card("人工全文状态")
-        form_layout = form.layout()
-        fulltext_detail = QTextEdit()
-        fulltext_detail.setObjectName("metaFulltextRecordDetail")
-        fulltext_detail.setReadOnly(True)
-        fulltext_detail.setPlainText("请选择一篇文献后再上传 PDF 或修改全文状态。")
-        fulltext_status = QComboBox()
-        fulltext_status.setObjectName("metaFulltextStatusSelector")
-        for status in FULLTEXT_MANAGEMENT_STATUSES:
-            fulltext_status.addItem(FULLTEXT_STATUS_LABELS_ZH.get(status, status), status)
-        eligibility_status = QComboBox()
-        eligibility_status.setObjectName("metaFulltextEligibilitySelector")
-        for status in ("available_online", "local_pdf_linked", "local_pdf_copied", "missing_full_text", "manual_review_required", "excluded_after_full_text_review", "included_for_extraction"):
-            eligibility_status.addItem(status, status)
-        fulltext_reason = QComboBox()
-        fulltext_reason.setObjectName("metaFulltextReasonSelector")
-        for reason in FULLTEXT_EXCLUSION_REASONS_M4C:
-            fulltext_reason.addItem(FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(reason, reason), reason)
-        notes = QLineEdit()
-        notes.setPlaceholderText("备注（可选，不作为确认提取证据）")
-        form_layout.addWidget(QLabel("当前文献"))
-        form_layout.addWidget(fulltext_detail)
-        form_layout.addWidget(QLabel("全文状态"))
-        form_layout.addWidget(fulltext_status)
-        form_layout.addWidget(QLabel("全文筛选"))
-        form_layout.addWidget(eligibility_status)
-        form_layout.addWidget(QLabel("排除原因"))
-        form_layout.addWidget(fulltext_reason)
-        form_layout.addWidget(notes)
-        layout.addWidget(form)
-        layout.addWidget(_developer_details(f"management={management.registry_path(project_dir)}\nrecords={len(records)}\ncandidates={len(candidates)}"))
-        layout.addStretch(1)
-
-        fulltext_rows = list(source_records)
-
-        def populate_fulltext_table() -> None:
-            record_table.setRowCount(len(fulltext_rows))
-            for row, record in enumerate(fulltext_rows):
-                record_id = getattr(record, "record_id", "")
-                candidate = candidates_by_id.get(record_id)
-                values = [
-                    getattr(record, "title", "") or "未命名文献",
-                    _first_author({"first_author": getattr(record, "first_author", ""), "authors": getattr(record, "authors", "") or getattr(candidate, "authors", "")}) or "-",
-                    str(getattr(record, "year", "") or getattr(candidate, "year", "") or "-"),
-                    getattr(record, "journal", "") or getattr(candidate, "journal", "") or "期刊未记录",
-                    _screening_decision_label(getattr(record, "source_screening_decision", "") or getattr(candidate, "screening_decision", "") or "未记录"),
-                    FULLTEXT_STATUS_LABELS_ZH.get(getattr(record, "fulltext_status", getattr(record, "eligibility_status", "")), getattr(record, "fulltext_status", getattr(record, "eligibility_status", "")) or "未记录"),
-                    management.safe_file_label(record) if hasattr(record, "pdf_path") else "未登记全文文件",
-                ]
-                for col, value in enumerate(values):
-                    item = QTableWidgetItem(str(value))
-                    if col == 0:
-                        item.setData(Qt.ItemDataRole.UserRole, record_id)
-                    record_table.setItem(row, col, item)
-
-        def selected_record_id() -> str:
-            rows = _selected_table_rows(record_table)
-            if not rows:
-                return ""
-            row = rows[0]
-            if row < 0 or row >= len(fulltext_rows):
-                return ""
-            return str(getattr(fulltext_rows[row], "record_id", ""))
-
-        def update_fulltext_detail(row: int = -1, _col: int = 0) -> None:
-            if row < 0 or row >= len(fulltext_rows):
-                fulltext_detail.setPlainText("请选择一篇文献后再上传 PDF 或修改全文状态。")
-                return
-            record = fulltext_rows[row]
-            candidate = candidates_by_id.get(getattr(record, "record_id", ""))
-            fulltext_detail.setPlainText(_fulltext_record_detail_text(record, candidate=candidate, management=management))
-
-        def do_build_registry() -> None:
-            result = management.build_registry_from_screening(project_dir, project_id=project_dir.name)
-            _show_message(result.message)
-            on_refresh()
-
-        def do_attach_pdf() -> None:
-            record_id = selected_record_id()
-            if not record_id:
-                _show_message("请选择文献")
-                return
-            filename, _ = QFileDialog.getOpenFileName(frame, "选择 PDF", str(project_dir), "PDF (*.pdf);;All files (*)")
-            if filename:
-                result = management.attach_pdf(project_dir, record_id=record_id, source_file_path=filename, actor="reviewer", notes=notes.text())
-                _show_message(result.message)
-                on_refresh()
-
-        def do_ocr_pdf() -> None:
-            record_id = selected_record_id()
-            if not record_id:
-                _show_message("请选择文献")
-                return
-            record = management.get_record(project_dir, record_id)
-            if record is None or not record.pdf_path:
-                _show_message("请先上传或登记本地 PDF")
-                return
-            result = parser.parse_record(project_dir, record_id=record_id, use_ocr=True)
-            if result.success:
-                _show_message(f"OCR 已完成：{Path(result.extracted_text_path).name}；原始 JSON 已写入 fulltext/ocr。")
-            else:
-                _show_message(f"OCR 未完成：{result.diagnostics.get('error_code', result.parse_status)}")
-            on_refresh()
-
-        def do_mark_unavailable() -> None:
-            record_id = selected_record_id()
-            if not record_id:
-                _show_message("请选择文献")
-                return
-            result = management.mark_unavailable(project_dir, record_id=record_id, reason=str(fulltext_reason.currentData()), actor="reviewer", notes=notes.text())
-            _show_message(result.message)
-            on_refresh()
-
-        def do_confirm_fulltext() -> None:
-            record_id = selected_record_id()
-            if not record_id:
-                _show_message("请选择文献")
-                return
-            result = management.update_status(project_dir, record_id=record_id, status=FULLTEXT_STATUS_FULL_TEXT_CONFIRMED, actor="reviewer", notes=notes.text())
-            _show_message(result.message)
-            on_refresh()
-
-        def do_save_status() -> None:
-            record_id = selected_record_id()
-            if not record_id:
-                _show_message("请选择文献")
-                return
-            status = str(fulltext_status.currentData())
-            if status == FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE:
-                result = management.mark_unavailable(project_dir, record_id=record_id, reason=str(fulltext_reason.currentData()), actor="reviewer", notes=notes.text())
-            else:
-                result = management.update_status(project_dir, record_id=record_id, status=status, actor="reviewer", notes=notes.text())
-            _show_message(result.message)
-            on_refresh()
-
-        def do_save_eligibility() -> None:
-            record_id = selected_record_id()
-            if not record_id:
-                _show_message("请选择文献")
-                return
-            result = eligibility.save_eligibility_decision(
-                project_dir,
-                record_id=record_id,
-                eligibility_status=str(eligibility_status.currentData()),
-                reviewer_id="reviewer",
-                exclusion_reason=str(fulltext_reason.currentData()),
-            )
-            _show_message(result.message)
-            on_refresh()
-
-        build_registry.clicked.connect(do_build_registry)
-        attach_pdf.clicked.connect(do_attach_pdf)
-        ocr_pdf.clicked.connect(do_ocr_pdf)
-        mark_unavailable.clicked.connect(do_mark_unavailable)
-        confirm_fulltext.clicked.connect(do_confirm_fulltext)
-        save_status.clicked.connect(do_save_status)
-        save_eligibility.clicked.connect(do_save_eligibility)
-        next_button.clicked.connect(on_next)
-        record_table.cellClicked.connect(update_fulltext_detail)
-        populate_fulltext_table()
-        return frame
-
-
-    def _manual_extraction_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = ManualExtractionEffectRowService()
-        records = service.literature_records_for_extraction(project_dir)
-        units = service.load_study_units(project_dir)
-        rows = service.load_effect_rows(project_dir)
-        structured_rows = service.load_structured_extraction_table(project_dir)
-        validation = _load_json_object(service.validation_report_path(project_dir))
-        frame = QFrame()
-        frame.setObjectName("metaManualExtractionPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("数据提取", "结构化录入研究基本信息、PICO/PECO、效应量数据和统计字段。", "人工确认"))
-        layout.addWidget(
-            _info_card(
-                "提取状态",
-                [
-                    f"可提取文献：{len(records)}",
-                    f"study unit：{len(units)}",
-                    f"effect row：{len(rows)}",
-                    f"结构化提取行：{len(structured_rows)}",
-                    f"缺失关键字段：{validation.get('missing_required_fields_count', 0)}",
-                    "用户确认不会运行正式统计分析。",
-                ],
-                object_name="metaExtractionSummary",
-            )
-        )
-        action_row = QHBoxLayout()
-        create_unit = QPushButton("新建 study unit")
-        create_row = QPushButton("新建提取行")
-        save_structured = QPushButton("保存结构化草稿")
-        complete_row = QPushButton("完成本行提取")
-        confirm_structured = QPushButton("用户确认")
-        mark_missing = QPushButton("标记缺失数据")
-        export_template = QPushButton("导出空模板 CSV")
-        export_current = QPushButton("导出当前 CSV")
-        import_csv = QPushButton("导入 CSV 草稿")
-        next_button = QPushButton("下一步：质量评价")
-        for button in (create_unit, create_row, save_structured, complete_row, confirm_structured, mark_missing, export_template, export_current, import_csv, next_button):
-            button.setObjectName("metaSecondaryButton")
-            action_row.addWidget(button)
-        create_unit.setObjectName("metaPrimaryButton")
-        action_row.addStretch(1)
-        layout.addLayout(action_row)
-        lists = QHBoxLayout()
-        record_list = QListWidget()
-        record_list.setObjectName("metaExtractionRecordList")
-        for record in records:
-            item = QListWidgetItem(
-                "\n".join(
-                    [
-                        str(record.get("title") or "未命名文献"),
-                        " · ".join(part for part in (str(record.get("first_author") or ""), str(record.get("year") or ""), _extraction_source_label(str(record.get("extraction_source") or ""))) if part),
-                    ]
-                )
-            )
-            item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
-            record_list.addItem(item)
-        unit_list = QListWidget()
-        unit_list.setObjectName("metaStudyUnitList")
-        for unit in units:
-            item = QListWidgetItem(
-                "\n".join(
-                    [
-                        str(unit.get("study_unit_label") or "未命名 study unit"),
-                        " · ".join(part for part in (str(unit.get("study_design") or ""), str(unit.get("country_or_region") or "")) if part),
-                    ]
-                )
-            )
-            item.setData(Qt.ItemDataRole.UserRole, str(unit.get("study_unit_id", "")))
-            unit_list.addItem(item)
-        row_list = QListWidget()
-        row_list.setObjectName("metaEffectRowList")
-        for row in rows:
-            structured = dict(row.get("m5_structured_fields", {}) if isinstance(row.get("m5_structured_fields"), dict) else {})
-            item = QListWidgetItem(
-                "\n".join(
-                    [
-                        str(structured.get("outcome") or row.get("outcome_name") or "待填写结局"),
-                        f"{structured.get('effect_measure_type') or row.get('data_input_mode', '')} · {_evidence_state_label(str(row.get('evidence_state') or row.get('extraction_status') or 'draft'))}",
-                    ]
-                )
-            )
-            item.setData(Qt.ItemDataRole.UserRole, str(row.get("effect_row_id", "")))
-            row_list.addItem(item)
-        lists.addWidget(record_list)
-        lists.addWidget(unit_list)
-        lists.addWidget(row_list)
-        layout.addLayout(lists)
-
-        structured_card = _card("结构化提取表")
-        structured_layout = structured_card.layout()
-        structured_layout.addWidget(QLabel("研究基本信息"))
-        study_id_input = QLineEdit()
-        title_input = QLineEdit()
-        first_author_input = QLineEdit()
-        year_input = QLineEdit()
-        country_input = QLineEdit()
-        design_input = QLineEdit()
-        population_input = QLineEdit()
-        sample_total_input = QLineEdit()
-        for field_name, widget in (
-            ("study_id", study_id_input),
-            ("title", title_input),
-            ("first_author", first_author_input),
-            ("year", year_input),
-            ("country_or_region", country_input),
-            ("study_design", design_input),
-            ("population", population_input),
-            ("sample_size_total", sample_total_input),
-        ):
-            widget.setObjectName(f"metaExtraction_{field_name}")
-            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
-            structured_layout.addWidget(widget)
-        structured_layout.addWidget(QLabel("PICO/PECO"))
-        intervention_input = QLineEdit()
-        comparator_input = QLineEdit()
-        outcome_input = QLineEdit()
-        follow_up_input = QLineEdit()
-        for field_name, widget in (
-            ("intervention_or_exposure", intervention_input),
-            ("comparator", comparator_input),
-            ("outcome", outcome_input),
-            ("follow_up_duration", follow_up_input),
-        ):
-            widget.setObjectName(f"metaExtraction_{field_name}")
-            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
-            structured_layout.addWidget(widget)
-        structured_layout.addWidget(QLabel("效应量数据"))
-        effect_type = QComboBox()
-        effect_type.setObjectName("metaExtractionEffectMeasureSelector")
-        for measure in STRUCTURED_EXTRACTION_EFFECT_MEASURES:
-            effect_type.addItem(measure, measure)
-        structured_layout.addWidget(effect_type)
-        effect_estimate_input = QLineEdit()
-        ci_lower_input = QLineEdit()
-        ci_upper_input = QLineEdit()
-        for field_name, widget in (
-            ("effect_estimate", effect_estimate_input),
-            ("ci_lower", ci_lower_input),
-            ("ci_upper", ci_upper_input),
-        ):
-            widget.setObjectName(f"metaExtraction_{field_name}")
-            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
-            structured_layout.addWidget(widget)
-        structured_layout.addWidget(QLabel("统计字段"))
-        events_case_input = QLineEdit()
-        total_case_input = QLineEdit()
-        events_control_input = QLineEdit()
-        total_control_input = QLineEdit()
-        notes_input = QLineEdit()
-        for field_name, widget in (
-            ("events_case", events_case_input),
-            ("total_case", total_case_input),
-            ("events_control", events_control_input),
-            ("total_control", total_control_input),
-            ("notes", notes_input),
-        ):
-            widget.setObjectName(f"metaExtraction_{field_name}")
-            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
-            structured_layout.addWidget(widget)
-        evidence_state = QComboBox()
-        evidence_state.setObjectName("metaExtractionEvidenceStateSelector")
-        for state in STRUCTURED_EXTRACTION_EVIDENCE_STATES:
-            evidence_state.addItem(_evidence_state_label(state), state)
-        structured_layout.addWidget(QLabel("提取状态"))
-        structured_layout.addWidget(evidence_state)
-        layout.addWidget(structured_card)
-        layout.addWidget(_quality_assessment_page(project_dir, on_refresh=on_refresh, on_next=on_next))
-        layout.addWidget(_developer_details(f"manifest={service.manifest_path(project_dir)}\nvalidation={service.validation_report_path(project_dir)}"))
-        layout.addStretch(1)
-
-        def selected_record_id() -> str:
-            item = record_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else (str(records[0].get("record_id", "")) if records else "")
-
-        def selected_unit_id() -> str:
-            item = unit_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else (str(units[0].get("study_unit_id", "")) if units else "")
-
-        def selected_row_id() -> str:
-            item = row_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
-
-        def do_create_unit() -> None:
-            record_id = selected_record_id()
-            if not record_id:
-                _show_message("请先在文献库中导入文献")
-                return
-            result = service.create_study_unit(project_dir, record_id=record_id, study_unit_label=f"Study unit {len(units) + 1}", actor="reviewer")
-            _show_message(result.message)
-            on_refresh()
-
-        def do_create_row() -> None:
-            unit_id = selected_unit_id()
-            if not unit_id:
-                _show_message("请先新建 study unit")
-                return
-            result = service.create_effect_row(
-                project_dir,
-                study_unit_id=unit_id,
-                actor="reviewer",
-                data_input_mode="manual_note_only",
-                outcome_name="待填写结局",
-                evidence_note="UI draft; requires reviewer completion.",
-            )
-            _show_message(result.message)
-            on_refresh()
-
-        def structured_fields() -> dict[str, object]:
-            return {
-                "study_id": study_id_input.text(),
-                "title": title_input.text(),
-                "first_author": first_author_input.text(),
-                "year": year_input.text(),
-                "country_or_region": country_input.text(),
-                "study_design": design_input.text(),
-                "population": population_input.text(),
-                "sample_size_total": sample_total_input.text(),
-                "intervention_or_exposure": intervention_input.text(),
-                "comparator": comparator_input.text(),
-                "outcome": outcome_input.text(),
-                "follow_up_duration": follow_up_input.text(),
-                "effect_measure_type": str(effect_type.currentData()),
-                "effect_estimate": effect_estimate_input.text(),
-                "ci_lower": ci_lower_input.text(),
-                "ci_upper": ci_upper_input.text(),
-                "events_case": events_case_input.text(),
-                "total_case": total_case_input.text(),
-                "events_control": events_control_input.text(),
-                "total_control": total_control_input.text(),
-                "notes": notes_input.text(),
+            for label, type_ids in groups:
+                section = QVBoxLayout()
+                section.setSpacing(8)
+                title_row = QHBoxLayout()
+                group_label = QLabel(label)
+                group_label.setObjectName("metaMetaTypeCategoryLabel")
+                divider = QFrame()
+                divider.setFrameShape(QFrame.HLine)
+                divider.setStyleSheet("color: #E5E7EB;")
+                title_row.addWidget(group_label)
+                title_row.addWidget(divider, 1)
+                section.addLayout(title_row)
+                cards = QHBoxLayout()
+                cards.setSpacing(10)
+                for type_id in type_ids:
+                    cards.addWidget(self._build_meta_type_card(active_types[type_id]), 1)
+                if label == "剂量反应类":
+                    cards.addWidget(self._build_network_meta_planned_card(), 1)
+                    cards.addStretch(1)
+                section.addLayout(cards)
+                layout.addLayout(section)
+
+            footer = QHBoxLayout()
+            footer.addWidget(self._active_type_status, 1)
+            next_search = QPushButton("下一步：检索策略 / Next: Search Strategy")
+            next_search.setObjectName("metaQuestionNextSearchStrategyButton")
+            next_search.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            next_search.setProperty("pageKey", "question_meta_type")
+            next_search.setProperty("targetPageKey", "search_strategy")
+            next_search.setProperty("actionSemantic", "navigation_only")
+            next_search.setProperty("formalActionEnabled", False)
+            next_search.setMinimumHeight(34)
+            next_search.clicked.connect(lambda _checked=False: self.show_target_ia_page("search_strategy"))
+            footer.addWidget(next_search)
+            layout.addLayout(footer)
+            return panel
+
+        def _build_meta_type_card(self, meta_type: MetaActiveType) -> QFrame:
+            descriptions = {
+                "binary_outcome_meta": "如缓解率、有效率、死亡率等",
+                "continuous_outcome_meta": "如均值差、标准化均值差等",
+                "survival_outcome_meta": "如 OS、PFS、HR 等",
+                "prevalence_incidence_meta": "如疾病患病率、发病率等",
+                "diagnostic_accuracy_meta": "如灵敏度、特异度、AUC 等",
+                "exposure_disease_risk_meta": "如 OR、RR、HR 等",
+                "biomarker_expression_difference_meta": "如基因、蛋白表达差异等",
+                "correlation_meta": "如相关系数合并等",
+                "prognostic_factor_meta": "如预后因子与结局的关联等",
+                "dose_response_meta": "如剂量-反应关系、趋势分析等",
             }
+            card = QFrame()
+            card.setObjectName("metaActiveTypeCard")
+            card.setProperty("typeId", meta_type.type_id)
+            card.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            card.setProperty("statusKey", meta_type.status_key)
+            card.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
+            card.setMinimumHeight(154)
+            card.setMinimumWidth(170)
+            card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(7)
+            top = QHBoxLayout()
+            icon = QLabel("⌁")
+            icon.setObjectName("metaProjectHomeSummaryTesting")
+            icon.setFixedSize(32, 32)
+            icon.setAlignment(Qt.AlignCenter)
+            select = QPushButton("")
+            select.setObjectName("metaActiveTypeSelectButton")
+            select.setCheckable(True)
+            select.setProperty("typeId", meta_type.type_id)
+            select.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            select.setProperty("statusKey", meta_type.status_key)
+            select.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
+            select.setProperty("interactionMode", meta_type.interaction_mode)
+            select.setProperty("formalActionEnabled", False)
+            select.clicked.connect(lambda _checked=False, type_id=meta_type.type_id: self.select_active_meta_type(type_id))
+            self._active_type_buttons[meta_type.type_id] = select
+            self._active_type_cards[meta_type.type_id] = card
+            top.addWidget(icon)
+            top.addStretch(1)
+            top.addWidget(select)
+            layout.addLayout(top)
+            type_id = QLabel(meta_type.type_id)
+            type_id.setObjectName("metaActiveTypeId")
+            type_id.setWordWrap(True)
+            label = QLabel(meta_type.label_zh)
+            label.setObjectName("metaActiveTypeLabel")
+            label.setWordWrap(True)
+            effect = QLabel(descriptions.get(meta_type.type_id, meta_type.effect_size))
+            effect.setObjectName("metaActiveTypeEffect")
+            effect.setWordWrap(True)
+            layout.addWidget(type_id)
+            layout.addWidget(label)
+            layout.addWidget(effect)
+            layout.addStretch(1)
+            return card
 
-        def do_save_structured() -> None:
-            record_id = selected_record_id()
-            result = service.create_structured_extraction_row(
-                project_dir,
-                fields=structured_fields(),
-                actor="reviewer",
-                evidence_state=str(evidence_state.currentData()),
-                record_id=record_id,
+        def _build_network_meta_planned_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaActiveTypeCardPlanned")
+            card.setProperty("typeId", "network_meta_analysis")
+            card.setProperty("planned", True)
+            card.setMinimumHeight(154)
+            card.setMinimumWidth(170)
+            card.setStyleSheet("QFrame#metaActiveTypeCardPlanned { border: 1px dashed #CBD5E1; border-radius: 10px; background: #F8FAFC; }")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(12, 10, 12, 10)
+            top = QHBoxLayout()
+            icon = QLabel("⌘")
+            icon.setObjectName("metaProjectHomeSummaryBadge")
+            icon.setFixedSize(32, 32)
+            icon.setAlignment(Qt.AlignCenter)
+            planned_button = QPushButton("计划中")
+            planned_button.setObjectName("metaNetworkMetaPlannedButton")
+            planned_button.setProperty("typeId", "network_meta_analysis")
+            planned_button.setProperty("statusKey", "planned")
+            planned_button.setProperty("interactionMode", "planned_disabled")
+            planned_button.setProperty("formalActionEnabled", False)
+            planned_button.setEnabled(False)
+            top.addWidget(icon)
+            top.addStretch(1)
+            top.addWidget(planned_button)
+            layout.addLayout(top)
+            type_id = QLabel("network_meta")
+            type_id.setObjectName("metaActiveTypeId")
+            title = QLabel("网络 Meta 分析")
+            title.setObjectName("metaActiveTypeLabel")
+            desc = QLabel("探索干预比较的网络证据合成\n计划中 / Planned")
+            desc.setObjectName("metaActiveTypeEffect")
+            desc.setWordWrap(True)
+            boundary = QLabel("Network Meta：planned only / not enabled，不属于当前 active Meta 类型。")
+            boundary.setObjectName("metaNetworkMetaBoundary")
+            boundary.setProperty("typeId", "network_meta_analysis")
+            boundary.setProperty("statusKey", "planned")
+            boundary.setProperty("formalActionEnabled", False)
+            boundary.setVisible(False)
+            layout.addWidget(type_id)
+            layout.addWidget(title)
+            layout.addWidget(desc)
+            layout.addWidget(boundary)
+            layout.addStretch(1)
+            return card
+
+        def _build_question_type_quick_access_panel(self) -> QFrame:
+            panel = QFrame()
+            panel.setObjectName("metaQuestionQuickAccessPanel")
+            layout = QHBoxLayout(panel)
+            layout.setContentsMargins(20, 13, 20, 13)
+            layout.setSpacing(8)
+            title = QLabel("快速入口")
+            title.setObjectName("metaQuestionSectionTitle")
+            layout.addWidget(title)
+            layout.addStretch(1)
+            for text in ("最近使用", "使用指南", "常见问题", "意见反馈"):
+                button = QPushButton(text)
+                button.setObjectName("metaProjectHomeBoundaryButton")
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(False)
+                layout.addWidget(button)
+            return panel
+
+        def _build_search_strategy_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaSearchStrategyRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "search_strategy")
+            frame.setProperty("runtimeStatus", "testing")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet(
+                """
+                QFrame#metaSearchStrategyRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaSearchCard,
+                QFrame#metaSearchSideCard,
+                QFrame#metaSearchStepper {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaSearchTitle {
+                    color: #0F172A;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaSearchStepDone {
+                    background: transparent;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchStepCurrent {
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 900;
+                }
+                QLabel#metaSearchTermGroup {
+                    border-radius: 8px;
+                    font-size: 11px;
+                    font-weight: 850;
+                    padding: 7px 12px;
+                }
+                QLabel#metaSearchTermGroup[semantic="population"] {
+                    background: #EAF3FF;
+                    color: #1D4ED8;
+                    border-left: 3px solid #3B82F6;
+                }
+                QLabel#metaSearchTermGroup[semantic="exposure"] {
+                    background: #E9FBF3;
+                    color: #047857;
+                    border-left: 3px solid #10B981;
+                }
+                QLabel#metaSearchTermGroup[semantic="outcome"] {
+                    background: #FFF7ED;
+                    color: #C2410C;
+                    border-left: 3px solid #FB923C;
+                }
+                QLabel#metaSearchTermGroup[semantic="study"] {
+                    background: #F5F3FF;
+                    color: #7C3AED;
+                    border-left: 3px solid #A855F7;
+                }
+                QLabel#metaSearchQueryEditor {
+                    background: #FFFFFF;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 8px;
+                    color: #64748B;
+                    font-family: Menlo;
+                    font-size: 11px;
+                    padding: 8px;
+                }
+                QLabel#metaSearchDbRow {
+                    background: #FFFFFF;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 9px 12px;
+                }
+                QLabel#metaSearchDbRow[selected="true"] {
+                    background: #EFF6FF;
+                    border-color: #93C5FD;
+                }
+                QLabel#metaSearchChecklistPassed {
+                    color: #059669;
+                    font-size: 11px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchChecklistWarning {
+                    color: #D97706;
+                    font-size: 11px;
+                    font-weight: 850;
+                }
+                QLabel#metaSearchChecklistTodo {
+                    color: #64748B;
+                    font-size: 11px;
+                    font-weight: 850;
+                }
+                QPushButton#metaDatabaseDraftScopeButton {
+                    background: #EFF6FF;
+                    border: 1px solid #93C5FD;
+                    border-radius: 8px;
+                    color: #1D4ED8;
+                    font-size: 11px;
+                    font-weight: 850;
+                    text-align: left;
+                    padding: 8px 10px;
+                }
+                QPushButton#metaCopyQueryButton,
+                QPushButton#metaSaveSearchDraftButton,
+                QPushButton#metaSearchTokenButton {
+                    background: #FFFFFF;
+                    border: 1px solid #D8E1EC;
+                    border-radius: 7px;
+                    color: #334155;
+                    font-size: 11px;
+                    font-weight: 750;
+                    padding: 6px 10px;
+                }
+                QPushButton#metaSearchTokenButton[token="operator"] {
+                    background: #EFF6FF;
+                    border-color: #93C5FD;
+                    color: #1D4ED8;
+                }
+                QPushButton#metaSearchNextReferenceButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 9px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 850;
+                    padding: 10px 12px;
+                }
+                """
             )
-            _show_message(result.message)
-            on_refresh()
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(14)
+            layout.addWidget(self._build_meta_search_stepper())
 
-        def do_complete_row() -> None:
-            row_id = selected_row_id()
-            if not row_id:
-                _show_message("请选择 effect row")
-                return
-            result = service.complete_effect_row(project_dir, effect_row_id=row_id, actor="reviewer")
-            _show_message(result.message)
-            on_refresh()
-
-        def do_confirm_structured() -> None:
-            row_id = selected_row_id()
-            if not row_id:
-                _show_message("请选择提取行")
-                return
-            result = service.confirm_structured_extraction_row(project_dir, effect_row_id=row_id, actor="reviewer")
-            _show_message(result.message)
-            on_refresh()
-
-        def do_mark_missing() -> None:
-            row_id = selected_row_id()
-            if not row_id:
-                _show_message("请选择 effect row")
-                return
-            result = service.mark_missing_data(project_dir, effect_row_id=row_id, actor="reviewer", missing_reason="用户标记缺失数据")
-            _show_message(result.message)
-            on_refresh()
-
-        def do_import_csv() -> None:
-            filename, _ = QFileDialog.getOpenFileName(frame, "选择 CSV", str(project_dir), "CSV (*.csv);;All files (*)")
-            if filename:
-                result = service.import_csv_as_draft(project_dir, csv_path=Path(filename), actor="reviewer")
-                _show_message(result.message)
-                on_refresh()
-
-        create_unit.clicked.connect(do_create_unit)
-        create_row.clicked.connect(do_create_row)
-        save_structured.clicked.connect(do_save_structured)
-        complete_row.clicked.connect(do_complete_row)
-        confirm_structured.clicked.connect(do_confirm_structured)
-        mark_missing.clicked.connect(do_mark_missing)
-        export_template.clicked.connect(lambda: _show_message(service.export_empty_template_csv(project_dir, actor="reviewer").message))
-        export_current.clicked.connect(lambda: _show_message(service.export_current_csv(project_dir, actor="reviewer").message))
-        import_csv.clicked.connect(do_import_csv)
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _ai_extraction_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = AIAssistedExtractionQueueService()
-        suggestions = service.list_extraction_suggestions(project_dir)
-        counts: dict[str, int] = {}
-        for suggestion in suggestions:
-            counts[suggestion.status] = counts.get(suggestion.status, 0) + 1
-        frame = QFrame()
-        frame.setObjectName("metaAIExtractionPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("AI 辅助提取", "suggestion 队列；accepted 后也只写人工提取草稿。", "建议待审"))
-        layout.addWidget(_info_card("建议队列", [f"总数：{len(suggestions)}", f"状态：{counts}", "不会写 final extraction，不生成 analysis-ready dataset。"], object_name="metaAIExtractionSummary"))
-        suggestion_list = QListWidget()
-        suggestion_list.setObjectName("metaAIExtractionSuggestionList")
-        for suggestion in suggestions:
-            item = QListWidgetItem(f"{suggestion.status} · {suggestion.suggestion_id}\nconfidence={suggestion.confidence}")
-            item.setData(Qt.ItemDataRole.UserRole, suggestion.suggestion_id)
-            suggestion_list.addItem(item)
-        layout.addWidget(suggestion_list)
-        actions = QHBoxLayout()
-        accept = QPushButton("接受建议")
-        reject = QPushButton("拒绝建议")
-        apply_draft = QPushButton("写入人工草稿")
-        next_button = QPushButton("下一步：质量评价")
-        for button in (accept, reject, apply_draft, next_button):
-            button.setObjectName("metaSecondaryButton")
-            actions.addWidget(button)
-        actions.addStretch(1)
-        layout.addLayout(actions)
-        layout.addWidget(_developer_details(f"queue={service.queue_path(project_dir)}\napplication={service.application_path(project_dir)}"))
-        layout.addStretch(1)
-
-        def selected_suggestion_id() -> str:
-            item = suggestion_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
-
-        def do_accept() -> None:
-            suggestion_id = selected_suggestion_id()
-            if suggestion_id:
-                service.accept_suggestion(project_dir, suggestion_id, actor="reviewer")
-                on_refresh()
-
-        def do_reject() -> None:
-            suggestion_id = selected_suggestion_id()
-            if suggestion_id:
-                service.reject_suggestion(project_dir, suggestion_id, actor="reviewer")
-                on_refresh()
-
-        def do_apply() -> None:
-            suggestion_id = selected_suggestion_id()
-            if not suggestion_id:
-                return
-            result = service.apply_accepted_suggestion_as_draft(project_dir, suggestion_id=suggestion_id, actor="reviewer")
-            _show_message(result.message)
-            on_refresh()
-
-        accept.clicked.connect(do_accept)
-        reject.clicked.connect(do_reject)
-        apply_draft.clicked.connect(do_apply)
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _quality_assessment_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = QualityAssessmentService()
-        registry = service.tool_registry_v1()
-        records = service.load_quality_assessment_records_v1(project_dir)
-        study_rows = _quality_study_rows_for_workspace(project_dir)
-        summary = service.quality_m6_summary(project_dir, expected_study_ids=[row["study_id"] for row in study_rows])
-        frame = QFrame()
-        frame.setObjectName("metaQualityAssessmentPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("质量评价", "NOS 优先的人工偏倚风险评价；其他工具保持 staged/testing。", "人工确认"))
-        layout.addWidget(
-            _info_card(
-                "质量评价摘要",
-                [
-                    f"工具数：{registry.get('tool_count', 0)}",
-                    f"待评价研究：{summary['studies_pending_quality']}",
-                    f"草稿质量评价：{summary['studies_with_draft_quality']}",
-                    f"已确认质量评价：{summary['studies_with_confirmed_quality']}",
-                    f"低风险/较好：{summary['low_risk_or_good']}",
-                    f"不明确：{summary['unclear']}",
-                    f"高风险/较差：{summary['high_risk_or_poor']}",
-                    "不自动评分，不自动 GRADE，不运行统计。",
-                ],
-                object_name="metaQualitySummary",
+            term_table = _readonly_table(
+                "metaSearchTermGroupTable",
+                ("Term group", "English terms", "State"),
+                (
+                    ("Disease", "thyroid cancer OR thyroid carcinoma OR thyroid neoplasm", "draft"),
+                    ("Biomarker", "adiponectin OR ADIPOQ", "draft"),
+                    ("Outcome", "prognosis OR survival OR recurrence OR clinicopathological", "draft"),
+                ),
             )
-        )
-        study_list = QListWidget()
-        study_list.setObjectName("metaQualityStudyList")
-        if study_rows:
-            for row in study_rows:
-                item = QListWidgetItem(
-                    "\n".join(
-                        [
-                            str(row.get("title") or row.get("study_id") or "未命名研究"),
-                            " · ".join(part for part in (str(row.get("first_author") or ""), str(row.get("year") or ""), str(row.get("study_design") or "")) if part),
-                        ]
-                    )
+            term_table.setMinimumHeight(118)
+            term_table.setVisible(False)
+
+            query = QLabel(
+                'PubMed-style query draft: ("thyroid cancer"[Title/Abstract] OR "thyroid carcinoma"[Title/Abstract] OR '
+                '"thyroid neoplasm"[Title/Abstract]) AND ("adiponectin"[Title/Abstract] OR "ADIPOQ"[Title/Abstract]) '
+                'AND ("prognosis"[Title/Abstract] OR "survival"[Title/Abstract] OR "recurrence"[Title/Abstract] OR '
+                '"clinicopathological"[Title/Abstract])'
+            )
+            query.setObjectName("metaSearchPubMedStyleQueryDraft")
+            query.setProperty("queryState", "draft_only")
+            query.setWordWrap(True)
+            query.setStyleSheet("background: transparent; border: 0; color: #64748B;")
+            query.setVisible(False)
+
+            logic = QLabel("Boolean logic preview: Disease AND Biomarker AND Outcome")
+            logic.setObjectName("metaSearchBooleanLogicPreview")
+            logic.setWordWrap(True)
+            logic.setVisible(False)
+
+            database_scope = QFrame()
+            database_scope.setObjectName("metaDatabaseDraftScope")
+            database_scope.setProperty("selectionState", "draft_scope_only")
+            database_layout = QVBoxLayout(database_scope)
+            database_layout.setContentsMargins(0, 0, 0, 0)
+            database_layout.setSpacing(8)
+            for database in ("PubMed", "Embase", "Web of Science"):
+                item = QPushButton(database)
+                item.setObjectName("metaDatabaseDraftScopeButton")
+                item.setCheckable(True)
+                item.setChecked(True)
+                item.setProperty("databaseName", database)
+                item.setProperty("selectionState", "draft_scope_only")
+                item.setProperty("executedSearch", False)
+                item.setProperty("formalActionEnabled", False)
+                item.setMinimumHeight(42)
+                database_layout.addWidget(item)
+
+            action_row = QHBoxLayout()
+            copy_query = QPushButton("Copy Query")
+            copy_query.setObjectName("metaCopyQueryButton")
+            copy_query.setProperty("actionSemantic", "copy_only")
+            copy_query.setProperty("formalActionEnabled", False)
+            copy_query.setMinimumHeight(34)
+            save_draft = QPushButton("Save Draft - adapter needed")
+            save_draft.setObjectName("metaSaveSearchDraftButton")
+            save_draft.setProperty("actionSemantic", "adapter_needed")
+            save_draft.setProperty("formalActionEnabled", False)
+            save_draft.setEnabled(False)
+            save_draft.setMinimumHeight(34)
+            action_row.addWidget(copy_query)
+            action_row.addWidget(save_draft)
+            action_row.addStretch(1)
+
+            main = QHBoxLayout()
+            main.setSpacing(14)
+            left = QVBoxLayout()
+            left.setSpacing(14)
+            left.addWidget(self._build_query_builder_card(term_table, query, action_row))
+            left.addWidget(self._build_search_fields_card())
+            main.addLayout(left, 1)
+            right = QVBoxLayout()
+            right.setSpacing(14)
+            right.addWidget(self._build_database_selection_card(database_scope))
+            right.addWidget(self._build_strategy_checklist_card())
+            right.addStretch(1)
+            right_wrap = QWidget()
+            right_wrap.setMinimumWidth(360)
+            right_wrap.setMaximumWidth(400)
+            right_wrap.setLayout(right)
+            main.addWidget(right_wrap)
+            layout.addLayout(main)
+
+            next_ref = QPushButton("下一步：文献导入 / Next: Reference Management")
+            next_ref.setObjectName("metaSearchNextReferenceButton")
+            next_ref.setProperty("targetPageKey", "import_dedup")
+            next_ref.setProperty("formalActionEnabled", False)
+            next_ref.clicked.connect(lambda _checked=False: self.show_target_ia_page("import_dedup"))
+            layout.addWidget(next_ref)
+            layout.addWidget(logic)
+            return frame
+
+        def _build_meta_search_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaSearchStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(16, 10, 16, 10)
+            layout.setSpacing(8)
+            steps = (
+                ("✓", "项目首页\nProject Home", "done"),
+                ("✓", "问题与类型\nQuestion", "done"),
+                ("3", "检索策略\nSearch Strategy", "current"),
+                ("4", "文献导入\nReferences", "todo"),
+                ("5", "去重\nDeduplication", "todo"),
+                ("6", "筛选\nScreening", "todo"),
+                ("7", "全文提取\nFull-text", "todo"),
+                ("8", "偏倚风险\nRisk of Bias", "todo"),
+                ("9", "成对Meta\nPairwise", "todo"),
+                ("10", "结果复核\nReview", "todo"),
+                ("11", "报告门控\nGate", "todo"),
+                ("12", "导出\nExport", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName("metaSearchStepCurrent" if state == "current" else "metaSearchStepDone")
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(64)
+                layout.addWidget(item, 1)
+            return stepper
+
+        def _build_query_builder_card(self, term_table: QTableWidget, query: QLabel, action_row: QHBoxLayout) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 10, 14, 12)
+            layout.setSpacing(9)
+            title = QLabel("1. 检索式构建 / Query Builder")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            header = QHBoxLayout()
+            label = QLabel("关键词组 / TERM GROUPS")
+            label.setObjectName("metaSearchTitle")
+            count = QLabel("4 groups")
+            count.setObjectName("metaSearchMuted")
+            header.addWidget(label)
+            header.addStretch(1)
+            header.addWidget(count)
+            layout.addLayout(header)
+            for semantic, heading, value, terms in (
+                ("population", "POPULATION / 人群", "甲状腺癌", "3 terms"),
+                ("exposure", "EXPOSURE / INDEX MARKER / 暴露/指标", "Adiponectin", "4 terms"),
+                ("outcome", "OUTCOME / 结局", "预后 / 生存等", "6 terms"),
+                ("study", "STUDY DESIGN / 研究设计", "观察性研究", "4 terms"),
+            ):
+                layout.addWidget(self._search_term_group_label(semantic, heading, value, terms))
+            add = QLabel("+  新建关键词组 / New Group")
+            add.setObjectName("metaSearchMuted")
+            add.setAlignment(Qt.AlignCenter)
+            add.setStyleSheet("border: 1px dashed #CBD5E1; border-radius: 8px; padding: 8px; color: #64748B;")
+            layout.addWidget(add)
+            editor_header = QHBoxLayout()
+            editor_title = QLabel("检索式编辑 / QUERY EDITOR")
+            editor_title.setObjectName("metaSearchTitle")
+            editor_count = QLabel("5 lines · 313 chars")
+            editor_count.setObjectName("metaSearchMuted")
+            editor_header.addWidget(editor_title)
+            editor_header.addStretch(1)
+            editor_header.addWidget(editor_count)
+            layout.addLayout(editor_header)
+            editor = QLabel(
+                "1  (thyroid cancer OR thyroid carcinoma OR thyroid neoplasm)\n"
+                "2  AND (adiponectin OR ADIPOQ)\n"
+                "3  AND (prognosis OR survival OR recurrence)\n"
+                "4  AND (clinicopathological OR overall survival)\n"
+                "5  NOT animal studies"
+            )
+            editor.setObjectName("metaSearchQueryEditor")
+            editor.setMinimumHeight(118)
+            editor.setMaximumHeight(118)
+            editor.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            layout.addWidget(editor)
+            token_row = QHBoxLayout()
+            token_row.setSpacing(6)
+            for text, semantic in (("清空", ""), ("格式化", ""), ("添加组", ""), ("AND", "operator"), ("OR", "operator"), ("NOT", "operator"), ("(", "operator"), (")", "operator"), ("预览", "")):
+                button = QPushButton(text)
+                button.setObjectName("metaSearchTokenButton")
+                button.setProperty("token", semantic)
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(text not in {"添加组"})
+                button.setMinimumHeight(28)
+                token_row.addWidget(button)
+            token_row.addStretch(1)
+            layout.addLayout(token_row)
+            layout.addLayout(action_row)
+            layout.addWidget(query)
+            layout.addWidget(term_table)
+            return card
+
+        def _search_term_group_label(self, semantic: str, heading: str, value: str, terms: str) -> QLabel:
+            label = QLabel(f"{heading}\n{value}                                      {terms}   edit  delete")
+            label.setObjectName("metaSearchTermGroup")
+            label.setProperty("semantic", semantic)
+            label.setMinimumHeight(46)
+            label.setMaximumHeight(46)
+            return label
+
+        def _build_search_fields_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(10)
+            title = QLabel("2. 检索字段与限制 / Fields & Filters")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            for text in (
+                "FIELD / 字段：Title/Abstract, MeSH Terms, Keywords",
+                "LANGUAGE / 语言：English-first draft; Chinese database search disabled",
+                "YEAR / 年份：No limit by default",
+            ):
+                label = QLabel(text)
+                label.setObjectName("metaSearchDbRow")
+                layout.addWidget(label)
+            return card
+
+        def _build_database_selection_card(self, database_scope: QFrame) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(10)
+            title = QLabel("4. 选择数据库 / Select Databases (Draft)")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            tabs = QHBoxLayout()
+            for text, active in (("全部 / All", False), ("常用 / Common", True), ("自定义 / Custom", False)):
+                tab = QLabel(text)
+                tab.setAlignment(Qt.AlignCenter)
+                tab.setObjectName("metaSearchDbRow")
+                tab.setProperty("selected", active)
+                if active:
+                    tab.setStyleSheet("background: #2563EB; color: #FFFFFF; border: 0; border-radius: 0; padding: 8px; font-weight: 850;")
+                tabs.addWidget(tab, 1)
+            layout.addLayout(tabs)
+            layout.addWidget(database_scope)
+            for name, code, selected in (
+                ("Scopus", "SCP", False),
+                ("Cochrane Library", "COC", False),
+                ("Other（手动导入 / Manual import）", "", False),
+            ):
+                row = QLabel(f"{'☑' if selected else '☐'}   {name}\n无数量限制 / No limit                         {code}")
+                row.setObjectName("metaSearchDbRow")
+                row.setProperty("selected", selected)
+                layout.addWidget(row)
+            footer = QHBoxLayout()
+            selected = QLabel("2 个已选 / selected")
+            selected.setObjectName("metaSearchMuted")
+            draft = QLabel("Draft — 不执行真实检索")
+            draft.setStyleSheet("background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; color: #D97706; padding: 4px 8px;")
+            footer.addWidget(selected)
+            footer.addStretch(1)
+            footer.addWidget(draft)
+            layout.addLayout(footer)
+            return card
+
+        def _build_strategy_checklist_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaSearchSideCard")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(16, 12, 16, 16)
+            layout.setSpacing(10)
+            title = QLabel("5. 检索策略清单 / Strategy Checklist")
+            title.setObjectName("metaSearchTitle")
+            layout.addWidget(title)
+            rows = (
+                ("研究问题已确定", "Research question defined", "passed"),
+                ("关键词组已覆盖核心要素", "Key elements covered", "passed"),
+                ("布尔逻辑结构完整", "Boolean logic structure complete", "passed"),
+                ("字段与限制需优化", "Fields & limits need optimization", "warning"),
+                ("数据库组合待确认", "Database combination to confirm", "todo"),
+                ("检索执行与结果数量待记录", "Execution & results to be recorded", "todo"),
+            )
+            for zh, en, state in rows:
+                label = QLabel(f"{'✓' if state == 'passed' else ('!' if state == 'warning' else '○')}  {zh}\n   {en}        { {'passed': '通过', 'warning': '警告', 'todo': '未完成'}[state] }")
+                label.setObjectName(
+                    "metaSearchChecklistPassed" if state == "passed" else ("metaSearchChecklistWarning" if state == "warning" else "metaSearchChecklistTodo")
                 )
-                item.setData(Qt.ItemDataRole.UserRole, dict(row))
-                study_list.addItem(item)
-        else:
-            study_list.addItem(QListWidgetItem("暂无可评价研究；请先完成数据提取确认。"))
-        layout.addWidget(study_list)
-        layout.addWidget(QLabel("评价工具"))
-        tool_selector = QComboBox()
-        tool_selector.setObjectName("metaQualityToolSelector")
-        for tool_name in service.list_quality_tools():
-            suffix = " · staged/testing" if tool_name != "NOS" else " · NOS"
-            tool_selector.addItem(f"{tool_name}{suffix}", tool_name)
-        tool_selector.setCurrentText("NOS · NOS")
-        layout.addWidget(tool_selector)
-        assessment_list = QListWidget()
-        assessment_list.setObjectName("metaQualityAssessmentList")
-        for record in records:
-            item = QListWidgetItem(
-                "\n".join(
-                    [
-                        f"{record.get('tool_name')} · {_quality_state_label(str(record.get('status') or 'draft'))}",
-                        f"总体判断：{_quality_rating_label(str(record.get('overall_rating') or record.get('overall_judgement') or ''))}",
-                    ]
+                layout.addWidget(label)
+            progress = QLabel("3 / 6 完成")
+            progress.setObjectName("metaSearchMuted")
+            progress.setAlignment(Qt.AlignRight)
+            layout.addWidget(progress)
+            return card
+
+        def _build_reference_dedup_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaReferenceDedupRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "import_dedup")
+            frame.setProperty("runtimeStatus", "testing")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaReferenceDedupRuntimePanel { border: 1px solid #DDE5F0; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Import / Reference Management / Deduplication")
+            title.setObjectName("metaReferenceDedupRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            import_row = QHBoxLayout()
+            for source_id, label in (
+                ("ris_bibtex_endnote", "RIS / BibTeX / EndNote XML"),
+                ("csv_excel", "CSV / Excel"),
+                ("pubmed_result_file", "PubMed result file"),
+                ("manual_entry", "Manual entry"),
+            ):
+                card = QFrame()
+                card.setObjectName("metaImportSourceCard")
+                card.setProperty("sourceId", source_id)
+                card.setProperty("importState", "adapter_needed")
+                card.setStyleSheet("QFrame#metaImportSourceCard { border: 1px solid #CBD5E1; border-radius: 8px; background: #F8FAFC; }")
+                card_layout = QVBoxLayout(card)
+                card_layout.setContentsMargins(10, 8, 10, 8)
+                label_widget = QLabel(label)
+                label_widget.setObjectName("metaImportSourceLabel")
+                label_widget.setWordWrap(True)
+                button = QPushButton("Import - adapter needed")
+                button.setObjectName("metaImportSourceButton")
+                button.setProperty("sourceId", source_id)
+                button.setProperty("actionSemantic", "adapter_needed")
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(False)
+                card_layout.addWidget(label_widget)
+                card_layout.addWidget(button)
+                import_row.addWidget(card)
+            layout.addLayout(import_row)
+
+            reference_label = QLabel("Reference table preview (mockup-only / local draft)")
+            reference_label.setObjectName("metaReferenceTablePreviewLabel")
+            reference_label.setStyleSheet("font-weight: 700;")
+            layout.addWidget(reference_label)
+            reference_table = _readonly_table(
+                "metaReferencePreviewTable",
+                ("ref_id", "title", "year", "source", "DOI/PMID", "screening_status", "dedup_status"),
+                (
+                    ("REF-001", "Serum adiponectin and clinicopathological features in thyroid carcinoma", "2018", "PubMed mock", "PMID-MOCK-001", "not_started", "unique"),
+                    ("REF-002", "ADIPOQ expression and survival outcomes in differentiated thyroid cancer", "2020", "RIS mock", "DOI-MOCK-002", "not_started", "possible_duplicate"),
+                    ("REF-003", "Adiponectin signaling in thyroid neoplasm progression", "2021", "CSV mock", "DOI-MOCK-003", "not_started", "possible_duplicate"),
+                    ("REF-004", "Circulating adipokines and thyroid cancer risk", "2017", "PubMed mock", "PMID-MOCK-004", "not_started", "unique"),
+                ),
+            )
+            reference_table.setMinimumHeight(150)
+            layout.addWidget(reference_table)
+
+            dedup_label = QLabel("Deduplication risk preview")
+            dedup_label.setObjectName("metaDedupRiskPreviewTitle")
+            dedup_label.setStyleSheet("font-weight: 700;")
+            layout.addWidget(dedup_label)
+            dedup_table = _readonly_table(
+                "metaDedupRiskGroupTable",
+                ("group_id", "risk", "records", "reviewer compare draft", "boundary"),
+                (
+                    ("DUP-001", "possible duplicate", "REF-002, REF-003", "compare title / DOI / year", "reviewer review required"),
+                ),
+            )
+            dedup_table.setMinimumHeight(86)
+            layout.addWidget(dedup_table)
+
+            chip = make_status_chip("no automatic merge / reviewer review required", status_key="blocked")
+            chip.setObjectName("metaDedupReviewerRequiredChip")
+            layout.addWidget(chip)
+
+            action_row = QHBoxLayout()
+            for object_name, text in (
+                ("metaAutoMergeDisabledButton", "Auto merge disabled"),
+                ("metaAutoDeleteDisabledButton", "Auto delete disabled"),
+                ("metaSendToScreeningDisabledButton", "Send to screening disabled"),
+            ):
+                button = QPushButton(text)
+                button.setObjectName(object_name)
+                button.setProperty("actionSemantic", "disabled_boundary")
+                button.setProperty("formalActionEnabled", False)
+                button.setEnabled(False)
+                button.setMinimumHeight(34)
+                action_row.addWidget(button)
+            action_row.addStretch(1)
+            layout.addLayout(action_row)
+            return frame
+
+        def _build_screening_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaScreeningRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "screening")
+            frame.setProperty("runtimeStatus", "testing")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("screeningState", "draft_decisions_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet(
+                """
+                QFrame#metaScreeningRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaScreeningCard,
+                QFrame#metaScreeningStepper,
+                QFrame#metaScreeningProgressCard,
+                QFrame#metaScreeningDecisionCard,
+                QFrame#metaScreeningDecisionLog {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaScreeningTitle {
+                    color: #12324A;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaScreeningMuted,
+                QLabel#metaScreeningSmall {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaScreeningStepDone,
+                QLabel#metaScreeningStepCurrent,
+                QLabel#metaScreeningStepTodo {
+                    color: #94A3B8;
+                    font-size: 10px;
+                    font-weight: 750;
+                }
+                QLabel#metaScreeningStepDone,
+                QLabel#metaScreeningStepCurrent {
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaScreeningRefItem {
+                    background: #FFFFFF;
+                    border: 1px solid transparent;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaScreeningRefItem[selected="true"] {
+                    background: #EAF3FF;
+                    border-left: 3px solid #2563EB;
+                    border-color: #BFDBFE;
+                }
+                QLabel#metaScreeningStatusInclude {
+                    background: #DCFCE7;
+                    border-radius: 8px;
+                    color: #059669;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningStatusExclude {
+                    background: #FEE2E2;
+                    border-radius: 8px;
+                    color: #DC2626;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningStatusUncertain {
+                    background: #FEF3C7;
+                    border-radius: 8px;
+                    color: #D97706;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningStatusFulltext {
+                    background: #DBEAFE;
+                    border-radius: 8px;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaScreeningMetric {
+                    color: #2563EB;
+                    font-size: 16px;
+                    font-weight: 900;
+                }
+                QLabel#metaScreeningAbstract {
+                    background: transparent;
+                    border: 0;
+                    color: #475569;
+                    font-size: 12px;
+                    line-height: 1.35;
+                }
+                QLabel#metaScreeningMetaBox,
+                QLabel#metaScreeningNoteBox {
+                    background: #F8FAFC;
+                    border: 1px solid #EEF2F7;
+                    border-radius: 10px;
+                    color: #475569;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaScreeningKeyword {
+                    background: #EFF6FF;
+                    border: 1px solid #BFDBFE;
+                    border-radius: 10px;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 800;
+                    padding: 4px 8px;
+                }
+                QLabel#metaScreeningAISuggestionCard {
+                    background: #FFFBEB;
+                    border: 1px solid #FDE68A;
+                    border-radius: 10px;
+                    color: #B45309;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaScreeningExclusionReason,
+                QLabel#metaScreeningNotesBox {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    color: #94A3B8;
+                    font-size: 11px;
+                    padding: 9px 10px;
+                }
+                QPushButton#metaScreeningDecisionDraftButton {
+                    border-radius: 10px;
+                    font-size: 12px;
+                    font-weight: 850;
+                    padding: 10px 12px;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="include_draft"] {
+                    background: #E9FBF3;
+                    border: 1px solid #86EFAC;
+                    color: #059669;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="exclude_draft"] {
+                    background: #FF3045;
+                    border: 1px solid #FF3045;
+                    color: #FFFFFF;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="uncertain"] {
+                    background: #FFFBEB;
+                    border: 1px solid #FACC15;
+                    color: #B45309;
+                }
+                QPushButton#metaScreeningDecisionDraftButton[decisionId="need_full_text"] {
+                    background: #EFF6FF;
+                    border: 1px solid #93C5FD;
+                    color: #2563EB;
+                }
+                QPushButton#metaSaveDraftScreeningDecisionButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 10px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 10px 12px;
+                }
+                QPushButton#metaScreeningSaveNextButton {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 10px;
+                    color: #475569;
+                    font-size: 11px;
+                    font-weight: 750;
+                    padding: 8px 10px;
+                }
+                QPushButton#metaScreeningNextFulltextButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 10px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 10px 14px;
+                }
+                """
+            )
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(12)
+            layout.addWidget(self._build_meta_screening_stepper())
+
+            counts = _readonly_table(
+                "metaScreeningDraftCountsTable",
+                ("Bucket", "Count", "State"),
+                (
+                    ("Queue", "4", "draft counts"),
+                    ("Include draft", "1", "not final"),
+                    ("Exclude draft", "1", "not final"),
+                    ("Uncertain", "1", "draft"),
+                    ("Need full text", "1", "draft"),
+                ),
+            )
+            counts.setMinimumHeight(118)
+            counts.setVisible(False)
+
+            queue = _readonly_table(
+                "metaScreeningReferenceQueue",
+                ("ref_id", "title", "screening_status"),
+                (
+                    ("REF-001", "Serum adiponectin and clinicopathological features in thyroid carcinoma", "include_draft"),
+                    ("REF-002", "ADIPOQ expression and survival outcomes in differentiated thyroid cancer", "uncertain"),
+                    ("REF-004", "Circulating adipokines and thyroid cancer risk", "exclude_draft"),
+                ),
+            )
+            queue.setMinimumHeight(138)
+            queue.setVisible(False)
+
+            reference_queue = make_reference_queue_panel(
+                references=(
+                    ReferenceItem("REF-001", "Serum adiponectin and clinicopathological features", "include_draft", "testing", "testing"),
+                    ReferenceItem("REF-002", "ADIPOQ expression and survival outcomes", "uncertain", "testing", "testing"),
+                    ReferenceItem("REF-004", "Circulating adipokines and thyroid cancer risk", "exclude_draft", "testing", "testing"),
+                ),
+                object_name="metaSharedReferenceQueuePanel",
+            )
+            reference_queue.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            reference_queue.setProperty("pageKey", "screening")
+            reference_queue.setProperty("screeningState", "draft_decisions_only")
+            reference_queue.setProperty("formalActionEnabled", False)
+            reference_queue.setVisible(False)
+
+            main = QHBoxLayout()
+            main.setSpacing(12)
+            main.addWidget(self._build_screening_queue_column(counts, queue, reference_queue))
+            main.addWidget(self._build_screening_reference_detail_card(), 1)
+            main.addWidget(self._build_screening_decision_column())
+            layout.addLayout(main)
+
+            footer = QHBoxLayout()
+            note = QLabel("AI 建议仅供参考，不能替代人工筛选。最终纳排决策须由研究者确认后方可进入下一流程。")
+            note.setObjectName("metaScreeningMuted")
+            note.setStyleSheet("color: #2563EB;")
+            footer.addWidget(note, 1)
+            next_fulltext = QPushButton("下一步：全文与提取 / Next: Full-text & Extraction  ->")
+            next_fulltext.setObjectName("metaScreeningNextFulltextButton")
+            next_fulltext.setProperty("targetPageKey", "fulltext_extraction")
+            next_fulltext.setProperty("formalActionEnabled", False)
+            next_fulltext.clicked.connect(lambda _checked=False: self.show_target_ia_page("fulltext_extraction"))
+            footer.addWidget(next_fulltext)
+            layout.addLayout(footer)
+
+            layout.addWidget(counts)
+            layout.addWidget(queue)
+            layout.addWidget(reference_queue)
+            return frame
+
+        def _build_meta_screening_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaScreeningStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(12, 9, 12, 9)
+            layout.setSpacing(6)
+            steps = (
+                ("1", "选题\nTopic", "done"),
+                ("2", "协议\nProtocol", "done"),
+                ("3", "检索\nSearch", "done"),
+                ("4", "去重\nDedup", "done"),
+                ("5", "筛选\nScreening", "current"),
+                ("6", "全文\nFull-text", "todo"),
+                ("7", "提取\nExtraction", "todo"),
+                ("8", "质量\nQuality", "todo"),
+                ("9", "合并\nSynthesis", "todo"),
+                ("10", "分析\nAnalysis", "todo"),
+                ("11", "报告\nReport", "todo"),
+                ("12", "发布\nPublish", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName(
+                    "metaScreeningStepCurrent" if state == "current" else ("metaScreeningStepDone" if state == "done" else "metaScreeningStepTodo")
                 )
-            )
-            item.setData(Qt.ItemDataRole.UserRole, str(record.get("assessment_id", "")))
-            assessment_list.addItem(item)
-        layout.addWidget(assessment_list)
-        form = _card("偏倚风险")
-        form_layout = form.layout()
-        domain_selectors: dict[str, QComboBox] = {}
-        domain_notes: dict[str, QLineEdit] = {}
-        for domain in NOS_DOMAINS:
-            form_layout.addWidget(QLabel(f"评价维度：{NOS_DOMAIN_LABELS_ZH.get(domain, domain)}"))
-            selector = QComboBox()
-            selector.setObjectName(f"metaQualityDomain_{domain}")
-            for rating in ("not_assessed", "low_risk_or_good", "unclear", "high_risk_or_poor"):
-                selector.addItem(QUALITY_RATING_LABELS_ZH.get(rating, rating), rating)
-            domain_selectors[domain] = selector
-            form_layout.addWidget(selector)
-            note = QLineEdit()
-            note.setObjectName(f"metaQualityDomainNote_{domain}")
-            note.setPlaceholderText("评价理由")
-            domain_notes[domain] = note
-            form_layout.addWidget(QLabel("评价理由"))
-            form_layout.addWidget(note)
-        overall = QComboBox()
-        overall.setObjectName("metaQualityOverallSelector")
-        for rating in ("not_assessed", "low_risk_or_good", "unclear", "high_risk_or_poor"):
-            overall.addItem(QUALITY_RATING_LABELS_ZH.get(rating, rating), rating)
-        state_selector = QComboBox()
-        state_selector.setObjectName("metaQualityStateSelector")
-        for state in ("draft", "suggested", "user_accepted", "user_edited", "confirmed", "rejected"):
-            state_selector.addItem(QUALITY_M6_STATE_LABELS_ZH.get(state, state), state)
-        notes = QPlainTextEdit()
-        notes.setObjectName("metaQualityNotes")
-        notes.setPlaceholderText("评价理由 / 备注；AI 或规则建议必须由用户确认后才生效")
-        notes.setMaximumHeight(90)
-        form_layout.addWidget(QLabel("总体判断"))
-        form_layout.addWidget(overall)
-        form_layout.addWidget(QLabel("已确认"))
-        form_layout.addWidget(state_selector)
-        form_layout.addWidget(notes)
-        layout.addWidget(form)
-        actions = QHBoxLayout()
-        save_draft = QPushButton("保存评分草稿")
-        complete = QPushButton("已确认")
-        export_csv = QPushButton("导出 CSV")
-        next_button = QPushButton("下一步：分析计划")
-        for button in (save_draft, complete, export_csv, next_button):
-            button.setObjectName("metaSecondaryButton")
-            actions.addWidget(button)
-        save_draft.setObjectName("metaPrimaryButton")
-        actions.addStretch(1)
-        layout.addLayout(actions)
-        layout.addWidget(_developer_details(f"records={project_dir / 'quality' / 'quality_assessment_records_v1.json'}"))
-        layout.addStretch(1)
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(48)
+                layout.addWidget(item, 1)
+            return stepper
 
-        def selected_assessment_id() -> str:
-            item = assessment_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+        def _build_screening_queue_column(self, counts: QTableWidget, queue: QTableWidget, reference_queue: QFrame) -> QFrame:
+            column = QFrame()
+            column.setObjectName("metaScreeningCard")
+            column.setFixedWidth(280)
+            column.setFixedHeight(575)
+            layout = QVBoxLayout(column)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("参考文献队列 / Queue")
+            title.setObjectName("metaScreeningTitle")
+            title.setWordWrap(True)
+            badge = QLabel("8 条")
+            badge.setObjectName("metaScreeningSmall")
+            badge.setStyleSheet("border: 1px solid #E5E7EB; border-radius: 10px; padding: 3px 8px;")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(badge)
+            layout.addLayout(header)
 
-        def do_save_draft() -> None:
-            tool_name = str(tool_selector.currentData() or "")
-            if not tool_name:
-                _show_message("暂无推荐工具")
-                return
-            selected = _selected_quality_study()
-            state = str(state_selector.currentData() or "draft")
-            result = service.create_quality_assessment_draft(
-                project_dir,
-                study_id=str(selected.get("study_id") or "study-ui-draft"),
-                record_id=str(selected.get("record_id") or "record-ui-draft"),
-                tool_name=tool_name,
-                domains={domain: str(selector.currentData()) for domain, selector in domain_selectors.items()},
-                domain_notes={domain: note.text() for domain, note in domain_notes.items()},
-                overall_rating=str(overall.currentData()),
-                notes=notes.toPlainText(),
-                reviewer_id="reviewer",
-                actor="reviewer",
-                assessment_state=state,
-            )
-            _show_message(result.message)
-            on_refresh()
-
-        def do_complete() -> None:
-            assessment_id = selected_assessment_id()
-            if not assessment_id:
-                _show_message("请选择质量评价记录")
-                return
-            result = service.confirm_quality_assessment_by_user(project_dir, assessment_id=assessment_id, actor="reviewer")
-            _show_message(result.message)
-            on_refresh()
-
-        def _selected_quality_study() -> dict[str, object]:
-            item = study_list.currentItem()
-            data = item.data(Qt.ItemDataRole.UserRole) if item is not None else {}
-            return dict(data) if isinstance(data, dict) else {}
-
-        save_draft.clicked.connect(do_save_draft)
-        complete.clicked.connect(do_complete)
-        export_csv.clicked.connect(lambda: _show_message(f"已导出：{service.export_quality_assessments_v1_csv(project_dir).name}"))
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _analysis_plan_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = AnalysisPlanService()
-        draft = service.load_draft(project_dir)
-        confirmed = service.load_confirmed(project_dir)
-        active_plan = confirmed or draft
-        readiness = service.analysis_plan_readiness(project_dir)
-        warning_labels = dict(active_plan.get("m7_warning_labels_zh", {})) if isinstance(active_plan.get("m7_warning_labels_zh"), dict) else dict(readiness.get("warning_labels_zh", {}))
-        frame = QFrame()
-        frame.setObjectName("metaAnalysisPlanPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("分析计划", "确认研究类型、效应量、模型、异质性、亚组/敏感性/发表偏倚计划。", "Developer Preview / testing"))
-        layout.addWidget(
-            _info_card(
-                "当前状态",
-                [
-                    f"计划状态：{_analysis_plan_state_label(str(active_plan.get('plan_state') or active_plan.get('status') or '未生成'))}",
-                    f"纳入研究数量：{int(active_plan.get('included_study_count', readiness.get('included_study_count', 0)) or 0)}",
-                    "确认分析计划不会运行正式统计分析。",
-                    "该计划仅用于测试阶段，不代表正式统计结论。",
-                ],
-                object_name="metaAnalysisPlanSummary",
-            )
-        )
-        form = _card("分析计划")
-        form_layout = form.layout()
-        form_layout.addWidget(_kv_label("研究类型", str(active_plan.get("meta_profile") or active_plan.get("meta_type") or "待生成")))
-        form_layout.addWidget(_kv_label("纳入研究数量", str(active_plan.get("included_study_count", readiness.get("included_study_count", 0)))))
-        research_question = QLineEdit()
-        research_question.setObjectName("metaAnalysisPlanResearchQuestionInput")
-        research_question.setPlaceholderText("研究问题")
-        research_question.setText(str(active_plan.get("research_question", "")))
-        form_layout.addWidget(research_question)
-        population = QLineEdit()
-        population.setObjectName("metaAnalysisPlanPopulationInput")
-        population.setPlaceholderText("Population / 研究对象")
-        population.setText(str(active_plan.get("population", "")))
-        form_layout.addWidget(population)
-        intervention = QLineEdit()
-        intervention.setObjectName("metaAnalysisPlanInterventionInput")
-        intervention.setPlaceholderText("Intervention / Exposure / 干预或暴露")
-        intervention.setText(str(active_plan.get("intervention_or_exposure", "")))
-        form_layout.addWidget(intervention)
-        comparator = QLineEdit()
-        comparator.setObjectName("metaAnalysisPlanComparatorInput")
-        comparator.setPlaceholderText("Comparator / 对照")
-        comparator.setText(str(active_plan.get("comparator", "")))
-        form_layout.addWidget(comparator)
-        outcome = QLineEdit()
-        outcome.setObjectName("metaAnalysisPlanOutcomeInput")
-        outcome.setPlaceholderText("Outcome / 结局")
-        outcome.setText(str(active_plan.get("outcome", "")))
-        form_layout.addWidget(outcome)
-        effect_type = QComboBox()
-        effect_type.setObjectName("metaAnalysisPlanEffectMeasureSelector")
-        for item in ANALYSIS_PLAN_EFFECT_MEASURE_TYPES:
-            effect_type.addItem(item, item)
-        selected_effect = str(active_plan.get("effect_measure_type") or active_plan.get("effect_measure") or "OR")
-        effect_index = effect_type.findData(selected_effect)
-        if effect_index >= 0:
-            effect_type.setCurrentIndex(effect_index)
-        form_layout.addWidget(_kv_label("效应量类型", "OR / RR / HR / MD / SMD / proportion / correlation / diagnostic_accuracy / other"))
-        form_layout.addWidget(effect_type)
-        model_preference = QComboBox()
-        model_preference.setObjectName("metaAnalysisPlanModelPreferenceSelector")
-        model_labels = {
-            "fixed_effect": "固定效应",
-            "random_effect": "随机效应",
-            "both": "固定效应 + 随机效应",
-            "undecided": "暂不决定",
-        }
-        for item in ANALYSIS_PLAN_MODEL_PREFERENCES:
-            model_preference.addItem(model_labels[item], item)
-        selected_model = str(active_plan.get("model_preference") or "random_effect")
-        model_index = model_preference.findData(selected_model)
-        if model_index >= 0:
-            model_preference.setCurrentIndex(model_index)
-        form_layout.addWidget(_kv_label("固定效应", "可在模型偏好中选择"))
-        form_layout.addWidget(_kv_label("随机效应", "可在模型偏好中选择"))
-        form_layout.addWidget(model_preference)
-        form_layout.addWidget(_kv_label("异质性", "I2 / tau2 / Q"))
-        subgroup_plan = QPlainTextEdit()
-        subgroup_plan.setObjectName("metaAnalysisPlanSubgroupInput")
-        subgroup_plan.setPlaceholderText("亚组分析")
-        subgroup_plan.setPlainText(_plan_text(active_plan.get("subgroup_plan", "")))
-        form_layout.addWidget(_kv_label("亚组分析", "按研究问题人工填写或确认"))
-        form_layout.addWidget(subgroup_plan)
-        sensitivity_plan = QPlainTextEdit()
-        sensitivity_plan.setObjectName("metaAnalysisPlanSensitivityInput")
-        sensitivity_plan.setPlaceholderText("敏感性分析")
-        sensitivity_plan.setPlainText(_plan_text(active_plan.get("sensitivity_plan", "")))
-        form_layout.addWidget(_kv_label("敏感性分析", "按研究问题人工填写或确认"))
-        form_layout.addWidget(sensitivity_plan)
-        publication_bias_plan = QPlainTextEdit()
-        publication_bias_plan.setObjectName("metaAnalysisPlanPublicationBiasInput")
-        publication_bias_plan.setPlaceholderText("发表偏倚")
-        publication_bias_plan.setPlainText(_plan_text(active_plan.get("publication_bias_plan", "")))
-        form_layout.addWidget(_kv_label("发表偏倚", "研究数量充足时再考虑；当前只记录计划"))
-        form_layout.addWidget(publication_bias_plan)
-        layout.addWidget(form)
-        layout.addWidget(
-            _info_card(
-                "准备度提示",
-                list(warning_labels.values())
-                or [ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH["developer_preview_testing_only"]],
-                object_name="metaAnalysisPlanWarnings",
-            )
-        )
-        buttons = QHBoxLayout()
-        generate = QPushButton("生成分析计划草稿")
-        save_draft = QPushButton("保存计划编辑")
-        confirm = QPushButton("确认分析计划")
-        next_button = QPushButton("下一步：结果与报告")
-        for button in (generate, save_draft, confirm, next_button):
-            button.setObjectName("metaSecondaryButton")
-            buttons.addWidget(button)
-        generate.setObjectName("metaPrimaryButton")
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
-        layout.addWidget(_m10_m13_statistics_controls(project_dir, on_refresh=on_refresh))
-        layout.addWidget(_developer_details(f"draft={service.draft_path(project_dir)}\nconfirmed={service.confirmed_path(project_dir)}\nmanifest={service.manifest_path(project_dir)}"))
-        layout.addStretch(1)
-
-        def _ui_updates(plan_state: str = "user_edited") -> dict[str, object]:
-            return {
-                "research_question": research_question.text().strip(),
-                "population": population.text().strip(),
-                "intervention_or_exposure": intervention.text().strip(),
-                "comparator": comparator.text().strip(),
-                "outcome": outcome.text().strip(),
-                "effect_measure": str(effect_type.currentData()),
-                "effect_measure_type": str(effect_type.currentData()),
-                "model_default": str(model_preference.currentData()),
-                "model_preference": str(model_preference.currentData()),
-                "heterogeneity_metrics": ["I2", "tau2", "Q"],
-                "subgroup_plan": {"user_plan": subgroup_plan.toPlainText().strip(), "status": "user_edited"},
-                "sensitivity_plan": {"user_plan": sensitivity_plan.toPlainText().strip(), "status": "user_edited"},
-                "publication_bias_plan": {"user_plan": publication_bias_plan.toPlainText().strip(), "status": "user_edited"},
-                "plan_state": plan_state,
-            }
-
-        def do_generate() -> None:
-            try:
-                result = service.generate_draft(project_dir, actor="reviewer")
-                _show_message(result.message)
-            except Exception as exc:
-                _show_message(str(exc))
-            on_refresh()
-
-        def do_save_draft() -> None:
-            try:
-                if not service.load_draft(project_dir):
-                    service.generate_draft(project_dir, actor="reviewer")
-                result = service.edit_draft(project_dir, actor="reviewer", updates=_ui_updates())
-                _show_message(result.message)
-            except Exception as exc:
-                _show_message(str(exc))
-            on_refresh()
-
-        def do_confirm() -> None:
-            try:
-                if not service.load_draft(project_dir):
-                    service.generate_draft(project_dir, actor="reviewer")
-                service.edit_draft(project_dir, actor="reviewer", updates=_ui_updates())
-                result = service.confirm_plan(project_dir, actor="reviewer")
-                _show_message(result.message)
-            except Exception as exc:
-                _show_message(str(exc))
-            on_refresh()
-
-        generate.clicked.connect(do_generate)
-        save_draft.clicked.connect(do_save_draft)
-        confirm.clicked.connect(do_confirm)
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _m10_m13_statistics_controls(project_dir: Path, *, on_refresh: Callable[[], None]) -> QFrame:
-        plan_service = AnalysisPlanService()
-        normalization_service = EffectSizeNormalizationService()
-        pairwise_service = PairwiseMetaExecutorService(analysis_plan_service=plan_service, normalization_service=normalization_service)
-        review_service = StatisticalResultReviewService(pairwise_executor=pairwise_service)
-        normalized_effects = normalization_service.normalize_extraction_rows(project_dir)
-        normalization_summary = normalization_service.summarize_normalization(normalized_effects)
-        latest_result = pairwise_service.load_latest_result(project_dir)
-        review = review_service.load_review(project_dir)
-        panel = _card("M10-M13 统计结果路径")
-        panel.setObjectName("metaM10M13StatisticsPanel")
-        layout = panel.layout()
-        layout.addWidget(
-            _info_card(
-                "效应量标准化预检查",
-                [
-                    f"总提取行：{normalization_summary.total_rows}",
-                    f"confirmed 行：{normalization_summary.confirmed_rows}",
-                    f"可用于后续统计的研究数：{normalization_summary.normalized_ready}",
-                    f"需要用户检查：{normalization_summary.needs_user_review}",
-                    f"字段不完整：{normalization_summary.incomplete}",
-                    f"无效或不支持：{normalization_summary.invalid + normalization_summary.unsupported_effect_type}",
-                    "标准化输入只用于 executor 预检查，不生成 computed 或 report_ready 结果。",
-                ],
-                object_name="metaEffectSizeNormalizationPreview",
-            )
-        )
-        layout.addWidget(
-            _info_card(
-                "Pairwise executor",
-                _pairwise_workspace_result_lines(latest_result),
-                object_name="metaPairwiseExecutorPreview",
-            )
-        )
-        layout.addWidget(
-            _info_card(
-                "统计结果审核",
-                [
-                    f"审核状态：{result_review_label_zh(review.review_state)}",
-                    f"当前统计状态：{statistical_result_state_label_zh(review.result_state or (latest_result.result_state if latest_result else STATISTICAL_RESULT_STATE_NOT_RUN))}",
-                    f"已确认查看警告：{'是' if review.review_warnings_acknowledged else '否'}",
-                    f"申请报告就绪：{'是' if review.report_ready_requested else '否'}",
-                    f"报告就绪：{'是' if review.report_ready_granted else '否'}",
-                    f"阻止进入报告的原因：{'；'.join(review.report_ready_blockers) if review.report_ready_blockers else '无'}",
-                    "report_ready 只代表可进入当前草稿报告流程，不代表正式发表、临床、监管或 production 结论。",
-                ],
-                object_name="metaResultReviewPreview",
-            )
-        )
-        feedback = QLabel("")
-        feedback.setObjectName("metaStatisticsFeedback")
-        feedback.setWordWrap(True)
-        layout.addWidget(feedback)
-        review_notes = QLineEdit()
-        review_notes.setObjectName("metaResultReviewNotesInput")
-        review_notes.setPlaceholderText("审核备注（可选）")
-        warning_ack = QCheckBox("已确认查看警告")
-        warning_ack.setObjectName("metaResultWarningAcknowledgement")
-        warning_ack.setChecked(bool(review.review_warnings_acknowledged))
-        layout.addWidget(review_notes)
-        layout.addWidget(warning_ack)
-        buttons = QHBoxLayout()
-        refresh_normalization = QPushButton("刷新效应量标准化预检查")
-        run = QPushButton("运行 pairwise executor")
-        accept = QPushButton("接受进入报告草稿")
-        needs_revision = QPushButton("标记需要修订")
-        reject = QPushButton("不纳入报告")
-        report_ready = QPushButton("申请报告就绪")
-        for button in (refresh_normalization, accept, needs_revision, reject, report_ready):
-            button.setObjectName("metaSecondaryButton")
-            buttons.addWidget(button)
-        run.setObjectName("metaPrimaryButton")
-        buttons.insertWidget(1, run)
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
-        layout.addWidget(_developer_details(f"pairwise_result={pairwise_service.latest_result_path(project_dir)}\nreview={review_service.review_path(project_dir)}"))
-
-        def latest_for_review():
-            result = pairwise_service.load_latest_result(project_dir)
-            if result is None:
-                raise ValueError("请先运行 pairwise executor。")
-            return result
-
-        def set_transition_feedback(prefix: str, transition) -> None:
-            blockers = "；".join(transition.blockers) if transition.blockers else "无"
-            feedback.setText(f"{prefix}：{'已完成' if transition.success else '未完成'}；阻止进入报告的原因：{blockers}")
-
-        def do_refresh_normalization() -> None:
-            _show_message("已刷新效应量标准化预检查。")
-            on_refresh()
-
-        def do_run_pairwise() -> None:
-            try:
-                result = pairwise_service.execute(project_dir, actor="reviewer")
-                if result.validation_errors:
-                    feedback.setText("输入校验失败：" + "；".join(result.validation_errors))
+            tabs = QHBoxLayout()
+            for text, active in (("全部 (8)", True), ("待筛选 (6)", False), ("已处理 (2)", False)):
+                tab = QLabel(text)
+                tab.setObjectName("metaScreeningSmall")
+                tab.setAlignment(Qt.AlignCenter)
+                if active:
+                    tab.setStyleSheet("color: #2563EB; font-weight: 900; border-bottom: 2px solid #2563EB; padding: 6px;")
                 else:
-                    feedback.setText("pairwise executor 已完成计算；结果仍为 Developer Preview / testing，需用户审核。")
-            except Exception as exc:
-                feedback.setText(f"pairwise executor 运行失败：{exc}")
-            on_refresh()
+                    tab.setStyleSheet("color: #64748B; padding: 6px;")
+                tabs.addWidget(tab, 1)
+            layout.addLayout(tabs)
 
-        def do_accept() -> None:
-            try:
-                transition = review_service.accept_for_report(
-                    project_dir,
-                    latest_for_review(),
-                    reviewer_role="reviewer",
-                    review_notes=review_notes.text(),
-                    warnings_acknowledged=warning_ack.isChecked(),
+            refs = (
+                ("#004", "建议纳入", "include", "待筛选", "CAR-T relapsed B-cell lymphoma review", "2022  Blood Cancer"),
+                ("#005", "建议排除", "exclude", "已排除", "PD-L1 gastric cancer meta-analysis", "2017  Oncotarget"),
+                ("#006", "不确定", "uncertain", "待筛选", "Dupilumab safety in adult dermatitis", "2019  JAMA"),
+            )
+            for index, (ref_no, badge_text, semantic, state, title_text, meta) in enumerate(refs):
+                layout.addWidget(self._build_screening_reference_item(ref_no, badge_text, semantic, state, title_text, meta, selected=index == 0))
+
+            footer = QHBoxLayout()
+            footer_label = QLabel("第 1-8 条，共 22 条")
+            footer_label.setObjectName("metaScreeningMuted")
+            page = QLabel("<   1   >")
+            page.setObjectName("metaScreeningMuted")
+            page.setAlignment(Qt.AlignRight)
+            footer.addWidget(footer_label)
+            footer.addStretch(1)
+            footer.addWidget(page)
+            layout.addLayout(footer)
+
+            progress = QFrame()
+            progress.setObjectName("metaScreeningProgressCard")
+            progress_layout = QVBoxLayout(progress)
+            progress_layout.setContentsMargins(12, 10, 12, 10)
+            progress_layout.setSpacing(8)
+            progress_title = QLabel("筛选进度 / Screening Progress")
+            progress_title.setObjectName("metaScreeningTitle")
+            progress_layout.addWidget(progress_title)
+            metrics = QHBoxLayout()
+            for value, label, color in (("6", "待筛选", "#2563EB"), ("1", "已纳入", "#059669"), ("1", "已排除", "#DC2626"), ("0", "不确定", "#D97706")):
+                box = QVBoxLayout()
+                metric = QLabel(value)
+                metric.setObjectName("metaScreeningMetric")
+                metric.setAlignment(Qt.AlignCenter)
+                metric.setStyleSheet(f"color: {color}; font-size: 16px; font-weight: 900;")
+                caption = QLabel(label)
+                caption.setObjectName("metaScreeningMuted")
+                caption.setAlignment(Qt.AlignCenter)
+                box.addWidget(metric)
+                box.addWidget(caption)
+                metrics.addLayout(box)
+            progress_layout.addLayout(metrics)
+            bar = QLabel("")
+            bar.setFixedHeight(6)
+            bar.setStyleSheet("background: #2563EB; border-radius: 3px;")
+            progress_layout.addWidget(bar)
+            percent = QLabel("25% 完成")
+            percent.setObjectName("metaScreeningMuted")
+            percent.setAlignment(Qt.AlignRight)
+            progress_layout.addWidget(percent)
+            layout.addWidget(progress)
+            return column
+
+        def _build_screening_reference_item(self, ref_no: str, badge_text: str, semantic: str, state: str, title_text: str, meta: str, *, selected: bool) -> QLabel:
+            label = QLabel(f"{ref_no}    {badge_text}                                      {state}\n{title_text} · {meta}")
+            label.setObjectName("metaScreeningRefItem")
+            label.setProperty("selected", selected)
+            label.setWordWrap(True)
+            label.setMinimumHeight(72 if selected else 68)
+            label.setMaximumHeight(82 if selected else 76)
+            return label
+
+        def _build_screening_reference_detail_card(self) -> QFrame:
+            detail = QFrame()
+            detail.setObjectName("metaScreeningReferenceDetail")
+            detail.setProperty("screeningState", "draft_decisions_only")
+            detail.setFixedWidth(390)
+            detail.setFixedHeight(575)
+            layout = QVBoxLayout(detail)
+            layout.setContentsMargins(14, 10, 14, 10)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("文献详情 / Reference Detail")
+            title.setObjectName("metaScreeningTitle")
+            pager = QLabel("<    4 / 8    >")
+            pager.setObjectName("metaScreeningMuted")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(pager)
+            layout.addLayout(header)
+
+            paper_title = QLabel("CAR-T cell therapy for relapsed or refractory B-cell non-Hodgkin lymphoma: systematic review and meta-analysis")
+            paper_title.setObjectName("metaScreeningTitle")
+            paper_title.setStyleSheet("font-size: 14px; font-weight: 900; color: #12324A;")
+            paper_title.setWordWrap(True)
+            layout.addWidget(paper_title)
+            author = QLabel("Schuster SJ, Bishop MR, Tam CS, et al.")
+            author.setObjectName("metaScreeningMuted")
+            layout.addWidget(author)
+
+            meta_box = QLabel("期刊 / JOURNAL                         年份 / YEAR\nBlood Cancer Journal                    2022\n\nPMID                                     DOI\n35773265                                10.1038/s41408-022-00700-z")
+            meta_box.setObjectName("metaScreeningMetaBox")
+            meta_box.setWordWrap(True)
+            layout.addWidget(meta_box)
+
+            abstract_title = QLabel("摘要 / ABSTRACT")
+            abstract_title.setObjectName("metaScreeningMuted")
+            abstract_title.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(abstract_title)
+            abstract = QLabel(
+                "Chimeric antigen receptor T-cell (CAR-T) therapy has emerged as a transformative treatment for relapsed or refractory B-cell non-Hodgkin lymphoma. "
+                "This systematic review and meta-analysis evaluates efficacy and safety across multiple clinical trials. Pooled response rate and safety outcomes are summarized for reviewer triage."
+            )
+            abstract.setObjectName("metaScreeningAbstract")
+            abstract.setWordWrap(True)
+            layout.addWidget(abstract)
+
+            keyword_title = QLabel("关键词 / KEYWORDS")
+            keyword_title.setObjectName("metaScreeningMuted")
+            keyword_title.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(keyword_title)
+            keyword_row = QHBoxLayout()
+            for keyword in ("CAR-T", "B-cell", "CD19", "immuno", "meta"):
+                chip = QLabel(keyword)
+                chip.setObjectName("metaScreeningKeyword")
+                chip.setAlignment(Qt.AlignCenter)
+                keyword_row.addWidget(chip)
+            keyword_row.addStretch(1)
+            layout.addLayout(keyword_row)
+
+            ai_card = QLabel("AI suggestion: likely_include, confidence 0.72. Advisory only; reviewer remains the authority.")
+            ai_card.setObjectName("metaScreeningAISuggestionCard")
+            ai_card.setProperty("aiBoundary", "advisory_only")
+            ai_card.setWordWrap(True)
+            layout.addWidget(ai_card)
+            layout.addStretch(1)
+            return detail
+
+        def _build_screening_decision_column(self) -> QFrame:
+            column = QFrame()
+            column.setObjectName("metaScreeningDecisionCard")
+            column.setFixedWidth(260)
+            column.setFixedHeight(575)
+            layout = QVBoxLayout(column)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(8)
+            title = QLabel("筛选决策 / Screening Decision")
+            title.setObjectName("metaScreeningTitle")
+            title.setWordWrap(True)
+            layout.addWidget(title)
+            decision_label = QLabel("选择决策 / SELECT DECISION")
+            decision_label.setObjectName("metaScreeningMuted")
+            decision_label.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(decision_label)
+
+            decision_grid = QGridLayout()
+            decision_grid.setHorizontalSpacing(8)
+            decision_grid.setVerticalSpacing(8)
+            for decision_id, text in (
+                ("include_draft", "纳入草稿"),
+                ("exclude_draft", "排除草稿"),
+                ("uncertain", "不确定"),
+                ("need_full_text", "需全文"),
+            ):
+                button = QPushButton(text)
+                button.setObjectName("metaScreeningDecisionDraftButton")
+                button.setProperty("decisionId", decision_id)
+                button.setProperty("decisionState", "draft_only")
+                button.setProperty("formalActionEnabled", False)
+                button.setMinimumHeight(40)
+                index = {"include_draft": 0, "exclude_draft": 1, "uncertain": 2, "need_full_text": 3}[decision_id]
+                decision_grid.addWidget(button, index // 2, index % 2)
+            layout.addLayout(decision_grid)
+
+            reason_label = QLabel("排除原因 / EXCLUSION REASON")
+            reason_label.setObjectName("metaScreeningMuted")
+            reason_label.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(reason_label)
+            reason = QLabel("请选择排除原因                         v")
+            reason.setObjectName("metaScreeningExclusionReason")
+            layout.addWidget(reason)
+            notes_label = QLabel("补充说明 / ADDITIONAL NOTES")
+            notes_label.setObjectName("metaScreeningMuted")
+            notes_label.setStyleSheet("font-weight: 850; color: #94A3B8;")
+            layout.addWidget(notes_label)
+            notes = QLabel("添加决策说明（可选）...\n\n")
+            notes.setObjectName("metaScreeningNotesBox")
+            notes.setMaximumHeight(70)
+            layout.addWidget(notes)
+
+            save_draft = QPushButton("Save Draft Decision")
+            save_draft.setObjectName("metaSaveDraftScreeningDecisionButton")
+            save_draft.setProperty("actionSemantic", "draft_only")
+            save_draft.setProperty("formalActionEnabled", False)
+            save_draft.setMinimumHeight(40)
+            layout.addWidget(save_draft)
+            save_next = QPushButton("保存并下一条 / Save Next")
+            save_next.setObjectName("metaScreeningSaveNextButton")
+            save_next.setProperty("actionSemantic", "draft_only")
+            save_next.setProperty("formalActionEnabled", False)
+            save_next.setMinimumHeight(32)
+            layout.addWidget(save_next)
+            layout.addSpacing(20)
+
+            log = QFrame()
+            log.setObjectName("metaScreeningDecisionLog")
+            log_layout = QVBoxLayout(log)
+            log_layout.setContentsMargins(12, 10, 12, 10)
+            log_layout.setSpacing(8)
+            log_header = QHBoxLayout()
+            log_title = QLabel("决策记录 / Log")
+            log_title.setObjectName("metaScreeningTitle")
+            log_title.setWordWrap(True)
+            log_count = QLabel("3 条记录")
+            log_count.setObjectName("metaScreeningMuted")
+            log_header.addWidget(log_title)
+            log_header.addStretch(1)
+            log_header.addWidget(log_count)
+            log_layout.addLayout(log_header)
+            for badge, semantic, text in (
+                ("纳入草稿", "include", "RCT设计，符合纳入标准\n09:15 · Developer"),
+                ("排除草稿", "exclude", "结局指标与检索方案不符\n09:32 · Developer"),
+                ("需全文", "fulltext", "摘要信息不足，需全文核查\n10:05 · Developer"),
+            ):
+                row = QLabel(f"{badge}    {text}")
+                row.setObjectName(
+                    "metaScreeningStatusInclude" if semantic == "include" else ("metaScreeningStatusExclude" if semantic == "exclude" else "metaScreeningStatusFulltext")
                 )
-                set_transition_feedback("接受进入报告草稿", transition)
-            except Exception as exc:
-                feedback.setText(f"统计结果审核失败：{exc}")
-            on_refresh()
+                row.setWordWrap(True)
+                log_layout.addWidget(row)
+            layout.addWidget(log, 1)
+            return column
 
-        def do_needs_revision() -> None:
-            try:
-                transition = review_service.mark_needs_revision(project_dir, latest_for_review(), reviewer_role="reviewer", review_notes=review_notes.text())
-                set_transition_feedback("标记需要修订", transition)
-            except Exception as exc:
-                feedback.setText(f"统计结果审核失败：{exc}")
-            on_refresh()
-
-        def do_reject() -> None:
-            try:
-                transition = review_service.reject_for_report(project_dir, latest_for_review(), reviewer_role="reviewer", review_notes=review_notes.text())
-                set_transition_feedback("不纳入报告", transition)
-            except Exception as exc:
-                feedback.setText(f"统计结果审核失败：{exc}")
-            on_refresh()
-
-        def do_report_ready() -> None:
-            try:
-                requested = review_service.request_report_ready(project_dir, latest_for_review(), reviewer_role="reviewer")
-                latest = pairwise_service.load_latest_result(project_dir)
-                granted = review_service.grant_report_ready(project_dir, latest, reviewer_role="reviewer") if requested.success else requested
-                set_transition_feedback("申请报告就绪", granted)
-            except Exception as exc:
-                feedback.setText(f"申请报告就绪失败：{exc}")
-            on_refresh()
-
-        refresh_normalization.clicked.connect(do_refresh_normalization)
-        run.clicked.connect(do_run_pairwise)
-        accept.clicked.connect(do_accept)
-        needs_revision.clicked.connect(do_needs_revision)
-        reject.clicked.connect(do_reject)
-        report_ready.clicked.connect(do_report_ready)
-        return panel
-
-
-    def _pairwise_workspace_result_lines(result) -> list[str]:
-        if result is None:
-            return [
-                "当前统计状态：尚未运行正式统计分析",
-                "模型：未运行",
-                "纳入研究数：0",
-                "合并效应量：缺失",
-                "95% CI：缺失",
-                "异质性 I²：缺失",
-                "测试阶段提示：尚未运行 M12 pairwise executor。",
-                "需要用户审核后才能进入报告。",
-            ]
-        payload = result.to_dict()
-        heterogeneity = payload.get("heterogeneity_summary", {})
-        i2 = heterogeneity.get("i_squared") if isinstance(heterogeneity, dict) else None
-        ci = "缺失"
-        if payload.get("pooled_ci_lower") is not None and payload.get("pooled_ci_upper") is not None:
-            ci = f"{_format_number(payload.get('pooled_ci_lower'))} - {_format_number(payload.get('pooled_ci_upper'))}"
-        errors = "；".join(str(item) for item in payload.get("validation_errors", []) if str(item)) if isinstance(payload.get("validation_errors"), list) else ""
-        warnings = "；".join(str(item) for item in payload.get("warnings", []) if str(item)) if isinstance(payload.get("warnings"), list) else ""
-        return [
-            f"当前统计状态：{statistical_result_state_label_zh(str(payload.get('result_state', 'not_run')))}",
-            f"模型：{payload.get('model_used') or '未运行'}",
-            f"纳入研究数：{len(payload.get('included_studies', [])) if isinstance(payload.get('included_studies'), list) else 0}",
-            f"合并效应量：{_format_number(payload.get('pooled_effect'))}",
-            f"95% CI：{ci}",
-            f"异质性 I²：{_format_number(i2)}",
-            f"校验错误：{errors or '无'}",
-            f"警告：{warnings or '无'}",
-            "测试阶段提示：M12 为 Developer Preview / testing MVP，不生成正式医学结论。",
-            "需要用户审核后才能进入报告。",
-        ]
-
-
-    def _format_number(value: object) -> str:
-        if value is None:
-            return "缺失"
-        try:
-            return f"{float(value):.6g}"
-        except (TypeError, ValueError):
-            return "缺失"
-
-
-    def _statistics_analysis_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        plan_service = AnalysisPlanService()
-        stats = MetaStatisticsEngineService(analysis_plan_service=plan_service)
-        confirmed = plan_service.load_confirmed(project_dir)
-        manifest = _load_json_object(stats.manifest_path(project_dir))
-        result_files = sorted(stats.results_dir(project_dir).glob("*_result.json")) if stats.results_dir(project_dir).exists() else []
-        latest_result = _load_json_object(result_files[-1]) if result_files else {}
-        frame = QFrame()
-        frame.setObjectName("metaStatisticsAnalysisPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("统计分析", "只能从 confirmed analysis plan 运行；结果 testing-level。", "M17 / testing"))
-        layout.addWidget(_info_card("输入校验", ["请先确认分析计划" if not confirmed else "已有 confirmed analysis plan", f"run_count={manifest.get('run_count', len(result_files))}", "不生成医学 conclusion，不推进 PRISMA。"], object_name="metaStatisticsSummary"))
-        result_view = QTextEdit()
-        result_view.setObjectName("metaStatisticsResultPreview")
-        result_view.setReadOnly(True)
-        result_view.setPlainText(json.dumps(latest_result or {"message": "暂无统计结果"}, ensure_ascii=False, indent=2)[:12000])
-        layout.addWidget(result_view)
-        buttons = QHBoxLayout()
-        run = QPushButton("运行统计分析")
-        run.setObjectName("metaPrimaryButton")
-        run.setEnabled(bool(confirmed))
-        next_button = QPushButton("下一步：报告导出")
-        next_button.setObjectName("metaSecondaryButton")
-        buttons.addWidget(run)
-        buttons.addWidget(next_button)
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
-        layout.addWidget(_developer_details(f"manifest={stats.manifest_path(project_dir)}\nresults={stats.results_dir(project_dir)}"))
-        layout.addStretch(1)
-
-        def do_run() -> None:
-            try:
-                result = stats.run_statistics(project_dir, actor="reviewer")
-                _show_message(result.message)
-            except Exception as exc:
-                _show_message(str(exc))
-            on_refresh()
-
-        run.clicked.connect(do_run)
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _figure_results_page(project_dir: Path, *, on_next: Callable[[], None]) -> QFrame:
-        service = FigureResultService()
-        artifacts = service.list_figure_artifacts(project_dir)
-        results_dir = project_dir / "analysis" / "results"
-        result_files = sorted(results_dir.glob("*_result.json")) if results_dir.exists() else []
-        frame = QFrame()
-        frame.setObjectName("metaFigureResultsPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("图表结果", "读取已存在图表/统计结果；不重新计算统计。", "M18 逐步接入"))
-        layout.addWidget(_info_card("图表摘要", [f"figure artifacts：{len(artifacts)}", f"standardized results：{len(result_files)}", "本页不会重新计算统计，不生成 conclusion。"], object_name="metaFigureSummary"))
-        table = QTableWidget()
-        table.setObjectName("metaFigureArtifactTable")
-        table.setColumnCount(4)
-        table.setHorizontalHeaderLabels(["figure_id", "type", "format", "path"])
-        table.setRowCount(len(artifacts))
-        for row, artifact in enumerate(artifacts):
-            values = [artifact.figure_id, artifact.figure_type, artifact.output_format, artifact.output_path]
-            for col, value in enumerate(values):
-                table.setItem(row, col, QTableWidgetItem(str(value)))
-        layout.addWidget(table)
-        next_button = QPushButton("下一步：PRISMA")
-        next_button.setObjectName("metaSecondaryButton")
-        next_button.clicked.connect(on_next)
-        layout.addWidget(next_button)
-        layout.addWidget(_developer_details(f"figure_manifest={project_dir / 'figures' / 'figure_artifacts.json'}\nresults_dir={results_dir}"))
-        layout.addStretch(1)
-        return frame
-
-
-    def _prisma_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        service = PRISMAService()
-        summary = service.load_prisma_flow_summary(project_dir)
-        frame = QFrame()
-        frame.setObjectName("metaPrismaPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("PRISMA", "数字必须来自真实导入、去重、筛选、全文记录。", "可追溯"))
-        lines = ["尚未生成 PRISMA summary。"]
-        if summary is not None:
-            payload = _prisma_payload(summary)
-            lines = [
-                f"identified={payload.get('records_identified', 0)}",
-                f"duplicates_removed={payload.get('duplicates_removed', 0)}",
-                f"screened={payload.get('records_screened', 0)}",
-                f"title/abstract excluded={payload.get('records_excluded_title_abstract', 0)}",
-                f"studies included={payload.get('studies_included', 0)}",
-            ]
-        layout.addWidget(_info_card("PRISMA summary", lines, object_name="metaPrismaSummary"))
-        buttons = QHBoxLayout()
-        collect = QPushButton("生成 PRISMA summary")
-        export_md = QPushButton("导出 Markdown")
-        next_button = QPushButton("下一步：报告导出")
-        for button in (collect, export_md, next_button):
-            button.setObjectName("metaSecondaryButton")
-            buttons.addWidget(button)
-        collect.setObjectName("metaPrimaryButton")
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
-        layout.addWidget(_developer_details(f"summary={project_dir / 'reports' / 'prisma_flow_summary.json'}"))
-        layout.addStretch(1)
-
-        def do_collect() -> None:
-            result = service.collect_prisma_numbers(project_dir)
-            path = service.save_prisma_flow_summary(project_dir, result)
-            _show_message(f"已生成：{path.name}")
-            on_refresh()
-
-        def do_export_md() -> None:
-            result = service.load_prisma_flow_summary(project_dir) or service.collect_prisma_numbers(project_dir)
-            path = service.export_prisma_flow_markdown(project_dir, result)
-            _show_message(f"已导出：{path.name}")
-            on_refresh()
-
-        collect.clicked.connect(do_collect)
-        export_md.clicked.connect(do_export_md)
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _report_export_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
-        report_path = project_dir / "reports" / "formal_meta_report.md"
-        frame = QFrame()
-        frame.setObjectName("metaReportExportPage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("报告导出", "生成中文 draft/testing 报告；明确区分确认、草稿、建议、缺失和未来统计占位。", "draft"))
-        missing_hint = "缺失内容提示：生成报告后会在 Markdown 末尾列出。"
-        layout.addWidget(
-            _info_card(
-                "报告状态",
-                [
-                    f"Markdown 草稿：{'已存在' if report_path.exists() else '暂无'}",
-                    "不会自动生成 pooled effect、p value、forest plot、funnel plot 或医学结论。",
-                    "统计分析结果尚未作为正式可发表结论生成。",
-                    missing_hint,
-                ],
-                object_name="metaReportSummary",
+        def _build_fulltext_extraction_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaFulltextExtractionPanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "fulltext_extraction")
+            frame.setProperty("semanticKey", PageKey.META_FULLTEXT_EXTRACTION.value)
+            frame.setProperty("statusKey", "testing")
+            frame.setProperty("extractionState", "draft_extraction")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet(
+                """
+                QFrame#metaFulltextExtractionPanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaFulltextStepper,
+                QFrame#metaFulltextCard,
+                QFrame#metaFulltextSideCard,
+                QFrame#metaFulltextTableCard,
+                QFrame#metaExtractionDesignBody,
+                QFrame#metaFulltextManagementBody {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaFulltextTitle,
+                QLabel#metaExtractionSectionTitle {
+                    color: #12324A;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaFulltextMuted,
+                QLabel#metaFulltextSmall,
+                QLabel#metaExtractionMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaFulltextStepDone,
+                QLabel#metaFulltextStepCurrent,
+                QLabel#metaFulltextStepTodo {
+                    color: #94A3B8;
+                    font-size: 10px;
+                    font-weight: 750;
+                }
+                QLabel#metaFulltextStepDone,
+                QLabel#metaFulltextStepCurrent {
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QPushButton#metaFulltextExtractionTab {
+                    background: transparent;
+                    border: 0;
+                    border-radius: 0;
+                    color: #475569;
+                    font-size: 12px;
+                    font-weight: 750;
+                    padding: 7px 10px;
+                }
+                QPushButton#metaFulltextExtractionTab:checked {
+                    color: #2563EB;
+                    border-bottom: 2px solid #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaFulltextStatusRow,
+                QLabel#metaFulltextSourceRow,
+                QLabel#metaExtractionStructureItem,
+                QLabel#metaExtractionInfoBox {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaFulltextStatusRow[status="ready"],
+                QLabel#metaExtractionMatchBadge {
+                    background: #ECFDF5;
+                    border-color: #BBF7D0;
+                    color: #059669;
+                    font-weight: 850;
+                }
+                QLabel#metaFulltextStatusRow[status="pending"] {
+                    background: #FFFBEB;
+                    border-color: #FDE68A;
+                    color: #B45309;
+                }
+                QLabel#metaFulltextStatusRow[status="missing"] {
+                    background: #FEF2F2;
+                    border-color: #FECACA;
+                    color: #DC2626;
+                }
+                QLabel#metaExtractionFieldHeader {
+                    background: #F8FAFC;
+                    border: 0;
+                    color: #64748B;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 6px;
+                }
+                QLabel#metaExtractionFieldCell {
+                    background: #FFFFFF;
+                    border: 0;
+                    border-bottom: 1px solid #F1F5F9;
+                    color: #334155;
+                    font-size: 10px;
+                    padding: 6px;
+                }
+                QLabel#metaExtractionFieldCell[semantic="section"] {
+                    background: #F8FAFC;
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaExtractionRequiredDot {
+                    background: #2563EB;
+                    border-radius: 7px;
+                    color: #FFFFFF;
+                    font-size: 9px;
+                    font-weight: 900;
+                }
+                QLabel#metaExtractionAnalysisDot {
+                    background: #22C55E;
+                    border-radius: 7px;
+                    color: #FFFFFF;
+                    font-size: 9px;
+                    font-weight: 900;
+                }
+                QPushButton#metaSaveExtractionDesignButton,
+                QPushButton#metaBackToFulltextButton {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 9px;
+                    color: #334155;
+                    font-size: 12px;
+                    font-weight: 800;
+                    padding: 9px 12px;
+                }
+                QPushButton#metaConfirmExtractionButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 10px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 10px 14px;
+                }
+                """
             )
-        )
-        preview = QTextEdit()
-        preview.setObjectName("metaReportPreview")
-        preview.setReadOnly(True)
-        preview.setPlainText(report_path.read_text(encoding="utf-8")[:12000] if report_path.exists() else "暂无报告草稿。")
-        layout.addWidget(preview)
-        buttons = QHBoxLayout()
-        build_md = QPushButton("生成报告草稿")
-        show_location = QPushButton("打开报告位置")
-        export_html = QPushButton("导出 HTML")
-        export_docx = QPushButton("导出 DOCX")
-        next_button = QPushButton("返回项目首页")
-        for button in (build_md, show_location, export_html, export_docx, next_button):
-            button.setObjectName("metaSecondaryButton")
-            buttons.addWidget(button)
-        build_md.setObjectName("metaPrimaryButton")
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
-        layout.addWidget(_developer_details(f"report={report_path}"))
-        layout.addStretch(1)
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(10)
 
-        def do_build_md() -> None:
-            path = FormalMarkdownReportBuilder().build_draft_markdown_report(project_dir)
-            _show_message(f"已生成：{path.name}")
-            on_refresh()
+            layout.addWidget(self._build_fulltext_stepper())
 
-        def do_show_location() -> None:
-            _show_message("报告位置：项目 reports 目录。未自动打开外部应用。")
+            tab_row = QHBoxLayout()
+            tab_row.setSpacing(14)
+            self._fulltext_extraction_tabs: dict[str, QPushButton] = {}
+            for index, tab in enumerate(("全文管理", "提取表设计", "提取完成核查", "历史记录")):
+                button = QPushButton(tab)
+                button.setObjectName("metaFulltextExtractionTab")
+                button.setCheckable(True)
+                button.setChecked(index == 0)
+                button.setMinimumHeight(34)
+                button.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+                button.setProperty("pageKey", "fulltext_extraction")
+                button.setProperty("tabKey", tab)
+                button.clicked.connect(lambda _checked=False, tab_key=tab: self._select_fulltext_extraction_tab(tab_key))
+                self._fulltext_extraction_tabs[tab] = button
+                tab_row.addWidget(button)
+            tab_row.addStretch(1)
+            layout.addLayout(tab_row)
 
-        def do_export_html() -> None:
-            result = PublicationExportService().export_html_report(project_dir)
-            _show_message(result.message)
-            on_refresh()
-
-        def do_export_docx() -> None:
-            result = PublicationExportService().export_word_report(project_dir)
-            _show_message(result.message)
-            on_refresh()
-
-        build_md.clicked.connect(do_build_md)
-        show_location.clicked.connect(do_show_location)
-        export_html.clicked.connect(do_export_html)
-        export_docx.clicked.connect(do_export_docx)
-        next_button.clicked.connect(on_next)
-        return frame
-
-
-    def _reproducibility_package_page(project_dir: Path, *, on_refresh: Callable[[], None]) -> QFrame:
-        exports = sorted((project_dir / "exports").glob("reproducibility_package_*.zip")) if (project_dir / "exports").exists() else []
-        frame = QFrame()
-        frame.setObjectName("metaReproducibilityPackagePage")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header("可复现项目包", "打包项目关键 artifact，保留 schema/version。", "export"))
-        layout.addWidget(_info_card("导出状态", [f"已有 package：{len(exports)}", "不包含不必要的本机绝对路径。", "用于内部 testing / 迁移复核。"], object_name="metaReproducibilitySummary"))
-        package_list = QListWidget()
-        package_list.setObjectName("metaReproducibilityPackageList")
-        for path in exports:
-            package_list.addItem(str(path.relative_to(project_dir)))
-        layout.addWidget(package_list)
-        export = QPushButton("导出可复现项目包")
-        export.setObjectName("metaPrimaryButton")
-        layout.addWidget(export)
-        layout.addWidget(_developer_details(f"exports_dir={project_dir / 'exports'}"))
-        layout.addStretch(1)
-
-        def do_export() -> None:
-            result = PublicationExportService().export_reproducibility_package(project_dir)
-            _show_message(result.message)
-            on_refresh()
-
-        export.clicked.connect(do_export)
-        return frame
-
-
-    def _placeholder_step_page(step: MetaWorkflowStepState) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName(f"metaPlaceholder_{step.route_key}")
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(12)
-        layout.addWidget(_page_header(step.title_zh, step.artifact_summary, "待开发 / testing-level"))
-        layout.addWidget(_info_card("当前状态", [f"状态：{step.status}", f"artifact 数量：{step.artifact_count}", f"warning 数量：{step.warning_count}", f"下一步：{step.next_action_zh}"]))
-        layout.addWidget(_info_card("边界", ["本轮不触发业务写入。", "不运行统计，不生成图表，不生成报告，不推进 PRISMA。"]))
-        layout.addWidget(_developer_details(_step_debug_text(step)))
-        layout.addStretch(1)
-        return frame
-
-
-    def _page_header(title: str, subtitle: str, badge: str) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("metaPageHeader")
-        layout = QHBoxLayout(frame)
-        title_col = QVBoxLayout()
-        title_label = QLabel(title)
-        title_label.setObjectName("metaPageTitle")
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setObjectName("metaMutedText")
-        subtitle_label.setWordWrap(True)
-        title_col.addWidget(title_label)
-        title_col.addWidget(subtitle_label)
-        layout.addLayout(title_col, 1)
-        badge_label = QLabel(badge)
-        badge_label.setObjectName("metaStatusBadge")
-        layout.addWidget(badge_label)
-        return frame
-
-
-    def _meta_home_header(summary: MetaProjectSummary | None, title: str, subtitle: str) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("metaPageHeader")
-        layout = QHBoxLayout(frame)
-        title_col = QVBoxLayout()
-        title_label = QLabel(title)
-        title_label.setObjectName("metaPageTitle")
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setObjectName("metaMutedText")
-        subtitle_label.setWordWrap(True)
-        title_col.addWidget(title_label)
-        title_col.addWidget(subtitle_label)
-        if summary is not None:
-            summary_label = QLabel(
-                f"{summary.project_name} · {_compact_path(summary.project_root)} · 当前阶段：{_workflow_stage_zh(summary.workflow_stage)}"
+            fulltext_status = _readonly_table(
+                "metaFulltextStatusPreviewTable",
+                ("ref_id", "full_text_state", "extraction_state"),
+                (
+                    ("REF-001", "file pending", "not_started"),
+                    ("REF-002", "needs retrieval", "not_started"),
+                    ("REF-004", "not requested", "not_started"),
+                ),
             )
-            summary_label.setObjectName("metaMutedText")
-            summary_label.setWordWrap(True)
-            title_col.addWidget(summary_label)
-        layout.addLayout(title_col, 1)
-        badge_label = QLabel("Developer Preview / 本地测试版")
-        badge_label.setObjectName("metaStatusBadge")
-        layout.addWidget(badge_label)
-        return frame
+            fulltext_status.setProperty("horizontalOverflow", True)
+            fulltext_status.setMinimumHeight(92)
+            fulltext_status.setVisible(False)
 
+            self._fulltext_management_body = self._build_fulltext_management_body(fulltext_status)
+            layout.addWidget(self._fulltext_management_body)
 
-    def _project_business_summary(project_dir: Path) -> QFrame:
-        pico = PICOWorkspaceService()
-        library = LiteratureLibraryService()
-        extraction = ManualExtractionEffectRowService()
-        analysis = AnalysisPlanService()
-        screening_payload = _load_json_object(TitleAbstractScreeningV2Service().decisions_path(project_dir))
-        screening_records = _items_from_payload(screening_payload, "screening_records")
-        literature_count = len(library.list_records(project_dir))
-        effect_rows = extraction.load_effect_rows(project_dir)
-        lines = [
-            f"研究问题：{'已确认' if pico.load_confirmed(project_dir) else '未填写'}",
-            f"文献库：{literature_count} 篇",
-            f"筛选记录：{len(screening_records)} 条",
-            f"数据提取表：{'已创建' if effect_rows else '未创建'}",
-            f"分析计划：{'已创建' if analysis.load_confirmed(project_dir) else '未创建'}",
-        ]
-        return _info_card("项目摘要", lines, object_name="metaProjectSummaryCard")
+            self._extraction_design_body = self._build_extraction_design_body()
+            layout.addWidget(self._extraction_design_body)
 
+            shared_extraction_table = make_extraction_form_table(
+                (
+                    ExtractionField("first_author", "first_author", "Zhang", "testing", "draft", "manual extraction draft"),
+                    ExtractionField("year", "year", "2020", "testing", "draft", "manual extraction draft"),
+                    ExtractionField("cancer_type", "cancer_type", "thyroid carcinoma", "testing", "draft", "manual review required"),
+                    ExtractionField("effect_measure", "effect_measure", "HR", "testing", "draft", "not a formal pooled input"),
+                    ExtractionField("effect_value", "effect_value", "1.48 draft", "testing", "draft", "not a formal effect estimate"),
+                    ExtractionField("ci_lower", "ci_lower", "1.05 draft", "testing", "draft", "not a formal effect estimate"),
+                    ExtractionField("ci_upper", "ci_upper", "2.10 draft", "testing", "draft", "not a formal effect estimate"),
+                ),
+                object_name="metaSharedExtractionFormTable",
+            )
+            shared_extraction_table.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            shared_extraction_table.setProperty("pageKey", "fulltext_extraction")
+            shared_extraction_table.setProperty("extractionState", "draft_extraction")
+            shared_extraction_table.setProperty("formalActionEnabled", False)
+            shared_extraction_table.setProperty("draftOnly", True)
+            shared_extraction_table.setProperty("formalAnalysisInput", False)
+            shared_extraction_table.setVisible(False)
+            layout.addWidget(shared_extraction_table)
 
-    def _progress_summary(state) -> QFrame:
-        stage_labels = {
-            "project_home": "项目首页",
-            "pico_workspace": "研究问题与 PICO",
-            "search_strategy": "检索策略",
-            "literature_import": "文献库与导入",
-            "screening": "去重与筛选",
-            "extraction_quality": "数据提取与质量评价",
-            "analysis_results": "统计分析",
-            "prisma_reporting": "报告导出",
-        }
-        complete_statuses = {"已完成", "已有项目", "已确认", "已生成", "已有记录", "已有人工评分"}
-        current = next((step for step in state.steps if step.status not in complete_statuses), state.steps[-1])
-        if current.step_id == "pico_workspace":
-            current_line = "当前进度：项目已创建"
-            next_line = "下一步：填写研究问题 / PICO"
-        else:
-            current_line = f"当前进度：{stage_labels.get(current.step_id, current.title_zh)}"
-            next_line = f"下一步：{current.next_action_zh}"
-        chips = []
-        for step in state.steps:
-            label = stage_labels.get(step.step_id, step.title_zh)
-            if step.step_id == current.step_id:
-                status = f"当前（{_main_stage_status_label(step.status)}）"
+            self._extraction_action_bar = QFrame()
+            self._extraction_action_bar.setObjectName("metaExtractionActionBar")
+            action_row = QHBoxLayout(self._extraction_action_bar)
+            action_row.setContentsMargins(0, 0, 0, 0)
+            save = QPushButton("保存提取表设计")
+            save.setObjectName("metaSaveExtractionDesignButton")
+            save.setMinimumHeight(34)
+            save.setEnabled(False)
+            mark_draft = QPushButton("Mark as Draft Extracted - adapter needed")
+            mark_draft.setObjectName("metaConfirmExtractionButton")
+            mark_draft.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            mark_draft.setProperty("pageKey", "fulltext_extraction")
+            mark_draft.setProperty("actionSemantic", "advance_to_extraction_stage")
+            mark_draft.setProperty("draftActionSemantic", "draft_extraction_adapter_needed")
+            mark_draft.setProperty("formalActionEnabled", False)
+            mark_draft.setMinimumHeight(34)
+            mark_draft.setEnabled(False)
+            back = QPushButton("返回全文管理")
+            back.setObjectName("metaBackToFulltextButton")
+            back.setMinimumHeight(34)
+            back.clicked.connect(lambda _checked=False: self._select_fulltext_extraction_tab("全文管理"))
+            action_row.addWidget(save)
+            action_row.addStretch(1)
+            action_row.addWidget(mark_draft)
+            action_row.addWidget(back)
+            layout.addWidget(self._extraction_action_bar)
+            self._select_fulltext_extraction_tab("全文管理")
+            return frame
+
+        def _build_fulltext_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaFulltextStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(14, 9, 14, 9)
+            layout.setSpacing(8)
+            steps = (
+                ("✓", "项目首页", "done"),
+                ("✓", "研究问题与\nMeta类型", "done"),
+                ("✓", "检索策略", "done"),
+                ("✓", "文献导入与\n去重", "done"),
+                ("✓", "文献筛选", "done"),
+                ("6", "全文与数据\n提取", "current"),
+                ("7", "质量评价", "todo"),
+                ("8", "统计分析", "todo"),
+                ("9", "结果与报告", "todo"),
+                ("10", "报告导出", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName(
+                    "metaFulltextStepCurrent" if state == "current" else ("metaFulltextStepDone" if state == "done" else "metaFulltextStepTodo")
+                )
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(70)
+                layout.addWidget(item, 1)
+            return stepper
+
+        def _build_fulltext_management_body(self, fulltext_status: QTableWidget) -> QFrame:
+            body = QFrame()
+            body.setObjectName("metaFulltextManagementBody")
+            body.setFixedHeight(560)
+            layout = QHBoxLayout(body)
+            layout.setContentsMargins(12, 12, 12, 12)
+            layout.setSpacing(12)
+
+            queue = QFrame()
+            queue.setObjectName("metaFulltextCard")
+            queue.setFixedWidth(280)
+            queue_layout = QVBoxLayout(queue)
+            queue_layout.setContentsMargins(14, 12, 14, 12)
+            queue_layout.setSpacing(9)
+            title = QLabel("全文管理 / Full-text Management")
+            title.setObjectName("metaFulltextTitle")
+            queue_layout.addWidget(title)
+            for text, status in (
+                ("REF-001  file pending\nCAR-T B-cell lymphoma review", "pending"),
+                ("REF-002  needs retrieval\nPD-L1 gastric cancer meta-analysis", "missing"),
+                ("REF-004  ready for extraction\nCirculating adipokines and cancer risk", "ready"),
+            ):
+                row = QLabel(text)
+                row.setObjectName("metaFulltextStatusRow")
+                row.setProperty("status", status)
+                row.setWordWrap(True)
+                row.setMinimumHeight(62)
+                queue_layout.addWidget(row)
+            upload = QLabel("+ 绑定 PDF / HTML 文件")
+            upload.setObjectName("metaFulltextSourceRow")
+            upload.setStyleSheet("border-style: dashed; color: #2563EB;")
+            upload.setAlignment(Qt.AlignCenter)
+            upload.setMinimumHeight(44)
+            queue_layout.addWidget(upload)
+            queue_layout.addWidget(fulltext_status)
+            queue_layout.addStretch(1)
+            layout.addWidget(queue)
+
+            preview = QFrame()
+            preview.setObjectName("metaFulltextTableCard")
+            preview_layout = QVBoxLayout(preview)
+            preview_layout.setContentsMargins(14, 12, 14, 12)
+            preview_layout.setSpacing(10)
+            preview_header = QHBoxLayout()
+            preview_title = QLabel("全文预览 / Full-text Preview")
+            preview_title.setObjectName("metaFulltextTitle")
+            state = QLabel("mockup-only / draft extraction")
+            state.setObjectName("metaExtractionMatchBadge")
+            preview_header.addWidget(preview_title)
+            preview_header.addStretch(1)
+            preview_header.addWidget(state)
+            preview_layout.addLayout(preview_header)
+            meta = QLabel("REF-001 · Blood Cancer Journal · 2022 · PMID 35773265")
+            meta.setObjectName("metaFulltextMuted")
+            preview_layout.addWidget(meta)
+            for heading, content in (
+                ("Abstract", "CAR-T therapy has emerged as a transformative treatment for relapsed or refractory B-cell non-Hodgkin lymphoma. This article is queued for manual evidence extraction."),
+                ("Methods", "Eligible studies were summarized by response and safety endpoints. Extraction remains reviewer-controlled."),
+                ("Extraction readiness", "PDF/HTML binding is pending for one record; no production data extraction is generated from this preview."),
+            ):
+                section = QLabel(f"{heading}\n{content}")
+                section.setObjectName("metaFulltextSourceRow")
+                section.setWordWrap(True)
+                section.setMinimumHeight(78)
+                preview_layout.addWidget(section)
+            preview_layout.addStretch(1)
+            layout.addWidget(preview, 1)
+
+            side = QFrame()
+            side.setObjectName("metaFulltextSideCard")
+            side.setFixedWidth(210)
+            side_layout = QVBoxLayout(side)
+            side_layout.setContentsMargins(14, 12, 14, 12)
+            side_layout.setSpacing(10)
+            side_title = QLabel("全文状态 / Readiness")
+            side_title.setObjectName("metaFulltextTitle")
+            side_layout.addWidget(side_title)
+            for text, status in (
+                ("全文文件齐备度\n1 / 3 ready", "pending"),
+                ("数据提取准备\nmanual extraction draft", "ready"),
+                ("质量追踪\nmanual review required", "pending"),
+                ("边界\nadapter disabled; reviewer controlled", "missing"),
+            ):
+                row = QLabel(text)
+                row.setObjectName("metaFulltextStatusRow")
+                row.setProperty("status", status)
+                row.setWordWrap(True)
+                side_layout.addWidget(row)
+            next_design = QPushButton("进入提取表设计")
+            next_design.setObjectName("metaSaveExtractionDesignButton")
+            next_design.setProperty("formalActionEnabled", False)
+            next_design.clicked.connect(lambda _checked=False: self._select_fulltext_extraction_tab("提取表设计"))
+            side_layout.addStretch(1)
+            side_layout.addWidget(next_design)
+            layout.addWidget(side)
+            return body
+
+        def _build_extraction_design_body(self) -> QFrame:
+            body = QFrame()
+            body.setObjectName("metaExtractionDesignBody")
+            body.setFixedHeight(560)
+            layout = QHBoxLayout(body)
+            layout.setContentsMargins(12, 12, 12, 12)
+            layout.setSpacing(12)
+
+            structure = QFrame()
+            structure.setObjectName("metaFulltextCard")
+            structure.setFixedWidth(180)
+            structure_layout = QVBoxLayout(structure)
+            structure_layout.setContentsMargins(12, 10, 12, 10)
+            structure_layout.setSpacing(8)
+            structure_title = QLabel("提取表结构")
+            structure_title.setObjectName("metaExtractionSectionTitle")
+            structure_layout.addWidget(structure_title)
+            structure_hint = QLabel("点击切换查看或编辑各部分字段")
+            structure_hint.setObjectName("metaExtractionMuted")
+            structure_hint.setWordWrap(True)
+            structure_layout.addWidget(structure_hint)
+            for section, count, active in (
+                ("研究基本信息", "6", True),
+                ("研究对象与分组", "4", False),
+                ("干预 / 暴露", "3", False),
+                ("对照措施", "2", False),
+                ("结局指标", "5", False),
+                ("效应量数据（二分类）", "8", False),
+                ("备注与来源", "3", False),
+                ("复核字段", "2", False),
+            ):
+                label = QLabel(f"{section}                                      {count}")
+                label.setObjectName("metaExtractionStructureItem")
+                label.setProperty("sectionKey", section)
+                if active:
+                    label.setStyleSheet("background: #EAF3FF; border-color: #BFDBFE; color: #2563EB; font-weight: 900;")
+                structure_layout.addWidget(label)
+            add = QLabel("+  新增自定义字段")
+            add.setObjectName("metaExtractionStructureItem")
+            add.setStyleSheet("border-style: dashed; color: #2563EB;")
+            add.setAlignment(Qt.AlignCenter)
+            structure_layout.addWidget(add)
+            layout.addWidget(structure)
+
+            fields = QFrame()
+            fields.setObjectName("metaFulltextTableCard")
+            fields.setFixedWidth(560)
+            fields_layout = QVBoxLayout(fields)
+            fields_layout.setContentsMargins(14, 12, 14, 12)
+            fields_layout.setSpacing(8)
+            title_row = QHBoxLayout()
+            fields_title = QLabel("当前提取表字段（Binary Outcome Meta 专用）")
+            fields_title.setObjectName("metaExtractionSectionTitle")
+            match = QLabel("与当前 Meta 类型匹配")
+            match.setObjectName("metaExtractionMatchBadge")
+            title_row.addWidget(fields_title)
+            title_row.addWidget(match)
+            title_row.addStretch(1)
+            for text in ("导入", "保存", "预览"):
+                action = QLabel(text)
+                action.setObjectName("metaFulltextSourceRow")
+                action.setStyleSheet("background: #FFFFFF; color: #2563EB;")
+                title_row.addWidget(action)
+            fields_layout.addLayout(title_row)
+            legacy_contract = QLabel("当前提取表字段（Binary Outcome Meta 专用）")
+            legacy_contract.setObjectName("metaExtractionLegacyContractLabel")
+            legacy_contract.setProperty("legacyCompatibilityOnly", True)
+            legacy_contract.setVisible(False)
+            fields_layout.addWidget(legacy_contract)
+            field_grid = QGridLayout()
+            field_grid.setHorizontalSpacing(0)
+            field_grid.setVerticalSpacing(0)
+            for column, header in enumerate(("序号", "字段名称", "字段含义 / 说明", "必填", "数据类型", "来源提示", "用于分析", "操作")):
+                header_label = QLabel(header)
+                header_label.setObjectName("metaExtractionFieldHeader")
+                field_grid.addWidget(header_label, 0, column)
+            rows = (
+                ("一、研究基本信息", "", "", "", "", "", "", ""),
+                ("1", "研究 ID", "本研究在本项目中的唯一编号", "✓", "文本 Text", "-", "", "edit"),
+                ("2", "first_author", "论文第一作者", "✓", "文本 Text", "来源首页", "", "edit"),
+                ("3", "year", "论文发表年份", "✓", "数字 Number", "来源首页", "", "edit"),
+                ("4", "cancer_type", "研究所处国家或地区", "✓", "下拉选择 Select", "方法部分", "✓", "edit"),
+                ("5", "研究设计", "研究类型（RCT、队列研究等）", "✓", "下拉选择 Select", "-", "✓", "edit"),
+                ("6", "样本量（总样本）", "研究纳入的总样本量", "", "数字 Number", "-", "✓", "edit"),
+                ("二、研究对象与分组", "", "", "", "", "", "", ""),
+                ("7", "marker_name", "adiponectin / ADIPOQ", "✓", "文本 Text", "结果部分", "✓", "edit"),
+                ("8", "effect_measure", "HR / OR / RR", "✓", "Select", "表格", "✓", "edit"),
+                ("9", "effect_value", "1.48 mockup-only / draft extraction", "✓", "Number", "表格", "✓", "edit"),
+                ("10", "ci_lower", "1.05 mockup-only / draft extraction", "✓", "Number", "表格", "✓", "edit"),
+                ("11", "ci_upper", "2.10 mockup-only / draft extraction", "✓", "Number", "表格", "✓", "edit"),
+                ("12", "adjusted_model", "multivariable", "", "Text", "方法", "✓", "edit"),
+                ("13", "outcome_name", "overall survival", "✓", "Text", "结果", "✓", "edit"),
+            )
+            for row, values in enumerate(rows, start=1):
+                section_row = values[1] == ""
+                for column, value in enumerate(values):
+                    label = QLabel(value)
+                    label.setObjectName("metaExtractionFieldCell")
+                    if section_row:
+                        label.setProperty("semantic", "section")
+                    label.setWordWrap(False)
+                    label.setMinimumHeight(28)
+                    field_grid.addWidget(label, row, column)
+            fields_layout.addLayout(field_grid)
+            legend = QLabel("必填字段    非必填字段    用于统计分析                         共 8 个部分，33 个字段，必填字段 25 个")
+            legend.setObjectName("metaExtractionMuted")
+            fields_layout.addWidget(legend)
+            layout.addWidget(fields, 1)
+
+            side = QFrame()
+            side.setObjectName("metaFulltextSideCard")
+            side.setFixedWidth(172)
+            side_layout = QVBoxLayout(side)
+            side_layout.setContentsMargins(12, 10, 12, 10)
+            side_layout.setSpacing(10)
+            info_title = QLabel("提取表信息")
+            info_title.setObjectName("metaExtractionSectionTitle")
+            side_layout.addWidget(info_title)
+            for text in (
+                "提取表名称\n二分类结局（RCT）提取表 v2.1",
+                "适用研究类型\n随机对照试验（RCT）",
+                "创建时间\n2024-05-20 14:25",
+                "更新时间\n2024-05-20 14:25",
+                "创建者\nResearcher（她）",
+                "备注\n-",
+            ):
+                box = QLabel(text)
+                box.setObjectName("metaExtractionInfoBox")
+                box.setWordWrap(True)
+                side_layout.addWidget(box)
+            completeness = QLabel("完整性检查\n100%\n配置完整\n必填字段已配置 25/25\n建议字段已配置 8/8\n与 Meta 类型匹配")
+            completeness.setObjectName("metaExtractionMatchBadge")
+            completeness.setWordWrap(True)
+            side_layout.addWidget(completeness)
+            side_layout.addStretch(1)
+            layout.addWidget(side)
+            return body
+
+        def _build_risk_of_bias_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaRiskOfBiasRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "quality_assessment")
+            frame.setProperty("runtimeStatus", "planned")
+            frame.setProperty("processingMode", "english_first")
+            frame.setProperty("aiBoundary", "advisory_only")
+            frame.setProperty("riskOfBiasState", "preview_in_progress")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaRiskOfBiasRuntimePanel { border: 1px solid #DDE5F0; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Risk of Bias / 质量评价预览")
+            title.setObjectName("metaRiskOfBiasRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            rob = _readonly_table(
+                "metaRiskOfBiasDomainTable",
+                ("tool / domain", "draft state", "preview note"),
+                (
+                    ("NOS Selection", "Draft", "preview score requires final confirmation"),
+                    ("NOS Comparability", "In progress", "preview score requires final confirmation"),
+                    ("NOS Outcome", "Draft", "preview score requires final confirmation"),
+                    ("ROBINS-I Confounding", "not_started", "tool suggestion only"),
+                    ("QUADAS-2", "not_applicable_for_current_type", "depends on diagnostic type"),
+                ),
+            )
+            rob.setMinimumHeight(150)
+            layout.addWidget(rob)
+
+            score = QLabel("Preview / draft only: no automatic RoB final judgement and no formal quality score.")
+            score.setObjectName("metaRiskOfBiasPreviewScoreNotice")
+            score.setProperty("riskOfBiasState", "preview_only")
+            score.setWordWrap(True)
+            score.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 8px; background: #FFF7E6;")
+            layout.addWidget(score)
+
+            save = QPushButton("Save RoB Draft - adapter needed")
+            save.setObjectName("metaSaveRiskOfBiasDraftButton")
+            save.setProperty("actionSemantic", "adapter_needed")
+            save.setProperty("formalActionEnabled", False)
+            save.setEnabled(False)
+            save.setMinimumHeight(34)
+            layout.addWidget(save)
+            return frame
+
+        def _build_result_review_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaResultReviewRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "result_report")
+            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("resultSemanticKey", "testing_summary_only")
+            frame.setProperty("formalResultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("reportReadyState", "blocked")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("fileWriteAllowed", False)
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet(
+                """
+                QFrame#metaResultReviewRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaExportReportStepper,
+                QFrame#metaExportReportCard,
+                QFrame#metaExportReportGateCard,
+                QFrame#metaExportReportBottomCard {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaExportReportTitle {
+                    color: #12324A;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaExportReportMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaExportReportStepDone,
+                QLabel#metaExportReportStepCurrent,
+                QLabel#metaExportReportStepBlocked {
+                    color: #16A34A;
+                    font-size: 10px;
+                    font-weight: 900;
+                }
+                QLabel#metaExportReportStepBlocked {
+                    color: #EF4444;
+                }
+                QLabel#metaExportReportStepCurrent {
+                    color: #2563EB;
+                }
+                QLabel#metaReportTypeItem {
+                    background: #FFFFFF;
+                    border: 1px solid transparent;
+                    border-radius: 9px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 9px 10px;
+                }
+                QLabel#metaReportTypeItem[selected="true"] {
+                    background: #EAF3FF;
+                    border-color: #BFDBFE;
+                }
+                QLabel#metaExportFormatBadge {
+                    background: #EFF6FF;
+                    border-radius: 7px;
+                    color: #2563EB;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 3px 6px;
+                }
+                QLabel#metaExportPreviewRow {
+                    background: #FFFFFF;
+                    border: 0;
+                    border-bottom: 1px solid #F1F5F9;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 7px 8px;
+                }
+                QLabel#metaExportStatusDone {
+                    background: #DCFCE7;
+                    border: 1px solid #86EFAC;
+                    border-radius: 7px;
+                    color: #059669;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 4px 7px;
+                }
+                QLabel#metaExportStatusDraft {
+                    background: #FEF3C7;
+                    border: 1px solid #FACC15;
+                    border-radius: 7px;
+                    color: #B45309;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 4px 7px;
+                }
+                QLabel#metaExportStatusDisabled {
+                    background: #F3F4F6;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 7px;
+                    color: #9CA3AF;
+                    font-size: 10px;
+                    font-weight: 850;
+                    padding: 4px 7px;
+                }
+                QLabel#metaExportGateRow {
+                    background: #FFFFFF;
+                    border: 0;
+                    border-bottom: 1px solid #FEE2E2;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 7px 8px;
+                }
+                QLabel#metaExportGateHeader,
+                QLabel#metaExportFinalBlocked {
+                    background: #FEF2F2;
+                    border: 1px solid #FECACA;
+                    border-radius: 9px;
+                    color: #DC2626;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 9px 10px;
+                }
+                QLabel#metaExportSettingBox {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 9px;
+                    color: #64748B;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaResultReviewHumanReviewNotice {
+                    background: #FFFBEB;
+                    border: 1px solid #FDE68A;
+                    border-radius: 10px;
+                    color: #B45309;
+                    font-size: 11px;
+                    padding: 9px 10px;
+                }
+                QPushButton#metaGenerateReportDisabledButton {
+                    background: #F3F4F6;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 10px;
+                    color: #9CA3AF;
+                    font-size: 12px;
+                    font-weight: 850;
+                    padding: 10px 12px;
+                }
+                """
+            )
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(12)
+            layout.addWidget(self._build_export_report_stepper())
+
+            review_notice = QLabel("人工复核集中在此页面：前置草稿、提取和 RoB 预览不能升级为正式结果。")
+            review_notice.setObjectName("metaResultReviewHumanReviewNotice")
+            review_notice.setProperty("reviewBoundary", "human_review_required")
+            review_notice.setWordWrap(True)
+
+            readiness = _readonly_table(
+                "metaResultReadinessSummaryTable",
+                ("gate", "state", "reason"),
+                (
+                    ("result_semantic", "testing_summary_only / no_formal_result", "no formal pairwise result"),
+                    ("formal_pooled_effect", "none", "Pairwise Meta executor not enabled"),
+                    ("forest_plot", "disabled_boundary", "no formal result artifact"),
+                    ("heterogeneity", "none", "no computed model"),
+                    ("publication_bias", "none", "no computed model"),
+                    ("ai_suggestion", "advisory_only", "reviewer remains authority"),
+                ),
+            )
+            readiness.setMinimumHeight(150)
+            readiness.setVisible(False)
+
+            forest_placeholder = make_plot_placeholder(
+                title="Forest plot placeholder / 森林图占位",
+                plot_type="forest_plot",
+                message="Formal synthesis estimates and figure previews are disabled in UI-D5.",
+                status_key="blocked",
+                semantic_state="blocked",
+                object_name="metaForestPlotPlaceholder",
+            )
+            forest_placeholder.setVisible(False)
+
+            pairwise = _readonly_table(
+                "metaPairwiseInputPreviewTable",
+                ("study_id", "effect_type", "effect_value", "ci_lower", "ci_upper", "readiness"),
+                (
+                    ("STUDY-001", "HR", "1.48 draft", "1.05 draft", "2.10 draft", "preflight_only"),
+                    ("STUDY-002", "HR", "1.21 draft", "0.88 draft", "1.67 draft", "warning_missing_adjustment"),
+                    ("STUDY-003", "OR", "1.76 draft", "1.10 draft", "2.82 draft", "incompatible_effect_type"),
+                ),
+            )
+            pairwise.setObjectName("metaPairwiseInputPreviewTable")
+            pairwise.setProperty("previewOnly", True)
+            pairwise.setMinimumHeight(120)
+            pairwise_card = make_preview_card(
+                title="Pairwise input preview / 配对输入预览",
+                preview_widget=pairwise,
+                status_key="preflight_only",
+                semantic_state="preflight_only",
+                caption="Draft extraction values are shown for review only; no summary estimate is computed.",
+                object_name="metaPairwiseInputPreviewCard",
+            )
+            pairwise_card.setVisible(False)
+
+            blockers = _readonly_table(
+                "metaReportReadyBlockerChecklist",
+                ("blocker", "state"),
+                (
+                    ("research question/type confirmation", "missing_or_draft"),
+                    ("search strategy", "draft"),
+                    ("references", "not_finalized"),
+                    ("screening", "not_final"),
+                    ("extraction", "not_final"),
+                    ("risk of bias", "not_final"),
+                    ("pairwise input", "not_formal"),
+                    ("formal result", "missing"),
+                ),
+            )
+            blockers.setMinimumHeight(162)
+            blockers.setVisible(False)
+
+            generate = QPushButton("Generate Report disabled")
+            generate.setObjectName("metaGenerateReportDisabledButton")
+            generate.setProperty("actionSemantic", "disabled_report_gate")
+            generate.setProperty("formalActionEnabled", False)
+            generate.setProperty("fileWriteAllowed", False)
+            generate.setEnabled(False)
+            generate.setMinimumHeight(34)
+
+            main = QHBoxLayout()
+            main.setSpacing(12)
+            main.addWidget(self._build_export_report_type_card())
+            main.addWidget(self._build_export_content_preview_card(), 1)
+            main.addWidget(self._build_export_gate_status_card(generate))
+            layout.addLayout(main)
+
+            bottom = QHBoxLayout()
+            bottom.setSpacing(12)
+            bottom.addWidget(self._build_export_settings_card(), 1)
+            bottom.addWidget(self._build_export_history_card(), 1)
+            layout.addLayout(bottom)
+            layout.addWidget(review_notice)
+
+            layout.addWidget(readiness)
+            layout.addWidget(forest_placeholder)
+            layout.addWidget(pairwise_card)
+            layout.addWidget(blockers)
+            return frame
+
+        def _build_export_report_stepper(self) -> QFrame:
+            stepper = QFrame()
+            stepper.setObjectName("metaExportReportStepper")
+            layout = QHBoxLayout(stepper)
+            layout.setContentsMargins(14, 9, 14, 9)
+            layout.setSpacing(7)
+            steps = (
+                ("✓", "项目首页", "done"),
+                ("✓", "问题与类型", "done"),
+                ("✓", "检索策略", "done"),
+                ("✓", "文献导入", "done"),
+                ("✓", "去重", "done"),
+                ("✓", "筛选", "done"),
+                ("✓", "全文与提取", "done"),
+                ("✓", "偏倚风险", "done"),
+                ("✓", "成对Meta输入", "done"),
+                ("✓", "结果复核", "done"),
+                ("✕", "报告门控", "blocked"),
+                ("12", "导出", "current"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName(
+                    "metaExportReportStepCurrent" if state == "current" else ("metaExportReportStepBlocked" if state == "blocked" else "metaExportReportStepDone")
+                )
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(58)
+                layout.addWidget(item, 1)
+            return stepper
+
+        def _build_export_report_type_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportCard")
+            card.setFixedWidth(260)
+            card.setFixedHeight(455)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(9)
+            title = QLabel("报告类型 / Report Type")
+            title.setObjectName("metaExportReportTitle")
+            layout.addWidget(title)
+            tabs = QHBoxLayout()
+            for text, active in (("系统模板", True), ("自定义模板", False), ("输出片段", False)):
+                tab = QLabel(text)
+                tab.setObjectName("metaExportReportMuted")
+                tab.setAlignment(Qt.AlignCenter)
+                if active:
+                    tab.setStyleSheet("color: #2563EB; border-bottom: 2px solid #2563EB; padding: 6px; font-weight: 900;")
+                tabs.addWidget(tab, 1)
+            layout.addLayout(tabs)
+            for title_text, subtitle, fmt, selected in (
+                ("Meta 分析完整报告", "Full Meta-Analysis Report", "DOCX", False),
+                ("方法学与流程报告", "Methods & Process Report", "DOCX", False),
+                ("数据提取表", "Data Extraction Table", "XLSX", False),
+                ("成对比较结果表", "Paired Comparison Results", "XLSX", False),
+                ("PRISMA 流程图", "PRISMA Flowchart", "PNG/SVG", False),
+                ("汇总包", "Summary Package", "ZIP", True),
+            ):
+                item = QLabel(f"{title_text}                                      {fmt}\n{subtitle}")
+                item.setObjectName("metaReportTypeItem")
+                item.setProperty("selected", selected)
+                item.setWordWrap(True)
+                layout.addWidget(item)
+            footer = QLabel("导出已禁用，通过 Gate 后解锁")
+            footer.setObjectName("metaExportReportMuted")
+            footer.setStyleSheet("color: #9CA3AF;")
+            layout.addStretch(1)
+            layout.addWidget(footer)
+            return card
+
+        def _build_export_content_preview_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportCard")
+            card.setFixedWidth(410)
+            card.setFixedHeight(455)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("导出内容预览 / Export Content Preview")
+            title.setObjectName("metaExportReportTitle")
+            draft = QLabel("仅显示草稿状态")
+            draft.setObjectName("metaExportReportMuted")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(draft)
+            layout.addLayout(header)
+            column_header = QLabel("内容项 / CONTENT                                      状态 / STATUS                         说明")
+            column_header.setObjectName("metaExportReportMuted")
+            column_header.setStyleSheet("font-weight: 850; color: #64748B;")
+            layout.addWidget(column_header)
+            rows = (
+                ("方法与流程 / Methods", "已完成草稿", "done", "可纳入报告"),
+                ("检索策略 / Search", "已完成草稿", "done", "可纳入报告"),
+                ("文献信息 / Literature", "已导入草稿", "info", "待人工确认"),
+                ("筛选结果 / Screening", "草稿", "draft", "需完善"),
+                ("数据提取表 / Extraction", "草稿", "draft", "需完善"),
+                ("偏倚风险 / Risk of Bias", "已完成草稿", "done", "可纳入报告"),
+                ("成对输入 / Paired Input", "草稿", "draft", "需完善"),
+                ("Meta 分析结果 / Results", "不可用", "disabled", "Gate 未过"),
+                ("图表与森林图 / Plots", "不可用", "disabled", "Gate 未过"),
+                ("发表偏倚 / Bias", "不可用", "disabled", "Gate 未过"),
+            )
+            for name, status, semantic, note in rows:
+                row = QHBoxLayout()
+                name_label = QLabel(name)
+                name_label.setObjectName("metaExportPreviewRow")
+                name_label.setMaximumHeight(31)
+                name_label.setMinimumWidth(175)
+                status_label = QLabel(status)
+                status_label.setObjectName(
+                    "metaExportStatusDone" if semantic in {"done", "info"} else ("metaExportStatusDraft" if semantic == "draft" else "metaExportStatusDisabled")
+                )
+                status_label.setAlignment(Qt.AlignCenter)
+                status_label.setFixedWidth(95)
+                status_label.setMaximumHeight(31)
+                note_label = QLabel(note)
+                note_label.setObjectName("metaExportPreviewRow")
+                note_label.setMaximumHeight(31)
+                row.addWidget(name_label)
+                row.addWidget(status_label)
+                row.addWidget(note_label, 1)
+                layout.addLayout(row)
+            warning = QLabel("⚠ 3 项内容不可用，需先通过 Report-ready Gate")
+            warning.setObjectName("metaExportReportMuted")
+            warning.setStyleSheet("background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; color: #B45309; padding: 7px;")
+            layout.addWidget(warning)
+            return card
+
+        def _build_export_gate_status_card(self, generate: QPushButton) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportGateCard")
+            card.setFixedWidth(250)
+            card.setFixedHeight(455)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            header = QLabel("报告门控未通过")
+            header.setObjectName("metaExportGateHeader")
+            header.setMinimumHeight(46)
+            header.setMaximumHeight(52)
+            header.setAlignment(Qt.AlignCenter)
+            layout.addWidget(header)
+            column_header = QLabel("检查项                                      状态")
+            column_header.setObjectName("metaExportReportMuted")
+            column_header.setStyleSheet("font-weight: 850;")
+            layout.addWidget(column_header)
+            checks = (
+                ("研究问题确认", False),
+                ("检索策略确认", False),
+                ("去重完成确认", True),
+                ("筛选完成确认", False),
+                ("提取完成确认", False),
+                ("偏倚风险确认", False),
+                ("成对输入确认", False),
+                ("分析一致性", False),
+                ("结果可报告性", False),
+            )
+            for text, passed in checks:
+                row = QLabel(f"{text}                                      {'✓' if passed else '✕'}")
+                row.setObjectName("metaExportGateRow")
+                row.setWordWrap(False)
+                row.setMaximumHeight(34)
+                layout.addWidget(row)
+            final = QLabel("最终结果 / Final Result                                      ✕")
+            final.setObjectName("metaExportFinalBlocked")
+            final.setMinimumHeight(34)
+            final.setAlignment(Qt.AlignCenter)
+            layout.addWidget(final)
+            generate.setText("Export Disabled")
+            layout.addWidget(generate)
+            footer = QLabel("8/9 checks failed · 需完成所有检查项")
+            footer.setObjectName("metaExportReportMuted")
+            footer.setAlignment(Qt.AlignCenter)
+            layout.addWidget(footer)
+            return card
+
+        def _build_export_settings_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportBottomCard")
+            card.setFixedHeight(126)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            header = QHBoxLayout()
+            title = QLabel("导出设置 / Export Settings")
+            title.setObjectName("metaExportReportTitle")
+            disabled = QLabel("已禁用")
+            disabled.setObjectName("metaExportReportMuted")
+            disabled.setStyleSheet("background: #F3F4F6; border-radius: 7px; padding: 4px 8px;")
+            header.addWidget(title)
+            header.addStretch(1)
+            header.addWidget(disabled)
+            layout.addLayout(header)
+            grid = QGridLayout()
+            grid.setHorizontalSpacing(10)
+            grid.setVerticalSpacing(8)
+            for index, text in enumerate(
+                (
+                    "文件格式 / File Format\nDOCX (.docx)",
+                    "包含级别 / Include Level\n完整报告 Full Report",
+                    "报告语言 / Language\n中英双语 Bilingual",
+                    "引用格式 / Citation Format\nVancouver Style",
+                )
+            ):
+                box = QLabel(text)
+                box.setObjectName("metaExportSettingBox")
+                grid.addWidget(box, index // 2, index % 2)
+            layout.addLayout(grid)
+            return card
+
+        def _build_export_history_card(self) -> QFrame:
+            card = QFrame()
+            card.setObjectName("metaExportReportBottomCard")
+            card.setFixedHeight(126)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(8)
+            title = QLabel("导出历史 / Export History")
+            title.setObjectName("metaExportReportTitle")
+            layout.addWidget(title)
+            empty = QLabel("暂无导出记录\n通过 Report-ready Gate 后才记录正式导出历史\nFormal export history logged after gate passes")
+            empty.setObjectName("metaExportReportMuted")
+            empty.setAlignment(Qt.AlignCenter)
+            empty.setWordWrap(True)
+            layout.addWidget(empty, 1)
+            return card
+
+        def _build_report_export_gate_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaReportExportGateRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "report_export")
+            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("reportReadyState", "blocked")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("fileWriteAllowed", False)
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet("QFrame#metaReportExportGateRuntimePanel { border: 1px solid #DDE5F0; border-radius: 8px; background: #FFFFFF; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(10)
+
+            title = QLabel("Report Export / 报告导出门控")
+            title.setObjectName("metaReportExportGateRuntimeTitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            shared_gate = make_export_gate_panel(
+                title="Shared export gate / 共享导出门控",
+                checks=(
+                    ExportGateCheck("formal_result", "Formal pooled result", False, "No formal pairwise pooled result exists.", "blocked"),
+                    ExportGateCheck("report_ready", "Report-ready package", False, "Report-ready systematic review package is not enabled.", "report_disabled"),
+                    ExportGateCheck("export_adapter", "Export adapter", False, "Export adapter is not connected in the runtime shell.", "adapter_needed"),
+                ),
+                formats=(
+                    ExportFormatAction("export.format.docx", "DOCX disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                    ExportFormatAction("export.format.html", "HTML disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                    ExportFormatAction("export.format.pdf", "PDF disabled", "Report-ready gate is not satisfied.", "export_disabled"),
+                ),
+                artifact_exists=False,
+                object_name="metaSharedExportGatePanel",
+            )
+            shared_gate.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            shared_gate.setProperty("pageKey", "report_export")
+            layout.addWidget(shared_gate)
+
+            gate = _readonly_table(
+                "metaReportExportGateReasonTable",
+                ("gate", "state", "reason"),
+                (
+                    ("result", "disabled", "no formal result"),
+                    ("report", "disabled", "report not ready"),
+                    ("adapter", "disabled", "export adapter missing"),
+                    ("file_write", "false", "no file write in gated shell"),
+                ),
+            )
+            gate.setMinimumHeight(112)
+            layout.addWidget(gate)
+
+            format_row = QHBoxLayout()
+            for export_format in ("DOCX", "HTML", "PDF", "CSV", "XLSX", "ZIP"):
+                button = QPushButton(f"{export_format} disabled")
+                button.setObjectName("metaExportFormatDisabledButton")
+                button.setProperty("exportFormat", export_format)
+                button.setProperty("actionSemantic", "disabled_export_gate")
+                button.setProperty("formalActionEnabled", False)
+                button.setProperty("fileWriteAllowed", False)
+                button.setEnabled(False)
+                button.setMinimumHeight(34)
+                format_row.addWidget(button)
+            layout.addLayout(format_row)
+
+            future = QLabel("Export will be enabled after gate.")
+            future.setObjectName("metaExportAfterGateNotice")
+            future.setProperty("exportGate", "disabled_empty_result")
+            future.setWordWrap(True)
+            layout.addWidget(future)
+            return frame
+
+        def _select_fulltext_extraction_tab(self, tab_key: str) -> None:
+            for key, button in getattr(self, "_fulltext_extraction_tabs", {}).items():
+                button.setChecked(key == tab_key)
+            show_extraction_design = tab_key == "提取表设计"
+            if hasattr(self, "_fulltext_management_body"):
+                self._fulltext_management_body.setVisible(tab_key == "全文管理")
+            if hasattr(self, "_extraction_design_body"):
+                self._extraction_design_body.setVisible(show_extraction_design)
+            if hasattr(self, "_extraction_action_bar"):
+                self._extraction_action_bar.setVisible(show_extraction_design)
+
+        def _sync_target_interaction_state(self) -> None:
+            pages = {page.key: page for page in meta_target_ia_pages()}
+            current = pages[self._current_target_page_key]
+            if hasattr(self, "_workspace_title_label"):
+                if self._current_target_page_key == "question_meta_type":
+                    self._workspace_title_label.setText("Meta Analysis / 研究问题与 Meta 类型")
+                    self._workspace_subtitle_label.setText("定义研究问题，选择适合的 Meta 分析类型，系统将为您推荐后续流程与方法。")
+                elif self._current_target_page_key == "search_strategy":
+                    self._workspace_title_label.setText("检索策略 / Search Strategy Builder")
+                    self._workspace_subtitle_label.setText("构建英文检索式，管理检索数据库与字段，当前为 Developer Preview。")
+                elif self._current_target_page_key == "screening":
+                    self._workspace_title_label.setText("筛选 / Screening Workspace")
+                    self._workspace_subtitle_label.setText("标题与摘要筛选、人工决策、AI 建议仅供参考。")
+                elif self._current_target_page_key == "fulltext_extraction":
+                    self._workspace_title_label.setText("全文与数据提取 / Full-text & Extraction")
+                    self._workspace_subtitle_label.setText("管理全文获取状态、进行数据提取与质控追踪，确保数据提取逻辑和可追溯。")
+                elif self._current_target_page_key == "result_report":
+                    self._workspace_title_label.setText("导出与报告 / Export & Report")
+                    self._workspace_subtitle_label.setText("当前结果未通过 Report-ready Gate，正式报告生成与导出功能已禁用。")
+                elif self._current_target_page_key == "project_home":
+                    self._workspace_title_label.setText("Meta 分析 / Meta Analysis")
+                    self._workspace_subtitle_label.setText("系统综述与 Meta 分析流程管理，当前为 Developer Preview（本地测试版）。")
+            for key, button in self._target_ia_buttons.items():
+                is_current = key == self._current_target_page_key
+                button.setChecked(is_current)
+                button.setProperty("currentStep", is_current)
+                _refresh_dynamic_style(button)
+                button.setMinimumHeight(74)
+                button.setMinimumSize(0, 74)
+            if hasattr(self, "_target_interaction_status"):
+                self._target_interaction_status.setText(
+                    f"当前页面：{current.label} · {current.status_key}"
+                )
+            if hasattr(self, "_target_runtime_stack"):
+                target_index = self._target_runtime_page_indices.get(self._current_target_page_key)
+                if target_index is not None:
+                    self._target_runtime_stack.setCurrentIndex(target_index)
+            if hasattr(self, "_result_export_panel"):
+                self._result_export_panel.setVisible(self._current_target_page_key == "report_export")
+
+        def _sync_type_interaction_state(self) -> None:
+            types = {meta_type.type_id: meta_type for meta_type in meta_active_types_v1()}
+            current = types[self._selected_active_meta_type_id]
+            for type_id, button in self._active_type_buttons.items():
+                button.setChecked(type_id == self._selected_active_meta_type_id)
+            for type_id, card in getattr(self, "_active_type_cards", {}).items():
+                card.setProperty("selected", type_id == self._selected_active_meta_type_id)
+                _refresh_dynamic_style(card)
+            if hasattr(self, "_active_type_status"):
+                self._active_type_status.setText(
+                    f"Selected active Meta type: {current.type_id} · {current.status_key} · {current.interaction_mode}; AI suggestion remains review-only."
+                )
+
+        def _build_pages(self) -> None:
+            for item in self._layout_state.navigation_items:
+                self._navigation_list.addItem(QListWidgetItem(f"{item.label}\n{item.status_label_zh}"))
+                self._page_stack.addWidget(self._page(item))
+                self._page_keys.append(item.page_key)
+            self._navigation_list.setCurrentRow(0)
+
+        def _page(self, item: MetaWorkspaceNavigationItem) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName(f"metaMainlinePage_{item.page_key}")
+            layout = QVBoxLayout(frame)
+            heading = QLabel(item.label)
+            heading.setStyleSheet("font-size: 18px; font-weight: 700;")
+            body = QLabel(item.description)
+            body.setWordWrap(True)
+            note = QLabel(self._layout_state.testing_notice)
+            note.setObjectName("metaMainlineBoundaryNotice")
+            note.setWordWrap(True)
+            layout.addWidget(heading)
+            layout.addWidget(body)
+            layout.addWidget(note)
+            layout.addStretch(1)
+            return frame
+
+        def _refresh_summary(self) -> None:
+            if self._current_meta_project is not None:
+                summary = self._current_meta_project
+                self._status_label.setText(
+                    f"当前 Meta 项目：{summary.project_name} · {summary.status} · {summary.project_root}"
+                )
+            elif self._current_project_dir is not None:
+                self._status_label.setText(f"当前目录：{self._current_project_dir}；尚未读取到有效 Meta 项目 manifest。")
             else:
-                status = _main_stage_status_label(step.status)
-            chips.append(f"{label} {status}")
-        return _info_card("流程进度", [current_line, next_line, " / ".join(chips)], object_name="metaProgressCard")
+                self._status_label.setText("当前未绑定 Meta 项目。")
 
-
-    def _developer_diagnostics_text(state, summary: MetaProjectSummary | None = None) -> str:
-        lines = ["内部诊断信息"]
-        if summary is not None:
-            lines.extend(
-                [
-                    f"project_stage={summary.workflow_stage}",
-                    f"status={summary.status}",
-                    f"created_at={summary.created_at}",
-                    f"manifest_path={summary.manifest_path}",
-                    f"config_path={summary.config_path}",
-                ]
-            )
-        lines.append("workflow_state:")
-        lines.extend(f"{step.route_key}: {step.status} / {step.artifact_summary}" for step in state.steps)
-        warnings = [warning for step in state.steps for warning in step.warnings]
-        if warnings:
-            lines.append("warnings:")
-            lines.extend(warnings[:8])
-        return "\n".join(lines)
-
-
-    def _card(title: str) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("metaCard")
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(8)
-        label = QLabel(title)
-        label.setObjectName("metaCardTitle")
-        layout.addWidget(label)
-        return frame
-
-
-    def _info_card(title: str, lines: list[str], *, object_name: str = "metaInfoCard") -> QFrame:
-        frame = _card(title)
-        frame.setObjectName(object_name)
-        body = QLabel("\n".join(str(line) for line in lines if str(line).strip()) or "暂无")
-        body.setObjectName("metaCardBody")
-        body.setWordWrap(True)
-        frame.layout().addWidget(body)
-        return frame
-
-
-    def _developer_details(text: str, *, button_text: str = "开发者诊断") -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("metaDeveloperDetails")
-        layout = QVBoxLayout(frame)
-        button = QPushButton(button_text)
-        button.setObjectName("metaSecondaryButton")
-        detail = QLabel(text)
-        detail.setObjectName("metaDeveloperDetailsBody")
-        detail.setWordWrap(True)
-        detail.setVisible(False)
-        button.clicked.connect(lambda: detail.setVisible(not detail.isVisible()))
-        layout.addWidget(button)
-        layout.addWidget(detail)
-        return frame
-
-
-    def _kv_label(label: str, value: str) -> QLabel:
-        widget = QLabel(f"{label}：{value or '暂无'}")
-        widget.setWordWrap(True)
-        return widget
-
-
-    def _warning_label(text: str) -> QLabel:
-        widget = QLabel("Warnings：" + text)
-        widget.setObjectName("metaWarningText")
-        widget.setWordWrap(True)
-        return widget
-
-
-    def _analysis_plan_state_label(value: str) -> str:
-        labels = {
-            "draft": "草稿",
-            "suggested": "建议",
-            "user_edited": "用户编辑",
-            "confirmed": "已确认",
-            "needs_revision": "需要修订",
-            "missing": "未生成",
-            "未生成": "未生成",
-        }
-        return labels.get(value, value or "未生成")
-
-
-    def _plan_text(value: object) -> str:
-        if isinstance(value, dict):
-            for key in ("user_plan", "description", "status"):
-                if str(value.get(key, "")).strip():
-                    return str(value.get(key))
-            return "；".join(f"{key}: {item}" for key, item in value.items() if str(item).strip())
-        if isinstance(value, (list, tuple)):
-            return "；".join(str(item) for item in value if str(item).strip())
-        return str(value or "")
-
-
-    def _default_meta_type(candidates: tuple[dict[str, object], ...]) -> str:
-        for candidate in candidates:
-            value = str(candidate.get("meta_type") or candidate.get("type") or candidate.get("id") or candidate.get("name") or "")
-            if value and "coming_soon" not in value:
-                return value
-        return "treatment_comparative_meta"
-
-
-    def _default_inclusion_criteria(draft) -> str:
-        if draft is None:
-            return ""
-        parts = [
-            f"研究对象符合：{draft.population}" if draft.population else "",
-            f"干预/暴露符合：{draft.exposure or draft.intervention}" if draft.exposure or draft.intervention else "",
-            f"对照符合：{draft.comparator}" if draft.comparator else "",
-            f"结局包含：{draft.outcome}" if draft.outcome else "",
-            f"研究类型：{draft.study_design}" if draft.study_design else "",
-        ]
-        return "；".join(part for part in parts if part)
-
-
-    def _recommended_effect_measure(draft) -> str:
-        if draft is None:
-            return ""
-        meta_type = _default_meta_type(draft.meta_type_candidates)
-        if "diagnostic" in meta_type:
-            return "敏感度、特异度、诊断比值比"
-        if "prevalence" in meta_type or "incidence" in meta_type:
-            return "比例、发生率或率比"
-        if "correlation" in meta_type:
-            return "相关系数 r 或 Fisher z"
-        if "survival" in meta_type or "prognostic" in meta_type:
-            return "HR"
-        if draft.pico_mode == "peco" or "risk" in meta_type:
-            return "OR、RR 或 HR"
-        return "RR、OR、MD 或 SMD"
-
-
-    def _pico_ui_draft_path(project_dir: Path) -> Path:
-        return project_dir.expanduser().resolve() / "protocol" / "pico_workspace_ui_draft.json"
-
-
-    def _save_pico_ui_draft(project_dir: Path, draft_fields: dict[str, QLineEdit]) -> None:
-        payload = {
-            "schema_version": "meta_pico_workspace_ui_draft.v1",
-            "inclusion_criteria": draft_fields["inclusion_criteria"].text().strip(),
-            "exclusion_criteria": draft_fields["exclusion_criteria"].text().strip(),
-            "primary_outcomes": draft_fields["primary_outcomes"].text().strip(),
-            "secondary_outcomes": draft_fields["secondary_outcomes"].text().strip(),
-            "effect_measure": draft_fields["effect_measure"].text().strip(),
-        }
-        path = _pico_ui_draft_path(project_dir)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-    def _database_label(database: str) -> str:
-        labels = {
-            "pubmed": "PubMed",
-            "web_of_science": "Web of Science",
-            "embase": "Embase",
-            "cochrane": "Cochrane",
-            "cnki": "CNKI",
-            "wanfang": "万方",
-            "vip": "维普",
-        }
-        return labels.get(database, database)
-
-
-    def _search_database_order() -> tuple[str, ...]:
-        return ("pubmed", "web_of_science", "embase", "cochrane", "cnki", "wanfang", "vip")
-
-
-    def _search_strategy_status(draft, confirmed) -> str:
-        if confirmed is not None and str(confirmed.execution_status) not in {"", "not_executed"}:
-            if str(confirmed.execution_status) == "ready_for_pubmed_execution":
-                return "已确认"
-            return "已确认"
-        if confirmed is not None:
-            return "已确认"
-        if draft is None:
-            return "未生成"
-        if draft.warnings:
-            return "有警告" if "draft_only" not in draft.warnings else "草稿"
-        return "已编辑" if int(draft.version) > 1 else "草稿"
-
-
-    def _database_manual_notice(database: str) -> str:
-        if database == "pubmed":
-            return "PubMed 检索式确认后可执行 testing-level 在线检索；结果仍需人工复核。"
-        manual_registry = {
-            "wos": ("Web of Science", "https://www.webofscience.com", "plain text / tab-delimited"),
-            "embase": ("Embase", "https://www.embase.com", "RIS"),
-            "cochrane": ("Cochrane Library", "https://www.cochranelibrary.com", "RIS"),
-            "cnki": ("CNKI", "https://www.cnki.net", "CNKI 本地导出"),
-            "wanfang": ("万方", "https://www.wanfangdata.com.cn", "本地导出"),
-            "vip": ("维普", "https://www.cqvip.com", "本地导出"),
-        }
-        label, url, formats = manual_registry.get(database, (_database_label(database), "", "本地导出"))
-        url_text = f"官网：{url}" if url else "官网入口：请按机构权限访问"
-        return f"{label} 当前走手动检索流程：复制检索式 -> 打开官网 -> 人工检索 -> 导入结果文件。{url_text}；建议导入格式：{formats}。"
-
-
-    def _write_pubmed_execution_report(project_dir: Path, execution) -> Path:
-        path = project_dir.expanduser().resolve() / "protocol" / "search_execution_report.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(execution.to_report(), ensure_ascii=False, indent=2), encoding="utf-8")
-        return path
-
-
-    def _latest_pubmed_preview_payload(project_dir: Path) -> dict[str, object]:
-        preview_paths = sorted((project_dir.expanduser().resolve() / "protocol" / "pubmed_candidates").glob("*_candidates_preview.json"))
-        if not preview_paths:
-            return {}
-        return _load_json_object(preview_paths[-1])
-
-
-    def _pubmed_preview_summary(preview: dict[str, object], *, execution_report: dict[str, object] | None = None) -> str:
-        if not preview:
-            return "尚无 PubMed 候选文献。请先确认 PubMed 检索式并执行 testing-level 检索。"
-        candidates = _items_from_payload(preview, "candidates")
-        with_abstract = len([item for item in candidates if str(item.get("abstract", "")).strip()])
-        total_count = int((execution_report or {}).get("result_count") or len(candidates) or 0)
-        fetched_count = int((execution_report or {}).get("returned_count") or len(candidates) or 0)
-        return (
-            f"检索总数 {total_count} 条；当前已保存候选 {len(candidates)} 条；"
-            f"当前批次返回 {fetched_count} 条；有摘要 {with_abstract} 条；preview={preview.get('preview_id', '')}"
-        )
-
-
-    def _pubmed_page_info_text(preview: dict[str, object], *, execution_report: dict[str, object] | None = None) -> str:
-        if not preview:
-            return "默认不显示详情；请先执行 PubMed 检索并手动选择需要查看或导入的候选文献。"
-        total_count = int((execution_report or {}).get("result_count") or len(_items_from_payload(preview, "candidates")) or 0)
-        page_size = int((execution_report or {}).get("returned_count") or len(_items_from_payload(preview, "candidates")) or 0)
-        if total_count > page_size > 0:
-            return f"当前工作台已保留第 1 批 {page_size} 条候选结果；总召回 {total_count} 条。默认只展示已保存候选，导入只作用于已选中行。"
-        return "候选文献按行展示；未点击任何行前，右侧详情面板保持空状态。"
-
-
-    def _candidate_row_text(candidate: dict[str, object]) -> str:
-        authors = candidate.get("authors", [])
-        first_author = authors[0] if isinstance(authors, list) and authors else ""
-        abstract_flag = "有摘要" if str(candidate.get("abstract", "")).strip() else "无摘要"
-        return " · ".join(
-            item
-            for item in (
-                str(candidate.get("title") or "Untitled"),
-                str(first_author),
-                str(candidate.get("year") or ""),
-                str(candidate.get("journal") or ""),
-                f"PMID {candidate.get('pmid') or '-'}",
-                f"DOI {candidate.get('doi') or '-'}",
-                abstract_flag,
-                str(candidate.get("user_decision") or "pending"),
-            )
-            if item
-        )
-
-
-    def _candidate_detail_text(candidate: dict[str, object]) -> str:
-        if not candidate:
-            return "请选择一条候选文献以查看英文标题和摘要。"
-        authors = candidate.get("authors", [])
-        authors_text = "；".join(str(item) for item in authors) if isinstance(authors, list) else str(authors or "")
-        return "\n".join(
-            [
-                f"英文标题：{candidate.get('title') or ''}",
-                f"英文摘要：{candidate.get('abstract') or ''}",
-                f"DOI：{candidate.get('doi') or ''}",
-                f"PMID：{candidate.get('pmid') or ''}",
-                f"期刊：{candidate.get('journal') or ''}",
-                f"年份：{candidate.get('year') or ''}",
-                f"作者：{authors_text}",
-                "来源数据库：PubMed",
-                "用户备注：仅用于人工查看，不参与内部识别、检索和去重逻辑。",
-            ]
-        )
-
-
-    def _pubmed_candidate_status_label(candidate: dict[str, object]) -> str:
-        decision = str(candidate.get("user_decision") or "pending")
-        return {
-            "selected": "已选中待导入",
-            "rejected": "已忽略",
-            "pending": "待处理",
-        }.get(decision, decision or "待处理")
-
-
-    def _selected_table_rows(table: QTableWidget) -> list[int]:
-        rows = {item.row() for item in table.selectedItems()}
-        return sorted(rows)
-
-
-    def _set_all_list_items_selected(widget: QListWidget, selected: bool) -> None:
-        for index in range(widget.count()):
-            widget.item(index).setSelected(selected)
-
-
-    def _literature_import_summary_lines(project_dir: Path, manifest: dict[str, object]) -> list[str]:
-        batches_payload = _load_json_object(project_dir.expanduser().resolve() / "literature" / "import_batches.json")
-        batches = _items_from_payload(batches_payload, "import_batches")
-        latest = batches[-1] if batches else {}
-        source_counts = dict(manifest.get("source_counts", {})) if isinstance(manifest.get("source_counts"), dict) else {}
-        pubmed_count = int(source_counts.get("pubmed_confirmed_candidates", 0) or 0)
-        diagnostics = latest.get("diagnostics", {}) if isinstance(latest.get("diagnostics"), dict) else {}
-        warning_counts = dict(diagnostics.get("warning_counts", {})) if isinstance(diagnostics.get("warning_counts"), dict) else {}
-        return [
-            f"当前文献总数：{manifest.get('total_records', 0)}",
-            f"PubMed 来源数量：{pubmed_count}",
-            f"最近导入批次：{latest.get('import_batch_id') or latest.get('batch_id') or '暂无'}",
-            f"导入成功数量：{latest.get('imported_count', 0)}",
-            f"跳过/失败数量：{latest.get('skipped_count', 0)}",
-            f"缺 DOI：{warning_counts.get('缺少 DOI', 0)}",
-            f"缺摘要：{warning_counts.get('缺少摘要', 0)}",
-            f"缺年份：{warning_counts.get('缺少年份', 0)}",
-        ]
-
-
-    def _latest_multisource_diagnostics_lines(project_dir: Path) -> list[str]:
-        diagnostics_dir = project_dir.expanduser().resolve() / "literature" / "multisource_import_diagnostics"
-        paths = sorted(diagnostics_dir.glob("*_diagnostics.json"))
-        if not paths:
-            return ["暂无本地导入诊断。"]
-        payload = _load_json_object(paths[-1])
-        warning_counts = dict(payload.get("warning_counts", {})) if isinstance(payload.get("warning_counts"), dict) else {}
-        return [
-            f"导入文件名：{Path(str(payload.get('source_path', ''))).name or '未知'}",
-            f"来源格式：{payload.get('source_format', '')}",
-            f"成功条数：{payload.get('parsed_record_count', 0)}",
-            f"失败条数：{payload.get('failed_record_count', 0)}",
-            f"缺 DOI 条数：{warning_counts.get('缺少 DOI', 0)}",
-            f"缺摘要条数：{warning_counts.get('缺少摘要', 0)}",
-            f"缺年份条数：{warning_counts.get('缺少年份', 0)}",
-            f"字段映射警告：{payload.get('warning_count', 0)}",
-        ]
-
-
-    def _literature_library_diagnostics(project_dir: Path, *, records: list[dict[str, object]] | None = None) -> dict[str, object]:
-        records = records if records is not None else LiteratureLibraryService().list_records(project_dir)
-        batches_payload = _load_json_object(project_dir.expanduser().resolve() / "literature" / "import_batches.json")
-        batches = _items_from_payload(batches_payload, "import_batches")
-        latest = batches[-1] if batches else {}
-        source_counts: dict[str, int] = {"PubMed": 0, "NBIB": 0, "RIS": 0, "CSV": 0, "PubMed XML": 0, "WOS": 0, "CNKI": 0, "其他": 0}
-        for record in records:
-            label = _source_bucket(str(record.get("source_type") or record.get("source") or record.get("database_source") or ""))
-            source_counts[label] = source_counts.get(label, 0) + 1
-        missing = {
-            "doi": len([record for record in records if not str(record.get("doi", "")).strip()]),
-            "pmid": len([record for record in records if not str(record.get("pmid", "")).strip()]),
-            "abstract": len([record for record in records if not str(record.get("abstract", "")).strip()]),
-            "year": len([record for record in records if not str(record.get("year", "")).strip()]),
-            "journal": len([record for record in records if not str(record.get("journal") or record.get("publication_title") or "").strip()]),
-        }
-        title_abnormal = [str(record.get("title") or "") for record in records if _title_looks_abnormal(str(record.get("title") or ""))]
-        diagnostics = latest.get("diagnostics", {}) if isinstance(latest.get("diagnostics"), dict) else {}
-        warning_counts = dict(diagnostics.get("warning_counts", {})) if isinstance(diagnostics.get("warning_counts"), dict) else {}
-        return {
-            "total_records": len(records),
-            "source_counts": source_counts,
-            "latest_batch": latest,
-            "imported_count": int(latest.get("imported_count", 0) or 0),
-            "skipped_count": int(latest.get("skipped_count", 0) or 0),
-            "failed_count": int(diagnostics.get("failed_record_count", 0) or latest.get("failed_count", 0) or 0),
-            "missing": missing,
-            "field_mapping_warnings": list(diagnostics.get("field_mapping_warnings", [])) if isinstance(diagnostics.get("field_mapping_warnings"), list) else [],
-            "warning_counts": warning_counts,
-            "title_abnormality_count": len(title_abnormal),
-            "title_abnormality_examples": title_abnormal[:5],
-        }
-
-
-    def _literature_diagnostics_lines(diagnostics: dict[str, object]) -> list[str]:
-        missing = dict(diagnostics.get("missing", {})) if isinstance(diagnostics.get("missing"), dict) else {}
-        source_counts = dict(diagnostics.get("source_counts", {})) if isinstance(diagnostics.get("source_counts"), dict) else {}
-        latest = dict(diagnostics.get("latest_batch", {})) if isinstance(diagnostics.get("latest_batch"), dict) else {}
-        mapping = diagnostics.get("field_mapping_warnings", [])
-        return [
-            f"当前文献总数：{diagnostics.get('total_records', 0)}",
-            "按来源统计：" + "；".join(f"{key} {value}" for key, value in source_counts.items()),
-            f"最近导入批次：{latest.get('import_batch_id') or latest.get('batch_id') or '暂无'}",
-            f"导入成功数：{diagnostics.get('imported_count', 0)}",
-            f"跳过数：{diagnostics.get('skipped_count', 0)}",
-            f"失败数：{diagnostics.get('failed_count', 0)}",
-            f"缺 DOI 数：{missing.get('doi', 0)}",
-            f"缺 PMID 数：{missing.get('pmid', 0)}",
-            f"缺 abstract 数：{missing.get('abstract', 0)}",
-            f"缺年份数：{missing.get('year', 0)}",
-            f"缺期刊数：{missing.get('journal', 0)}",
-            f"字段映射警告：{'；'.join(str(item) for item in mapping[:3]) if mapping else '暂无'}",
-            f"可能乱码或标题异常：{diagnostics.get('title_abnormality_count', 0)}",
-        ]
-
-
-    def _literature_source_filter_values(records: list[dict[str, object]]) -> list[str]:
-        values = sorted({str(record.get("source_type") or record.get("source") or "") for record in records if str(record.get("source_type") or record.get("source") or "").strip()})
-        return values
-
-
-    def _record_matches_literature_filters(record: dict[str, object], *, query: str, source_type: str, missing_field: str) -> bool:
-        if source_type and str(record.get("source_type") or record.get("source") or "") != source_type:
-            return False
-        if missing_field:
-            value = record.get("journal") or record.get("publication_title") if missing_field == "journal" else record.get(missing_field)
-            if str(value or "").strip():
-                return False
-        needle = query.strip().lower()
-        if not needle:
-            return True
-        haystack = " ".join(
-            [
-                str(record.get("title", "")),
-                str(record.get("authors", "")),
-                str(record.get("authors_text", "")),
-                str(record.get("doi", "")),
-                str(record.get("pmid", "")),
-            ]
-        ).lower()
-        return needle in haystack
-
-
-    def _record_status_label(record: dict[str, object]) -> str:
-        return str(record.get("record_status") or record.get("dedup_status") or record.get("screening_status") or "未开始")
-
-
-    def _source_bucket(source: str) -> str:
-        text = source.lower()
-        if "pubmed_confirmed" in text or text == "pubmed" or text.startswith("pubmed_"):
-            return "PubMed"
-        if "nbib" in text:
-            return "NBIB"
-        if "ris" in text:
-            return "RIS"
-        if text == "csv":
-            return "CSV"
-        if "pubmed_xml" in text:
-            return "PubMed XML"
-        if "wos" in text or "web_of_science" in text:
-            return "WOS"
-        if "cnki" in text:
-            return "CNKI"
-        return "其他"
-
-
-    def _source_label(source: str) -> str:
-        if not source:
-            return "未知"
-        return {
-            "pubmed_confirmed_candidates": "PubMed",
-            "pubmed_xml": "PubMed XML",
-            "nbib": "NBIB",
-            "ris": "RIS",
-            "csv": "CSV",
-            "wos_plain_text": "WOS",
-            "wos_tab_delimited": "WOS",
-            "cnki_export": "CNKI",
-        }.get(source, source)
-
-
-    def _title_looks_abnormal(title: str) -> bool:
-        text = title.strip()
-        if not text:
-            return True
-        if "\ufffd" in text or "�" in text:
-            return True
-        if text.count("?") >= 3:
-            return True
-        letters = sum(1 for char in text if char.isalpha())
-        return len(text) >= 12 and letters == 0
-
-
-    def _literature_notes_path(project_dir: Path) -> Path:
-        return project_dir.expanduser().resolve() / "literature" / "literature_record_notes.json"
-
-
-    def _load_literature_note(project_dir: Path, record_id: str) -> str:
-        payload = _load_json_object(_literature_notes_path(project_dir))
-        notes = payload.get("notes", {}) if isinstance(payload, dict) else {}
-        return str(notes.get(record_id, "")) if isinstance(notes, dict) else ""
-
-
-    def _save_literature_note(project_dir: Path, record_id: str, note: str) -> None:
-        path = _literature_notes_path(project_dir)
-        payload = _load_json_object(path)
-        notes = dict(payload.get("notes", {})) if isinstance(payload.get("notes"), dict) else {}
-        notes[record_id] = note.strip()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"schema_version": "meta_literature_user_notes.v1", "notes": notes}, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-    def _export_literature_library_summary(project_dir: Path, *, diagnostics: dict[str, object], records: list[dict[str, object]]) -> Path:
-        path = project_dir.expanduser().resolve() / "literature" / "literature_library_summary.md"
-        lines = ["# 文献库摘要", "", *_literature_diagnostics_lines(diagnostics), "", "## 文献", ""]
-        for record in records:
-            lines.append(f"- {record.get('title') or 'Untitled'} | {record.get('year') or '-'} | PMID {record.get('pmid') or '-'} | DOI {record.get('doi') or '-'}")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("\n".join(lines), encoding="utf-8")
-        return path
-
-
-    def _items_from_payload(payload: dict[str, object], key: str) -> list[dict[str, object]]:
-        value = payload.get(key)
-        if isinstance(value, list):
-            return [dict(item) for item in value if isinstance(item, dict)]
-        return []
-
-
-    def _record_detail(record: dict[str, object], *, user_note: str = "") -> str:
-        authors = record.get("authors", "")
-        authors_text = "；".join(str(item) for item in authors) if isinstance(authors, list) else str(authors or record.get("authors_text", ""))
-        return "\n".join(
-            [
-                f"英文标题：{record.get('title', '')}",
-                f"作者：{authors_text}",
-                f"期刊：{record.get('journal', '')}",
-                f"年份：{record.get('year', '')}",
-                f"PMID：{record.get('pmid', '')}",
-                f"DOI：{record.get('doi', '')}",
-                f"Abstract：{record.get('abstract', '')}",
-                f"来源数据库：{record.get('database_source') or record.get('source_type', '')}",
-                f"导入批次：{record.get('import_batch_id') or record.get('batch_id') or ''}",
-                f"当前筛选状态：{record.get('screening_status', '')}",
-                f"用户备注：{user_note}",
-            ]
-        )
-
-
-    def _screening_decision_label(decision: str) -> str:
-        return {
-            "not_screened": "未筛选",
-            "pending": "未筛选",
-            "include": "纳入",
-            "included": "纳入",
-            "exclude": "排除",
-            "excluded": "排除",
-            "uncertain": "不确定",
-            "maybe": "不确定",
-            "need_full_text": "需要全文",
-            "needs_review": "需要复核",
-        }.get(decision, decision or "未筛选")
-
-
-    def _author_year_text(authors: object, year: object) -> str:
-        author_text = ""
-        if isinstance(authors, (list, tuple)):
-            author_text = "、".join(str(item).strip() for item in authors if str(item).strip())
-        else:
-            author_text = str(authors or "").strip()
-        year_text = str(year or "").strip()
-        if author_text and year_text:
-            return f"{author_text} · {year_text}"
-        return author_text or year_text or "作者/年份未记录"
-
-
-    def _extraction_source_label(source: str) -> str:
-        return {
-            "full_text_confirmed": "全文已确认",
-            "final_included_studies": "全文筛选纳入",
-            "manual_full_text_unavailable": "全文不可获取：人工提取",
-            "manual_library_fallback": "文献库人工提取",
-        }.get(source, source or "来源未标记")
-
-
-    def _evidence_state_label(state: str) -> str:
-        return {
-            "empty": "空",
-            "draft": "草稿",
-            "suggested": "建议",
-            "user_accepted": "用户接受",
-            "user_edited": "用户编辑",
-            "confirmed": "已确认",
-            "rejected": "已拒绝",
-            "completed_by_user": "用户已完成",
-            "missing_data": "缺失数据",
-            "not_started": "未开始",
-        }.get(state, state or "草稿")
-
-
-    def _quality_rating_label(rating: str) -> str:
-        return QUALITY_RATING_LABELS_ZH.get(rating, rating or "未评价")
-
-
-    def _quality_state_label(state: str) -> str:
-        return QUALITY_M6_STATE_LABELS_ZH.get(state, "已确认" if state == "completed_by_user" else state or "草稿")
-
-
-    def _quality_study_rows_for_workspace(project_dir: Path) -> list[dict[str, object]]:
-        rows: list[dict[str, object]] = []
-        payload = _load_json_object(project_dir / "extraction" / "extraction_effect_rows.json")
-        for item in _items_from_payload(payload, "effect_rows"):
-            if str(item.get("evidence_state", "")) != "confirmed" and str(item.get("extraction_status", "")) != "completed_by_user":
-                continue
-            structured = dict(item.get("m5_structured_fields", {}) if isinstance(item.get("m5_structured_fields"), dict) else {})
-            rows.append(
-                {
-                    "study_id": structured.get("study_id") or item.get("study_unit_label") or item.get("study_unit_id") or "",
-                    "record_id": item.get("record_id", ""),
-                    "title": structured.get("title") or item.get("study_unit_label") or "",
-                    "first_author": structured.get("first_author", ""),
-                    "year": structured.get("year", ""),
-                    "study_design": structured.get("study_design", ""),
-                }
-            )
-        if rows:
-            return rows
-        final = _load_json_object(project_dir / "fulltext" / "final_included_studies.json")
-        for item in _items_from_payload(final, "included_studies"):
-            rows.append(
-                {
-                    "study_id": item.get("study_id") or item.get("record_id") or "",
-                    "record_id": item.get("record_id", ""),
-                    "title": item.get("title", ""),
-                    "first_author": item.get("first_author", ""),
-                    "year": item.get("year", ""),
-                    "study_design": item.get("study_design", ""),
-                }
-            )
-        return rows
-
-
-    def _first_author(record: dict[str, object]) -> str:
-        first = str(record.get("first_author") or "").strip()
-        if first:
-            return first
-        authors = record.get("authors")
-        if isinstance(authors, list) and authors:
-            return str(authors[0])
-        authors_text = str(record.get("authors_text") or "").strip()
-        return authors_text.split(";")[0].strip() if authors_text else ""
-
-
-    def _screening_record_user_detail(record: dict[str, object], decision_payload: dict[str, object]) -> str:
-        decision = str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED)
-        reason_code = str(decision_payload.get("exclusion_reason_code") or "")
-        abstract = " ".join(str(record.get("abstract") or "").split())
-        abstract_snippet = abstract if len(abstract) <= 320 else abstract[:319].rstrip() + "..."
-        return "\n".join(
-            [
-                f"title：{record.get('title', '')}",
-                f"作者：{_first_author(record)}",
-                f"年份：{record.get('year', '')}",
-                f"期刊：{record.get('journal', '')}",
-                f"来源数据库：{record.get('database_source') or record.get('source_type') or '未知'}",
-                f"摘要片段：{abstract_snippet or '暂无摘要'}",
-                f"去重状态：{record.get('dedup_status') or '去重后待筛选'}",
-                f"当前筛选状态：{_screening_decision_label(decision)}",
-                f"排除原因：{EXCLUSION_REASON_LABELS_ZH.get(reason_code, str(decision_payload.get('exclusion_reason_text') or '暂无'))}",
-            ]
-        )
-
-
-    def _screening_ai_suggestion_payload(project_dir: Path, record_id: str) -> dict[str, object]:
-        payload = _load_json_object(TitleAbstractScreeningV2Service().suggestion_queue_path(project_dir))
-        suggestions = _items_from_payload(payload, "suggestions")
-        for suggestion in reversed(suggestions):
-            if str(suggestion.get("record_id", "")) == record_id:
-                return suggestion
-        return {}
-
-
-    def _screening_ai_suggestion_label(payload: dict[str, object]) -> str:
-        if not payload:
-            return "暂无"
-        decision = _screening_decision_label(str(payload.get("suggested_decision") or ""))
-        confidence = payload.get("confidence")
-        if isinstance(confidence, (int, float)):
-            return f"{decision}（{confidence:.0%}）"
-        return decision
-
-
-    def _screening_ai_suggestion_text(project_dir: Path, record_id: str) -> str:
-        payload = _screening_ai_suggestion_payload(project_dir, record_id)
-        if not payload:
-            return "暂无 AI 建议。AI 建议不会自动写入人工筛选结果。"
-        return "\n".join(
-            [
-                f"建议结果：{_screening_decision_label(str(payload.get('suggested_decision') or ''))}",
-                f"置信度：{payload.get('confidence', '')}",
-                f"命中依据：{payload.get('rationale') or '未记录'}",
-                "说明：只有人工决定会进入正式筛选记录和 PRISMA 计数。",
-            ]
-        )
-
-
-    def _next_unscreened_screening_row(
-        records: list[dict[str, object]],
-        decisions_by_record: dict[str, dict[str, object]],
-        *,
-        after_row: int,
-    ) -> int:
-        if not records:
-            return -1
-        start = max(after_row + 1, 0)
-        for row in range(start, len(records)):
-            record_id = str(records[row].get("record_id", ""))
-            decision = str(decisions_by_record.get(record_id, {}).get("decision") or records[row].get("decision") or DECISION_NOT_SCREENED)
-            if decision in {DECISION_NOT_SCREENED, "", "pending"}:
-                return row
-        return -1
-
-
-    def _fulltext_record_detail_text(record: object, *, candidate: object | None, management: FullTextManagementService) -> str:
-        record_id = getattr(record, "record_id", "")
-        title = getattr(record, "title", "") or getattr(candidate, "title", "") or "未命名文献"
-        authors = getattr(record, "authors", "") or getattr(candidate, "authors", "")
-        year = getattr(record, "year", "") or getattr(candidate, "year", "")
-        journal = getattr(record, "journal", "") or getattr(candidate, "journal", "") or "期刊未记录"
-        screening = getattr(record, "source_screening_decision", "") or getattr(candidate, "screening_decision", "") or "未记录"
-        status = getattr(record, "fulltext_status", getattr(record, "eligibility_status", "")) or "未记录"
-        exclusion_reason = (
-            getattr(record, "fulltext_exclusion_reason", "")
-            or getattr(record, "unavailable_reason", "")
-            or getattr(candidate, "exclusion_reason", "")
-            or ""
-        )
-        file_label = management.safe_file_label(record) if hasattr(record, "pdf_path") else "未登记全文文件"
-        return "\n".join(
-            [
-                f"标题：{title}",
-                f"作者/年份：{_author_year_text(authors, year)}",
-                f"期刊：{journal}",
-                f"标题摘要决定：{_screening_decision_label(screening)}",
-                f"全文状态：{FULLTEXT_STATUS_LABELS_ZH.get(status, status)}",
-                f"PDF 文件：{file_label}",
-                f"全文排除原因：{FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(exclusion_reason, exclusion_reason or '暂无')}",
-                f"记录 ID：{record_id}",
-            ]
-        )
-
-
-    def _risk_counts_text(risk_counts: dict[str, int]) -> str:
-        if not risk_counts:
-            return "暂无"
-        return "；".join(f"{_risk_label(key)} {value}" for key, value in risk_counts.items())
-
-
-    def _dedup_decision_label(decision: str) -> str:
-        return {
-            "merge": "已合并",
-            "set_master_record": "已合并",
-            "keep_both": "标记非重复",
-            "mark_not_duplicate": "标记非重复",
-            "skip": "跳过",
-        }.get(decision, "未处理")
-
-
-    def _dedup_log_text(decisions: list[dict[str, object]]) -> str:
-        if not decisions:
-            return "暂无去重日志。"
-        lines = []
-        for decision in decisions[-20:]:
-            lines.append(
-                " · ".join(
-                    str(item)
-                    for item in (
-                        decision.get("created_at", ""),
-                        decision.get("group_id", ""),
-                        _dedup_decision_label(str(decision.get("decision", ""))),
-                        decision.get("selected_record_id", ""),
-                    )
-                    if item
-                )
-            )
-        return "\n".join(lines)
-
-
-    def _stage_m3_prisma_lines(summary: dict[str, object]) -> list[str]:
-        lines = [
-            f"records identified from PubMed：{summary.get('records_identified_from_pubmed', 0)}",
-            f"records identified from local imports：{summary.get('records_identified_from_local_imports', 0)}",
-            f"total records before deduplication：{summary.get('total_records_before_deduplication', 0)}",
-            f"duplicate records removed：{summary.get('duplicate_records_removed', 0)}",
-            f"records after deduplication：{summary.get('records_after_deduplication', 0)}",
-            f"records ready for title/abstract screening：{summary.get('records_ready_for_title_abstract_screening', 0)}",
-        ]
-        if str(summary.get("deduplication_status", "")) == "preliminary":
-            lines.append("preliminary：去重完成后数字会更新")
-        return lines
-
-
-    def _dedup_group_detail(group: dict[str, object]) -> str:
-        records = group.get("records", [])
-        record_lines: list[str] = []
-        if isinstance(records, list):
-            for record in records:
-                if isinstance(record, dict):
-                    authors = record.get("authors", [])
-                    authors_text = "；".join(str(item) for item in authors) if isinstance(authors, list) else str(authors or record.get("authors_text", ""))
-                    abstract = str(record.get("abstract") or "")
-                    record_lines.append(
-                        "\n".join(
-                            [
-                                f"- {record.get('record_id', '')}",
-                                f"  标题：{record.get('title', '')}",
-                                f"  作者：{authors_text}",
-                                f"  年份/期刊：{record.get('year', '')} / {record.get('journal', '')}",
-                                f"  PMID/DOI：{record.get('pmid', '-') or '-'} / {record.get('doi', '-') or '-'}",
-                                f"  Abstract：{abstract[:240]}",
-                                f"  来源/批次：{record.get('source_type', '')} / {record.get('import_batch_id', '')}",
-                            ]
-                        )
-                    )
-        differences = group.get("field_differences", [])
-        diff_lines: list[str] = []
-        if isinstance(differences, list):
-            for item in differences[:8]:
-                if isinstance(item, dict):
-                    diff_lines.append(f"- {item.get('field', '')}: {item.get('values', item)}")
-        return "\n".join(
-            [
-                f"Group：{group.get('group_id', '')}",
-                f"风险：{_risk_label(str(group.get('risk_level', '')))}",
-                f"规则：{group.get('duplicate_rule', '')}",
-                f"原因：{group.get('match_reason', '')}",
-                f"置信度：{group.get('confidence', '')}",
-                f"推荐保留：{group.get('retain_candidate_id', '')}",
-                "记录：",
-                *(record_lines or ["- 暂无记录"]),
-                "字段差异：",
-                *(diff_lines or ["- 暂无字段差异"]),
-            ]
-        )
-
-
-    def _risk_label(risk: str) -> str:
-        return {
-            "red": "红色：高度重复",
-            "yellow": "黄色：疑似重复",
-            "gray": "灰色：轻度疑似",
-            "green": "绿色：暂未发现重复",
-        }.get(risk, risk or "未知风险")
-
-
-    def _state_debug_text(state) -> str:
-        return "\n".join(f"{step.route_key}: {step.status} / {step.artifact_summary}" for step in state.steps)
-
-
-    def _step_debug_text(step: MetaWorkflowStepState) -> str:
-        lines = [
-            f"route={step.route_key}",
-            f"status={step.status}",
-            f"artifact_summary={step.artifact_summary}",
-            f"updated_at={step.updated_at or '暂无'}",
-        ]
-        if step.artifact_paths:
-            lines.append("paths=" + "；".join(step.artifact_paths[:5]))
-        if step.warnings:
-            lines.append("warnings=" + "；".join(step.warnings))
-        return "\n".join(lines)
-
-
-    def _show_message(text: str) -> None:
-        if QMessageBox is not None:
-            QMessageBox.information(None, "Meta 分析", text)
-
-
-else:
+else:  # pragma: no cover
 
     class MetaAnalysisWorkspaceWidget:  # type: ignore[no-redef]
-        pass
+        def __init__(self, *args, **kwargs) -> None:
+            self._current_project_dir = None
+
+        def page_keys(self) -> tuple[str, ...]:
+            return tuple(item.page_key for item in meta_workspace_layout_state().navigation_items)
+
+        def current_project_dir(self) -> Path | None:
+            return self._current_project_dir
+
+        def set_project_record(self, record) -> None:
+            self._current_project_dir = Path(record.project_dir).expanduser().resolve()

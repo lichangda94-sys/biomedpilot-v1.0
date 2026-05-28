@@ -1,0 +1,11 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_python</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <rect x='14' y='14' width='36' height='36' rx='8' fill='#F5FAFF' stroke='#35506B' stroke-width='3'/>
+      <path d='M25 24h10c4 0 6 2 6 6v4c0 4-2 6-6 6H24' fill='none' stroke='#2F80ED' stroke-width='3' stroke-linecap='round'/>
+      <path d='M39 25v-3M25 39v3M25 31h14' stroke='#1DA6A8' stroke-width='3' stroke-linecap='round'/>
+      <circle cx='30' cy='27' r='1.8' fill='#35506B'/>
+
+  </g>
+</svg>

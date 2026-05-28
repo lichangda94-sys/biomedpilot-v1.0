@@ -370,43 +370,63 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
     assert widget.objectName() == "bioinformaticsDataSourcePage"
 
 
-def test_data_source_page_shows_four_primary_source_entries(qt_app) -> None:
-    widget = BioinformaticsDataSourceWidget()
-    card_titles = [
-        label.text()
-        for label in widget.findChildren(QLabel, "bioProjectCardTitle")
-        if label.text() not in {"GEO 数据集详情", "下载列表 / 待处理数据来源", "当前数据选择状态", "历史缓存数据", "数据详情"}
-    ]
-    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
-    inputs = widget.findChildren(workflow_pages.QLineEdit)
-    visible_text = " ".join(
-        [label.text() for label in widget.findChildren(QLabel)]
-        + [button.text() for button in widget.findChildren(QPushButton)]
-        + [input_box.placeholderText() for input_box in inputs]
+def test_gse_preview_preserves_geo_organism_for_detail_profile(qt_app) -> None:
+    metadata_text = "\n".join(
+        [
+            "当前 GSE 编号：GSE5078",
+            "数据集标题：Hippocampal transcript profile in young and middle-aged mice",
+            "样本数：23",
+            "平台信息：GPL1261",
+            "物种：Mus musculus",
+        ]
     )
 
-    assert "选择数据来源" in card_titles
-    assert "GEO 数据库" in card_titles
-    assert "TCGA 数据库" in card_titles
-    assert "GTEx 数据库" in card_titles
-    assert "本地数据导入" in card_titles
-    assert "按 GSE 编号检索/下载" in card_titles
-    assert "按中文研究问题检索 GEO 数据集" in card_titles
-    assert "GEO Series Matrix 文件" not in card_titles
-    assert "TCGA 本地数据" not in card_titles
-    assert "GTEx 本地数据" not in card_titles
-    assert "TCGA + GTEx 联合数据" not in card_titles
-    assert "本地 AI 检索助手" not in card_titles
-    assert {"GEO 数据库", "TCGA 数据库", "GTEx 数据库", "本地数据导入"} <= set(card_titles)
-    assert {"进入", "预览可下载数据", "生成下载计划草案"} <= set(button_texts)
-    assert "选择本地文件或文件夹" in button_texts
-    assert "选择本地数据" not in button_texts
-    assert "选择本地文件夹" not in button_texts
-    assert "检索" in button_texts
-    assert "检索数据集" not in button_texts
-    assert "进入中文主题检索" in button_texts
-    assert any(input_box.placeholderText() == "请输入 GSE 编号，例如 GSE60235" for input_box in inputs)
-    assert any(input_box.placeholderText() == "请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据" for input_box in inputs)
+    preview = workflow_pages._gse_preview_from_metadata("GSE5078", metadata_text)
+    candidate = workflow_pages._geo_candidate_from_gse_preview(preview)
+    rows = workflow_pages._geo_detail_basic_rows(candidate)
+    profile = workflow_pages._build_geo_detail_profile(None, candidate)
+    row_map = {str(row[0]): str(row[1]) for row in rows}
+
+    assert preview.organism == "Mus musculus"
+    assert candidate.organism == "Mus musculus"
+    assert row_map["物种"] == "小鼠（Mus musculus）"
+    assert profile.organism == "Mus musculus"
+    assert profile.species_group == "mouse"
+    assert "人类或疑似人类" not in profile.analysis_potential_reason
+
+
+def test_data_source_page_shows_only_four_gated_source_cards(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    source_cards = widget.findChildren(QFrame, "bioinformaticsDataSourceMainCard")
+    source_titles = [card.findChild(QLabel, "bioinformaticsDataSourceMainCardTitle").text() for card in source_cards]
+    source_keys = [card.property("sourceKey") for card in source_cards]
+    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+    preview_buttons = widget.findChildren(QPushButton, "bioinformaticsDataSourceSelectPreviewButton")
+    legacy_cards = (
+        widget.findChild(QFrame, "localImportEntryCard"),
+        widget.findChild(QFrame, "gseSearchEntryCard"),
+        widget.findChild(QFrame, "chineseResearchSearchEntryCard"),
+    )
+
+    assert source_titles == ["GEO", "TCGA", "GTEx", "Local File"]
+    assert source_keys == ["geo", "tcga", "gtex", "local_file"]
+    assert all(card.property("formalActionEnabled") is False for card in source_cards)
+    assert all(card.property("downloadEnabled") is False for card in source_cards)
+    assert all(card.property("importEnabled") is False for card in source_cards)
+    assert all(card.property("analysisEnabled") is False for card in source_cards)
+    assert len(preview_buttons) == 4
+    assert all(button.property("buttonBehavior") == "enabled_select_preview_only" for button in preview_buttons)
+    assert all(card is not None and card.property("normalUserVisible") is False and card.isHidden() for card in legacy_cards)
+    assert "External Result" not in source_titles
+    assert "GEO Series Matrix 文件" not in source_titles
+    assert "TCGA 本地数据" not in source_titles
+    assert "GTEx 本地数据" not in source_titles
+    assert "TCGA + GTEx 联合数据" not in source_titles
+    assert "本地 AI 检索助手" not in source_titles
+    assert "选择本地数据" in button_texts
+    assert "选择本地文件夹" in button_texts
+    assert "进入检索界面" in button_texts
+    assert all(button.isEnabled() is False for button in widget.findChildren(QPushButton) if button.text() in {"选择本地数据", "选择本地文件夹", "进入检索界面", "检索数据集"})
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
     assert "登记为数据源" not in button_texts
@@ -417,7 +437,22 @@ def test_data_source_page_shows_four_primary_source_entries(qt_app) -> None:
     assert "下一步" in widget.findChild(QLabel, "dataSelectionNextStep").text()
 
 
-def test_data_source_tcga_workflow_initial_state_shows_five_steps_and_only_preview(qt_app, project_summary) -> None:
+def test_data_source_gated_selection_updates_preview_without_fake_result(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    buttons = {button.property("sourceKey"): button for button in widget.findChildren(QPushButton, "bioinformaticsDataSourceSelectPreviewButton")}
+    status_table = widget.findChild(QTableWidget, "bioinformaticsSourceStatusOverviewTable")
+    recent_table = widget.findChild(QTableWidget, "bioinformaticsRecentImportsPreviewTable")
+
+    buttons["geo"].click()
+
+    assert "已选择 GEO 配置预览" in widget.status_message()
+    assert status_table.item(0, 1).text() == "configure/select preview"
+    assert status_table.item(0, 3).text() == "download / analysis"
+    assert recent_table.item(0, 2).text() == "empty-safe"
+    assert "No fake expression matrix" in recent_table.item(0, 3).text()
+
+
+def test_local_import_strategy_copy_uses_user_friendly_copy(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
 
@@ -1396,7 +1431,7 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert "下一步交接清单：已生成" in widget.source_summary_tooltip("geo_gse")
     assert str(summary.plan_path) in widget._technical_details.toPlainText()
     assert widget._technical_details.isHidden()
-    assert widget.status_message() == "已在下载列表 / 待处理数据来源中：GSE60024"
+    assert widget.status_message() == "已在待处理数据集中：GSE60024"
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
     assert not widget._next_button.isEnabled()

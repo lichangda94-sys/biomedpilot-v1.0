@@ -137,7 +137,10 @@ def test_project_summary_uses_user_friendly_status_card(qt_app, tmp_path) -> Non
     assert "当前状态：项目已创建，等待选择数据来源" in label_text
     assert "项目结构正常" in label_text
     assert "暂无警告" in label_text
-    assert "当前：选择数据来源" in label_text
+    assert "当前：Data Source / 数据来源" in label_text
+    assert "Data Readiness" in label_text
+    assert "Analysis actions disabled" in label_text
+    assert "report/export not ready" in label_text
     assert "数据来源\n未选择" in label_text
     assert "样本识别\n未开始" in label_text
     assert "分析结果\n暂无" in label_text

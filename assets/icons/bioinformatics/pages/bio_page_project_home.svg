@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">bio_page_project_home</title>
+  <desc id="desc">Production candidate vector icon for bio_pages; transparent background.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="25" fill="#DCFCE7" stroke="#059669" stroke-width="1.5" opacity="0.65"/>
+    <path d="M14 31 L32 15 L50 31" stroke="#059669" stroke-width="3"/>
+    <rect x="20" y="30" width="24" height="20" rx="3" fill="none" stroke="#059669" stroke-width="3"/>
+    <path d="M29 50 V39 H35 V50" stroke="#059669" stroke-width="3"/>
+  </g>
+</svg>

@@ -20,6 +20,7 @@ from app.bioinformatics.tcga.barcode import validate_tcga_sample_barcodes
 RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
 RECOGNIZED_FILES = Path("logs") / "recognition" / "recognized_files.json"
 CURRENT_RECOGNITION_RUN = Path("logs") / "recognition" / "current_recognition_run.json"
+RECOGNITION_RUNS_DIR = Path("logs") / "recognition" / "runs"
 RECOGNITION_REPORT_SCHEMA_VERSION = "biomedpilot.recognition_report.v2"
 RECOGNIZED_FILES_SCHEMA_VERSION = "biomedpilot.recognized_files.v2"
 RECOGNITION_ENGINE_VERSION = "bioinformatics-recognition-engine.v2"
@@ -176,6 +177,92 @@ def run_project_recognition_for_paths(
     report["selected_inputs"] = [str(path) for path in files]
     _write_json(root / RECOGNITION_REPORT, report)
     return report
+
+
+def list_recognition_runs(project_root: str | Path, *, include_legacy: bool = True) -> list[dict[str, object]]:
+    root = Path(project_root).expanduser().resolve()
+    runs: list[dict[str, object]] = []
+    report = load_recognition_report(root)
+    if isinstance(report, dict):
+        run_id = str(report.get("recognition_run_id") or "current_recognition_report")
+        files = report.get("files") if isinstance(report.get("files"), list) else []
+        warnings = report.get("warnings") if isinstance(report.get("warnings"), list) else []
+        runs.append(
+            {
+                "run_id": run_id,
+                "batch_label": "当前识别记录",
+                "recognition_report_path": str(root / RECOGNITION_REPORT),
+                "recognized_file_count": len(files),
+                "warning_count": len(warnings),
+                "status": str(report.get("report_status") or "current"),
+                "is_current": True,
+            }
+        )
+    runs_dir = root / RECOGNITION_RUNS_DIR
+    if runs_dir.exists():
+        for report_path in sorted(runs_dir.glob("*/recognition_report.json"), reverse=True):
+            report = _read_json_if_exists(report_path) or {}
+            if not isinstance(report, dict):
+                continue
+            run_id = str(report.get("recognition_run_id") or report_path.parent.name)
+            if any(str(item.get("run_id")) == run_id for item in runs):
+                continue
+            files = report.get("files") if isinstance(report.get("files"), list) else []
+            warnings = report.get("warnings") if isinstance(report.get("warnings"), list) else []
+            runs.append(
+                {
+                    "run_id": run_id,
+                    "batch_label": "历史识别记录",
+                    "recognition_report_path": str(report_path),
+                    "recognized_file_count": len(files),
+                    "warning_count": len(warnings),
+                    "status": str(report.get("report_status") or "completed"),
+                    "is_current": False,
+                }
+            )
+    return runs
+
+
+def set_current_recognition_run(project_root: str | Path, run_id: str) -> bool:
+    root = Path(project_root).expanduser().resolve()
+    for run in list_recognition_runs(root):
+        if str(run.get("run_id") or "") == run_id:
+            _write_json(
+                root / CURRENT_RECOGNITION_RUN,
+                {
+                    "schema_version": "biomedpilot.current_recognition_run.v2",
+                    "run_id": run_id,
+                    "recognition_report_path": str(run.get("recognition_report_path") or ""),
+                    "set_at": _now(),
+                },
+            )
+            return True
+    return False
+
+
+def delete_recognition_run(project_root: str | Path, run_id: str) -> bool:
+    root = Path(project_root).expanduser().resolve()
+    current = _read_json_if_exists(root / CURRENT_RECOGNITION_RUN) or {}
+    if isinstance(current, dict) and str(current.get("run_id") or "") == run_id:
+        try:
+            (root / CURRENT_RECOGNITION_RUN).unlink(missing_ok=True)
+        except OSError:
+            pass
+    report = load_recognition_report(root)
+    if isinstance(report, dict) and str(report.get("recognition_run_id") or "") == run_id:
+        try:
+            (root / RECOGNITION_REPORT).unlink(missing_ok=True)
+            (root / RECOGNIZED_FILES).unlink(missing_ok=True)
+        except OSError:
+            pass
+        return True
+    run_dir = root / RECOGNITION_RUNS_DIR / run_id
+    if run_dir.exists() and run_dir.is_dir():
+        import shutil
+
+        shutil.rmtree(run_dir)
+        return True
+    return False
 
 
 def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[str, object]:
@@ -2307,6 +2394,14 @@ def _type_counts(records: list[dict[str, object]]) -> dict[str, int]:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _read_json_if_exists(path: Path) -> dict[str, object] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

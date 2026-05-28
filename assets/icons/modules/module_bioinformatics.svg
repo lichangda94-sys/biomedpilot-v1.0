@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">module_bioinformatics</title>
+  <desc id="desc">Production candidate vector icon for modules; transparent background.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="25" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" opacity="0.65"/>
+    <path d="M22 14 C42 22 42 42 22 50" stroke="#2563EB" stroke-width="3"/>
+    <path d="M42 14 C22 22 22 42 42 50" stroke="#2563EB" stroke-width="3"/>
+    <path d="M26 22 H38 M24 32 H40 M26 42 H38" stroke="#2563EB" stroke-width="2.4"/>
+  </g>
+</svg>
