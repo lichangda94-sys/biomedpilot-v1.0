@@ -122,12 +122,27 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
             "r_backend": {"packages": {"R": "not_checked", "limma": "not_checked", "DESeq2": "not_checked", "edgeR": "not_checked"}},
         },
         survival_dependency={"status": "preflight_only", "python_lifelines": {"available": False, "version": ""}, "blockers": ["lifelines_missing_formal_survival_disabled"]},
+        enrichment_backend_gate={
+            "status": "passed",
+            "rscript": {"available": True, "version": "R 4.4.2"},
+            "packages": {
+                "clusterProfiler": {"available": True, "importable": True, "version": "4.14.6"},
+                "fgsea": {"available": True, "importable": True, "version": "1.32.4"},
+                "ReactomePA": {"available": False, "importable": False, "version": ""},
+                "msigdbr": {"available": False, "importable": False, "version": ""},
+            },
+            "packaging_policy": "external_runtime_not_bundled",
+            "blockers": [],
+            "warnings": ["external_detection_global_status_blocked_by_unselected_capabilities"],
+        },
     )
 
     text = "\n".join(str(row) for row in rows)
     assert "missing_python_package:scipy" in text
     assert "missing_python_package:statsmodels" in text
     assert "lifelines_missing_formal_survival_disabled" in text
+    assert "clusterProfiler" in text
+    assert "Reactome/MSigDB blockers do not stop selected core ORA/GSEA capabilities." in text
     assert "no install action" in text
     assert "required_in_packaged_app_for_formal_deg" in text
 

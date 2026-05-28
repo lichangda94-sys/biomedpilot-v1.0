@@ -27,6 +27,7 @@ from app.bioinformatics.deg_engine import (
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
+from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
 from app.bioinformatics.survival_clinical import (
     audit_cox_multivariate_design,
     build_cox_univariate_parameter_manifest,
@@ -57,6 +58,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     result_entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
     deg_dependency = check_deg_backend_dependencies()
     survival_dependency = check_survival_backend_dependencies()
+    enrichment_backend_gate = build_enrichment_backend_gate(root, analysis_type="ora")
     report_gate = evaluate_report_ready_gate(root)
     formal_deg_report_gate = evaluate_formal_deg_report_ready_gate(root)
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
@@ -91,7 +93,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
-    dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
+    dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency, enrichment_backend_gate=enrichment_backend_gate)
     survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency, km_gate_state=survival_gates)
     blockers = _dedupe([*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]])
     warnings = _dedupe([*resolver.get("warnings", [])] + [item for row in package_rows for item in row["raw_warnings"]] + [item for row in dependency_rows for item in row["raw_warnings"]])
@@ -126,6 +128,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "multifactor_deg_gate_state": multifactor_deg_gates,
             "legacy_asset_pipeline": legacy_pipeline,
             "survival_dependency_snapshot": survival_dependency,
+            "enrichment_backend_gate": enrichment_backend_gate,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,
             "km_logrank_gate_state": survival_gates,
@@ -327,9 +330,15 @@ def build_package_rows(packages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survival_dependency: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def build_dependency_rows(
+    *,
+    deg_dependency: dict[str, Any] | None = None,
+    survival_dependency: dict[str, Any] | None = None,
+    enrichment_backend_gate: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     deg_dependency = deg_dependency or check_deg_backend_dependencies()
     survival_dependency = survival_dependency or check_survival_backend_dependencies()
+    enrichment_backend_gate = enrichment_backend_gate or build_enrichment_backend_gate(analysis_type="ora")
     rows: list[dict[str, Any]] = []
     packages = deg_dependency.get("packages") if isinstance(deg_dependency.get("packages"), dict) else {}
     for name in ("numpy", "pandas", "scipy", "statsmodels"):
@@ -367,6 +376,63 @@ def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survi
                 "packaging_impact": "optional_not_bundled_for_b9_1",
                 "raw_blockers": [],
                 "raw_warnings": ["survival_r_backend_not_configured"],
+            }
+        )
+    rows.extend(_enrichment_dependency_rows(enrichment_backend_gate))
+    return rows
+
+
+def _enrichment_dependency_rows(gate: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    rscript = gate.get("rscript") if isinstance(gate.get("rscript"), dict) else {}
+    gate_blockers = _list(gate.get("blockers"))
+    gate_warnings = _list(gate.get("warnings"))
+    rows.append(
+        {
+            "dependency_id": "external_r_enrichment:Rscript",
+            "label": "Rscript enrichment backend",
+            "status": "passed" if rscript.get("available") and not gate_blockers else ("available_with_blocked_capabilities" if rscript.get("available") else "blocked"),
+            "version": str(rscript.get("version") or "not_detected"),
+            "blockers": compact_list(gate_blockers),
+            "warnings": compact_list(gate_warnings),
+            "action": "Detect only; no install action.",
+            "packaging_impact": str(gate.get("packaging_policy") or "external_runtime_not_bundled"),
+            "raw_blockers": gate_blockers,
+            "raw_warnings": gate_warnings,
+        }
+    )
+    packages = gate.get("packages") if isinstance(gate.get("packages"), dict) else {}
+    if not packages:
+        return rows
+    package_names = (
+        "clusterProfiler",
+        "fgsea",
+        "DOSE",
+        "enrichplot",
+        "ggplot2",
+        "AnnotationDbi",
+        "org.Hs.eg.db",
+        "KEGGREST",
+        "GO.db",
+        "ReactomePA",
+        "msigdbr",
+    )
+    for name in package_names:
+        status = packages.get(name) if isinstance(packages.get(name), dict) else {}
+        available = bool(status.get("available") and status.get("importable"))
+        blocker = "" if available else f"missing_required_r_package:{name}"
+        rows.append(
+            {
+                "dependency_id": f"external_r_enrichment:{name}",
+                "label": name,
+                "status": "available" if available else "blocked",
+                "version": str(status.get("version") or "not_detected"),
+                "blockers": blocker or "None",
+                "warnings": "Reactome/MSigDB blockers do not stop selected core ORA/GSEA capabilities." if name in {"ReactomePA", "msigdbr"} and not available else "None",
+                "action": "Detect only; no install action.",
+                "packaging_impact": str(gate.get("packaging_policy") or "external_runtime_not_bundled"),
+                "raw_blockers": [blocker] if blocker else [],
+                "raw_warnings": [f"enrichment_r_package_missing:{name}"] if blocker else [],
             }
         )
     return rows
