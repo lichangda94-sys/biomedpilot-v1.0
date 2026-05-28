@@ -4561,6 +4561,17 @@ class MainWindow(QMainWindow):
                 ],
             ),
             (
+                "R 富集后端包：ReactomePA / msigdbr",
+                "preflight_only",
+                ["resource_r", "resource_analysis_package"],
+                [
+                    ("检测目标", "detect_external_enrichment_r_backend 的 R package visibility"),
+                    ("ReactomePA", "必需；缺失时阻断 Reactome ORA capability"),
+                    ("msigdbr", "必需；只检测包与授权资源 gate，不自动下载 MSigDB"),
+                    ("边界", "detect-only；正式 ORA/GSEA 仍由输入、参数与 report gate 控制"),
+                ],
+            ),
+            (
                 "Bioinformatics resolver / input package",
                 "preflight_only",
                 ["resource_analysis_package"],

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Sequence
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget
 
 from app.app_identity import SETTINGS_RESOURCE_ICON_PATHS, icon_asset_statuses, icon_asset_summary, load_settings_resource_pixmap
+from app.shared.local_engines.external_dependency_registry import detect_external_enrichment_r_backend
 from app.shared.local_engines.external_engine_manager_page import ExternalEngineManagerPage
 from app.shared.semantic_keys import ModuleKey, PageKey
 from app.shared.settings import SettingsProfile
@@ -500,11 +502,14 @@ def _build_settings_analysis_resources_page(_profile: SettingsProfile, pixmap_lo
     )
     for title, status_key, resource_keys, details in resources:
         root.addWidget(_settings_capability_card(title, status_key=status_key, resource_keys=resource_keys, details=details, pixmap_loader=pixmap_loader))
+    root.addWidget(_r_enrichment_backend_gate())
     root.addWidget(
         make_settings_resource_table(
             [
                 SettingsResourceItem("go", "GO resources", "Analysis", "planned", notes="No automatic download."),
                 SettingsResourceItem("kegg", "KEGG resources", "Analysis", "planned", notes="No automatic download."),
+                SettingsResourceItem("reactomepa", "ReactomePA", "R enrichment backend", "preflight_only", notes="Required for Reactome ORA capability gate; detect-only."),
+                SettingsResourceItem("msigdbr", "msigdbr", "R enrichment backend", "preflight_only", notes="Required for MSigDB metadata/resource gate; no automatic MSigDB download."),
                 SettingsResourceItem("analysis_package", "Resolver input package", "Bioinformatics", "preflight_only", notes="Preflight only."),
                 SettingsResourceItem("plotting_package", "Report/export templates", "Report", "developer_preview", notes="Report/export disabled."),
             ]
@@ -512,6 +517,118 @@ def _build_settings_analysis_resources_page(_profile: SettingsProfile, pixmap_lo
     )
     root.addStretch(1)
     return page
+
+
+def _r_enrichment_backend_gate() -> QFrame:
+    frame = make_workbench_card(object_name="settingsREnrichmentBackendGate", semantic_state="preflight_only")
+    frame.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+    frame.setProperty("semanticKey", PageKey.SETTINGS_ANALYSIS_RESOURCES.value)
+    frame.setProperty("detectOnly", True)
+    frame.setProperty("installAllowed", False)
+    frame.setProperty("downloadAllowed", False)
+    frame.setProperty("cloudConfigAllowed", False)
+    frame.setProperty("engineExecutionAllowed", False)
+    layout = QVBoxLayout(frame)
+    layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+    layout.setSpacing(SPACING["md"])
+    layout.addWidget(make_section_title("R 富集后端包 gate", "ReactomePA / msigdbr detect-only package surface."))
+
+    summary = QLabel(
+        "ReactomePA 与 msigdbr 已作为外部 R 富集后端的必需包接入检测；本页只显示本机依赖状态，不安装 R 包、不下载 MSigDB、也不直接运行 ORA/GSEA。"
+    )
+    summary.setObjectName("rEnrichmentBackendGateSummary")
+    summary.setWordWrap(True)
+    summary.setStyleSheet(f"color: {COLORS['muted']}; font-size: {FONT_SIZE['body']}px;")
+    layout.addWidget(summary)
+
+    layout.addWidget(
+        make_external_engine_status_panel(
+            title="必需 R 包",
+            engines=[
+                EngineStatusItem(
+                    "ReactomePA",
+                    "ReactomePA",
+                    status_key="preflight_only",
+                    semantic_state="preflight_only",
+                    detail="Required by ora_reactome; missing package blocks Reactome ORA.",
+                ),
+                EngineStatusItem(
+                    "msigdbr",
+                    "msigdbr",
+                    status_key="preflight_only",
+                    semantic_state="preflight_only",
+                    detail="Required by MSigDB resource/version gate; MSigDB content is not auto-downloaded.",
+                ),
+            ],
+            object_name="settingsREnrichmentPackageStatusPanel",
+        )
+    )
+
+    result_text = QPlainTextEdit()
+    result_text.setObjectName("rEnrichmentBackendDetectionText")
+    result_text.setReadOnly(True)
+    result_text.setMinimumHeight(132)
+    result_text.setPlainText(
+        "\n".join(
+            (
+                "状态：尚未在本页运行检测。",
+                "必需包：ReactomePA、msigdbr。",
+                "blocked reason 会来自 detect_external_enrichment_r_backend；正式执行仍由 ORA/GSEA 输入 gate、参数确认和 report gate 控制。",
+            )
+        )
+    )
+
+    detect_button = make_action_button(
+        "检测 R 富集后端",
+        role="secondary",
+        semantic_state="testing",
+        action_key="detect_r_enrichment_backend",
+        formal_action_enabled=False,
+        file_write_allowed=False,
+    )
+    detect_button.setObjectName("detectREnrichmentBackendButton")
+    detect_button.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+    detect_button.setProperty("semanticKey", PageKey.SETTINGS_ANALYSIS_RESOURCES.value)
+    detect_button.setProperty("detectOnly", True)
+    detect_button.setProperty("installAllowed", False)
+    detect_button.setProperty("downloadAllowed", False)
+    detect_button.setProperty("engineExecutionAllowed", False)
+    detect_button.clicked.connect(lambda: _run_r_enrichment_backend_detection(result_text))
+
+    actions = QHBoxLayout()
+    actions.addWidget(detect_button)
+    actions.addStretch(1)
+    layout.addLayout(actions)
+    layout.addWidget(result_text)
+    return frame
+
+
+def _run_r_enrichment_backend_detection(result_text: QPlainTextEdit) -> None:
+    try:
+        detection = detect_external_enrichment_r_backend(write_snapshot=False)
+    except Exception as exc:  # pragma: no cover - defensive UI guard.
+        result_text.setPlainText(f"检测失败：{exc.__class__.__name__}；不会安装、下载或运行富集分析。")
+        return
+    packages = detection.get("packages") if isinstance(detection.get("packages"), dict) else {}
+    capabilities = detection.get("capabilities") if isinstance(detection.get("capabilities"), dict) else {}
+    blockers = detection.get("blockers") if isinstance(detection.get("blockers"), list) else []
+    lines = [
+        f"status={detection.get('status', 'unknown')}",
+        f"rscript={detection.get('rscript', {}).get('path', '') if isinstance(detection.get('rscript'), dict) else ''}",
+        f"install_action={detection.get('install_action', '')}",
+        f"packaging_policy={detection.get('packaging_policy', '')}",
+    ]
+    for package_name in ("ReactomePA", "msigdbr"):
+        row = packages.get(package_name, {}) if isinstance(packages.get(package_name), dict) else {}
+        version = row.get("version") or "-"
+        available = row.get("available")
+        reason = row.get("missing_reason") or "none"
+        lines.append(f"{package_name}: available={available} version={version} disabled_reason={reason}")
+    lines.append(f"ora_reactome={capabilities.get('ora_reactome')}")
+    lines.append(f"gsea_preranked_fgsea={capabilities.get('gsea_preranked_fgsea')}")
+    lines.append(f"gsea_preranked_clusterprofiler={capabilities.get('gsea_preranked_clusterprofiler')}")
+    lines.append("blockers=" + (json.dumps(blockers, ensure_ascii=False) if blockers else "none"))
+    result_text.setPlainText("\n".join(lines))
 
 
 def _build_settings_model_engine_page(profile: SettingsProfile, pixmap_loader: SettingsPixmapLoader) -> QWidget:

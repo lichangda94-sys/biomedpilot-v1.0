@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QScrollArea, QStackedWidget, QTabBar, QToolButton
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPlainTextEdit, QPushButton, QScrollArea, QStackedWidget, QTabBar, QToolButton
 
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import ModuleKey, PageKey
@@ -124,6 +124,43 @@ def test_settings_status_chips_cover_external_resource_states(settings_window) -
         "blocked",
         "shell_only",
     }.issubset(status_keys)
+
+
+def test_settings_analysis_resources_exposes_r_enrichment_package_gate(settings_window) -> None:
+    nav = settings_window.findChild(QTabBar, "settingsSecondaryNav")
+    stack = settings_window.findChild(QStackedWidget, "settingsContentStack")
+    nav.setCurrentIndex(2)
+    current_page = stack.currentWidget()
+
+    labels = "\n".join(label.text() for label in current_page.findChildren(QLabel))
+    detect_button = current_page.findChild(QPushButton, "detectREnrichmentBackendButton")
+    result_text = current_page.findChild(QPlainTextEdit, "rEnrichmentBackendDetectionText")
+    gate = current_page.findChild(QFrame, "settingsREnrichmentBackendGate")
+
+    assert gate is not None
+    assert gate.property("detectOnly") is True
+    assert gate.property("installAllowed") is False
+    assert gate.property("downloadAllowed") is False
+    assert "ReactomePA" in labels
+    assert "msigdbr" in labels
+    assert detect_button is not None
+    assert detect_button.isEnabled()
+    assert detect_button.property("semanticKey") == PageKey.SETTINGS_ANALYSIS_RESOURCES.value
+    assert detect_button.property("detectOnly") is True
+    assert detect_button.property("installAllowed") is False
+    assert detect_button.property("downloadAllowed") is False
+    assert detect_button.property("engineExecutionAllowed") is False
+    assert result_text is not None
+    assert "尚未在本页运行检测" in result_text.toPlainText()
+
+    detect_button.click()
+
+    result = result_text.toPlainText()
+    assert "ReactomePA:" in result
+    assert "msigdbr:" in result
+    assert "install_action=none_detect_first_only" in result
+    assert "packaging_policy=external_runtime_not_bundled" in result
+    assert "ora_reactome=" in result
 
 
 def test_settings_developer_diagnostics_are_collapsed_by_default(settings_window) -> None:
