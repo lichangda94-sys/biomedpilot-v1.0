@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -147,6 +149,8 @@ def _formal_deg_gate_run_review_report(root: Path) -> dict[str, Any]:
 
     dependency = check_deg_backend_dependencies()
     services.append("check_deg_backend_dependencies")
+    r_backend_capability = _formal_deg_r_backend_capability()
+    services.append("build_formal_deg_r_backend_capability")
     run = run_formal_controlled_deg(root, dependency_snapshot=dependency)
     services.append("run_formal_controlled_deg")
     review = build_formal_deg_result_review(root, result_id=str(run.get("result_id") or "") or None)
@@ -161,9 +165,9 @@ def _formal_deg_gate_run_review_report(root: Path) -> dict[str, Any]:
     services.append("evaluate_formal_deg_report_ready_gate")
     return {
         "services_called": services,
-        "backend_results": {"dependency": dependency, "run": run, "review": review, "plot_gate": plot_gate, "plot": plot, "report_gate": report_gate},
+        "backend_results": {"dependency": dependency, "r_backend_capability": r_backend_capability, "run": run, "review": review, "plot_gate": plot_gate, "plot": plot, "report_gate": report_gate},
         "artifact_paths": _paths_from_payload(run, plot, report_gate),
-        "blockers": _collect_blockers(run, review, plot_gate, plot, report_gate),
+        "blockers": _collect_blockers(r_backend_capability, run, review, plot_gate, plot, report_gate),
     }
 
 
@@ -173,6 +177,8 @@ def _ora_gate_run_review_report(root: Path) -> dict[str, Any]:
     from app.bioinformatics.plots.ora import build_ora_plot_gate, create_ora_plot_artifact
     from app.bioinformatics.reports.ora import evaluate_ora_report_ready_gate
 
+    r_backend_capability = _enrichment_r_backend_capability(required_packages=("clusterProfiler", "fgsea", "DOSE", "enrichplot", "ggplot2"))
+    services.append("detect_enrichment_r_backend_capability")
     run = run_controlled_ora(root, min_gene_set_size=1)
     services.append("run_controlled_ora")
     review = build_ora_result_review(root, result_id=str(run.get("result_id") or "") or None)
@@ -185,7 +191,7 @@ def _ora_gate_run_review_report(root: Path) -> dict[str, Any]:
         services.append("create_ora_plot_artifact")
     report_gate = evaluate_ora_report_ready_gate(root, result_id=str(run.get("result_id") or "") or None, allow_table_only_report=True)
     services.append("evaluate_ora_report_ready_gate")
-    return {"services_called": services, "backend_results": {"run": run, "review": review, "plot_gate": plot_gate, "plot": plot, "report_gate": report_gate}, "artifact_paths": _paths_from_payload(run, plot, report_gate), "blockers": _collect_blockers(run, review, plot_gate, plot, report_gate)}
+    return {"services_called": services, "backend_results": {"r_backend_capability": r_backend_capability, "run": run, "review": review, "plot_gate": plot_gate, "plot": plot, "report_gate": report_gate}, "artifact_paths": _paths_from_payload(run, plot, report_gate), "blockers": _collect_blockers(r_backend_capability, run, review, plot_gate, plot, report_gate)}
 
 
 def _gsea_gate_run_review_report(root: Path) -> dict[str, Any]:
@@ -194,6 +200,8 @@ def _gsea_gate_run_review_report(root: Path) -> dict[str, Any]:
     from app.bioinformatics.plots.gsea import build_gsea_plot_gate, create_gsea_plot_artifact
     from app.bioinformatics.reports.gsea import evaluate_gsea_report_ready_gate
 
+    r_backend_capability = _enrichment_r_backend_capability(required_packages=("fgsea", "clusterProfiler", "enrichplot", "ggplot2"))
+    services.append("detect_enrichment_r_backend_capability")
     run = run_controlled_preranked_gsea(root, min_gene_set_size=1, max_gene_set_size=500, permutation_count=10)
     services.append("run_controlled_preranked_gsea")
     review = build_gsea_result_review(root, result_id=str(run.get("result_id") or "") or None)
@@ -206,7 +214,7 @@ def _gsea_gate_run_review_report(root: Path) -> dict[str, Any]:
         services.append("create_gsea_plot_artifact")
     report_gate = evaluate_gsea_report_ready_gate(root, result_id=str(run.get("result_id") or "") or None, allow_table_only_report=True)
     services.append("evaluate_gsea_report_ready_gate")
-    return {"services_called": services, "backend_results": {"run": run, "review": review, "plot_gate": plot_gate, "plot": plot, "report_gate": report_gate}, "artifact_paths": _paths_from_payload(run, plot, report_gate), "blockers": _collect_blockers(run, review, plot_gate, plot, report_gate)}
+    return {"services_called": services, "backend_results": {"r_backend_capability": r_backend_capability, "run": run, "review": review, "plot_gate": plot_gate, "plot": plot, "report_gate": report_gate}, "artifact_paths": _paths_from_payload(run, plot, report_gate), "blockers": _collect_blockers(r_backend_capability, run, review, plot_gate, plot, report_gate)}
 
 
 def _km_logrank_run_review_report(root: Path) -> dict[str, Any]:
@@ -332,6 +340,116 @@ def _connection_dependency_snapshot(runtime: str) -> dict[str, Any]:
         "blockers": [],
         "warnings": [],
     }
+
+
+def _formal_deg_r_backend_capability() -> dict[str, Any]:
+    from app.bioinformatics.deg_engine.r_adapter_contract import build_r_deg_runtime_gate_matrix
+
+    capabilities = _r_capability_snapshot(("limma", "DESeq2", "edgeR"))
+    preflight = {
+        "status": "blocked",
+        "method": "limma",
+        "method_family": "limma_linear_model",
+        "blockers": ["formal_deg_multifactor_preflight_not_selected"],
+        "warnings": [],
+    }
+    return build_r_deg_runtime_gate_matrix(preflight, external_capabilities=capabilities["external_capabilities"], dependency_snapshot=capabilities["dependency_snapshot"]) | {
+        "schema_version": "biomedpilot.release_formal_deg_r_backend_capability.v1",
+        "detect_first_only": True,
+        "install_action": "none_detect_first_only",
+        "capability_snapshot": capabilities,
+    }
+
+
+def _enrichment_r_backend_capability(*, required_packages: tuple[str, ...]) -> dict[str, Any]:
+    snapshot = _r_capability_snapshot(required_packages)
+    blockers: list[str] = []
+    if not snapshot["rscript"]["available"]:
+        blockers.append("r_enrichment_backend_rscript_missing")
+    for package in required_packages:
+        status = snapshot["packages"].get(package, {})
+        if not status.get("available"):
+            blockers.append(f"r_enrichment_backend_package_missing:{package}")
+    return {
+        "schema_version": "biomedpilot.release_enrichment_r_backend_capability.v1",
+        "status": "passed" if not blockers else "blocked",
+        "required_packages": list(required_packages),
+        "rscript": snapshot["rscript"],
+        "packages": snapshot["packages"],
+        "capabilities": {
+            "ora_clusterprofiler_enricher": _package_available(snapshot, "clusterProfiler"),
+            "gsea_preranked_fgsea": _package_available(snapshot, "fgsea"),
+            "enrichment_plot_enrichplot": _package_available(snapshot, "enrichplot") and _package_available(snapshot, "ggplot2"),
+        },
+        "blockers": blockers,
+        "warnings": [],
+        "install_action": "none_detect_first_only",
+        "packaging_policy": "external_r_runtime_not_bundled",
+    }
+
+
+def _r_capability_snapshot(packages: tuple[str, ...]) -> dict[str, Any]:
+    rscript = shutil.which("Rscript") or ""
+    rscript_status = {"available": bool(rscript), "path": rscript, "version": "", "missing_reason": "" if rscript else "Rscript_not_found_on_PATH"}
+    package_status: dict[str, dict[str, Any]] = {package: {"available": False, "version": "", "missing_reason": "Rscript_not_found_on_PATH"} for package in packages}
+    if rscript:
+        rscript_status["version"] = _rscript_version(rscript)
+        for package in packages:
+            package_status[package] = _r_package_status(rscript, package)
+    external_capabilities = {
+        "runtime.r.available": {"available": rscript_status["available"], "path": rscript_status["path"], "version": rscript_status["version"], "missing_reason": rscript_status["missing_reason"]},
+        "runtime.bioconductor.available": package_status.get("BiocManager", {"available": False, "version": "", "missing_reason": "BiocManager_not_checked"}),
+        "package.r.limma.available": package_status.get("limma", {"available": False, "version": "", "missing_reason": "limma_not_checked"}),
+        "package.r.deseq2.available": package_status.get("DESeq2", {"available": False, "version": "", "missing_reason": "DESeq2_not_checked"}),
+        "package.r.edger.available": package_status.get("edgeR", {"available": False, "version": "", "missing_reason": "edgeR_not_checked"}),
+    }
+    blockers = []
+    if not rscript_status["available"]:
+        blockers.append("Rscript_not_found_on_PATH")
+    blockers.extend(f"r_package_not_available:{name}" for name, status in package_status.items() if not status.get("available"))
+    return {
+        "schema_version": "biomedpilot.release_r_capability_snapshot.v1",
+        "status": "passed" if not blockers else "blocked",
+        "rscript": rscript_status,
+        "packages": package_status,
+        "external_capabilities": external_capabilities,
+        "dependency_snapshot": {
+            "status": "passed" if not blockers else "blocked",
+            "runtime": "system_rscript_detect_only",
+            "dependencies": {"R": rscript_status, **package_status},
+            "blockers": blockers,
+            "warnings": [],
+        },
+        "blockers": blockers,
+        "warnings": [],
+    }
+
+
+def _rscript_version(rscript: str) -> str:
+    try:
+        result = subprocess.run([rscript, "--version"], check=False, capture_output=True, text=True, timeout=5)
+    except Exception as exc:  # pragma: no cover - depends on local R install.
+        return f"{exc.__class__.__name__}: {exc}"
+    return (result.stdout or result.stderr).strip().splitlines()[0] if (result.stdout or result.stderr).strip() else ""
+
+
+def _r_package_status(rscript: str, package: str) -> dict[str, Any]:
+    script = f"if (!requireNamespace('{package}', quietly=TRUE)) quit(status=2); cat(as.character(utils::packageVersion('{package}')))"
+    try:
+        result = subprocess.run([rscript, "-e", script], check=False, capture_output=True, text=True, timeout=10)
+    except Exception as exc:  # pragma: no cover - depends on local R install.
+        return {"available": False, "version": "", "missing_reason": f"{exc.__class__.__name__}: {exc}"}
+    version = result.stdout.strip()
+    return {
+        "available": result.returncode == 0,
+        "version": version if result.returncode == 0 else "",
+        "missing_reason": "" if result.returncode == 0 else (result.stderr.strip() or f"{package}_not_available"),
+    }
+
+
+def _package_available(snapshot: dict[str, Any], package: str) -> bool:
+    status = snapshot.get("packages", {}).get(package, {})
+    return bool(isinstance(status, dict) and status.get("available"))
 
 
 def _collect_blockers(*payloads: Any) -> list[str]:

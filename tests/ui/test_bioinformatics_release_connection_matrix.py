@@ -78,6 +78,12 @@ def test_release_connection_buttons_call_services_and_write_artifacts(qt_app, bi
         assert payload["schema_version"] == "biomedpilot.bioinformatics_release_action_result.v1"
         assert payload["action_id"] == row.action_id
         assert payload["services_called"]
+        if row.action_id == "formal_deg_gate_run_review_report":
+            assert "build_formal_deg_r_backend_capability" in payload["services_called"]
+            assert payload["backend_results"]["r_backend_capability"]["install_action"] == "none_detect_first_only"
+        if row.action_id in {"ora_gate_run_review_report", "gsea_gate_run_review_report"}:
+            assert "detect_enrichment_r_backend_capability" in payload["services_called"]
+            assert payload["backend_results"]["r_backend_capability"]["packaging_policy"] == "external_r_runtime_not_bundled"
         assert payload["status"] in {"passed", "blocked"}
         if payload["status"] == "passed":
             assert payload["artifact_paths"] or payload["action_artifact_path"]
