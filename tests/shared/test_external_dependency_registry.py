@@ -4,19 +4,27 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from app.shared.local_engines import (
     CAPABILITY_STATUS_AVAILABLE,
     CAPABILITY_STATUS_BLOCKED,
     CAPABILITY_STATUS_MISSING,
+    R_ENRICHMENT_BACKEND_DETECTION_FILENAME,
+    R_ENRICHMENT_BACKEND_DETECTION_SCHEMA_VERSION,
+    R_ENRICHMENT_GSEA_FIXTURE_FILENAME,
+    R_ENRICHMENT_ORA_FIXTURE_FILENAME,
     PYTHON_STATISTICAL_ENGINE_FAMILY,
     R_BIOCONDUCTOR_ENGINE_FAMILY,
     dependency_snapshot_handoff,
     detect_all_external_dependencies,
+    detect_external_enrichment_r_backend,
     detect_python_statistical_dependencies,
     detect_r_bioconductor_dependencies,
     detect_report_renderer_dependencies,
     external_engines_storage_root,
     load_external_engine_registry,
+    run_external_enrichment_r_backend_validation,
 )
 
 
@@ -108,6 +116,126 @@ def test_detect_all_writes_registry_and_unknown_key_is_safe(tmp_path: Path) -> N
     assert (external_engines_storage_root(tmp_path) / "capability_registry_snapshot.json").exists()
 
 
+def test_external_enrichment_r_backend_missing_rscript_blocks_without_traceback(tmp_path: Path) -> None:
+    detection = detect_external_enrichment_r_backend(storage_root=tmp_path, command_finder=lambda _name: None)
+
+    assert detection["schema_version"] == R_ENRICHMENT_BACKEND_DETECTION_SCHEMA_VERSION
+    assert detection["status"] == "blocked"
+    assert detection["rscript"]["available"] is False
+    assert detection["rscript"]["architecture"] == "unknown"
+    assert detection["packages"]["clusterProfiler"]["available"] is False
+    assert detection["packages"]["ReactomePA"]["importable"] is False
+    assert detection["packages"]["msigdbr"]["missing_reason"] == "Rscript is not available"
+    assert detection["capabilities"]["ora_enricher"] is False
+    assert detection["install_action"] == "none_detect_first_only"
+    assert detection["packaging_policy"] == "external_runtime_not_bundled"
+    assert (external_engines_storage_root(tmp_path) / R_ENRICHMENT_BACKEND_DETECTION_FILENAME).exists()
+    assert "Traceback" not in json.dumps(detection)
+
+
+def test_external_enrichment_r_backend_reports_package_specific_blockers(tmp_path: Path) -> None:
+    detection = detect_external_enrichment_r_backend(
+        storage_root=tmp_path,
+        command_finder=lambda name: "/usr/local/bin/Rscript" if name == "Rscript" else None,
+        runner=_r_enrichment_runner(
+            installed={
+                "clusterProfiler": "4.14.6",
+                "fgsea": "1.32.4",
+                "DOSE": "4.0.1",
+                "enrichplot": "1.26.6",
+                "ggplot2": "3.5.2",
+                "AnnotationDbi": "1.68.0",
+                "org.Hs.eg.db": "3.20.0",
+                "GO.db": "3.20.0",
+                "KEGGREST": "1.46.0",
+            }
+        ),
+    )
+
+    assert detection["status"] == "blocked"
+    assert detection["rscript"]["version"] == "R version 4.4.2 (2024-10-31)"
+    assert detection["rscript"]["architecture"] == "arm64"
+    assert detection["rscript"]["library_paths"] == ["/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library"]
+    assert detection["packages"]["clusterProfiler"]["version"] == "4.14.6"
+    assert detection["packages"]["ReactomePA"]["missing_reason"] == "package_not_installed_or_not_on_libpaths:ReactomePA"
+    assert detection["packages"]["msigdbr"]["missing_reason"] == "package_not_installed_or_not_on_libpaths:msigdbr"
+    assert {blocker["package"] for blocker in detection["blockers"]} == {"ReactomePA", "msigdbr"}
+    assert detection["capabilities"]["ora_enricher"] is True
+    assert detection["capabilities"]["ora_reactome"] is False
+    assert detection["capabilities"]["gsea_preranked_fgsea"] is True
+    assert detection["capabilities"]["enrichment_plot_barplot"] is True
+
+
+def test_external_enrichment_validation_writes_mocked_fixture_outputs(tmp_path: Path) -> None:
+    detection = run_external_enrichment_r_backend_validation(
+        storage_root=tmp_path,
+        command_finder=lambda name: "/usr/local/bin/Rscript" if name == "Rscript" else None,
+        runner=_r_enrichment_runner(
+            installed={
+                "clusterProfiler": "4.14.6",
+                "fgsea": "1.32.4",
+                "DOSE": "4.0.1",
+                "enrichplot": "1.26.6",
+                "ggplot2": "3.5.2",
+                "AnnotationDbi": "1.68.0",
+                "org.Hs.eg.db": "3.20.0",
+                "ReactomePA": "1.50.0",
+                "msigdbr": "24.1.0",
+                "GO.db": "3.20.0",
+                "KEGGREST": "1.46.0",
+            },
+            write_fixtures=True,
+        ),
+    )
+    output_root = external_engines_storage_root(tmp_path)
+
+    assert detection["status"] == "passed"
+    assert Path(detection["fixture_outputs"]["ora_fixture_tsv"]).name == R_ENRICHMENT_ORA_FIXTURE_FILENAME
+    assert Path(detection["fixture_outputs"]["gsea_fixture_tsv"]).name == R_ENRICHMENT_GSEA_FIXTURE_FILENAME
+    assert (output_root / R_ENRICHMENT_BACKEND_DETECTION_FILENAME).exists()
+    assert (output_root / R_ENRICHMENT_ORA_FIXTURE_FILENAME).read_text(encoding="utf-8").startswith("ID\tDescription\tGeneRatio")
+    assert (output_root / R_ENRICHMENT_GSEA_FIXTURE_FILENAME).read_text(encoding="utf-8").startswith("pathway\tES\tNES")
+    assert detection["fixture_validation"]["ora"]["status"] == "passed"
+    assert detection["fixture_validation"]["gsea"]["status"] == "passed"
+    plot_checks = {row["check"]: row for row in detection["plot_smoke"]}
+    assert plot_checks["ora_barplot"]["ok"] is True
+    assert plot_checks["gsea_curve"]["class"] == "gglist/list"
+
+
+def test_external_enrichment_validation_blocks_bad_fixture_columns(tmp_path: Path) -> None:
+    detection = run_external_enrichment_r_backend_validation(
+        storage_root=tmp_path,
+        command_finder=lambda name: "/usr/local/bin/Rscript" if name == "Rscript" else None,
+        runner=_r_enrichment_runner(
+            installed={name: "1.0.0" for name in ("clusterProfiler", "fgsea", "DOSE", "enrichplot", "ggplot2", "AnnotationDbi", "org.Hs.eg.db", "ReactomePA", "msigdbr")},
+            write_fixtures=True,
+            bad_fixture_columns=True,
+        ),
+    )
+
+    assert detection["status"] == "blocked"
+    assert any(blocker["code"] == "fixture_output_missing_columns" for blocker in detection["blockers"])
+
+
+def test_real_external_enrichment_r_backend_detection_reports_current_runtime(tmp_path: Path) -> None:
+    detection = detect_external_enrichment_r_backend(storage_root=tmp_path, write_snapshot=False)
+    if not detection["rscript"]["available"]:
+        pytest.skip("Rscript is not available in this environment")
+
+    assert detection["schema_version"] == R_ENRICHMENT_BACKEND_DETECTION_SCHEMA_VERSION
+    assert detection["rscript"]["path"]
+    assert detection["rscript"]["version"].startswith("R version")
+    assert detection["rscript"]["architecture"] in {"arm64", "x86_64", "unknown"}
+    assert detection["install_action"] == "none_detect_first_only"
+    assert detection["packaging_policy"] == "external_runtime_not_bundled"
+    if detection["status"] == "blocked":
+        missing = {blocker.get("package") for blocker in detection["blockers"]}
+        assert missing
+    else:
+        validation = run_external_enrichment_r_backend_validation(storage_root=tmp_path)
+        assert validation["status"] in {"passed", "blocked"}
+
+
 def _r_runner(*, installed: dict[str, str]):
     def runner(command, **_kwargs):
         script = command[-1]
@@ -121,3 +249,67 @@ def _r_runner(*, installed: dict[str, str]):
 
 def _version_runner(command, **_kwargs):
     return subprocess.CompletedProcess(command, 0, stdout=f"{Path(command[0]).name} 1.0.0\n", stderr="")
+
+
+def _r_enrichment_runner(*, installed: dict[str, str], write_fixtures: bool = False, bad_fixture_columns: bool = False):
+    def runner(command, **_kwargs):
+        script = command[-1] if command[-1] not in {str(command[0])} else ""
+        if len(command) >= 4 and "--vanilla" in command and write_fixtures:
+            ora_path = Path(command[-2])
+            gsea_path = Path(command[-1])
+            ora_path.parent.mkdir(parents=True, exist_ok=True)
+            gsea_path.parent.mkdir(parents=True, exist_ok=True)
+            if bad_fixture_columns:
+                ora_path.write_text("ID\tDescription\nPathway_A\tPathway_A\n", encoding="utf-8")
+            else:
+                ora_path.write_text(
+                    "ID\tDescription\tGeneRatio\tBgRatio\tpvalue\tp.adjust\tqvalue\tgeneID\tCount\n"
+                    "Pathway_A\tPathway_A\t3/3\t5/12\t0.045\t0.091\t0.048\tG1/G2/G3\t3\n",
+                    encoding="utf-8",
+                )
+            gsea_path.write_text(
+                "pathway\tES\tNES\tpval\tpadj\tleadingEdge\tsize\n"
+                "Pathway_A\t1.0\t1.77\t0.007\t0.022\tG1/G2/G3/G4\t4\n",
+                encoding="utf-8",
+            )
+            stdout = (
+                "PLOT_SMOKE_BEGIN\n"
+                "check\tok\tclass\terror\n"
+                "ora_dotplot\tTRUE\tenrichplotDot/gg/ggplot\t\n"
+                "ora_barplot\tTRUE\tgg/ggplot\t\n"
+                "gsea_curve\tTRUE\tgglist/list\t\n"
+                "PLOT_SMOKE_END\n"
+            )
+            return subprocess.CompletedProcess(command, 0, stdout=stdout, stderr="")
+        if "R.version.string" in script:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout="R version 4.4.2 (2024-10-31)\naarch64\n/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library\n",
+                stderr="",
+            )
+        if "requireNamespace" in script:
+            names = (
+                "clusterProfiler",
+                "fgsea",
+                "DOSE",
+                "enrichplot",
+                "ggplot2",
+                "AnnotationDbi",
+                "org.Hs.eg.db",
+                "ReactomePA",
+                "msigdbr",
+                "pathview",
+                "GO.db",
+                "KEGGREST",
+            )
+            lines = ["package\tavailable\tversion\timportable\tmissing_reason"]
+            for name in names:
+                if name in installed:
+                    lines.append(f"{name}\tTRUE\t{installed[name]}\tTRUE\t")
+                else:
+                    lines.append(f"{name}\tFALSE\t\tFALSE\tpackage_not_installed_or_not_on_libpaths:{name}")
+            return subprocess.CompletedProcess(command, 0, stdout="\n".join(lines) + "\n", stderr="")
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr="unexpected R command")
+
+    return runner
