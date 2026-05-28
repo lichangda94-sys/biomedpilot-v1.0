@@ -4797,36 +4797,156 @@ class MainWindow(QMainWindow):
     def _build_about_page(self) -> QWidget:
         page = QWidget()
         page.setObjectName("aboutPage")
+        page.setStyleSheet(
+            """
+            QWidget#aboutPage {
+                background: #0D1B2D;
+                color: #E7EEF8;
+            }
+            QWidget#aboutContent {
+                background: transparent;
+            }
+            QLabel#aboutTitle {
+                color: #F8FAFC;
+                font-size: 24px;
+                font-weight: 800;
+            }
+            QLabel#aboutBrandTitle {
+                color: #F8FAFC;
+                font-size: 28px;
+                font-weight: 850;
+            }
+            QLabel#aboutBrandSubtitle, QLabel#aboutBodyText {
+                color: #CBD5E1;
+                font-size: 13px;
+            }
+            QLabel#aboutMutedText {
+                color: #8EA0B8;
+                font-size: 12px;
+            }
+            QFrame#aboutHeroPanel, QFrame#aboutInfoCard {
+                background: #142238;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 10px;
+            }
+            QLabel#aboutAppIcon {
+                background: transparent;
+                border: 0;
+            }
+            """
+        )
         root = QVBoxLayout(page)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(14)
+        root.setContentsMargins(32, 28, 32, 28)
+        root.setSpacing(16)
         title = QLabel("About / 关于")
         title.setObjectName("aboutTitle")
-        title.setStyleSheet("font-size: 24px; font-weight: 700;")
         root.addWidget(title)
-        root.addWidget(
-            self._list_card(
-                "品牌关系",
+
+        hero = QFrame()
+        hero.setObjectName("aboutHeroPanel")
+        hero_layout = QHBoxLayout(hero)
+        hero_layout.setContentsMargins(20, 18, 20, 18)
+        hero_layout.setSpacing(16)
+
+        icon_label = QLabel()
+        icon_label.setObjectName("aboutAppIcon")
+        icon_label.setFixedSize(64, 64)
+        icon = load_app_icon()
+        if not icon.isNull():
+            icon_label.setPixmap(icon.pixmap(58, 58))
+        hero_layout.addWidget(icon_label, alignment=Qt.AlignTop)
+
+        brand = QVBoxLayout()
+        brand.setSpacing(6)
+        brand_title = QLabel("萤火虫 / Firefly")
+        brand_title.setObjectName("aboutBrandTitle")
+        brand_subtitle = QLabel("BioMedPilot / 医研智析")
+        brand_subtitle.setObjectName("aboutBrandSubtitle")
+        version = QLabel("0.1.0-internal-beta · Developer Preview · Local desktop workspace")
+        version.setObjectName("aboutMutedText")
+        brand.addWidget(brand_title)
+        brand.addWidget(brand_subtitle)
+        brand.addWidget(version)
+        hero_layout.addLayout(brand, 1)
+        root.addWidget(hero)
+
+        cards = QWidget()
+        cards.setObjectName("aboutContent")
+        cards_layout = QGridLayout(cards)
+        cards_layout.setContentsMargins(0, 0, 0, 0)
+        cards_layout.setHorizontalSpacing(14)
+        cards_layout.setVerticalSpacing(14)
+        cards_layout.addWidget(
+            self._about_info_card(
+                "产品入口",
                 [
-                    "主入口显示：萤火虫 / Firefly",
-                    "当前 bundle 与工程名：BioMedPilot / 医研智析",
-                    "模块：Bioinformatics、Meta Analysis、LabTools",
+                    "欢迎页进入本地工作台。",
+                    "主模块保留 Bioinformatics、Meta Analysis、LabTools。",
+                    "设置、测试反馈与关于页属于统一壳层。",
                 ],
-            )
+            ),
+            0,
+            0,
         )
-        root.addWidget(
-            self._list_card(
-                "阶段边界",
+        cards_layout.addWidget(
+            self._about_info_card(
+                "本地边界",
                 [
-                    "UI-B2 只重建全局低保真壳层。",
-                    "Bioinformatics、Meta Analysis、LabTools 业务能力仍按各自 Developer Preview / planned 状态呈现。",
-                    "本阶段不替换资源、不打包、不运行 packaged app。",
+                    "当前版本不包含正式账号、订阅或授权流程。",
+                    "测试反馈保存到本机项目目录。",
+                    "不会因打开 About 页面触发网络请求。",
                 ],
-            )
+            ),
+            0,
+            1,
         )
-        root.addWidget(self._icon_asset_status_card(detailed=False))
+        cards_layout.addWidget(
+            self._about_info_card(
+                "阶段状态",
+                [
+                    "桌面壳层为 Developer Preview。",
+                    "分析能力按各自模块页面状态呈现。",
+                    "图标与资源状态可在 Settings 查看。",
+                ],
+            ),
+            1,
+            0,
+        )
+        summary = icon_asset_summary()
+        cards_layout.addWidget(
+            self._about_info_card(
+                "图标资源状态",
+                [
+                    f"图标槽位：{summary['total']}",
+                    f"已生成：{summary['generated']}",
+                    f"已接入：{summary['connected']}",
+                    f"待生成：{summary['pending']}",
+                ],
+            ),
+            1,
+            1,
+        )
+        root.addWidget(cards)
         root.addStretch(1)
         return page
+
+    def _about_info_card(self, title: str, rows: list[str]) -> QFrame:
+        card = QFrame()
+        card.setObjectName("aboutInfoCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
+        header = QLabel(title)
+        header.setObjectName("aboutBrandSubtitle")
+        header.setStyleSheet("font-weight: 750;")
+        layout.addWidget(header)
+        for row in rows:
+            label = QLabel(row)
+            label.setObjectName("aboutBodyText")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        layout.addStretch(1)
+        return card
 
     def _create_project_and_open(self, project_type: str) -> None:
         default_name = "生信分析项目" if project_type == "bioinformatics" else "Meta 分析项目"

@@ -95,6 +95,8 @@ def test_ui01_login_icon_assets_load(qt_app) -> None:
         "vip",
         "license",
         "preview",
+        "welcome_enter",
+        "welcome_about",
     }
     for key, path in UI01_LOGIN_ICON_PATHS.items():
         assert path.exists(), key

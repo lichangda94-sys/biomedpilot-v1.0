@@ -28,6 +28,7 @@ SETTINGS_RESOURCE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "settings" / "r
 RESULT_REPORT_EXPORT_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "result_report_export"
 STATUS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "status"
 EMPTY_STATE_IMAGE_DIR = PROJECT_ROOT / "assets" / "images" / "empty_states"
+WELCOME_IMAGE_DIR = PROJECT_ROOT / "assets" / "images" / "welcome"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
@@ -103,6 +104,7 @@ EMPTY_STATE_IMAGE_PATHS = {
     "empty_shell_only": EMPTY_STATE_IMAGE_DIR / "empty_shell_only.svg",
     "empty_preflight_only": EMPTY_STATE_IMAGE_DIR / "empty_preflight_only.svg",
 }
+WELCOME_HERO_IMAGE_PATH = WELCOME_IMAGE_DIR / "firefly_lab_welcome.png"
 EMPTY_STATE_SEMANTIC_IMAGE_KEYS = {
     PageKey.BIO_PROJECT_HOME.value: "empty_project",
     ResultSemanticKey.TESTING_SUMMARY_ONLY.value: "empty_result",
@@ -142,6 +144,8 @@ UI01_LOGIN_ICON_PATHS = {
     "vip": UI01_LOGIN_ICON_DIR / "vip.png",
     "license": UI01_LOGIN_ICON_DIR / "license.png",
     "preview": UI01_LOGIN_ICON_DIR / "preview.png",
+    "welcome_enter": UI01_LOGIN_ICON_DIR / "welcome_enter.svg",
+    "welcome_about": UI01_LOGIN_ICON_DIR / "welcome_about.svg",
 }
 UI02_MODULE_SELECTION_ICON_SHEET_PATH = UI02_MODULE_SELECTION_ICON_DIR / "ui02_module_selection_icon_sheet.png"
 UI02_MODULE_SELECTION_ICON_PATHS = {
@@ -393,6 +397,13 @@ def load_empty_state_illustration(empty_state_key: str | None = None, *, semanti
 def load_empty_state_pixmap(empty_state_key: str | None = None, *, semantic_key: str | None = None, size: int = 72) -> QPixmap:
     icon = load_empty_state_illustration(empty_state_key, semantic_key=semantic_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_welcome_hero_pixmap() -> QPixmap:
+    if not WELCOME_HERO_IMAGE_PATH.exists():
+        return QPixmap()
+    pixmap = QPixmap(str(WELCOME_HERO_IMAGE_PATH))
+    return pixmap if not pixmap.isNull() else QPixmap()
 
 
 def load_result_report_export_icon(resource_id: str) -> QIcon:

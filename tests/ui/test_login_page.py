@@ -34,15 +34,20 @@ def test_welcome_widget_instantiates(qt_app) -> None:
 def test_welcome_page_uses_existing_icons_without_replacing_resources(qt_app) -> None:
     widget = BioMedPilotLoginWidget()
 
-    brand_icon = widget.findChild(QLabel, "loginBrandIcon")
+    hero_image = widget.findChild(QLabel, "welcomeHeroImage")
     enter_button = widget.findChild(QPushButton, "primaryButton")
+    about_button = widget.findChild(QPushButton, "aboutButton")
 
-    assert brand_icon is not None
-    assert brand_icon.pixmap() is not None and not brand_icon.pixmap().isNull()
+    assert hero_image is not None
+    assert hero_image.pixmap() is not None and not hero_image.pixmap().isNull()
     assert enter_button is not None and not enter_button.icon().isNull()
+    assert enter_button.text() == "进入本地工作台"
     assert enter_button.isDefault()
     assert enter_button.accessibleName() == "Enter local workspace"
     assert enter_button.property("usabilityRole") == "primary_entry_action"
+    assert about_button is not None
+    assert about_button.text() == "关于"
+    assert about_button.property("usabilityRole") == "secondary_entry_action"
 
 
 def test_welcome_page_removes_visible_credential_flow(qt_app) -> None:
@@ -52,8 +57,8 @@ def test_welcome_page_removes_visible_credential_flow(qt_app) -> None:
     username_input = widget.findChild(QLineEdit, "usernameInput")
     password_input = widget.findChild(QLineEdit, "passwordInput")
 
-    assert "萤火虫 / Firefly" in labels
-    assert "BioMedPilot / 医研智析" in labels
+    assert "萤火虫 / Firefly" not in labels
+    assert "BioMedPilot / 医研智析" not in labels
     assert "账号" not in labels
     assert "VIP" not in labels
     assert username_input is not None and username_input.isHidden()
