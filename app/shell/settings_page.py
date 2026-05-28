@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import sys
 from collections.abc import Callable, Sequence
 
 from PySide6.QtCore import Qt
@@ -757,6 +759,7 @@ def _settings_capability_card(
     detect_button.setProperty("statusKey", status_key)
     detect_button.setProperty("semanticKey", _semantic_key_for_resources(resource_keys))
     detect_button.setProperty("detectOnly", True)
+    detect_button.clicked.connect(lambda _checked=False, button=detect_button, keys=tuple(resource_keys): _run_settings_resource_detection(button, keys))
     install_button = make_action_button(
         "安装 / 更新（检测后由用户触发）",
         role="ghost",
@@ -787,6 +790,29 @@ def _settings_capability_card(
     actions.addStretch(1)
     layout.addLayout(actions)
     return frame
+
+
+def _run_settings_resource_detection(button: QPushButton, resource_keys: Sequence[str]) -> None:
+    checks: list[str] = []
+    if "resource_python" in resource_keys:
+        checks.append(f"python={sys.executable}")
+    if "resource_r" in resource_keys:
+        checks.append(f"rscript={shutil.which('Rscript') or 'missing'}")
+    if "resource_imagej_fiji" in resource_keys:
+        checks.append("imagej_fiji=detect_on_labtools_engine_page")
+    if "resource_analysis_package" in resource_keys:
+        checks.append("analysis_package=see_R_enrichment_backend_gate_when_applicable")
+    if "resource_plotting_package" in resource_keys:
+        checks.append("report_renderer=detect_first_no_bundled_renderer")
+    if "resource_local_model" in resource_keys:
+        checks.append("local_model=external_engine_manager_detect_first")
+    if not checks:
+        checks.append("status=detect_only_shell_acknowledged")
+    summary = "; ".join(checks)
+    button.setProperty("lastDetectionStatus", summary)
+    button.setToolTip(summary)
+    button.setAccessibleDescription(summary)
+    button.setText("检测状态已更新")
 
 
 def _settings_resource_icon_label(resource_key: str, *, status_key: str, pixmap_loader: SettingsPixmapLoader, size: int = 28) -> QLabel:

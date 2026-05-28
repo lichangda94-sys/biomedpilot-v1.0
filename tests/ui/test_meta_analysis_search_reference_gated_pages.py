@@ -78,6 +78,10 @@ def test_meta_search_strategy_page_renders_english_draft_only(meta_workspace) ->
     assert copy_query is not None
     assert copy_query.property("actionSemantic") == "copy_only"
     assert copy_query.isEnabled()
+    copy_query.click()
+    assert meta_workspace.property("lastDraftAction") == "copy_search_query_draft"
+    databases[0].click()
+    assert databases[0].property("draftScopeState") in {"selected", "unselected"}
     assert save_draft is not None
     assert save_draft.property("actionSemantic") == "adapter_needed"
     assert not save_draft.isEnabled()

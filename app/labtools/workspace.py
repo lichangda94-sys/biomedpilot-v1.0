@@ -395,9 +395,26 @@ if QWidget is not None:
             self._on_back = on_back
             self._page_keys: list[str] = []
             self._build_ui()
+            self._annotate_disabled_buttons()
 
         def page_keys(self) -> tuple[str, ...]:
             return tuple(self._page_keys)
+
+        def _annotate_disabled_buttons(self) -> None:
+            for button in self.findChildren(QPushButton):
+                if button.isEnabled() or button.property("disabledReason") or button.toolTip():
+                    continue
+                text = button.text().lower()
+                reason = "labtools_action_disabled_until_required_input_or_result_exists"
+                if "export" in text or "导出" in text:
+                    reason = "labtools_export_disabled_until_result_artifact_exists"
+                elif "save" in text or "保存" in text:
+                    reason = "labtools_save_disabled_until_project_storage_and_result_exist"
+                elif "copy" in text or "复制" in text:
+                    reason = "labtools_copy_disabled_until_calculation_result_exists"
+                button.setProperty("disabledReason", reason)
+                button.setToolTip(reason)
+                button.setAccessibleDescription(reason)
 
         def current_page_key(self) -> str:
             current = self._stack.currentWidget()

@@ -103,6 +103,9 @@ def test_settings_external_capabilities_are_detect_first(settings_window) -> Non
     assert all(button.isEnabled() for button in detect_buttons)
     assert all(button.property("moduleKey") == ModuleKey.SETTINGS.value for button in detect_buttons)
     assert all(button.property("semanticKey") == PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value for button in detect_buttons)
+    detect_buttons[0].click()
+    assert detect_buttons[0].property("lastDetectionStatus")
+    assert detect_buttons[0].toolTip() == detect_buttons[0].property("lastDetectionStatus")
     assert install_buttons
     assert all(not button.isEnabled() for button in install_buttons)
     assert all(button.property("moduleKey") == ModuleKey.SETTINGS.value for button in install_buttons)

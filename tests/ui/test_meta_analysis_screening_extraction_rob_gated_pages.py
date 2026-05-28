@@ -82,9 +82,13 @@ def test_meta_screening_page_renders_draft_decisions_only(meta_workspace) -> Non
     }
     assert all(button.property("decisionState") == "draft_only" for button in decisions)
     assert all(button.property("formalActionEnabled") is False for button in decisions)
+    decisions[0].click()
+    assert meta_workspace.property("selectedScreeningDecisionDraft") == decisions[0].property("decisionId")
     assert save_draft is not None
     assert save_draft.text() == "Save Draft Decision"
     assert save_draft.property("formalActionEnabled") is False
+    save_draft.click()
+    assert meta_workspace.property("lastDraftAction") == "screening_save_draft"
     assert ai_card is not None
     assert ai_card.property("aiBoundary") == "advisory_only"
     assert "Advisory only" in ai_card.text()

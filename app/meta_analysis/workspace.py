@@ -40,6 +40,7 @@ try:
     from PySide6.QtCore import QSize, Qt
     from PySide6.QtWidgets import (
         QAbstractItemView,
+        QApplication,
         QCheckBox,
         QComboBox,
         QFrame,
@@ -65,6 +66,7 @@ try:
     from app.app_identity import META_PAGE_ICON_PATHS, load_meta_page_icon
 except Exception:  # pragma: no cover
     QSize = None  # type: ignore[assignment]
+    QApplication = None  # type: ignore[assignment]
     QWidget = None  # type: ignore[assignment]
     META_PAGE_ICON_PATHS = {}
     load_meta_page_icon = None  # type: ignore[assignment]
@@ -727,9 +729,25 @@ if QWidget is not None:
             self._page_keys: list[str] = []
             self._new_project_form: dict[str, object] = {}
             self._build_ui()
+            self._annotate_disabled_buttons()
 
         def page_keys(self) -> tuple[str, ...]:
             return _MetaPageKeys(self._page_keys)
+
+        def _annotate_disabled_buttons(self) -> None:
+            for button in self.findChildren(QPushButton):
+                if button.isEnabled() or button.property("disabledReason") or button.toolTip():
+                    continue
+                reason = "meta_formal_action_disabled_until_required_gate_passes"
+                if "adapter needed" in button.text().lower():
+                    reason = "meta_adapter_required_before_this_action_can_run"
+                elif "export" in button.text().lower() or "disabled" in button.text().lower():
+                    reason = "meta_report_or_export_gate_blocked_until_formal_result_exists"
+                elif button.property("formalActionEnabled") is False:
+                    reason = "meta_formal_action_disabled_in_developer_preview"
+                button.setProperty("disabledReason", reason)
+                button.setToolTip(reason)
+                button.setAccessibleDescription(reason)
 
         def current_page_key(self) -> str:
             row = self._navigation_list.currentRow()
@@ -1165,6 +1183,41 @@ if QWidget is not None:
                 return
             self._current_target_page_key = page_key
             self._sync_target_interaction_state()
+
+        def _set_target_draft_status(self, action: str, detail: str) -> None:
+            message = f"{action}: {detail}"
+            self.setProperty("lastDraftAction", action)
+            self.setProperty("lastDraftActionDetail", detail)
+            if hasattr(self, "_target_interaction_status"):
+                self._target_interaction_status.setText(message)
+
+        def _copy_meta_search_query_draft(self, query: QLabel) -> None:
+            QApplication.clipboard().setText(query.text())
+            self.setProperty("lastCopiedQueryDraft", query.text())
+            self._set_target_draft_status("copy_search_query_draft", "query copied to local clipboard; no formal search executed")
+
+        def _handle_meta_search_token(self, token: str) -> None:
+            self._set_target_draft_status("search_token_draft", f"{token} clicked; draft editor only")
+
+        def _toggle_meta_database_scope(self, button: QPushButton) -> None:
+            state = "selected" if button.isChecked() else "unselected"
+            database = button.property("databaseName") or button.text()
+            button.setProperty("draftScopeState", state)
+            self._set_target_draft_status("database_scope_draft", f"{database} {state}; no database search executed")
+
+        def _handle_meta_screening_decision_draft(self, button: QPushButton) -> None:
+            decision_id = str(button.property("decisionId") or "")
+            for sibling in self.findChildren(QPushButton, "metaScreeningDecisionDraftButton"):
+                sibling.setChecked(sibling is button)
+                sibling.setProperty("draftSelected", sibling is button)
+                _refresh_dynamic_style(sibling)
+            self.setProperty("selectedScreeningDecisionDraft", decision_id)
+            self._set_target_draft_status("screening_decision_draft", f"{decision_id}; draft only, no final screening result")
+
+        def _save_meta_screening_draft(self, *, advance: bool = False) -> None:
+            decision_id = str(self.property("selectedScreeningDecisionDraft") or "none_selected")
+            action = "screening_save_next_draft" if advance else "screening_save_draft"
+            self._set_target_draft_status(action, f"decision={decision_id}; local UI draft state only")
 
         def select_active_meta_type(self, type_id: str) -> None:
             if type_id not in {meta_type.type_id for meta_type in meta_active_types_v1()}:
@@ -2459,6 +2512,7 @@ if QWidget is not None:
                 item.setProperty("executedSearch", False)
                 item.setProperty("formalActionEnabled", False)
                 item.setMinimumHeight(42)
+                item.clicked.connect(lambda _checked=False, button=item: self._toggle_meta_database_scope(button))
                 database_layout.addWidget(item)
 
             action_row = QHBoxLayout()
@@ -2467,6 +2521,7 @@ if QWidget is not None:
             copy_query.setProperty("actionSemantic", "copy_only")
             copy_query.setProperty("formalActionEnabled", False)
             copy_query.setMinimumHeight(34)
+            copy_query.clicked.connect(lambda _checked=False, label=query: self._copy_meta_search_query_draft(label))
             save_draft = QPushButton("Save Draft - adapter needed")
             save_draft.setObjectName("metaSaveSearchDraftButton")
             save_draft.setProperty("actionSemantic", "adapter_needed")
@@ -2592,6 +2647,11 @@ if QWidget is not None:
                 button.setProperty("token", semantic)
                 button.setProperty("formalActionEnabled", False)
                 button.setEnabled(text not in {"添加组"})
+                if text in {"添加组"}:
+                    button.setToolTip("Draft group creation needs the Meta search adapter; no formal action is available in this UI stage.")
+                    button.setProperty("disabledReason", "meta_search_adapter_needed_for_draft_group_creation")
+                else:
+                    button.clicked.connect(lambda _checked=False, token=text: self._handle_meta_search_token(token))
                 button.setMinimumHeight(28)
                 token_row.addWidget(button)
             token_row.addStretch(1)
@@ -3286,7 +3346,9 @@ if QWidget is not None:
                 button.setProperty("decisionId", decision_id)
                 button.setProperty("decisionState", "draft_only")
                 button.setProperty("formalActionEnabled", False)
+                button.setCheckable(True)
                 button.setMinimumHeight(40)
+                button.clicked.connect(lambda _checked=False, item=button: self._handle_meta_screening_decision_draft(item))
                 index = {"include_draft": 0, "exclude_draft": 1, "uncertain": 2, "need_full_text": 3}[decision_id]
                 decision_grid.addWidget(button, index // 2, index % 2)
             layout.addLayout(decision_grid)
@@ -3312,12 +3374,14 @@ if QWidget is not None:
             save_draft.setProperty("actionSemantic", "draft_only")
             save_draft.setProperty("formalActionEnabled", False)
             save_draft.setMinimumHeight(40)
+            save_draft.clicked.connect(lambda _checked=False: self._save_meta_screening_draft(advance=False))
             layout.addWidget(save_draft)
             save_next = QPushButton("保存并下一条 / Save Next")
             save_next.setObjectName("metaScreeningSaveNextButton")
             save_next.setProperty("actionSemantic", "draft_only")
             save_next.setProperty("formalActionEnabled", False)
             save_next.setMinimumHeight(32)
+            save_next.clicked.connect(lambda _checked=False: self._save_meta_screening_draft(advance=True))
             layout.addWidget(save_next)
             layout.addSpacing(20)
 
