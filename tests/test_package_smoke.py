@@ -10,6 +10,9 @@ def test_package_smoke_payload_covers_public_modules() -> None:
     assert payload["modules"] == (
         "labtools.calculators",
         "labtools.reagent_templates",
+        "labtools.local_data",
+        "labtools.lan_client",
+        "labtools.lan_server",
         "labtools.western_blot",
         "labtools.pcr_qpcr",
         "labtools.cell_culture",

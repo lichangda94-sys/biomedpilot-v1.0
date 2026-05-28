@@ -1,0 +1,151 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from labtools.local_data.datasource_adapter import (
+    FutureCloudDataSourceAdapter,
+    FutureLanDataSourceAdapter,
+    LocalLabToolsDataSourceAdapter,
+    ReadOnlyLabToolsDataSourceAdapter,
+)
+
+
+def test_local_datasource_adapter_reports_status_and_lists_entities(tmp_path: Path) -> None:
+    adapter = LocalLabToolsDataSourceAdapter(tmp_path)
+    status = adapter.initialize()
+    reagent = adapter.create_reagent({"name": "Tris-HCl"})
+    updated = adapter.update_reagent(reagent.id, {"storage_location": "4C fridge / Box A"}, expected_version=1)
+    sample = adapter.create_sample({"sample_name": "S1", "sample_type": "protein_lysate", "concentration": "2.0"})
+    updated_sample = adapter.update_sample(sample.id, {"concentration": "2.5"}, expected_version=1)
+    adapter.store.create_cell({"cell_name": "TPC-1"})
+    batch = adapter.store.create_freeze_batch({"cell_id": adapter.list_cells()[0].id, "batch_name": "TPC-1_P12"})
+    vial = adapter.store.create_freeze_vial({"freeze_batch_id": batch.id, "vial_label": "TPC-1 P12 #01"})
+    record = adapter.create_record_index_entry({"record_type": "quick_calculation", "title": "Dilution"})
+
+    assert status.data_source_mode == "local"
+    assert status.write_enabled is True
+    assert updated.version == 2
+    assert len(adapter.list_reagents()) == 1
+    assert len(adapter.list_samples()) == 1
+    assert updated_sample.version == 2
+    assert updated_sample.concentration == "2.5"
+    assert len(adapter.list_cells()) == 1
+    assert adapter.list_freeze_vials() == (vial,)
+    assert adapter.list_records() == (record,)
+    assert adapter.list_record_index("quick_calculation") == (record,)
+    assert adapter.get_record_index(record.id) == record
+
+
+def test_readonly_datasource_adapter_disables_writes(tmp_path: Path) -> None:
+    local = LocalLabToolsDataSourceAdapter(tmp_path)
+    local.initialize()
+    local.store.create_reagent({"name": "Tris-HCl"})
+
+    readonly = ReadOnlyLabToolsDataSourceAdapter(tmp_path)
+    status = readonly.status()
+
+    assert status.data_source_mode == "readonly"
+    assert status.read_enabled is True
+    assert status.write_enabled is False
+    assert len(readonly.list_reagents()) == 1
+    with pytest.raises(PermissionError):
+        readonly.create_record_summary({"record_type": "quick_calculation", "title": "Dilution"})
+    with pytest.raises(PermissionError):
+        readonly.create_record_index_entry({"record_type": "quick_calculation", "title": "Dilution"})
+    with pytest.raises(PermissionError):
+        readonly.update_record_index_status("record_1", "archived", expected_version=1)
+    with pytest.raises(PermissionError):
+        readonly.create_reagent({"name": "Blocked"})
+    with pytest.raises(PermissionError):
+        readonly.update_reagent("reagent_1", {"name": "Blocked"}, expected_version=1)
+    with pytest.raises(PermissionError):
+        readonly.archive_reagent("reagent_1", expected_version=1)
+    with pytest.raises(PermissionError):
+        readonly.create_sample({"sample_name": "Blocked"})
+    with pytest.raises(PermissionError):
+        readonly.update_sample("sample_1", {"sample_name": "Blocked"}, expected_version=1)
+    with pytest.raises(PermissionError):
+        readonly.archive_sample("sample_1", expected_version=1)
+
+
+def test_local_datasource_adapter_archives_reagent_and_writes_audit(tmp_path: Path) -> None:
+    adapter = LocalLabToolsDataSourceAdapter(tmp_path)
+    adapter.initialize()
+    reagent = adapter.create_reagent({"name": "Tris-HCl"})
+
+    archived = adapter.archive_reagent(reagent.id, expected_version=1)
+
+    assert archived.status == "archived"
+    assert adapter.list_reagents() == ()
+    assert [entry.action for entry in adapter.store.load_store().audit_log] == ["create", "archive"]
+
+
+def test_local_datasource_adapter_archives_sample_and_writes_audit(tmp_path: Path) -> None:
+    adapter = LocalLabToolsDataSourceAdapter(tmp_path)
+    adapter.initialize()
+    sample = adapter.create_sample({"sample_name": "Tumor lysate", "sample_type": "protein_lysate", "volume": "25"})
+
+    updated = adapter.update_sample(sample.id, {"concentration": "2.0", "concentration_unit": "mg/mL"}, expected_version=1)
+    archived = adapter.archive_sample(sample.id, expected_version=2)
+
+    assert updated.version == 2
+    assert archived.version == 3
+    assert archived.status == "archived"
+    assert adapter.list_samples() == ()
+    snapshot = adapter.store.load_store()
+    assert snapshot.samples[0].status == "archived"
+    assert snapshot.samples[0].volume == "25"
+    assert [(entry.entity_type, entry.action) for entry in snapshot.audit_log] == [
+        ("sample", "create"),
+        ("sample", "update"),
+        ("sample", "archive"),
+    ]
+
+
+def test_local_datasource_adapter_manages_record_index_and_reverse_links(tmp_path: Path) -> None:
+    adapter = LocalLabToolsDataSourceAdapter(tmp_path)
+    adapter.initialize()
+    reagent = adapter.create_reagent({"name": "Tris-HCl"})
+    sample = adapter.create_sample({"sample_name": "Tumor lysate"})
+    cell = adapter.store.create_cell({"cell_name": "TPC-1"})
+
+    record = adapter.create_record_index_entry(
+        {
+            "record_type": "wb_loading",
+            "title": "WB loading summary",
+            "record_summary": "WB loading calculation draft.",
+            "linked_reagents": [reagent.id],
+            "linked_samples": [sample.id],
+            "linked_cells": [cell.id],
+            "artifact_refs": ["local-summary-only"],
+        }
+    )
+    updated = adapter.update_record_index_status(record.id, "archived", expected_version=1)
+
+    assert record.version == 1
+    assert record.status == "draft"
+    assert record.record_summary == "WB loading calculation draft."
+    assert record.linked_reagents == (reagent.id,)
+    assert record.linked_samples == (sample.id,)
+    assert updated.version == 2
+    assert updated.status == "archived"
+    assert adapter.list_record_index("wb_loading") == (updated,)
+    assert adapter.get_record_index(record.id) == updated
+    assert adapter.list_records_by_reagent(reagent.id) == (updated,)
+    assert adapter.list_records_by_sample(sample.id) == (updated,)
+    assert adapter.list_records_by_cell(cell.id) == (updated,)
+    assert [(entry.entity_type, entry.action) for entry in adapter.store.load_store().audit_log][-2:] == [
+        ("record", "create"),
+        ("record", "archive"),
+    ]
+
+
+def test_future_datasource_placeholders_are_disabled() -> None:
+    for adapter in (FutureLanDataSourceAdapter(), FutureCloudDataSourceAdapter()):
+        status = adapter.status()
+        assert status.status == "disabled_future_option"
+        assert status.read_enabled is False
+        assert status.write_enabled is False
+        assert status.reason == "Future adapter only; LAN/cloud sync not implemented."
