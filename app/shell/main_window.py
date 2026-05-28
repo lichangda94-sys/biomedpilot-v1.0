@@ -1279,6 +1279,10 @@ class MainWindow(QMainWindow):
         if index >= 0:
             combo.setCurrentIndex(index)
 
+    def _open_labtools_quick_task(self, task_id: str) -> None:
+        self._show_labtools_general_calculator_shell()
+        self._select_labtools_quick_task(task_id)
+
     def _populate_labtools_quick_form(self, description_label: QLabel) -> None:
         task_id = self._labtools_quick_task_combo.currentData()
         task = labtools_runtime.get_quick_task(task_id)
@@ -3557,62 +3561,279 @@ class MainWindow(QMainWindow):
         content = self._build_labtools_base_content(
             page_key="cell_experiment_workspace",
             semantic_key=semantic_key,
-            title="Cell Experiment Workspace / 细胞实验工作区",
-            subtitle="细胞信息、实验记录模板和结果处理工具三主区；当前 record store 未接入，保存记录保持禁用。",
+            title="细胞实验 / Cell Experiment",
+            subtitle="细胞信息、实验记录模板与结果处理工具的独立工作区；当前 record store 未接入，保存记录保持禁用。",
+        )
+        content.setStyleSheet(
+            """
+            QWidget#labtoolsContentPanel {
+                background: #F5F7FB;
+            }
+            QFrame#labtoolsCellExperimentTabBar,
+            QFrame#labtoolsCellExperimentMainCard,
+            QFrame#labtoolsCellTemplateCard,
+            QFrame#labtoolsCellHistoryCard,
+            QFrame#labtoolsCellProfilePanel,
+            QFrame#labtoolsCellProcessingPanel {
+                background: #FFFFFF;
+                border: 1px solid #E5E7EB;
+                border-radius: 12px;
+            }
+            QFrame#labtoolsCellExperimentTab {
+                background: #F1F5F9;
+                border: 1px solid transparent;
+                border-radius: 0;
+            }
+            QFrame#labtoolsCellExperimentTab[selected="true"] {
+                background: #FFFFFF;
+                border-color: #BFDBFE;
+                border-bottom: 2px solid #0EA5E9;
+            }
+            QLabel#labtoolsCellTitle,
+            QLabel#labtoolsBoundaryPanelTitle {
+                color: #111827;
+                font-size: 13px;
+                font-weight: 850;
+            }
+            QLabel#labtoolsCellMuted,
+            QLabel#labtoolsCellSmall {
+                color: #64748B;
+                font-size: 11px;
+            }
+            QLabel#labtoolsCellTemplateIcon {
+                background: #EFF6FF;
+                border-radius: 8px;
+                color: #0284C7;
+                font-size: 15px;
+                font-weight: 900;
+            }
+            QLabel#labtoolsCellCapabilityChip {
+                background: #DCFCE7;
+                border: 1px solid #86EFAC;
+                border-radius: 10px;
+                color: #059669;
+                font-size: 10px;
+                font-weight: 850;
+                padding: 3px 7px;
+            }
+            QLabel#labtoolsCellStorageChip {
+                background: #FFF7ED;
+                border: 1px solid #FDBA74;
+                border-radius: 10px;
+                color: #EA580C;
+                font-size: 10px;
+                font-weight: 850;
+                padding: 3px 7px;
+            }
+            QLabel#labtoolsCellProfileRow,
+            QLabel#labtoolsCellProcessingRow {
+                background: #F8FAFC;
+                border: 1px solid #E5E7EB;
+                border-radius: 8px;
+                color: #334155;
+                font-size: 11px;
+                padding: 7px 9px;
+            }
+            QPushButton#labtoolsCellTemplateButton {
+                background: #F1F5F9;
+                border: 1px solid #D8E1EC;
+                border-radius: 8px;
+                color: #475569;
+                font-size: 11px;
+                font-weight: 750;
+                padding: 8px 10px;
+            }
+            QPushButton#labtoolsCellTemplateButton[primary="true"] {
+                background: #0EA5E9;
+                border-color: #0EA5E9;
+                color: #FFFFFF;
+            }
+            """
         )
         root = content.layout()
         root.addLayout(self._labtools_boundary_nav(status_label="shell_only / record_store_missing", status_key="shell_only"))
         local_model = labtools_runtime.get_labtools_local_data_read_model(self._labtools_project_root)
-        body = QHBoxLayout()
-        body.setSpacing(12)
-        body.addWidget(
-            self._labtools_boundary_panel(
-                "细胞信息 / Cell Profile & Dynamic State",
-                [
-                    f"local_data status: {local_model.status.status}",
-                    f"local cell profiles: {local_model.status.cell_count}",
-                    "Cell line: A549（mock-labelled shell field）",
-                    "Passage: P12",
-                    "Culture condition: DMEM + 10% FBS, 37 C, 5% CO2",
-                    "Current state: 培养中 / 待处理",
-                    "污染 / 支原体 / 形态观察 / 汇合度：待记录",
-                    *[
-                        f"Local cell: {cell.cell_name} P{cell.passage} · {cell.storage_status}"
-                        for cell in local_model.cells
-                    ],
-                ],
-                object_name="labtoolsCellProfilePanel",
-            ),
-            1,
+
+        chips = QHBoxLayout()
+        chips.setSpacing(8)
+        for text, key in (
+            ("Developer Preview / 本地测试版", "testing"),
+            ("记录保存需适配", "blocked"),
+            ("结果处理仅外部能力配置", "testing"),
+        ):
+            chips.addWidget(make_status_chip(text, status_key=key))
+        chips.addStretch(1)
+        root.addLayout(chips)
+
+        tab_bar = QFrame()
+        tab_bar.setObjectName("labtoolsCellExperimentTabBar")
+        tab_layout = QHBoxLayout(tab_bar)
+        tab_layout.setContentsMargins(12, 0, 12, 0)
+        tab_layout.setSpacing(0)
+        for title, subtitle, selected in (
+            ("细胞信息 / Cell Profile & Dynamic State", "Cell Information", False),
+            ("细胞实验记录 / Experiment Record Templates", "Experiment Records", True),
+            ("细胞结果处理工具 / Result Processing", "Result Processing", False),
+        ):
+            tab = QFrame()
+            tab.setObjectName("labtoolsCellExperimentTab")
+            tab.setProperty("selected", selected)
+            tab.setMinimumHeight(66)
+            tab_inner = QVBoxLayout(tab)
+            tab_inner.setContentsMargins(20, 10, 20, 10)
+            tab_inner.setSpacing(2)
+            tab_title = QLabel(title)
+            tab_title.setObjectName("labtoolsBoundaryPanelTitle")
+            tab_subtitle = QLabel(subtitle)
+            tab_subtitle.setObjectName("labtoolsCellMuted")
+            tab_inner.addWidget(tab_title)
+            tab_inner.addWidget(tab_subtitle)
+            tab_layout.addWidget(tab, 1)
+        root.addWidget(tab_bar)
+
+        main_card = QFrame()
+        main_card.setObjectName("labtoolsCellExperimentMainCard")
+        main_layout = QVBoxLayout(main_card)
+        main_layout.setContentsMargins(20, 18, 20, 20)
+        main_layout.setSpacing(12)
+        header = QHBoxLayout()
+        title = QLabel("细胞实验记录")
+        title.setObjectName("labtoolsCellTitle")
+        subtitle = QLabel("Experiment Record Templates")
+        subtitle.setObjectName("labtoolsCellMuted")
+        header.addWidget(title)
+        header.addWidget(subtitle)
+        header.addStretch(1)
+        main_layout.addLayout(header)
+        template_summary = QLabel("传代、复苏、冻存、接种、给药 / 处理、转染")
+        template_summary.setObjectName("labtoolsCellMuted")
+        main_layout.addWidget(template_summary)
+
+        def template_card(title_text: str, subtitle_text: str, description: str, *, primary: bool = False) -> QFrame:
+            card = QFrame()
+            card.setObjectName("labtoolsCellTemplateCard")
+            card.setMinimumHeight(136)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 14, 14, 14)
+            layout.setSpacing(8)
+            top = QHBoxLayout()
+            icon = QLabel("+" if title_text == "接种" else "↻")
+            icon.setObjectName("labtoolsCellTemplateIcon")
+            icon.setFixedSize(28, 28)
+            icon.setAlignment(Qt.AlignCenter)
+            labels = QVBoxLayout()
+            label = QLabel(title_text)
+            label.setObjectName("labtoolsCellTitle")
+            sub = QLabel(subtitle_text)
+            sub.setObjectName("labtoolsCellMuted")
+            labels.addWidget(label)
+            labels.addWidget(sub)
+            top.addWidget(icon)
+            top.addLayout(labels, 1)
+            layout.addLayout(top)
+            desc = QLabel(description)
+            desc.setObjectName("labtoolsCellMuted")
+            desc.setWordWrap(True)
+            layout.addWidget(desc)
+            if primary:
+                chip_row = QHBoxLayout()
+                chip_row.addWidget(QLabel("接种：计算辅助可用；保存记录 disabled"))
+                chip_row.itemAt(0).widget().setObjectName("labtoolsCellCapabilityChip")
+                chip_row.addWidget(QLabel("保存需适配"))
+                chip_row.itemAt(1).widget().setObjectName("labtoolsCellStorageChip")
+                chip_row.addStretch(1)
+                layout.addLayout(chip_row)
+            button = QPushButton("+ 打开接种计算辅助" if primary else "+ 新建记录 · 需记录存储适配")
+            button.setObjectName("labtoolsCellTemplateButton")
+            button.setProperty("primary", primary)
+            button.setProperty("formalActionEnabled", False)
+            button.setMinimumHeight(34)
+            button.setEnabled(primary)
+            if primary:
+                button.clicked.connect(lambda _checked=False: self._open_labtools_quick_task("quick_cell_seeding"))
+            layout.addWidget(button)
+            return card
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(12)
+        cards = (
+            ("传代", "Passage", "记录传代比例、消化时间、接种密度", False),
+            ("复苏", "Revival", "记录复苏批次、复苏时间、培养条件", False),
+            ("冻存", "Cryopreservation", "记录冻存批次、冻存管、冻存液", False),
+            ("接种", "Cell Seeding", "记录接种密度、孔板格式、体积", True),
+            ("给药 / 处理", "Drug Treatment", "记录处理条件、剂量、时间点", False),
+            ("转染", "Transfection", "记录转染试剂、核酸量、时间点", False),
         )
-        body.addWidget(
-            self._labtools_boundary_panel(
-                "细胞实验记录 / Experiment Record Templates",
-                [
-                    "传代、复苏、冻存、接种、给药 / 处理、转染",
-                    "从上次记录创建：需 record store",
-                    "接种：计算辅助可用；保存记录 disabled",
-                    "不显示假保存记录或假时间线。",
-                ],
-                object_name="labtoolsCellRecordPanel",
-            ),
-            1,
-        )
-        result_panel = self._labtools_boundary_panel(
-            "细胞结果处理工具 / Result Processing",
-            [
-                f"freeze vial overview: {', '.join(local_model.freeze_vial_status_rows)}",
-                *[
-                    f"Local vial: {vial.vial_label} · {vial.status} · {vial.location or 'no location'}"
-                    for vial in local_model.freeze_vials[:6]
-                ],
-                "Scratch / Transwell / Fluorescence/Staining：规划中",
-                "ImageJ/Fiji：Settings-linked 外部能力配置入口",
-                "不显示自动 ROI、自动细胞计数或自动分析结果。",
-            ],
-            object_name="labtoolsCellProcessingPanel",
-        )
-        result_layout = result_panel.layout()
+        for index, (label, sub, desc, primary) in enumerate(cards):
+            grid.addWidget(template_card(label, sub, desc, primary=primary), index // 3, index % 3)
+        main_layout.addLayout(grid)
+        history = QFrame()
+        history.setObjectName("labtoolsCellHistoryCard")
+        history_layout = QHBoxLayout(history)
+        history_layout.setContentsMargins(16, 14, 16, 14)
+        history_layout.setSpacing(12)
+        history_text = QVBoxLayout()
+        history_title = QLabel("从上次记录创建")
+        history_title.setObjectName("labtoolsCellTitle")
+        history_desc = QLabel("基于历史记录继续实验流程\n需要历史记录存储；不显示假保存记录或假时间线。")
+        history_desc.setObjectName("labtoolsCellMuted")
+        history_text.addWidget(history_title)
+        history_text.addWidget(history_desc)
+        history_layout.addLayout(history_text, 1)
+        history_button = QPushButton("创建记录 · 暂不可用")
+        history_button.setObjectName("labtoolsCellTemplateButton")
+        history_button.setEnabled(False)
+        history_button.setProperty("formalActionEnabled", False)
+        history_button.setMinimumHeight(34)
+        history_layout.addWidget(history_button)
+        main_layout.addWidget(history)
+        root.addWidget(main_card)
+
+        summary_row = QHBoxLayout()
+        summary_row.setSpacing(12)
+        profile_panel = QFrame()
+        profile_panel.setObjectName("labtoolsCellProfilePanel")
+        profile_layout = QVBoxLayout(profile_panel)
+        profile_layout.setContentsMargins(14, 12, 14, 12)
+        profile_layout.setSpacing(8)
+        profile_title = QLabel("细胞信息 / Cell Profile & Dynamic State")
+        profile_title.setObjectName("labtoolsBoundaryPanelTitle")
+        profile_layout.addWidget(profile_title)
+        for text in (
+            f"local_data status: {local_model.status.status}",
+            f"local cell profiles: {local_model.status.cell_count}",
+            "Cell line: A549（mock-labelled shell field）",
+            "Passage: P12",
+            "Culture condition: DMEM + 10% FBS, 37 C, 5% CO2",
+            "Current state: 培养中 / 待处理",
+            *[f"Local cell: {cell.cell_name} P{cell.passage} · {cell.storage_status}" for cell in local_model.cells],
+        ):
+            row = QLabel(text)
+            row.setObjectName("labtoolsCellProfileRow")
+            row.setWordWrap(True)
+            profile_layout.addWidget(row)
+        summary_row.addWidget(profile_panel, 1)
+
+        result_panel = QFrame()
+        result_panel.setObjectName("labtoolsCellProcessingPanel")
+        result_layout = QVBoxLayout(result_panel)
+        result_layout.setContentsMargins(14, 12, 14, 12)
+        result_layout.setSpacing(8)
+        result_title = QLabel("细胞结果处理工具 / Result Processing")
+        result_title.setObjectName("labtoolsBoundaryPanelTitle")
+        result_layout.addWidget(result_title)
+        for text in (
+            f"freeze vial overview: {', '.join(local_model.freeze_vial_status_rows)}",
+            *[f"Local vial: {vial.vial_label} · {vial.status} · {vial.location or 'no location'}" for vial in local_model.freeze_vials[:6]],
+            "Scratch / Transwell / Fluorescence/Staining：规划中",
+            "ImageJ/Fiji：Settings-linked 外部能力配置入口",
+            "不显示自动 ROI、自动细胞计数或自动分析结果。",
+        ):
+            row = QLabel(text)
+            row.setObjectName("labtoolsCellProcessingRow")
+            row.setWordWrap(True)
+            result_layout.addWidget(row)
         settings_button = make_button("前往 Settings 外部能力配置", role="secondary")
         settings_button.setObjectName("labtoolsSettingsLinkButton")
         settings_button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
@@ -3620,9 +3841,9 @@ class MainWindow(QMainWindow):
         settings_button.setProperty("semanticKey", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value)
         settings_button.clicked.connect(self.show_settings)
         result_layout.addWidget(settings_button)
-        body.addWidget(result_panel, 1)
-        root.addLayout(body)
-        root.addWidget(self._labtools_notice_card("免疫与吸光度边界不属于细胞实验页面；细胞记录保存和图像分析运行均需后续 adapter。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
+        summary_row.addWidget(result_panel, 1)
+        root.addLayout(summary_row)
+        root.addWidget(self._labtools_notice_card("当前项目暂无保存的细胞实验记录；记录保存需要后续 CellExperimentRecordStore 适配完成后方可启用。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
         root.addLayout(
             self._labtools_boundary_actions(
                 page_key="cell_experiment_workspace",
