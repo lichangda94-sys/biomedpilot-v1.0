@@ -361,6 +361,8 @@ def import_gmt_file(project_root: str | Path, source_path: str | Path, metadata:
             "validation_summary": validation.validation_summary,
             "gene_set_count": validation.gene_set_count,
             "gene_count_preview": [dict(item) for item in validation.gene_count_preview],
+            "file_size": target.stat().st_size if target.exists() else 0,
+            "checksum": _sha256(target) if target.exists() else "",
         }
     )
     registry = _load_registry(root)
