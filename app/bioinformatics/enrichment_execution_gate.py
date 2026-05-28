@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
+from app.bioinformatics.enrichment_input_contract import build_enrichment_input_contract_gate
 from app.bioinformatics.enrichment_resources import build_enrichment_resource_gate
 
 
@@ -34,9 +35,11 @@ def build_enrichment_parameter_manifest(
     required_gene_id_type: str = "symbol",
     p_value_cutoff: float = 0.05,
     fdr_cutoff: float = 0.25,
+    log2fc_threshold: float = 1.0,
     min_gene_set_size: int = 1,
     max_gene_set_size: int = 500,
     ranking_metric: str = "statistic",
+    background_strategy: str = "formal_deg_result_table_all_features",
     backend_detection_path: str | Path | None = None,
 ) -> dict[str, Any]:
     resource_gate = build_enrichment_resource_gate(
@@ -51,6 +54,18 @@ def build_enrichment_parameter_manifest(
         analysis_type=analysis_type,
         required_capabilities=[DEFAULT_BACKEND_CAPABILITY.get(analysis_type, "")],
         detection_path=backend_detection_path,
+    )
+    input_contract_gate = build_enrichment_input_contract_gate(
+        project_root,
+        analysis_type=analysis_type,
+        source_result_id=source_result_id,
+        resource_id=resource_id,
+        required_species=required_species,
+        required_gene_id_type=required_gene_id_type,
+        log2fc_threshold=log2fc_threshold,
+        fdr_cutoff=fdr_cutoff,
+        ranking_metric=ranking_metric,
+        background_strategy=background_strategy,
     )
     blockers: list[str] = []
     warnings: list[str] = []
@@ -74,8 +89,11 @@ def build_enrichment_parameter_manifest(
         blockers.extend(str(item) for item in resource_gate.get("blockers", []) or [])
     if backend_gate.get("status") != "passed":
         blockers.extend(str(item) for item in backend_gate.get("blockers", []) or [])
+    if input_contract_gate.get("status") != "passed":
+        blockers.extend(str(item) for item in input_contract_gate.get("blockers", []) or [])
     warnings.extend(str(item) for item in resource_gate.get("warnings", []) or [])
     warnings.extend(str(item) for item in backend_gate.get("warnings", []) or [])
+    warnings.extend(str(item) for item in input_contract_gate.get("warnings", []) or [])
     manifest = {
         "schema_version": ENRICHMENT_PARAMETER_MANIFEST_SCHEMA_VERSION,
         "created_at": _now(),
@@ -85,13 +103,20 @@ def build_enrichment_parameter_manifest(
         "input_package_id": f"enrichment_from:{source_result_id}" if source_result_id else "",
         "resource_id": str(resource_gate.get("selected_resource_id") or resource_id),
         "resource_gate": resource_gate,
+        "input_contract_gate": input_contract_gate,
+        "background_universe": input_contract_gate.get("background_universe", {}),
+        "identifier_compatibility_gate": input_contract_gate.get("identifier_compatibility_gate", {}),
+        "source_derivation_manifest": input_contract_gate.get("source_derivation_manifest", {}),
+        "resource_lock": input_contract_gate.get("resource_lock", {}),
         "backend_gate": backend_gate,
         "engine_candidate": "r_clusterProfiler_enricher" if analysis_type == "ora" else "r_fgsea_preranked",
         "required_backend_capability": DEFAULT_BACKEND_CAPABILITY.get(analysis_type, ""),
         "required_species": required_species,
         "required_gene_id_type": required_gene_id_type,
+        "background_strategy": background_strategy,
         "p_value_cutoff": p_value_cutoff,
         "fdr_cutoff": fdr_cutoff,
+        "log2fc_threshold": log2fc_threshold,
         "min_gene_set_size": min_gene_set_size,
         "max_gene_set_size": max_gene_set_size,
         "ranking_metric": ranking_metric if analysis_type == "gsea_preranked" else "",

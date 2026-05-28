@@ -10,12 +10,15 @@ from app.bioinformatics.enrichment_execution_gate import (
     validate_enrichment_parameter_confirmation,
 )
 from app.bioinformatics.gene_set_resources import import_gmt_file, select_gene_set
+from app.bioinformatics.results.models import ResultIndexEntry
+from app.bioinformatics.results.registry import register_result
 
 
 def test_enrichment_execution_gate_requires_confirmation_after_resource_and_backend_pass(tmp_path: Path) -> None:
     resource = _import_resource(tmp_path)
     select_gene_set(tmp_path, str(resource["resource_id"]))
     detection = _write_detection(tmp_path)
+    _register_deg_source(tmp_path, "deg-1")
 
     gate = build_enrichment_execution_gate(tmp_path, analysis_type="ora", source_result_id="deg-1", resource_id=str(resource["resource_id"]), backend_detection_path=detection)
 
@@ -30,6 +33,7 @@ def test_enrichment_confirmation_passes_and_detects_stale_manifest(tmp_path: Pat
     resource = _import_resource(tmp_path)
     select_gene_set(tmp_path, str(resource["resource_id"]))
     detection = _write_detection(tmp_path)
+    _register_deg_source(tmp_path, "deg-1")
     manifest = build_enrichment_parameter_manifest(tmp_path, analysis_type="gsea_preranked", source_result_id="deg-1", resource_id=str(resource["resource_id"]), backend_detection_path=detection)
 
     confirmation = save_enrichment_parameter_confirmation(tmp_path, manifest)
@@ -58,6 +62,7 @@ def test_enrichment_parameter_manifest_blocks_reactome_until_package_available(t
     resource = _import_resource(tmp_path, collection_type="Reactome")
     select_gene_set(tmp_path, str(resource["resource_id"]))
     detection = _write_detection(tmp_path)
+    _register_deg_source(tmp_path, "deg-1")
 
     manifest = build_enrichment_parameter_manifest(tmp_path, analysis_type="ora_reactome", source_result_id="deg-1", resource_id=str(resource["resource_id"]), backend_detection_path=detection)
 
@@ -124,3 +129,31 @@ def _write_detection(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def _register_deg_source(tmp_path: Path, result_id: str, *, gene_id_type: str = "symbol") -> None:
+    table = tmp_path / "results" / "tables" / f"{result_id}.tsv"
+    table.parent.mkdir(parents=True)
+    table.write_text(
+        "feature_id\tgene_symbol\tlog2_fold_change\tstatistic\tp_value\tadjusted_p_value\tsignificance_label\n"
+        "f1\tTP53\t1.5\t3.0\t0.01\t0.02\tup\n"
+        "f2\tBAX\t-1.4\t-2.8\t0.02\t0.03\tdown\n"
+        "f3\tGAPDH\t0.1\t0.2\t0.8\t0.9\tnot_significant\n",
+        encoding="utf-8",
+    )
+    register_result(
+        tmp_path,
+        ResultIndexEntry(
+            result_id=result_id,
+            task_run_id=f"{result_id}-task",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            input_package_id="deg-ready",
+            parameters_manifest={"gene_id_type": gene_id_type},
+            engine_name="test_deg",
+            engine_version="1",
+            dependency_snapshot={"status": "passed"},
+            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table.relative_to(tmp_path)), "schema": "biomedpilot.deg_result_table.v1"},),
+            validation_status="passed",
+        ),
+    )
