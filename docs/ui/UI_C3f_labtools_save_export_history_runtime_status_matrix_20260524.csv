@@ -1,0 +1,12 @@
+screen_id,save_history_status,save_write_location,export_status,allowed_export_formats,export_path_source,must_remain_disabled,home_labtools_write_allowed,notes
+reagent_template,pilot_enabled_with_project_context,project_storage/labtools/templates/reagent_templates.json,not_applicable,none,none,"cloud_templates;inventory_deduction;batch_release;multi_user_sync",false,"Template save is project-storage only and requires explicit LabTools project context."
+reagent_preparation,pilot_enabled_with_project_context,project_storage/labtools/records/reagent_preparations.json,pilot_enabled,markdown;csv,QFileDialog.getSaveFileName,"pdf;docx;hardcoded_path_export;inventory_deduction;batch_release",false,"Copy summary remains available; export uses file picker only."
+wb_loading,pilot_enabled_with_project_context,project_storage/labtools/records/wb_loading_records.json,pilot_enabled,markdown;csv,QFileDialog.getSaveFileName,"pdf;docx;hardcoded_path_export;image_analysis;band_quantification;antibody_recommendation",false,"WB lane preview remains a helper and not a gel image result."
+quick_calculator,disabled,none,disabled,none,none,"history;markdown;csv;pdf;docx",false,"General calculator history/export remains disabled."
+formula_solver,disabled,none,disabled,none,none,"history;markdown;csv;pdf;docx",false,"Formula solver history/export remains disabled."
+sds_page,boundary_disabled,none,boundary_disabled,none,none,"xlsx;template_save;history;pdf;docx",false,"SDS-PAGE remains adapter-needed boundary."
+bca_od,boundary_disabled,none,boundary_disabled,none,none,"record_save;csv;markdown;pdf;docx;formal_report",false,"BCA/OD remains MVP boundary without formal record/export."
+cell_experiment,backend_missing_disabled,none,backend_missing_disabled,none,none,"record_save;record_export;history;image_analysis",false,"Cell record store remains missing."
+elisa_immuno_absorbance,blocked_until_backend,none,blocked_until_backend,none,none,"analysis;record_save;report_export;pdf;docx",false,"ELISA backend remains unavailable."
+image_processing,external_engine_adapter_missing,none,external_engine_adapter_missing,none,none,"run_analysis;save_result;export_result;macro;imagej_fiji_runner",false,"Image processing remains a Settings-linked external capability boundary."
+pdf_docx,disabled,none,disabled,none,none,"all_pdf_docx_export",false,"PDF/DOCX remains out of C3 adapter pilot."

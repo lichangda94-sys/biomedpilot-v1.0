@@ -56,10 +56,12 @@ def test_versioned_packaged_entry_smoke_reports_metadata(tmp_path: Path) -> None
     assert f"app_root={result.resource_root}" in completed.stdout
 
     launchservices_completed = subprocess.run(
-        [str(result.launcher_path), "--smoke-test", "-psn_0_12345"],
+        [str(result.launcher_path), "-psn_0_12345", "--smoke-test"],
         check=True,
         text=True,
         capture_output=True,
         env=env,
     )
+
     assert f"app_version={APP_VERSION}" in launchservices_completed.stdout
+    assert "launch_mode=packaged-local-python" in launchservices_completed.stdout

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">labtools_protein_experiments</title>
+  <desc id="desc">Production candidate vector icon for labtools; transparent background.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="25" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" opacity="0.65"/>
+    <path d="M18 42 C26 18 39 50 46 22" stroke="#059669" stroke-width="3"/>
+    <circle cx="22" cy="37" r="3" fill="#059669" stroke="#059669" stroke-width="2"/>
+    <circle cx="31" cy="30" r="3" fill="#059669" stroke="#059669" stroke-width="2"/>
+    <circle cx="40" cy="35" r="3" fill="#059669" stroke="#059669" stroke-width="2"/>
+  </g>
+</svg>

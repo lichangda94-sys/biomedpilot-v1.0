@@ -1,0 +1,12 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_imagej_fiji</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <path d='M20 46h25' stroke='#35506B' stroke-width='3' stroke-linecap='round'/>
+      <path d='M28 45l7-19M23 45l5-14' stroke='#35506B' stroke-width='3' stroke-linecap='round'/>
+      <rect x='29' y='14' width='17' height='10' rx='3' transform='rotate(18 37.5 19)' fill='#EEF5FF' stroke='#2F80ED' stroke-width='3'/>
+      <circle cx='25' cy='29' r='5' fill='none' stroke='#1DA6A8' stroke-width='3'/>
+      <path d='M15 51h34' stroke='#6B7C93' stroke-width='3' stroke-linecap='round'/>
+
+  </g>
+</svg>

@@ -1,0 +1,11 @@
+record_type,copy_text,markdown,csv,xlsx,json_draft,pdf_docx,current_state,notes
+quick_calculator,allowed,planned,future,not_applicable,planned,blocked,copy_only_active,"No CalculationRecordStore; output is calculation aid only."
+dynamic_formula_solver,allowed,planned,future,not_applicable,planned,blocked,copy_only_active,"No CalculationRecordStore; solve target output remains user-reviewed."
+reagent_template,planned,planned,planned,not_applicable,planned,blocked,adapter_needed,"Save/export requires BioMedPilotLabToolsStorageAdapter; no cloud or inventory semantics."
+reagent_preparation,allowed,planned,planned,not_applicable,planned,blocked,preview_only_adapter_needed,"PBS example can be copied; record/export needs storage and file picker."
+wb_loading,allowed,planned,planned,not_applicable,planned,blocked,preview_only_adapter_needed,"WB table copy is allowed; CSV/Markdown export requires file picker and storage adapter."
+sds_page,planned,planned,planned,planned,planned,blocked,boundary_shell_only,"XLSX is planned but disabled until writer and file picker review."
+bca_od_mvp_preview,planned,planned,planned,not_applicable,planned,blocked,boundary_preview_only,"No formal BCA record/export/report; preview only."
+cell_records_shell,disabled,planned,planned,future,planned,blocked,boundary_shell_only,"Structure only; no CellExperimentRecordStore."
+image_processing_preview,disabled,planned,planned,future,planned,blocked,boundary_shell_only,"No ImageJ/Fiji result export or automatic analysis output."
+elisa_boundary,disabled,blocked,blocked,blocked,blocked,blocked,blocked_until_backend,"ELISA backend/export/report disabled; boundary only."

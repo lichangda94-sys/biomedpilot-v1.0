@@ -1,0 +1,11 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_plotting_package</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <rect x='15' y='14' width='34' height='36' rx='6' fill='#F5FAFF' stroke='#35506B' stroke-width='3'/>
+      <path d='M23 42V28M32 42V22M41 42V33' stroke='#2F80ED' stroke-width='4' stroke-linecap='round'/>
+      <path d='M22 43h22' stroke='#6B7C93' stroke-width='3' stroke-linecap='round'/>
+      <path d='M22 24l8 6 7-9 7 4' fill='none' stroke='#1DA6A8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/>
+
+  </g>
+</svg>

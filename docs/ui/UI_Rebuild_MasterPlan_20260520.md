@@ -24,11 +24,50 @@ Priority order:
 
 ## 2. Current Phase Boundary
 
-Current phase: UI-B0.
+Current checkpoint after UI-C1: low-to-mid fidelity visual calibration.
 
-UI-B0 only creates governance documents. It does not modify UI code, business code, tests, resources, i18n runtime, packaging scripts, dist bundles, or desktop `.app` entries.
+Completed:
 
-The next code-capable phase is UI-B1, and only after UI-B0 documents are accepted enough to govern token and component names.
+- UI-B0: governance documents.
+- UI-B1: design tokens, theme and basic primitives.
+- UI-B2: Welcome / Dashboard / Sidebar / About / Test Feedback low-fidelity shell.
+- UI-B3: Settings secondary navigation and external capability management shell.
+- UI-B4: LabTools IA shell.
+- UI-B5 shell: Bioinformatics target IA shell and gated/preflight copy.
+- UI-B5.1: Bioinformatics legacy page routing calibration.
+- UI-B5.2: Bioinformatics target page consolidation.
+- UI-B6 shell: Meta Analysis target IA shell and active Meta type display.
+- UI-B6.1: Meta Analysis target shell interaction calibration.
+- UI-B7 shell: shared Result / Report / Export semantic shell.
+- UI-B7.1: Result / Report / Export shell adoption calibration.
+- UI-B8a: resource inventory / placeholder strategy.
+- UI-B8b-prep: resource design brief, Figma brief and icon requirements.
+- UI-B9a: semantic key registry.
+- UI-B9b: key adoption / test migration.
+- UI-B9c: selective key adoption / test migration expansion.
+- UI-C0: low-fidelity shell usability pass.
+- UI-C1: low-to-mid fidelity visual calibration from first concept image batch.
+
+Partially completed:
+
+- Full UI-B9 i18n adoption / language switch has not started.
+
+Not started:
+
+- UI-B8b formal resource replacement.
+- UI-B10 packaging / desktop entry.
+
+Current hard boundary:
+
+- Do not handle App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation, or desktop `.app` overwrite before UI-B10.
+- Do not treat UI-B8a as resource replacement; it is only inventory and placeholder policy.
+- Do not treat UI-B8b-prep as resource replacement; it is only design brief and icon requirements.
+- Do not treat UI-B9a/B9b/B9c as full i18n; they are key registry, selective key adoption and focused test migration only.
+
+Recommended next stage:
+
+- UI-B8b formal resource replacement only after brand/resource owner confirmation and approved design exports, or
+- UI-C2 module-specific visual/detail calibration if another concept batch needs implementation.
 
 ## 3. Rebuild Principles
 
@@ -324,13 +363,15 @@ Critical rules:
 
 ## 11. Immediate Next Stage
 
-After UI-B0, proceed to UI-B1:
+After UI-C1, proceed only with one of the following confirmed next stages:
 
 ```text
-Design tokens / theme / basic primitives
+UI-C2: module-specific visual/detail calibration, if another concept batch needs implementation
+UI-B8b: formal resource replacement, only after brand/resource owner approval and exported assets
+UI-B10: packaging / desktop entry, only when explicitly authorized
 ```
 
-Do not proceed directly to UI-B2 until UI-B1 creates enough shared token and component foundation.
+Do not treat UI-C1 as permission to replace icons, bind App icons, update Finder/LaunchServices metadata, or run packaged app validation.
 
 ## 12. UI-B0 Completion Statement
 

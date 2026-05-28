@@ -1,0 +1,5 @@
+component,required_amount,amount_unit,user_check,warning
+NaCl,4.00,g,unchecked,
+KCl,0.10,g,unchecked,
+Na2HPO4,0.72,g,unchecked,confirm hydrate form
+KH2PO4,0.12,g,unchecked,

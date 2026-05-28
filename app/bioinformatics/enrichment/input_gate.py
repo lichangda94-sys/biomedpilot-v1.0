@@ -199,9 +199,10 @@ def _read_table(path: Path) -> list[dict[str, str]]:
 
 
 def _first_present(header: set[str], aliases: tuple[str, ...]) -> str:
-    lookup = {name.lower(): name for name in header}
+    normalized_header = {str(name) for name in header if name}
+    lookup = {name.lower(): name for name in normalized_header}
     for alias in aliases:
-        if alias in header:
+        if alias in normalized_header:
             return alias
         if alias.lower() in lookup:
             return lookup[alias.lower()]

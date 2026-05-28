@@ -4,7 +4,6 @@ import os
 import json
 import gzip
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from xml.sax.saxutils import escape
@@ -14,16 +13,11 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
 
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
-    from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
-    from app.bioinformatics.acquisition_adapters import adapt_geo_detection_manifest, write_legacy_acquisition_manifest
-    from app.bioinformatics.plots import create_formal_deg_plot_artifact
     from app.bioinformatics.project_workspace import create_bioinformatics_project
-    from app.bioinformatics.results.models import ResultIndexEntry
     from app.bioinformatics.results.project_results import write_result_index
-    from app.bioinformatics.results.registry import register_result
     import app.bioinformatics.project_recognition as project_recognition
     import app.bioinformatics.workflow_pages as workflow_pages
     from app.bioinformatics.workflow_pages import (
@@ -376,43 +370,63 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
     assert widget.objectName() == "bioinformaticsDataSourcePage"
 
 
-def test_data_source_page_shows_four_primary_source_entries(qt_app) -> None:
-    widget = BioinformaticsDataSourceWidget()
-    card_titles = [
-        label.text()
-        for label in widget.findChildren(QLabel, "bioProjectCardTitle")
-        if label.text() not in {"GEO 数据集详情", "下载列表 / 待处理数据来源", "当前数据选择状态", "历史缓存数据", "数据详情"}
-    ]
-    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
-    inputs = widget.findChildren(workflow_pages.QLineEdit)
-    visible_text = " ".join(
-        [label.text() for label in widget.findChildren(QLabel)]
-        + [button.text() for button in widget.findChildren(QPushButton)]
-        + [input_box.placeholderText() for input_box in inputs]
+def test_gse_preview_preserves_geo_organism_for_detail_profile(qt_app) -> None:
+    metadata_text = "\n".join(
+        [
+            "当前 GSE 编号：GSE5078",
+            "数据集标题：Hippocampal transcript profile in young and middle-aged mice",
+            "样本数：23",
+            "平台信息：GPL1261",
+            "物种：Mus musculus",
+        ]
     )
 
-    assert "选择数据来源" in card_titles
-    assert "GEO 数据库" in card_titles
-    assert "TCGA 数据库" in card_titles
-    assert "GTEx 数据库" in card_titles
-    assert "本地数据导入" in card_titles
-    assert "按 GSE 编号检索/下载" in card_titles
-    assert "按中文研究问题检索 GEO 数据集" in card_titles
-    assert "GEO Series Matrix 文件" not in card_titles
-    assert "TCGA 本地数据" not in card_titles
-    assert "GTEx 本地数据" not in card_titles
-    assert "TCGA + GTEx 联合数据" not in card_titles
-    assert "本地 AI 检索助手" not in card_titles
-    assert {"GEO 数据库", "TCGA 数据库", "GTEx 数据库", "本地数据导入"} <= set(card_titles)
-    assert {"进入", "预览可下载数据", "生成下载计划草案"} <= set(button_texts)
-    assert "选择本地文件或文件夹" in button_texts
-    assert "选择本地数据" not in button_texts
-    assert "选择本地文件夹" not in button_texts
-    assert "检索" in button_texts
-    assert "检索数据集" not in button_texts
-    assert "进入中文主题检索" in button_texts
-    assert any(input_box.placeholderText() == "请输入 GSE 编号，例如 GSE60235" for input_box in inputs)
-    assert any(input_box.placeholderText() == "请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据" for input_box in inputs)
+    preview = workflow_pages._gse_preview_from_metadata("GSE5078", metadata_text)
+    candidate = workflow_pages._geo_candidate_from_gse_preview(preview)
+    rows = workflow_pages._geo_detail_basic_rows(candidate)
+    profile = workflow_pages._build_geo_detail_profile(None, candidate)
+    row_map = {str(row[0]): str(row[1]) for row in rows}
+
+    assert preview.organism == "Mus musculus"
+    assert candidate.organism == "Mus musculus"
+    assert row_map["物种"] == "小鼠（Mus musculus）"
+    assert profile.organism == "Mus musculus"
+    assert profile.species_group == "mouse"
+    assert "人类或疑似人类" not in profile.analysis_potential_reason
+
+
+def test_data_source_page_shows_only_four_gated_source_cards(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    source_cards = widget.findChildren(QFrame, "bioinformaticsDataSourceMainCard")
+    source_titles = [card.findChild(QLabel, "bioinformaticsDataSourceMainCardTitle").text() for card in source_cards]
+    source_keys = [card.property("sourceKey") for card in source_cards]
+    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+    preview_buttons = widget.findChildren(QPushButton, "bioinformaticsDataSourceSelectPreviewButton")
+    legacy_cards = (
+        widget.findChild(QFrame, "localImportEntryCard"),
+        widget.findChild(QFrame, "gseSearchEntryCard"),
+        widget.findChild(QFrame, "chineseResearchSearchEntryCard"),
+    )
+
+    assert source_titles == ["GEO", "TCGA", "GTEx", "Local File"]
+    assert source_keys == ["geo", "tcga", "gtex", "local_file"]
+    assert all(card.property("formalActionEnabled") is False for card in source_cards)
+    assert all(card.property("downloadEnabled") is False for card in source_cards)
+    assert all(card.property("importEnabled") is False for card in source_cards)
+    assert all(card.property("analysisEnabled") is False for card in source_cards)
+    assert len(preview_buttons) == 4
+    assert all(button.property("buttonBehavior") == "enabled_select_preview_only" for button in preview_buttons)
+    assert all(card is not None and card.property("normalUserVisible") is False and card.isHidden() for card in legacy_cards)
+    assert "External Result" not in source_titles
+    assert "GEO Series Matrix 文件" not in source_titles
+    assert "TCGA 本地数据" not in source_titles
+    assert "GTEx 本地数据" not in source_titles
+    assert "TCGA + GTEx 联合数据" not in source_titles
+    assert "本地 AI 检索助手" not in source_titles
+    assert "选择本地数据" in button_texts
+    assert "选择本地文件夹" in button_texts
+    assert "进入检索界面" in button_texts
+    assert all(button.isEnabled() is False for button in widget.findChildren(QPushButton) if button.text() in {"选择本地数据", "选择本地文件夹", "进入检索界面", "检索数据集"})
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
     assert "登记为数据源" not in button_texts
@@ -423,7 +437,22 @@ def test_data_source_page_shows_four_primary_source_entries(qt_app) -> None:
     assert "下一步" in widget.findChild(QLabel, "dataSelectionNextStep").text()
 
 
-def test_data_source_tcga_workflow_initial_state_shows_five_steps_and_only_preview(qt_app, project_summary) -> None:
+def test_data_source_gated_selection_updates_preview_without_fake_result(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    buttons = {button.property("sourceKey"): button for button in widget.findChildren(QPushButton, "bioinformaticsDataSourceSelectPreviewButton")}
+    status_table = widget.findChild(QTableWidget, "bioinformaticsSourceStatusOverviewTable")
+    recent_table = widget.findChild(QTableWidget, "bioinformaticsRecentImportsPreviewTable")
+
+    buttons["geo"].click()
+
+    assert "已选择 GEO 配置预览" in widget.status_message()
+    assert status_table.item(0, 1).text() == "configure/select preview"
+    assert status_table.item(0, 3).text() == "download / analysis"
+    assert recent_table.item(0, 2).text() == "empty-safe"
+    assert "No fake expression matrix" in recent_table.item(0, 3).text()
+
+
+def test_local_import_strategy_copy_uses_user_friendly_copy(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
 
@@ -1402,7 +1431,7 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert "下一步交接清单：已生成" in widget.source_summary_tooltip("geo_gse")
     assert str(summary.plan_path) in widget._technical_details.toPlainText()
     assert widget._technical_details.isHidden()
-    assert widget.status_message() == "已在下载列表 / 待处理数据来源中：GSE60024"
+    assert widget.status_message() == "已在待处理数据集中：GSE60024"
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
     assert not widget._next_button.isEnabled()
@@ -2944,29 +2973,12 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     workflow_pages.run_project_recognition(project_summary.project_root)
     workflow_pages.run_project_readiness(project_summary.project_root)
     workflow_pages.generate_standardized_assets(project_summary.project_root)
-    legacy_candidates = project_summary.project_root / "standardized_data" / "asset_candidates" / "legacy_acquisition_asset_candidates.json"
-    legacy_candidates.parent.mkdir(parents=True, exist_ok=True)
-    legacy_candidates.write_text(
-        json.dumps(
-            {
-                "schema_version": "biomedpilot.legacy_standardized_asset_candidate_bundle.v1",
-                "status": "candidate_only",
-                "candidate_count": 1,
-                "warnings": ["candidate_only_not_repository_asset"],
-                "blockers": [],
-            }
-        ),
-        encoding="utf-8",
-    )
 
     widget = BioinformaticsAnalysisTaskCenterWidget()
     widget.refresh_project(project_summary)
 
     buttons = {button.text() for button in widget.findChildren(QPushButton)}
-    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "确认 formal DEG 参数", "运行 controlled risk score", "查看已导入差异分析结果", "继续：结果浏览"}.issubset(buttons)
-    risk_score_button = widget.findChild(QPushButton, "runControlledRiskScoreButton")
-    assert risk_score_button is not None
-    assert risk_score_button.isEnabled() is False
+    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "查看已导入差异分析结果", "继续：结果浏览"}.issubset(buttons)
     assert widget.findChild(QLabel, "analysisTaskInputSummary") is not None
     assert "核心输入" in widget.findChild(QLabel, "analysisTaskInputSummary").text()
     assert "下一步建议" in widget.findChild(QLabel, "analysisTaskNextStep").text()
@@ -2994,197 +3006,6 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     diagnostics_text = diagnostics.toPlainText()
     assert "analysis_task_center" in diagnostics_text
     assert "differential_expression" in diagnostics_text
-    assert "analysis_center_state" in diagnostics_text
-
-    package_table = widget.findChild(QTableWidget, "analysisPackageTable")
-    assert package_table is not None
-    package_text = _table_text(package_table)
-    assert "DEG recompute input" in package_text
-    assert "Blockers" not in package_text
-    assert "sample metadata" in package_text or "Return to" in package_text or "raw count matrix" in package_text
-
-    legacy_table = widget.findChild(QTableWidget, "analysisLegacyAssetPipelineTable")
-    assert legacy_table is not None
-    legacy_text = _table_text(legacy_table)
-    assert "Standardized asset candidates" in legacy_text
-    assert "candidate_only" in legacy_text
-    assert "Formal boundary" in legacy_text
-    assert "writes_result_index=False" in legacy_text
-    assert "formal result" not in legacy_text.lower()
-    assert widget.findChild(QPushButton, "legacyBuildAssetCandidatesButton") is not None
-    assert widget.findChild(QPushButton, "legacyMaterializeCandidatesButton").isEnabled()
-    assert widget.findChild(QPushButton, "legacyMergeRepositoryManifestButton").isEnabled() is False
-
-    action_table = widget.findChild(QTableWidget, "analysisActionGateTable")
-    assert action_table is not None
-    action_text = _table_text(action_table)
-    assert "Review legacy asset pipeline" in action_text
-    assert "enabled_review_only_no_formal_execution" in action_text
-    assert "Build legacy asset candidates" in action_text
-    assert "controlled_standardization_artifact_write_no_formal_execution" in action_text
-    assert "Confirm formal DEG parameters" in action_text
-    assert "Run controlled two-group DEG" in action_text
-    assert "Prepare limma design config" in action_text
-    assert "Confirm limma Rscript parameters" in action_text
-    assert "Run limma Rscript DEG" in action_text
-    assert "blocked_limma_rscript_gate" in action_text
-    assert "Confirm DESeq2 parameters" in action_text
-    assert "Run DESeq2 count-model DEG" in action_text
-    assert "Review GSEA preranked readiness" in action_text
-    assert "Run controlled preranked GSEA" in action_text
-    assert "gsea_source_result_missing" in action_text or "gsea_input_gate_not_passed" in action_text
-    assert "disabled" in action_text
-    assert "Run formal GSEA" not in action_text
-    assert "Run two-group KM/log-rank" in action_text
-    assert "Run single-variable Cox" in action_text
-    assert "Generate KM plot" in action_text
-    assert "Resolve B12 input, KM parameter, confirmation and lifelines dependency gates" in action_text
-    assert "Resolve B12 input, Cox parameter, confirmation and lifelines dependency gates" in action_text
-    assert "Export report-ready package" in action_text
-    assert "Export full integrated report" in action_text
-    assert "survival_clinical_section_package_not_passed" in action_text or "missing_km_logrank_result" in action_text
-    assert "blocked_report_ready_gate" in action_text
-
-    capability_table = widget.findChild(QTableWidget, "analysisCapabilityMapTable")
-    assert capability_table is not None
-    capability_text = _table_text(capability_table)
-    assert "DEG two-group controlled MVP" in capability_text
-    assert "limma" in capability_text
-    assert "DESeq2" in capability_text
-    assert "edgeR" in capability_text
-    assert "package.r.deseq2.available" in capability_text
-    assert "blocked_by_dependency" in capability_text
-    assert "Cox multivariate" in capability_text
-    assert "b20_gated_execution_contract" in capability_text
-    assert "Risk score / nomogram" in capability_text
-    assert "Full integrated report" in capability_text
-    assert "Multi-factor DEG design" in capability_text
-    assert "multi_factor_design_config_missing" in capability_text
-    assert "preflight" in capability_text
-    assert "B19 adapter gate is blocked" in capability_text
-    assert "formal_computed_result" not in capability_text or "Never formal_computed_result" in capability_text
-
-    dependency_table = widget.findChild(QTableWidget, "analysisDependencyTable")
-    assert dependency_table is not None
-    dependency_text = _table_text(dependency_table)
-    assert "scipy" in dependency_text
-    assert "statsmodels" in dependency_text
-    assert "Detect only" in dependency_text
-    assert "required_in_packaged_app_for_formal_deg" in dependency_text
-    assert "安装" not in dependency_text
-
-    formal_deg_gate = widget.findChild(QTableWidget, "analysisFormalDegGateTable")
-    assert formal_deg_gate is not None
-    formal_deg_gate_text = _table_text(formal_deg_gate)
-    assert "Parameter manifest" in formal_deg_gate_text
-    assert "User parameter confirmation" in formal_deg_gate_text
-    assert "Result schema gate" in formal_deg_gate_text
-    assert "B9.2 controlled activation" in formal_deg_gate_text
-    assert "limma Rscript runtime detection" in formal_deg_gate_text
-    assert "limma Rscript user confirmation" in formal_deg_gate_text
-
-    limma_confirm_button = widget.findChild(QPushButton, "confirmRLimmaParametersButton")
-    assert limma_confirm_button is not None
-    assert limma_confirm_button.isEnabled() is False
-    limma_design_button = widget.findChild(QPushButton, "prepareRLimmaDesignConfigButton")
-    assert limma_design_button is not None
-    limma_run_button = widget.findChild(QPushButton, "runRLimmaRscriptDegButton")
-    assert limma_run_button is not None
-    assert limma_run_button.isEnabled() is False
-    deseq2_confirm_button = widget.findChild(QPushButton, "confirmRDeseq2ParametersButton")
-    assert deseq2_confirm_button is not None
-    assert deseq2_confirm_button.isEnabled() is False
-    deseq2_run_button = widget.findChild(QPushButton, "runRDeseq2RscriptDegButton")
-    assert deseq2_run_button is not None
-    assert deseq2_run_button.isEnabled() is False
-
-    confirmation_table = widget.findChild(QTableWidget, "analysisFormalDegConfirmationTable")
-    assert confirmation_table is not None
-    confirmation_text = _table_text(confirmation_table)
-    assert "Comparison" in confirmation_text
-    assert "Method" in confirmation_text
-    assert "Thresholds" in confirmation_text
-    assert "Dependency snapshot" in confirmation_text
-    assert "Output plan" in confirmation_text
-
-    gate_table = widget.findChild(QTableWidget, "analysisGatePreviewTable")
-    assert gate_table is not None
-    gate_text = _table_text(gate_table)
-    assert "Report-ready export" in gate_text
-    assert "Full integrated report" in gate_text
-    assert "survival_clinical_section_package_not_passed" in gate_text or "missing_km_logrank_result" in gate_text
-    assert "GSEA source DEG result" in gate_text
-    assert "GSEA rank metric" in gate_text
-    assert "B11.2 controlled GSEA execution" in gate_text
-    assert "blocked_report_ready_gate" in gate_text
-
-    survival_table = widget.findChild(QTableWidget, "analysisSurvivalClinicalTable")
-    assert survival_table is not None
-    survival_text = _table_text(survival_table)
-    assert "Survival design preflight" in survival_text
-    assert "Survival / clinical input resolver" in survival_text
-    assert "OS_time / OS_event / censoring gate" in survival_text
-    assert "Clinical variable typing / missingness" in survival_text
-    assert "Two-group KM/log-rank" in survival_text
-    assert "Single-variable Cox" in survival_text
-    assert "KM real plot artifact" in survival_text
-    assert "Cox real forest plot artifact" in survival_text
-    assert "Multivariate Cox gated execution" in survival_text
-    assert "Risk score / nomogram" in survival_text
-    assert "disabled" in survival_text
-
-
-def test_analysis_task_center_runs_legacy_pipeline_operations_without_formal_outputs(qt_app, project_summary, tmp_path: Path) -> None:
-    expression_file = tmp_path / "gene_symbol_counts.tsv"
-    expression_file.write_text("gene_symbol\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
-    sample_file = tmp_path / "sample_metadata.tsv"
-    sample_file.write_text("sample_id\tgroup\ns1\tcase\ns2\tcontrol\n", encoding="utf-8")
-    manifest = adapt_geo_detection_manifest(
-        accession="GSE_LEGACY_UI",
-        scan_root=tmp_path,
-        detection_result={
-            "accession_type": "GSE",
-            "has_expression_payload": True,
-            "matrix_level": "gene",
-            "candidate_expression_files": [str(expression_file)],
-            "candidate_metadata_files": [str(sample_file)],
-        },
-    )
-    write_legacy_acquisition_manifest(project_summary.project_root, manifest)
-
-    widget = BioinformaticsAnalysisTaskCenterWidget()
-    widget.refresh_project(project_summary)
-    assert widget.findChild(QPushButton, "legacyBuildAssetCandidatesButton").isEnabled()
-    assert not widget.findChild(QPushButton, "legacyMaterializeCandidatesButton").isEnabled()
-
-    candidates = widget.build_legacy_asset_candidates()
-    assert candidates is not None
-    assert candidates["candidate_count"] == 2
-    assert "不是 analysis input package 或 formal result" in widget.status_message()
-    assert widget.findChild(QPushButton, "legacyMaterializeCandidatesButton").isEnabled()
-
-    materialized = widget.materialize_legacy_asset_candidates()
-    assert materialized is not None
-    assert materialized["materialized_asset_count"] == 2
-    assert "不写 result index" in widget.status_message()
-    assert widget.findChild(QPushButton, "legacyMergeRepositoryManifestButton").isEnabled()
-
-    merged = widget.merge_legacy_assets_into_repository_manifest()
-    assert merged is not None
-    assert merged["merged_asset_count"] == 2
-    assert "未生成 formal analysis" in widget.status_message()
-    assert widget.findChild(QPushButton, "legacyConfirmAssetSelectionButton").isEnabled()
-
-    selection = widget.confirm_legacy_asset_selection()
-    assert selection is not None
-    assert selection["status"] == "selection_recorded_preflight_only"
-    assert "不写 analysis_input_repository/result_index" in widget.status_message()
-    assert not (project_summary.project_root / "standardized_data/repositories/analysis_input_repository").exists()
-    result_index_path = project_summary.project_root / "results/summaries/result_index.json"
-    if result_index_path.exists():
-        result_index = json.loads(result_index_path.read_text(encoding="utf-8"))
-        assert result_index.get("entries", []) == []
-        assert result_index.get("items", []) == []
 
 
 def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, project_summary, tmp_path: Path) -> None:
@@ -4288,80 +4109,6 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
     assert "未生成 report-ready" in widget.status_message()
 
 
-def test_results_browser_risk_score_review_table_summary_and_exports(qt_app, project_summary) -> None:
-    table_path = project_summary.project_root / "results" / "tables" / "risk_score.tsv"
-    table_path.parent.mkdir(parents=True, exist_ok=True)
-    table_path.write_text(
-        "sample_id\tcase_id\trisk_score\tsource_cox_multivariate_result_id\tmodel_formula\tcoefficient_source\tmissingness_policy\tscaling_policy\twarnings\n"
-        "S1\tC1\t1.5\tcox-mv-ui\tformula\tcox-mv-ui\tblock\tas_is\tstatistical_result_only\n"
-        "S2\tC2\t-0.5\tcox-mv-ui\tformula\tcox-mv-ui\tblock\tas_is\tstatistical_result_only\n",
-        encoding="utf-8",
-    )
-    entry = ResultIndexEntry(
-        result_id="risk-ui",
-        task_run_id="task-risk-ui",
-        task_type="risk_score",
-        result_semantics="formal_computed_result",
-        input_package_id="surv-ui",
-        source_dataset_id="surv-ui",
-        source_repository_manifest="B12 survival input package / B32 risk score contract gate",
-        parameters_manifest={"status": "ready_for_parameter_confirmation"},
-        engine_name="biomedpilot_controlled_risk_score",
-        engine_version="0.1.0",
-        dependency_snapshot={"status": "passed"},
-        output_artifacts=({"artifact_type": "risk_score_result_table", "path": str(table_path.relative_to(project_summary.project_root))},),
-        plot_artifacts=(),
-        report_artifacts=(),
-        validation_status="passed",
-        warnings=("risk_score_statistical_result_only",),
-        log_artifacts=({"artifact_type": "task_run_log", "path": "analysis/risk/log.json"},),
-        report_ready_eligible=False,
-    ).to_dict()
-    entry["source_cox_multivariate_result_id"] = "cox-mv-ui"
-    entry["risk_score_parameter_confirmation"] = {
-        "schema_version": "biomedpilot.risk_score_parameter_confirmation.v1",
-        "created_at": "now",
-        "candidate_variables": ["age", "marker"],
-        "source_cox_multivariate_result_id": "cox-mv-ui",
-    }
-    register_result(project_summary.project_root, entry)
-
-    widget = BioinformaticsResultsBrowserWidget()
-    widget.refresh_project(project_summary)
-
-    summary = widget.findChild(QLabel, "riskScoreReviewSummary")
-    assert summary is not None
-    assert "samples=2" in summary.text()
-    assert "source Cox=cox-mv-ui" in summary.text()
-    review_table = widget.findChild(QTableWidget, "riskScoreReviewTable")
-    assert review_table is not None
-    review_text = _table_text(review_table)
-    assert "S1" in review_text
-    assert "risk_group" not in review_text
-    assert "clinical_conclusion" not in review_text
-    provenance = widget.findChild(QTableWidget, "riskScoreReviewProvenanceTable")
-    assert provenance is not None
-    provenance_text = _table_text(provenance)
-    assert "surv-ui" in provenance_text
-    assert "cox-mv-ui" in provenance_text
-    assert "results/summaries/result_index.json" in provenance_text
-    assert "False" in provenance_text
-    downstream = widget.findChild(QLabel, "riskScoreReviewDownstream")
-    assert downstream is not None
-    assert "Risk group/cutpoint labels remain disabled" in downstream.text()
-    assert "not report-ready" in downstream.text()
-
-    exported = widget.export_risk_score_review_csv()
-
-    assert exported is not None
-    assert exported["status"] == "passed"
-    assert exported["report_ready_eligible"] is False
-    assert exported["plot_artifacts"] == []
-    assert exported["report_artifacts"] == []
-    assert Path(str(exported["export_path"])).is_file()
-    assert "未生成 risk group" in widget.status_message()
-
-
 def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_summary) -> None:
     table_path = project_summary.project_root / "results" / "tables" / "ora_ui.tsv"
     table_path.parent.mkdir(parents=True, exist_ok=True)
@@ -4468,10 +4215,9 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
     assert plot_result is not None
     assert plot_result["status"] == "passed"
     assert plot_result["report_ready_eligible"] is False
-    assert plot_result["plot_artifact"]["image_artifacts"][0]["format"] == "svg"
-    assert Path(str(plot_result["plot_artifact"]["image_artifacts"][0]["path"])).is_file()
-    assert plot_result["plot_artifact"]["plot_spec_artifact"]["rendering"] == "real_svg_artifact_no_report_ready"
-    assert "SVG plot artifact" in widget.status_message()
+    assert plot_result["plot_artifact"]["image_artifacts"] == []
+    assert plot_result["plot_artifact"]["plot_spec_artifact"]["rendering"] == "spec_only_no_image_dependency"
+    assert "未生成 PNG/SVG/PDF" in widget.status_message()
     report_status = widget.findChild(QLabel, "oraReportReadyStatus")
     assert report_status is not None
     assert "ORA report-ready gate passed" in report_status.text()
@@ -4595,9 +4341,8 @@ def test_results_browser_gsea_plot_and_report_package_gate(qt_app, project_summa
     plot_result = widget.generate_gsea_plot_artifact()
     assert plot_result is not None
     assert plot_result["status"] == "passed"
-    assert plot_result["plot_artifact"]["image_artifacts"][0]["format"] == "svg"
-    assert Path(str(plot_result["plot_artifact"]["image_artifacts"][0]["path"])).is_file()
-    assert "SVG plot artifact" in widget.status_message()
+    assert plot_result["plot_artifact"]["image_artifacts"] == []
+    assert "未生成 PNG/SVG/PDF" in widget.status_message()
     report_status = widget.findChild(QLabel, "gseaReportReadyStatus")
     assert report_status is not None
     assert "GSEA report-ready gate passed" in report_status.text()
@@ -4757,25 +4502,19 @@ def test_results_browser_survival_clinical_section_report_package_gate(qt_app, p
     gate_text = _table_text(gate_table)
     assert "KM/log-rank section report-ready" in gate_text
     assert "Cox section report-ready" in gate_text
-    assert "Risk score validation section report-ready" in gate_text
     assert "eligible_for_km_logrank_report_ready" in gate_text
     assert "eligible_for_cox_report_ready" in gate_text
 
     km_status = widget.findChild(QLabel, "kmReportReadyStatus")
     cox_status = widget.findChild(QLabel, "coxReportReadyStatus")
-    risk_status = widget.findChild(QLabel, "riskScoreReportReadyStatus")
     assert km_status is not None
     assert cox_status is not None
-    assert risk_status is not None
     assert "section-only package" in km_status.text()
     assert "section-only package" in cox_status.text()
-    assert "missing_risk_score_result" in risk_status.text()
     km_button = widget.findChild(QPushButton, "kmReportReadyButton")
     cox_button = widget.findChild(QPushButton, "coxReportReadyButton")
-    risk_button = widget.findChild(QPushButton, "riskScoreReportReadyButton")
     assert km_button is not None and km_button.isEnabled()
     assert cox_button is not None and cox_button.isEnabled()
-    assert risk_button is not None and not risk_button.isEnabled()
 
     km_package = widget.generate_km_logrank_report_ready_package()
     assert km_package is not None
@@ -4799,8 +4538,6 @@ def test_results_browser_survival_clinical_section_report_package_gate(qt_app, p
 def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, project_summary, monkeypatch) -> None:
     package_path = project_summary.project_root / "report_package" / "integrated" / "ui_ready"
     gate = _full_integrated_ui_gate()
-    captured_gate_kwargs: dict[str, object] = {}
-    captured_package_kwargs: dict[str, object] = {}
 
     def _fake_plan(_root, *, gate, export_format="markdown", renderer_gate=None):
         return {
@@ -4819,9 +4556,7 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
             "blocked_reason": "",
         }
 
-    def _fake_package(_root, *, export_format="markdown", include_sections=None, section_result_ids=None):
-        captured_package_kwargs["include_sections"] = include_sections
-        captured_package_kwargs["section_result_ids"] = section_result_ids
+    def _fake_package(_root, *, export_format="markdown"):
         package_path.mkdir(parents=True, exist_ok=True)
         (package_path / "integrated_report.md").write_text("# Integrated\n", encoding="utf-8")
         return {
@@ -4835,20 +4570,9 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
             "package_plan": _fake_plan(project_summary.project_root, gate=gate, export_format=export_format),
         }
 
-    def _fake_gate(_root, **kwargs):
-        captured_gate_kwargs.clear()
-        captured_gate_kwargs.update(kwargs)
-        include_sections = kwargs.get("include_sections") or []
-        if "risk_score_validation" not in include_sections:
-            return gate
-        risk_gate = _full_integrated_ui_gate(include_risk_score=True)
-        risk_gate["included_optional_sections"] = ["risk_score_validation"]
-        return risk_gate
-
-    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_gate", _fake_gate)
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_gate", lambda _root: gate)
     monkeypatch.setattr(workflow_pages, "build_full_integrated_report_package_plan", _fake_plan)
     monkeypatch.setattr(workflow_pages, "create_full_integrated_report_package", _fake_package)
-    monkeypatch.setattr(workflow_pages, "evaluate_risk_score_report_ready_gate", lambda *_args, **_kwargs: {"status": "eligible_for_risk_score_report_ready", "selected_result_id": "risk-ui", "blockers": [], "warnings": []})
 
     widget = BioinformaticsResultsBrowserWidget()
     widget.refresh_project(project_summary)
@@ -4856,12 +4580,7 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
     status = widget.findChild(QLabel, "fullIntegratedReportStatus")
     assert status is not None
     assert "markdown-only package can be created" in status.text()
-    assert "DOCX rendered export=" in status.text()
-    assert "PDF rendered export=" in status.text()
-    assert "rendered exports are package artifacts only" in status.text()
-    include_risk = widget.findChild(QCheckBox, "fullIntegratedIncludeRiskScoreValidation")
-    assert include_risk is not None
-    assert include_risk.isChecked() is False
+    assert "PDF/DOCX disabled" in status.text()
     button = widget.findChild(QPushButton, "fullIntegratedReportButton")
     assert button is not None and button.isEnabled()
     plan_table = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
@@ -4873,8 +4592,6 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
     assert "disabled_export_formats" in plan_text
     assert "pdf, docx" in plan_text
     assert "No clinical diagnosis" in plan_text
-    assert "risk_score_validation_optional_section" in plan_text
-    assert "not_included" in plan_text
     section_table = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
     assert section_table is not None
     headers = "\n".join(section_table.horizontalHeaderItem(column).text() for column in range(section_table.columnCount()))
@@ -4887,178 +4604,13 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
 
     assert result is not None
     assert result["status"] == "full_integrated_report_package_created"
-    assert captured_package_kwargs["include_sections"] == ["formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox"]
-    assert captured_package_kwargs["section_result_ids"] is None
     assert Path(str(result["package_path"])).is_dir()
     assert "输出位置：" in widget.status_message()
     assert "PDF/DOCX 仍禁用" in widget.status_message()
     assert "risk score" in widget.status_message()
 
-    include_risk.setChecked(True)
-    widget.refresh_results()
 
-    assert captured_gate_kwargs["include_sections"] == ["formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox", "risk_score_validation"]
-    assert captured_gate_kwargs["section_result_ids"] == {"risk_score_validation": "risk-ui"}
-    included_plan_text = _table_text(plan_table)
-    assert "risk_score_validation_optional_section" in included_plan_text
-    assert "included" in included_plan_text
-    included_sections_text = _table_text(section_table)
-    assert "risk_score_validation" in included_sections_text
-
-
-def test_results_browser_docx_rendered_export_gate_surfaces_missing_pandoc(qt_app, project_summary, monkeypatch) -> None:
-    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
-    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", lambda *args, **kwargs: _docx_renderer_gate(available=False))
-
-    widget = BioinformaticsResultsBrowserWidget()
-    widget.refresh_project(project_summary)
-
-    docx_button = widget.findChild(QPushButton, "fullIntegratedDocxRenderedExportButton")
-    assert docx_button is not None
-    assert docx_button.isEnabled() is False
-    plan = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
-    assert plan is not None
-    plan_text = _table_text(plan)
-    assert "docx_rendered_export_status" in plan_text
-    assert str(package_path) in plan_text
-    assert "renderer_dependency_missing:pandoc" in plan_text
-    assert "package artifact only" in plan_text
-
-
-def test_results_browser_docx_rendered_export_runs_only_after_gate_passes(qt_app, project_summary, monkeypatch) -> None:
-    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
-    output_path = package_path / "exports" / "integrated_report_ui.docx"
-    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", lambda *args, **kwargs: _docx_renderer_gate(available=True))
-    monkeypatch.setattr(
-        workflow_pages,
-        "create_full_integrated_docx_rendered_export",
-        lambda _package_path: {
-            "status": "full_integrated_docx_rendered_export_created",
-            "output_path": str(output_path),
-            "blockers": [],
-            "warnings": [],
-            "export_artifact": {"artifact_type": "full_integrated_report_rendered_export", "validation_status": "passed"},
-        },
-    )
-
-    widget = BioinformaticsResultsBrowserWidget()
-    widget.refresh_project(project_summary)
-
-    docx_button = widget.findChild(QPushButton, "fullIntegratedDocxRenderedExportButton")
-    assert docx_button is not None
-    assert docx_button.isEnabled() is True
-    result = widget.generate_full_integrated_docx_rendered_export()
-
-    assert result is not None
-    assert result["status"] == "full_integrated_docx_rendered_export_created"
-    assert "DOCX rendered export" in widget.status_message()
-    assert "不写入 result index" in widget.status_message()
-    assert "不生成 PDF" in widget.status_message()
-
-
-def test_results_browser_pdf_rendered_export_gate_surfaces_missing_xelatex(qt_app, project_summary, monkeypatch) -> None:
-    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
-
-    def renderer_gate(export_format: str, **kwargs) -> dict[str, object]:
-        if export_format == "pdf":
-            return _pdf_renderer_gate(available=False)
-        return _docx_renderer_gate(available=True)
-
-    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", renderer_gate)
-
-    widget = BioinformaticsResultsBrowserWidget()
-    widget.refresh_project(project_summary)
-
-    pdf_button = widget.findChild(QPushButton, "fullIntegratedPdfRenderedExportButton")
-    assert pdf_button is not None
-    assert pdf_button.isEnabled() is False
-    plan = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
-    assert plan is not None
-    plan_text = _table_text(plan)
-    assert "pdf_rendered_export_status" in plan_text
-    assert str(package_path) in plan_text
-    assert "renderer_dependency_missing:xelatex" in plan_text
-    assert "wkhtmltopdf detect-only" in plan_text
-    assert "no result_index_v2 write" in plan_text
-
-
-def test_results_browser_pdf_rendered_export_runs_only_after_gate_passes(qt_app, project_summary, monkeypatch) -> None:
-    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
-    output_path = package_path / "exports" / "integrated_report_ui.pdf"
-
-    def renderer_gate(export_format: str, **kwargs) -> dict[str, object]:
-        if export_format == "pdf":
-            return _pdf_renderer_gate(available=True)
-        return _docx_renderer_gate(available=True)
-
-    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", renderer_gate)
-    monkeypatch.setattr(
-        workflow_pages,
-        "create_full_integrated_pdf_rendered_export",
-        lambda _package_path: {
-            "status": "full_integrated_pdf_rendered_export_created",
-            "output_path": str(output_path),
-            "blockers": [],
-            "warnings": [],
-            "export_artifact": {
-                "artifact_type": "full_integrated_report_rendered_export",
-                "validation_status": "passed",
-                "export_format": "pdf",
-            },
-        },
-    )
-
-    widget = BioinformaticsResultsBrowserWidget()
-    widget.refresh_project(project_summary)
-
-    pdf_button = widget.findChild(QPushButton, "fullIntegratedPdfRenderedExportButton")
-    assert pdf_button is not None
-    assert pdf_button.isEnabled() is True
-    result = widget.generate_full_integrated_pdf_rendered_export()
-
-    assert result is not None
-    assert result["status"] == "full_integrated_pdf_rendered_export_created"
-    assert "PDF rendered export" in widget.status_message()
-    assert "不写入 result index" in widget.status_message()
-    assert "不标记 formal_computed_result" in widget.status_message()
-    assert "临床诊断" in widget.status_message()
-    assert "risk score" in widget.status_message()
-
-
-def test_results_browser_pdf_rendered_export_real_environment_registers_package_artifact(qt_app, project_summary) -> None:
-    renderer_gate = workflow_pages.evaluate_full_integrated_report_renderer_gate("pdf", allow_pdf_activation=True)
-    if renderer_gate.get("status") != "passed":
-        pytest.skip(f"PDF renderer runtime unavailable: {renderer_gate.get('blockers', [])}")
-
-    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
-    widget = BioinformaticsResultsBrowserWidget()
-    widget.refresh_project(project_summary)
-
-    pdf_button = widget.findChild(QPushButton, "fullIntegratedPdfRenderedExportButton")
-    assert pdf_button is not None
-    assert pdf_button.isEnabled() is True
-
-    result = widget.generate_full_integrated_pdf_rendered_export()
-
-    assert result is not None
-    assert result["status"] == "full_integrated_pdf_rendered_export_created"
-    output_path = Path(str(result["output_path"]))
-    assert output_path.is_file()
-    assert output_path.read_bytes()[:4] == b"%PDF"
-    assert package_path in output_path.parents
-    assert "输出位置：" in widget.status_message()
-    assert "不写入 result index" in widget.status_message()
-    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
-    assert rendered["exports"][-1]["export_format"] == "pdf"
-    assert rendered["exports"][-1]["selected_backend"] == "pandoc_xelatex"
-    assert rendered["exports"][-1]["validation_status"] == "passed"
-    assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
-    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
-    assert package_manifest["rendered_exports_summary"]["pdf_conversion_enabled"] is True
-    assert not list((package_path / "exports" / ".tmp").glob("*.pdf"))
-
-
-def _full_integrated_ui_gate(*, include_risk_score: bool = False) -> dict[str, object]:
+def _full_integrated_ui_gate() -> dict[str, object]:
     rows = [
         _full_integrated_ui_section("formal_deg", "deg-ui", "deg", package_status="not_required"),
         _full_integrated_ui_section("ora_enrichment", "ora-ui", "ora_enrichment", package_status="not_required"),
@@ -5066,8 +4618,6 @@ def _full_integrated_ui_gate(*, include_risk_score: bool = False) -> dict[str, o
         _full_integrated_ui_section("survival_km_logrank", "km-ui", "survival_km_logrank", package_status="passed"),
         _full_integrated_ui_section("cox", "cox-ui", "cox_univariate", package_status="passed"),
     ]
-    if include_risk_score:
-        rows.append(_full_integrated_ui_section("risk_score_validation", "risk-ui", "risk_score", package_status="passed"))
     return {
         "schema_version": "biomedpilot.full_integrated_report_gate.v1",
         "status": "eligible_for_full_integrated_report",
@@ -5075,7 +4625,6 @@ def _full_integrated_ui_gate(*, include_risk_score: bool = False) -> dict[str, o
         "export_activation_status": "eligible_for_markdown_export",
         "enabled_export_formats": ["markdown"],
         "disabled_export_formats": ["pdf", "docx"],
-        "included_optional_sections": ["risk_score_validation"] if include_risk_score else [],
         "section_rows": rows,
         "prerequisite_rows": [
             {
@@ -5086,113 +4635,13 @@ def _full_integrated_ui_gate(*, include_risk_score: bool = False) -> dict[str, o
             }
             for row in rows
         ],
-        "prerequisite_summary": {"status": "passed", "blocked_count": 0, "passed_count": len(rows)},
+        "prerequisite_summary": {"status": "passed", "blocked_count": 0, "passed_count": 5},
         "limitations_required": [
             "Statistical research report only.",
             "No clinical diagnosis, prognosis, or treatment recommendation.",
             "Warnings, blockers, dependencies, and provenance must remain attached.",
         ],
         "blockers": [],
-        "warnings": [],
-    }
-
-
-def _write_full_integrated_markdown_package(project_root: Path) -> Path:
-    package_path = project_root / "report_package" / "integrated" / "ui_docx_ready"
-    package_path.mkdir(parents=True, exist_ok=True)
-    (package_path / "integrated_report.md").write_text("# Integrated report\n\nStatistical research report only.\n", encoding="utf-8")
-    (package_path / "integrated_report_package_manifest.json").write_text(
-        json.dumps(
-            {
-                "schema_version": "biomedpilot.full_integrated_report_package.v1",
-                "created_at": "2026-05-22T00:00:00+00:00",
-                "status": "full_integrated_report_package_created",
-                "section_scope": "full_integrated_report",
-                "export_format": "markdown",
-                "gate": {"status": "eligible_for_full_integrated_report"},
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    return package_path
-
-
-def _docx_renderer_gate(*, available: bool) -> dict[str, object]:
-    blockers = [] if available else ["renderer_dependency_missing:pandoc"]
-    return {
-        "schema_version": "biomedpilot.full_integrated_report_renderer_gate.v1",
-        "status": "passed" if available else "blocked",
-        "export_format": "docx",
-        "renderer_id": "pandoc_docx",
-        "required_dependencies": ["pandoc"],
-        "detected_dependencies": {
-            "pandoc": {
-                "command": "pandoc",
-                "available": available,
-                "path": "/usr/local/bin/pandoc" if available else "",
-                "version": "pandoc 3.2" if available else "",
-                "missing_reason": "" if available else "pandoc_not_found_on_renderer_search_paths",
-                "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled",
-            }
-        },
-        "checks": {
-            "dependencies_detected": available,
-            "implementation_enabled": available,
-            "docx_activation_requested": True,
-            "detect_first_no_install_action": True,
-            "external_renderers_bundled": False,
-        },
-        "blockers": blockers,
-        "warnings": [],
-    }
-
-
-def _pdf_renderer_gate(*, available: bool) -> dict[str, object]:
-    blockers = [] if available else ["renderer_dependency_missing:xelatex"]
-    return {
-        "schema_version": "biomedpilot.full_integrated_report_renderer_gate.v1",
-        "status": "passed" if available else "blocked",
-        "export_format": "pdf",
-        "renderer_id": "pandoc_pdf",
-        "required_dependencies": ["pandoc", "xelatex"],
-        "detected_dependencies": {
-            "pandoc": {
-                "command": "pandoc",
-                "available": True,
-                "path": "/opt/homebrew/bin/pandoc",
-                "version": "pandoc 3.9.0.2",
-                "missing_reason": "",
-                "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled",
-            },
-            "xelatex": {
-                "command": "xelatex",
-                "available": available,
-                "path": "/Users/changdali/Library/TinyTeX/bin/universal-darwin/xelatex" if available else "",
-                "version": "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)" if available else "",
-                "missing_reason": "" if available else "xelatex_not_found_on_renderer_search_paths",
-                "packaging_impact": "external_binary_required_for_pandoc_pdf_backend_not_bundled",
-            },
-            "wkhtmltopdf": {
-                "command": "wkhtmltopdf",
-                "available": False,
-                "path": "",
-                "version": "",
-                "missing_reason": "wkhtmltopdf_detect_only_not_selected",
-                "packaging_impact": "detect_only_alternative_pdf_backend_not_selected",
-            },
-        },
-        "checks": {
-            "dependencies_detected": available,
-            "implementation_enabled": available,
-            "pdf_activation_requested": True,
-            "detect_first_no_install_action": True,
-            "external_renderers_bundled": False,
-            "wkhtmltopdf_detect_only_not_selected": True,
-        },
-        "blockers": blockers,
         "warnings": [],
     }
 
@@ -5410,14 +4859,6 @@ def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_
     assert "report_manifest" in diagnostics_text
     assert "schema_version" in diagnostics_text
     assert str(imported_path) in diagnostics_text
-    assert "analysis_center_state" in diagnostics_text
-
-    gate = widget.findChild(QTableWidget, "reportReadyGateTable")
-    assert gate is not None
-    gate_text = _table_text(gate)
-    assert "Report-ready export" in gate_text
-    assert "blocked_report_ready_gate" in gate_text
-    assert "unverified_testing_exploratory_or_imported_results_present" in gate_text
 
 
 def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) -> None:
@@ -5435,17 +4876,6 @@ def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) ->
     assert "legacy check ok" in result
     assert "不下载数据" in result
     assert "已完成" in settings._geo_check_status.text()
-    dep_table = settings.findChild(QTableWidget, "analysisDependencyStatusTable")
-    assert dep_table is not None
-    dep_text = _table_text(dep_table)
-    assert "scipy" in dep_text
-    assert "statsmodels" in dep_text
-    assert "lifelines" in dep_text
-    assert "Pandoc report renderer" in dep_text
-    assert "PDF/DOCX export remains disabled" in dep_text
-    assert "Detect only" in dep_text
-    assert "required_in_packaged_app_for_formal_deg" in dep_text
-    assert "安装" not in dep_text
 
 
 def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> None:

@@ -23,6 +23,10 @@ dev = [
 
 [project.scripts]
 biomedpilot = "app.main:main"
+labtools = "labtools.__main__:main"
+
+[tool.setuptools]
+packages = { find = { include = ["app*", "labtools*"] } }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

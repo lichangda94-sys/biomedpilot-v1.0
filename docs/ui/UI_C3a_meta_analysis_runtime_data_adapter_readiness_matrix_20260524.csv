@@ -1,0 +1,15 @@
+area,current_status,current_evidence,readiness_decision,next_required_contract,must_remain_disabled
+project_manifest,minimal_ready,app/meta_analysis/project_workspace.py,ready_for_contract_hardening,MetaProjectDataStore,executor;export
+question_type,draft_ui_only,C2b gated page tests,ready_for_draft_store,question/PICO/PECO draft schema,final protocol confirmation
+search_strategy,english_draft_only,C2c search tests,ready_for_draft_store,search draft schema and copy/export boundary,database execution;Chinese DB retrieval
+reference_import,adapter_needed,C2c import cards,planning_only,file picker parser adapter contract,real import;auto screening
+deduplication,reviewer_preview_only,C2c dedup panel,planning_only,dedup review decision schema,auto merge;auto delete
+screening,draft_decisions_only,C2d screening tests,ready_for_draft_store,screening draft decision store,AI final decision;final included studies
+fulltext_extraction,draft_fields_only,C2d extraction tests,ready_for_draft_store,extraction draft row schema,Chinese PDF extraction;automatic extraction
+risk_of_bias,preview_draft_only,C2d RoB tests,ready_for_draft_store,RoB reviewer draft schema,automatic final judgement;formal quality score
+pairwise_input,draft_preview_only,C2e pairwise preview,blocked_until_schema,pairwise input schema and compatibility gate,pooled effect;forest plot
+result_registry,not_ready,C2e result gate preview,blocked,formal result registry contract,formal pooled result
+report_ready_gate,blocked,C2e blocker checklist,blocked,report-ready criteria contract,Generate Report;report-ready package
+export_adapter,disabled,C2e export gate,blocked,file picker/export writer contract,DOCX;HTML;PDF;CSV;XLSX;ZIP
+network_meta,planned_disabled,IA and tests,blocked_future,none for current track,Network Meta execution
+ai_suggestion,advisory_only,C2d screening tests,guarded,AI advisory boundary contract,AI final decision

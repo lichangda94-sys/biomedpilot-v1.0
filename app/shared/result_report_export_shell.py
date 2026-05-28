@@ -1,0 +1,299 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import StrEnum
+
+from app.app_identity import RESULT_REPORT_EXPORT_ICON_PATHS, load_result_report_export_pixmap
+from app.shared.semantic_keys import ExportKey, ReportKey, ReportStatusKey, ResultSemanticKey
+
+
+class ResultPreviewState(StrEnum):
+    EMPTY = "empty"
+    IMPORTED_EXTERNAL = "imported_external"
+    TESTING_SUMMARY = "testing_summary"
+    REPORT_READY_FUTURE = "report_ready_future"
+
+
+class ExportGateState(StrEnum):
+    DISABLED_EMPTY_RESULT = "disabled_empty_result"
+    ENABLED_TESTING_EXPORT = "enabled_testing_export"
+    BLOCKED_FORMAL_REPORT_READY = "blocked_formal_report_ready"
+
+
+@dataclass(frozen=True)
+class ResultReportExportState:
+    result_state: ResultPreviewState
+    result_semantic_key: str
+    report_status_key: str
+    export_gate: ExportGateState
+    export_enabled: bool
+    gate_reason: str
+    disclaimer: str
+    generated_artifact_paths: tuple[str, ...] = ()
+
+    @property
+    def report_ready_package_allowed(self) -> bool:
+        return False
+
+
+@dataclass(frozen=True)
+class ExportAction:
+    format_key: str
+    label: str
+    enabled: bool
+    gate_reason: str
+
+
+DEFAULT_DISCLAIMER = (
+    "当前 Result / Report / Export 壳层仅用于测试摘要、结果预览和报告草稿边界展示；"
+    "不构成正式统计结果、正式图表、临床建议或 report-ready 交付包。"
+)
+
+
+def empty_result_preview_state(*, module: str = "shared") -> ResultReportExportState:
+    return ResultReportExportState(
+        result_state=ResultPreviewState.EMPTY,
+        result_semantic_key=ResultSemanticKey.TESTING_SUMMARY_ONLY.value,
+        report_status_key=ReportStatusKey.DRAFT.value,
+        export_gate=ExportGateState.DISABLED_EMPTY_RESULT,
+        export_enabled=False,
+        gate_reason=f"{module}: 尚无可预览结果；请先完成受控 preflight 或导入外部结果。",
+        disclaimer=DEFAULT_DISCLAIMER,
+    )
+
+
+def testing_summary_state(*, module: str = "shared") -> ResultReportExportState:
+    return ResultReportExportState(
+        result_state=ResultPreviewState.TESTING_SUMMARY,
+        result_semantic_key=ResultSemanticKey.TESTING_SUMMARY_ONLY.value,
+        report_status_key=ReportStatusKey.TESTING_SUMMARY.value,
+        export_gate=ExportGateState.ENABLED_TESTING_EXPORT,
+        export_enabled=True,
+        gate_reason=f"{module}: 仅允许导出 testing summary / draft，不允许 report-ready 包。",
+        disclaimer=DEFAULT_DISCLAIMER,
+    )
+
+
+def report_ready_future_state(*, module: str = "shared") -> ResultReportExportState:
+    return ResultReportExportState(
+        result_state=ResultPreviewState.REPORT_READY_FUTURE,
+        result_semantic_key=ResultSemanticKey.FORMAL_COMPUTED_RESULT.value,
+        report_status_key=ReportStatusKey.REPORT_READY_FUTURE.value,
+        export_gate=ExportGateState.BLOCKED_FORMAL_REPORT_READY,
+        export_enabled=False,
+        gate_reason=f"{module}: report-ready 包是未来能力，当前壳层禁止生成。",
+        disclaimer=DEFAULT_DISCLAIMER,
+    )
+
+
+def export_actions(
+    state: ResultReportExportState,
+    formats: tuple[ExportKey, ...] = (ExportKey.MARKDOWN, ExportKey.HTML, ExportKey.DOCX, ExportKey.CSV, ExportKey.XLSX),
+) -> tuple[ExportAction, ...]:
+    return tuple(
+        ExportAction(
+            format_key=format_key.value,
+            label=format_key.value.replace("export.format.", "").upper(),
+            enabled=state.export_enabled,
+            gate_reason=state.gate_reason,
+        )
+        for format_key in formats
+    )
+
+
+def make_result_preview_empty_state(state: ResultReportExportState | None = None):
+    from app.shared.ui_components.primitives import make_empty_state
+
+    shell_state = state or empty_result_preview_state()
+    empty = make_empty_state(
+        "No result preview / 暂无结果预览",
+        f"{shell_state.gate_reason} {shell_state.disclaimer}",
+        empty_state_key="empty_result",
+        semantic_key=shell_state.result_semantic_key,
+        illustration_size=84,
+    )
+    empty.setObjectName("resultPreviewEmptyState")
+    empty.setProperty("resultSemanticKey", shell_state.result_semantic_key)
+    empty.setProperty("reportStatusKey", shell_state.report_status_key)
+    empty.setProperty("semanticKey", shell_state.result_semantic_key)
+    empty.setProperty("exportGate", shell_state.export_gate.value)
+    empty.setMinimumHeight(128)
+    return empty
+
+
+def make_report_draft_boundary(state: ResultReportExportState | None = None):
+    from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout
+
+    from app.shared.ui_components.primitives import make_card, make_status_chip
+
+    shell_state = state or empty_result_preview_state()
+    card = make_card(object_name="reportDraftBoundaryCard")
+    card.setProperty("reportStatusKey", shell_state.report_status_key)
+    card.setProperty("reportKey", ReportKey.STATUS.value)
+    card.setProperty("semanticKey", shell_state.report_status_key)
+    card.setMinimumHeight(112)
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(16, 14, 16, 14)
+    layout.setSpacing(8)
+    layout.addWidget(make_status_chip(status_key=_visual_status_for_report(shell_state.report_status_key)))
+
+    header = QHBoxLayout()
+    header.setSpacing(8)
+    header.addWidget(_make_result_report_export_marker("report_template", "Report draft boundary / 报告草稿边界", shell_state))
+    header.addStretch(1)
+    layout.addLayout(header)
+
+    title = QLabel("Report draft boundary / 报告草稿边界")
+    title.setObjectName("reportDraftBoundaryTitle")
+    body = QLabel(shell_state.disclaimer)
+    body.setObjectName("reportDraftBoundaryDisclaimer")
+    body.setWordWrap(True)
+    layout.addWidget(title)
+    layout.addWidget(body)
+    return card
+
+
+def make_export_buttons(state: ResultReportExportState, formats: tuple[ExportKey, ...] = (ExportKey.MARKDOWN, ExportKey.HTML, ExportKey.DOCX)):
+    from app.shared.ui_components.primitives import make_button
+
+    buttons = []
+    for action in export_actions(state, formats):
+        button = make_button(f"导出 {action.label}", role="secondary")
+        button.setObjectName("exportGatedButton")
+        button.setProperty("formatKey", action.format_key)
+        button.setProperty("exportFormatKey", action.format_key)
+        button.setProperty("semanticKey", action.format_key)
+        button.setProperty("exportGate", state.export_gate.value)
+        button.setProperty("reportStatusKey", state.report_status_key)
+        button.setProperty("resultSemanticKey", state.result_semantic_key)
+        button.setProperty("formalActionEnabled", False)
+        button.setProperty("reportReadyPackageAllowed", state.report_ready_package_allowed)
+        button.setMinimumHeight(36)
+        button.setMinimumWidth(104)
+        button.setToolTip(action.gate_reason)
+        button.setEnabled(action.enabled)
+        buttons.append(button)
+    return tuple(buttons)
+
+
+def make_result_report_export_adoption_panel(
+    *,
+    module: str,
+    state: ResultReportExportState | None = None,
+    formats: tuple[ExportKey, ...] = (ExportKey.MARKDOWN, ExportKey.HTML, ExportKey.DOCX),
+):
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout
+
+    shell_state = state or empty_result_preview_state(module=module)
+    frame = QFrame()
+    frame.setObjectName("resultReportExportAdoptionPanel")
+    frame.setProperty("adoptionModule", module)
+    frame.setProperty("resultSemanticKey", shell_state.result_semantic_key)
+    frame.setProperty("reportStatusKey", shell_state.report_status_key)
+    frame.setProperty("exportGate", shell_state.export_gate.value)
+    frame.setProperty("reportReadyPackageAllowed", shell_state.report_ready_package_allowed)
+    frame.setMinimumHeight(260)
+    frame.setStyleSheet("QFrame#resultReportExportAdoptionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+
+    layout = QVBoxLayout(frame)
+    layout.setContentsMargins(14, 12, 14, 12)
+    layout.setSpacing(8)
+
+    title = QLabel("Result / Report / Export shell adoption")
+    title.setObjectName("resultReportExportAdoptionTitle")
+    title.setStyleSheet("font-weight: 700;")
+    detail = QLabel("Shared shell semantics are adopted here; exports stay gated by result and report status.")
+    detail.setObjectName("resultReportExportAdoptionDetail")
+    detail.setWordWrap(True)
+    layout.addWidget(title)
+    layout.addWidget(detail)
+    layout.addLayout(_make_result_report_export_marker_strip(shell_state))
+
+    content_row = QHBoxLayout()
+    content_row.setSpacing(12)
+    preview = make_result_preview_empty_state(shell_state)
+    preview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    boundary = make_report_draft_boundary(shell_state)
+    boundary.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    content_row.addWidget(preview, 3)
+    content_row.addWidget(boundary, 2)
+    layout.addLayout(content_row)
+
+    button_row = QHBoxLayout()
+    button_row.setSpacing(8)
+    for button in make_export_buttons(shell_state, formats):
+        button_row.addWidget(button)
+    button_row.addStretch(1)
+    layout.addLayout(button_row)
+    return frame
+
+
+def _make_result_report_export_marker_strip(shell_state: ResultReportExportState):
+    from PySide6.QtWidgets import QHBoxLayout
+
+    row = QHBoxLayout()
+    row.setSpacing(8)
+    for resource_id, label in (
+        ("result_overview", "Overview / 概览"),
+        ("result_table", "Table marker / 表格标记"),
+        ("result_summary", "Summary / 摘要"),
+        ("result_clear", "Clear gated / 清理受控"),
+    ):
+        row.addWidget(_make_result_report_export_marker(resource_id, label, shell_state))
+    row.addStretch(1)
+    return row
+
+
+def _make_result_report_export_marker(resource_id: str, label: str, shell_state: ResultReportExportState):
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel
+
+    marker = QFrame()
+    marker.setObjectName("resultReportExportIconMarker")
+    marker.setProperty("uiPrimitive", "result_report_export_marker")
+    marker.setProperty("resultReportExportIconKey", resource_id)
+    marker.setProperty("resultSemanticKey", shell_state.result_semantic_key)
+    marker.setProperty("reportStatusKey", shell_state.report_status_key)
+    marker.setProperty("exportGate", shell_state.export_gate.value)
+    marker.setProperty("formalActionEnabled", False)
+    marker.setProperty("reportReadyPackageAllowed", shell_state.report_ready_package_allowed)
+    marker.setProperty("iconSource", str(RESULT_REPORT_EXPORT_ICON_PATHS.get(resource_id, "")))
+    marker.setToolTip(f"{label}: {shell_state.gate_reason}")
+    marker.setStyleSheet(
+        "QFrame#resultReportExportIconMarker { "
+        "border: 1px solid #D8DEE9; border-radius: 6px; background: #F8FAFC; "
+        "}"
+    )
+
+    layout = QHBoxLayout(marker)
+    layout.setContentsMargins(8, 5, 8, 5)
+    layout.setSpacing(6)
+    icon = QLabel()
+    icon.setObjectName("resultReportExportMarkerIcon")
+    icon.setProperty("resultReportExportIconKey", resource_id)
+    pixmap = load_result_report_export_pixmap(resource_id, 22)
+    icon.setProperty("iconFallback", pixmap.isNull())
+    icon.setFixedSize(22, 22)
+    icon.setAlignment(Qt.AlignCenter)
+    if not pixmap.isNull():
+        icon.setPixmap(pixmap)
+    layout.addWidget(icon)
+
+    text = QLabel(label)
+    text.setObjectName("resultReportExportMarkerLabel")
+    text.setProperty("resultReportExportIconKey", resource_id)
+    text.setProperty("resultSemanticKey", shell_state.result_semantic_key)
+    text.setProperty("reportStatusKey", shell_state.report_status_key)
+    text.setProperty("exportGate", shell_state.export_gate.value)
+    text.setStyleSheet("color: #52616F; font-size: 12px; font-weight: 650;")
+    text.setAlignment(Qt.AlignVCenter)
+    layout.addWidget(text)
+    return marker
+
+
+def _visual_status_for_report(report_status_key: str) -> str:
+    if report_status_key == ReportStatusKey.DRAFT.value:
+        return "draft"
+    if report_status_key == ReportStatusKey.TESTING_SUMMARY.value:
+        return "testing"
+    return "planned"

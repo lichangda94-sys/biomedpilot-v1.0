@@ -1,0 +1,16 @@
+gate_id,area,required_before_b10,status,owner,decision_needed,implementation_allowed_now,next_stage,notes
+d6_screenshot_acceptance,visual_readiness,true,pending_human_review,product_owner,accept_all_or_request_targeted_polish,false,UI-B10a,D6 captured 16 source runtime screenshots but acceptance is not explicit
+dense_labtools_acceptance,visual_readiness,true,pending_human_review,product_owner,accept_dense_labtools_or_request_polish,false,UI-B10a,LabTools Reagent and WB remain dense operational pages
+bio_meta_dense_acceptance,visual_readiness,true,pending_human_review,product_owner,accept_table_and_extraction_density,false,UI-B10a,Bio Analysis Tasks and Meta Extraction remain dense draft gated surfaces
+final_app_icon_asset,icon,true,pending_human_approval,product_owner,approve_existing_icns_or_supply_asset,false,UI-B10a,Existing icns asset is present but final package use is not approved
+finder_icon_policy,icon,true,pending_human_approval,product_owner,confirm_finder_icon_binding_policy,false,UI-B10a,Finder icon completion requires plist and resource binding not source Qt icon loading alone
+cfbundle_icon_binding,packaging,true,missing,engineering,add_CFBundleIconFile_after_approval,false,UI-B10b,scripts_package_app_writes_plist_without_CFBundleIconFile
+icns_resource_copy,packaging,true,missing,engineering,copy_approved_icns_after_approval,false,UI-B10b,Package does not yet copy approved icns into Contents_Resources
+package_icon_tests,testing,true,missing,engineering,add_focused_icon_binding_tests_after_approval,false,UI-B10b,Existing package tests do not assert icon resource or plist binding
+package_output_target,packaging,true,pending_human_approval,product_owner,choose_temp_dist_desktop_or_release_dir,false,UI-B10a,Do not write dist or desktop app until target is confirmed
+desktop_overwrite_policy,packaging,false,pending_human_approval,product_owner,confirm_whether_desktop_bundle_may_be_replaced,false,UI-B10e,Desktop overwrite must remain separate from source implementation
+codesign_policy,signing,false,pending_human_approval,product_owner,choose_none_adhoc_or_developer_identity,false,UI-B10a,Signing expectation is not confirmed
+launchservices_validation,validation,true,pending_human_approval,product_owner,confirm_open_W_n_and_psn_gate,false,UI-B10d,LaunchServices validation requires a generated app and explicit approval
+package_smoke,validation,true,not_run,engineering,run_after_non_destructive_package_build,false,UI-B10c,Package smoke was intentionally not run during this planning task
+source_runtime_smoke,validation,true,previously_passed,engineering,rerun_when_B10_changes_runtime_or_packaging,false,UI-B10b,D6 already records source smoke passed but B10 should rerun relevant checks
+executor_report_export_boundary,safety,true,ready,engineering,preserve_disabled_and_gated_semantics,false,UI-B10b,B10 must not enable executors reports exports engines downloads uploads or cloud services

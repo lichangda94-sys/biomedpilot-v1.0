@@ -80,7 +80,24 @@ from .capability_map import build_analysis_capability_map
 from .labels import compact_list, label_package_type, label_semantics, label_status, repair_guidance
 
 
-def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
+def build_analysis_center_state(project_root: str | Path | None) -> dict[str, Any]:
+    if project_root is None:
+        return {
+            "schema_version": "biomedpilot.analysis_center_ui_state.v1",
+            "project_root": "",
+            "project_summary": {},
+            "package_rows": [],
+            "action_rows": [],
+            "dependency_rows": [],
+            "result_rows": [],
+            "gate_rows": [],
+            "result_gate": {"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []},
+            "report_gate": {"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []},
+            "export_gate": {"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []},
+            "top_blockers": ["missing_project_root"],
+            "top_warnings": [],
+            "developer_diagnostics": {},
+        }
     root = Path(project_root).expanduser().resolve()
     resolver = resolve_analysis_inputs(root).to_dict()
     center = _load_task_center_snapshot(root)
@@ -325,6 +342,13 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "legacy_asset_pipeline": legacy_pipeline,
         "analysis_capability_map": capability_map,
         "result_rows": result_rows,
+        "result_gate": {
+            "status": "available" if result_rows else "blocked_missing_result",
+            "blockers": [] if result_rows else ["missing_result_index_entry"],
+            "warnings": [],
+        },
+        "report_gate": report_gate,
+        "export_gate": full_integrated_report_gate,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
         "top_blockers": blockers[:8],

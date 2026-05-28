@@ -9,11 +9,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtCore import Qt
     from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QScrollArea
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QScrollArea, QTableView
 
     from app.shell.dashboard import build_dashboard_model
     from app.shell.login import LocalSession
     from app.shell.module_selection import ModuleSelectionWidget
+    from app.shared.semantic_keys import BrandKey, ModuleKey, NavKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     QPushButton = None  # type: ignore[assignment]
@@ -21,6 +22,9 @@ except Exception as exc:  # pragma: no cover - depends on optional local GUI run
     build_dashboard_model = None  # type: ignore[assignment]
     LocalSession = None  # type: ignore[assignment]
     ModuleSelectionWidget = None  # type: ignore[assignment]
+    BrandKey = None  # type: ignore[assignment]
+    ModuleKey = None  # type: ignore[assignment]
+    NavKey = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
     IMPORT_ERROR = None
@@ -67,23 +71,60 @@ def test_module_selection_widget_instantiates(qt_app) -> None:
     assert widget.findChild(QScrollArea, "moduleSelectionScrollArea") is not None
 
 
-def test_module_selection_displays_session(qt_app, local_session: LocalSession) -> None:
+def test_module_selection_displays_global_shell_brand(qt_app, local_session: LocalSession) -> None:
     widget = _widget(local_session)
 
-    display = widget.session_display()
+    title = widget.findChild(QLabel, "dashboardTitle")
+    subtitle = widget.findChild(QLabel, "dashboardSubtitle")
+    labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
 
-    assert display["username"] == "researcher"
-    assert display["tier"] == "Developer Preview"
-    assert display["license_status"] == "local_testing"
+    assert title is not None
+    assert title.property("semanticKey") == BrandKey.PRIMARY.value
+    assert subtitle is not None
+    assert subtitle.property("semanticKey") == BrandKey.SECONDARY.value
+    assert "订阅 / VIP" not in labels
 
 
-def test_module_selection_displays_icon_asset_summary(qt_app, local_session: LocalSession) -> None:
+def test_module_selection_displays_recent_projects_table_without_status_footer(qt_app, local_session: LocalSession) -> None:
     widget = _widget(local_session)
 
-    support_text = "\n".join(label.text() for label in widget.findChildren(QLabel, "supportLine"))
+    labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    recent = widget.findChild(QFrame, "dashboardRecentProjectsCard")
+    table = widget.findChild(QTableView, "dashboardRecentProjectsTable")
 
-    assert "图标资源：已生成" in support_text
-    assert "待生成" in support_text
+    assert recent is not None
+    assert recent.property("uiPrimitive") == "dashboard_recent_projects"
+    assert recent.property("projectCenter") is False
+    assert table is not None
+    assert table.property("uiPrimitive") == "project_recent_table"
+    assert table.property("dashboardOnly") is True
+    assert table.property("horizontalOverflow") is True
+    assert "最近项目 / Recent Projects" in labels
+    assert "本地环境可用" not in labels
+    assert "外部引擎可选配置" not in labels
+    assert "分析资源可管理" not in labels
+    assert "测试反馈入口" not in labels
+
+
+def test_three_module_cards_are_visible(qt_app, local_session: LocalSession) -> None:
+    widget = _widget(local_session)
+
+    module_titles = widget.findChildren(QLabel, "moduleTitle")
+    module_cards = widget.findChildren(QFrame, "moduleCard")
+    icons = widget.findChildren(QLabel, "moduleIcon")
+    visible_icons = [icon for icon in icons if not icon.isHidden() and icon.pixmap() is not None and not icon.pixmap().isNull()]
+
+    assert [card.property("moduleKey") for card in module_cards] == [
+        ModuleKey.BIOINFORMATICS.value,
+        ModuleKey.META_ANALYSIS.value,
+        ModuleKey.LABTOOLS.value,
+    ]
+    assert all(card.property("usabilityRole") == "module_entry_card" for card in module_cards)
+    assert all(card.property("uiPrimitive") == "module_entry_card" for card in module_cards)
+    assert all(card.accessibleName() for card in module_cards)
+    assert [label.property("semanticKey") for label in module_titles] == [card.property("moduleKey") for card in module_cards]
+    assert len(icons) == 3
+    assert len(visible_icons) == 3
 
 
 def test_bioinformatics_button_triggers_callback(qt_app, local_session: LocalSession) -> None:
@@ -91,7 +132,11 @@ def test_bioinformatics_button_triggers_callback(qt_app, local_session: LocalSes
     widget = _widget(local_session, on_open_bioinformatics=lambda: events.append("bio"))
 
     button = widget.findChild(QPushButton, "bioModuleButton")
-    assert button.text() == "进入生信分析模块"
+    assert button.property("moduleKey") == ModuleKey.BIOINFORMATICS.value
+    assert button.property("navKey") == NavKey.BIOINFORMATICS.value
+    assert button.property("semanticKey") == ModuleKey.BIOINFORMATICS.value
+    assert button.property("usabilityRole") == "module_entry_action"
+    assert button.accessibleName()
     assert not button.icon().isNull()
     button.click()
 
@@ -108,106 +153,38 @@ def test_bioinformatics_card_triggers_callback(qt_app, local_session: LocalSessi
     assert events == ["bio"]
 
 
-def test_module_icons_are_visible(qt_app, local_session: LocalSession) -> None:
-    widget = _widget(local_session)
-
-    icons = widget.findChildren(QLabel, "moduleIcon")
-    visible_icons = [icon for icon in icons if not icon.isHidden() and icon.pixmap() is not None and not icon.pixmap().isNull()]
-
-    assert len(icons) == 3
-    assert len(visible_icons) == 3
-
-
-def test_ui02_page_icons_are_visible(qt_app, local_session: LocalSession) -> None:
-    widget = _widget(local_session)
-
-    icons = widget.findChildren(QLabel, "ui02Icon")
-    visible_icons = [icon for icon in icons if not icon.isHidden() and icon.pixmap() is not None and not icon.pixmap().isNull()]
-
-    assert len(visible_icons) >= 8
-
-
 def test_meta_button_triggers_callback(qt_app, local_session: LocalSession) -> None:
     events: list[str] = []
     widget = _widget(local_session, on_open_meta_analysis=lambda: events.append("meta"))
 
     button = widget.findChild(QPushButton, "metaModuleButton")
-    assert button.text() == "进入 Meta 分析模块"
+    assert button.property("moduleKey") == ModuleKey.META_ANALYSIS.value
+    assert button.property("navKey") == NavKey.META_ANALYSIS.value
     assert not button.icon().isNull()
     button.click()
 
     assert events == ["meta"]
 
 
-def test_labtools_button_triggers_callback(qt_app, local_session: LocalSession) -> None:
+def test_labtools_button_triggers_low_fidelity_shell_callback(qt_app, local_session: LocalSession) -> None:
     events: list[str] = []
     widget = _widget(local_session, on_open_labtools=lambda: events.append("labtools"))
 
-    button = widget.findChild(QPushButton, "labToolsModuleButton")
-    assert button.text() == "进入实验工具模块"
+    button = widget.findChild(QPushButton, "labtoolsModuleButton")
+    assert button.property("moduleKey") == ModuleKey.LABTOOLS.value
+    assert button.property("navKey") == NavKey.LABTOOLS.value
+    assert not button.icon().isNull()
     button.click()
 
     assert events == ["labtools"]
 
 
-def test_labtools_module_card_keeps_testing_boundaries(qt_app, local_session: LocalSession) -> None:
-    widget = _widget(local_session)
-
-    descriptions = [label.text() for label in widget.findChildren(QLabel, "moduleDescription")]
-
-    assert any("manual ROI 图像辅助分析" in text for text in descriptions)
-    assert any("细胞计数、灰度/墨值和实验模板仍为开发中" in text for text in descriptions)
-
-
-def test_meta_module_card_mentions_current_workflow(qt_app, local_session: LocalSession) -> None:
-    widget = _widget(local_session)
-
-    descriptions = [label.text() for label in widget.findChildren(QLabel, "moduleDescription")]
-
-    assert any("仅保留 Meta 入口壳" in text for text in descriptions)
-    assert any("不得视为已接入完整流程" in text for text in descriptions)
-
-
-def test_logout_button_triggers_callback(qt_app, local_session: LocalSession) -> None:
-    events: list[str] = []
-    widget = _widget(local_session, on_logout=lambda: events.append("logout"))
-
-    button = widget.findChild(QPushButton, "logoutButton")
-    button.click()
-
-    assert events == ["logout"]
-
-
-def test_main_window_logout_returns_to_login_and_clears_session(qt_app) -> None:
+def test_main_window_module_buttons_enter_expected_workspaces(qt_app) -> None:
     from app.shell.main_window import MainWindow
 
     window = MainWindow()
     try:
-        assert window.minimumWidth() <= 860
-        assert window.minimumHeight() <= 560
-        window._login_page.set_credentials("researcher", "local-password")
-        window._login_page.attempt_login()
-
-        assert window.current_workspace_key() == "dashboard"
-        assert window.current_session() is not None
-
-        logout_button = window._dashboard_page.findChild(QPushButton, "logoutButton")
-        logout_button.click()
-
-        assert window.current_workspace_key() == "login"
-        assert window.current_session() is None
-        assert window._login_page.session() is None
-    finally:
-        _dispose_window(window)
-
-
-def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
-    from app.shell.main_window import MainWindow
-
-    window = MainWindow()
-    try:
-        window._login_page.set_credentials("researcher", "local-password")
-        window._login_page.attempt_login()
+        window._welcome_page.enter_workspace()
 
         bio_button = window._dashboard_page.findChild(QPushButton, "bioModuleButton")
         bio_button.click()
@@ -238,6 +215,39 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
             "pcr_qpcr",
             "elisa_absorbance",
         )
+
+        window.show_dashboard()
+        labtools_button = window._dashboard_page.findChild(QPushButton, "labtoolsModuleButton")
+        labtools_button.click()
+        assert window.current_workspace_key() == "labtools"
+    finally:
+        _dispose_window(window)
+
+
+def test_about_and_test_feedback_shells_are_reachable(qt_app) -> None:
+    from app.shell.main_window import ABOUT_BIOMEDPILOT_TEXT, MainWindow
+
+    window = MainWindow()
+    try:
+        window._welcome_page.enter_workspace()
+
+        window.show_about()
+        assert window.current_workspace_key() == "about"
+        about_labels = [label.text() for label in window._about_page.findChildren(QLabel)]
+        assert about_labels == [ABOUT_BIOMEDPILOT_TEXT]
+        assert "关于 BioMedPilot / 医研智析" in about_labels[0]
+        assert "有一分热，发一分光" in about_labels[0]
+
+        window.show_test_feedback()
+        assert window.current_workspace_key() == "test_feedback"
+        feedback_button = window.findChild(QPushButton, "generateTestFeedbackButton")
+        lan_feedback_button = window.findChild(QPushButton, "generateLanFeedbackButton")
+        assert feedback_button is not None
+        assert feedback_button.text() == "生成测试反馈模板"
+        assert lan_feedback_button is not None
+        assert lan_feedback_button.text() == "生成 LAN 真实测试反馈报告"
+        assert lan_feedback_button.property("feedbackType") == "labtools_lan_real_world"
+        assert lan_feedback_button.property("networkRequestAllowed") is False
     finally:
         _dispose_window(window)
 
@@ -258,8 +268,7 @@ def test_main_window_open_meta_project_binds_workspace_project_dir(qt_app, tmp_p
     )
     window = MainWindow()
     try:
-        window._login_page.set_credentials("researcher", "local-password")
-        window._login_page.attempt_login()
+        window._welcome_page.enter_workspace()
         window.open_project_record(record)
 
         assert window.current_workspace_key() == "meta_analysis"

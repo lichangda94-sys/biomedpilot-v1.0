@@ -1,0 +1,4 @@
+sample_id,protein_concentration_ug_per_ul,sample_volume_ul,buffer_4x_ul,water_ul,total_volume_ul,status,warning
+S1,2.0,10.0,5.0,5.0,20.0,ok,
+S2,1.5,13.3,5.0,1.7,20.0,ok,
+S3,0.8,25.0,5.0,-10.0,20.0,warning,sample volume exceeds final volume; water negative

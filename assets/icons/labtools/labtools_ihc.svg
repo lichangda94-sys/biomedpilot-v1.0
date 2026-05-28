@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">labtools_ihc</title>
+  <desc id="desc">Production candidate vector icon for labtools; transparent background.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="25" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" opacity="0.65"/>
+    <path d="M28 16 L39 27 M35 12 L44 21 M25 19 L34 28" stroke="#059669" stroke-width="3"/>
+    <path d="M29 30 C25 36 27 43 35 45" stroke="#059669" stroke-width="3"/>
+    <path d="M22 51 H48 M35 45 L42 51 M25 51 L31 43" stroke="#059669" stroke-width="3"/>
+  </g>
+</svg>

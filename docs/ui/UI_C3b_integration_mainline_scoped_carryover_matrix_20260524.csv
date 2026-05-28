@@ -1,0 +1,14 @@
+source,branch_or_commit,current_state,carryover_decision,carryover_scope,blocker,next_action
+UIShell,ea29b1a,committed,safe,docs_only,none,cherry-pick after target clean
+UIShell,aefe9fd,committed,safe,docs_only,none,cherry-pick after target clean
+UIShell,402ebba,committed,safe_with_scope,runtime_test_docs,exclude unstaged local_data changes,cherry-pick only this commit
+UIShell,a0eb47d,committed,safe,docs_only,none,cherry-pick after target clean
+UIShell,a8ee3d7,committed,safe,docs_only,none,cherry-pick after target clean
+UIShell,working_tree,dirty,blocked,local_data_read_integration,uncommitted mixed runtime/test files,review or commit separately
+LabTools,dev/labtools dirty,dirty,blocked,local_data_adapter,uncommitted datasource adapter changes,finish or park before carry-over
+Bioinformatics,dev/bioinformatics,untracked_present,blocked_for_wholesale,bioinformatics_branch,untracked docs/project_storage,clean branch before scoped carry-over
+Meta,dev/meta-analysis clean,clean,audit_only,meta_runtime_source,no immediate carry-over needed,keep separate until adapter planning
+Integration,codex/integration-labtools-ui-c2-carryover clean,clean,target_candidate,integration_target,needs explicit cherry-pick plan,use docs-only first
+MainLine,codex/mainline-survival-clinical-carryover clean,clean_high_risk,formal_executor_source,formal DEG/survival exceeds gated UI scope,do not wholesale merge
+ReleaseBuild,codex/releasebuild-formal-deg-carryover,not_audited_for_ui_b10,blocked,packaging_release,UI-B10 not started,do not use for ordinary UI carry-over
+UI-B10,deferred,not_started,requires_human_decision,desktop_identity,icon/packaging/signing decisions pending,start separate stage only after approval

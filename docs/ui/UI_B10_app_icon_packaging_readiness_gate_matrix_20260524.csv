@@ -1,0 +1,13 @@
+gate_item,required_for_ui_b10,current_status,decision,blocker,next_action
+final_app_icon_asset,true,asset_exists_not_approved,blocked,final icon approval not explicit,user approve icon asset
+iconset,true,exists,ready_pending_approval,needs final asset confirmation,user approve or regenerate
+icns,true,exists,ready_pending_binding,not bound in package Info.plist,copy into package resources after approval
+Info_plist_icon_binding,true,missing,blocked,CFBundleIconFile not present in packaging script,add binding in UI-B10
+package_resource_copy,true,missing,blocked,package_app.py does not copy explicit icns to Contents/Resources,add copy step in UI-B10
+package_tests,true,partial,blocked,tests cover package metadata but not app icon binding,add focused package icon tests
+source_app_identity,false,ready,passed_by_existing_tests,none,keep source Qt icon loading
+LaunchServices_validation,true,not_run,blocked,requires package and user approval,run only in UI-B10 after package build
+codesign_expectation,false,unknown,needs_human_decision,signing policy not confirmed,user choose no/ad-hoc/developer signing
+dist_update,false,not_allowed_yet,needs_human_decision,dist modifications not authorized,user approve if needed
+desktop_app_overwrite,false,not_allowed_yet,needs_human_decision,desktop replacement not authorized,user approve if needed
+dirty_worktree,true,dirty,blocked,unrelated LabTools local_data changes present,finish or park before UI-B10
