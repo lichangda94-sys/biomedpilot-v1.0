@@ -7,7 +7,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QLineEdit, QPushButton, QTabBar, QToolButton
 
     from app.shell.login import BioMedPilotLoginWidget, LocalSession
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
@@ -109,9 +109,17 @@ def test_settings_page_displays_icon_asset_details(qt_app) -> None:
     window._welcome_page.enter_workspace()
     window.show_settings()
 
-    labels = "\n".join(label.text() for label in window.findChildren(QLabel))
+    nav = window.findChild(QTabBar, "settingsSecondaryNav")
+    assert nav is not None
+    nav.setCurrentIndex(4)
+    toggle = window.findChild(QToolButton, "developerDiagnosticsToggle")
+    panel = window.findChild(QFrame, "developerDiagnosticsPanel")
+    assert toggle is not None
+    assert panel is not None
+    toggle.click()
+
+    labels = "\n".join(label.text() for label in panel.findChildren(QLabel))
 
     assert "图标资源状态" in labels
-    assert "图标槽位" in labels
-    assert "已生成" in labels
-    assert "待生成" in labels
+    assert "Settings resource diagnostics" in labels
+    assert "Settings audit log" in labels
