@@ -8,6 +8,7 @@ from typing import Any
 
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
 from app.bioinformatics.enrichment_input_contract import build_enrichment_input_contract_gate
+from app.bioinformatics.enrichment_result_schema import build_enrichment_statistical_policy
 from app.bioinformatics.enrichment_resources import build_enrichment_resource_gate
 
 
@@ -67,6 +68,13 @@ def build_enrichment_parameter_manifest(
         ranking_metric=ranking_metric,
         background_strategy=background_strategy,
     )
+    statistical_policy = build_enrichment_statistical_policy(
+        analysis_type=analysis_type,
+        p_value_cutoff=p_value_cutoff,
+        fdr_cutoff=fdr_cutoff,
+        min_gene_set_size=min_gene_set_size,
+        max_gene_set_size=max_gene_set_size,
+    )
     blockers: list[str] = []
     warnings: list[str] = []
     if analysis_type not in SUPPORTED_ANALYSIS_TYPES:
@@ -91,6 +99,8 @@ def build_enrichment_parameter_manifest(
         blockers.extend(str(item) for item in backend_gate.get("blockers", []) or [])
     if input_contract_gate.get("status") != "passed":
         blockers.extend(str(item) for item in input_contract_gate.get("blockers", []) or [])
+    if statistical_policy.get("status") != "passed":
+        blockers.extend(str(item) for item in statistical_policy.get("blockers", []) or [])
     warnings.extend(str(item) for item in resource_gate.get("warnings", []) or [])
     warnings.extend(str(item) for item in backend_gate.get("warnings", []) or [])
     warnings.extend(str(item) for item in input_contract_gate.get("warnings", []) or [])
@@ -108,6 +118,7 @@ def build_enrichment_parameter_manifest(
         "identifier_compatibility_gate": input_contract_gate.get("identifier_compatibility_gate", {}),
         "source_derivation_manifest": input_contract_gate.get("source_derivation_manifest", {}),
         "resource_lock": input_contract_gate.get("resource_lock", {}),
+        "statistical_policy": statistical_policy,
         "backend_gate": backend_gate,
         "engine_candidate": "r_clusterProfiler_enricher" if analysis_type == "ora" else "r_fgsea_preranked",
         "required_backend_capability": DEFAULT_BACKEND_CAPABILITY.get(analysis_type, ""),

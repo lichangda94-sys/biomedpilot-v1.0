@@ -10,6 +10,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
+from app.bioinformatics.enrichment_result_schema import build_enrichment_statistical_policy
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 
@@ -334,6 +335,7 @@ def _parameter_manifest(analysis_type: str, *, result_id: str, task_run_id: str,
         "required_capabilities": [capability],
         "dependency_snapshot_id": dependency_snapshot.get("detection_path", ""),
         "dependency_snapshot": dependency_snapshot,
+        "statistical_policy": build_enrichment_statistical_policy(analysis_type=analysis_type),
         "engine_candidate": "r_clusterProfiler_enricher" if analysis_type == "ora" else "r_fgsea_preranked",
         "plot_artifacts": [],
         "report_artifacts": [],
