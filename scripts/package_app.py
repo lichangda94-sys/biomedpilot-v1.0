@@ -199,6 +199,7 @@ APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
 export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
+export PYTHONDONTWRITEBYTECODE="1"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
