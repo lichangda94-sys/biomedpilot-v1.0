@@ -22,6 +22,7 @@ def build_analysis_capability_map(
     formal_deg_gate_rows: list[dict[str, Any]] | None = None,
     ora_gate_rows: list[dict[str, Any]] | None = None,
     gsea_gate_rows: list[dict[str, Any]] | None = None,
+    enrichment_production_gate_rows: list[dict[str, Any]] | None = None,
     survival_clinical_rows: list[dict[str, Any]] | None = None,
     dependency_rows: list[dict[str, Any]] | None = None,
     external_capabilities: dict[str, Any] | None = None,
@@ -74,6 +75,15 @@ def build_analysis_capability_map(
             action_by_id.get("formal_gsea"),
             required_contracts=["B11 GSEA input/rank/gene-set/parameter/result gates"],
             result_semantics="formal_computed_result only from eligible source result; imported-derived GSEA remains imported_external_result",
+        ),
+        _static_row(
+            "enrichment_production_hardening",
+            "Enrichment production hardening preview",
+            "Enrichment",
+            "b100a_scoped_releasebuild_convergence",
+            _combined_gate_status(enrichment_production_gate_rows),
+            "ReleaseBuild-native ORA/GSEA resource lock, background/identifier, statistical policy and production result schema preview; review-only and no package write.",
+            capability_keys=["runtime.r.available", "package.r.clusterProfiler.available", "package.r.fgsea.available"],
         ),
         _row_from_action(
             "km_logrank_controlled_mvp",
@@ -306,6 +316,13 @@ def _status_from_survival_row(rows: list[dict[str, Any]] | None, row_id: str) ->
         if isinstance(row, dict) and str(row.get("row_id") or "") == row_id:
             return str(row.get("status") or "")
     return ""
+
+
+def _combined_gate_status(rows: list[dict[str, Any]] | None) -> str:
+    statuses = [str(row.get("status") or "") for row in rows or [] if isinstance(row, dict)]
+    if not statuses:
+        return "blocked"
+    return "passed" if all(status == "passed" for status in statuses) else "blocked"
 
 
 def _capability_available(value: Any) -> bool | None:

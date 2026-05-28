@@ -6173,7 +6173,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._sync_confirmation_controls(analysis_state)
         _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
         _fill_table(self._formal_deg_gate_table, _analysis_ui_gate_rows(analysis_state.get("formal_deg_gate_rows", [])))
-        _fill_table(self._gate_table, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or [])]))
+        _fill_table(self._gate_table, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("enrichment_production_gate_rows", []) or [])]))
         _fill_table(self._survival_table, _analysis_ui_survival_rows(analysis_state.get("survival_clinical_rows", [])))
         self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}, "analysis_center_state": analysis_state})
 
@@ -7706,7 +7706,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         pdf_gate = self._build_full_integrated_pdf_rendered_export_ui_gate()
         self._render_full_integrated_report_preview(integrated_gate, integrated_plan, docx_gate, pdf_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
-        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("survival_clinical_report_gate_rows", []) or [])]))
+        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("enrichment_production_gate_rows", []) or []), *(analysis_state.get("survival_clinical_report_gate_rows", []) or [])]))
         self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "risk_score_review": risk_score_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "risk_score_report_gate": risk_score_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan, "full_integrated_docx_rendered_export_gate": docx_gate, "full_integrated_pdf_rendered_export_gate": pdf_gate}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:

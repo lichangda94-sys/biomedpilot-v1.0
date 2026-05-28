@@ -845,6 +845,31 @@ def test_ora_report_ready_action_is_gate_controlled() -> None:
     assert "ora_report_task_run_log_missing" in _row(blocked, "ora_report_ready")["disabled_reason"]
 
 
+def test_enrichment_production_preview_action_is_review_only() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        enrichment_production_preview={"status": "passed", "blockers": []},
+    )
+
+    preview = _row(rows, "enrichment_production_preview")
+    assert preview["enabled"] is True
+    assert preview["button_behavior"] == "enabled_review_only_no_package_write"
+    assert "audit package export remains explicit" in preview["next_action"]
+
+    blocked = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        enrichment_production_preview={"status": "blocked", "blockers": ["enrichment_result_not_found"]},
+    )
+    assert _row(blocked, "enrichment_production_preview")["enabled"] is False
+    assert "enrichment_result_not_found" in _row(blocked, "enrichment_production_preview")["disabled_reason"]
+
+
 def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
     rows = build_action_rows(
         packages=[{"package_type": "deg_recompute", "blockers": ["display_value_type_not_allowed_for_count_model_deg"]}],

@@ -30,7 +30,7 @@ from app.bioinformatics.deg_engine.r_adapter_contract import build_r_deg_runtime
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
-from app.bioinformatics.enrichment import build_ora_gene_set_resource_gate, build_ora_input_gate, build_ora_parameter_manifest, build_ora_result_schema_gate, check_ora_backend_dependencies
+from app.bioinformatics.enrichment import build_enrichment_production_preview, build_ora_gene_set_resource_gate, build_ora_input_gate, build_ora_parameter_manifest, build_ora_result_schema_gate, check_ora_backend_dependencies
 from app.bioinformatics.gsea import build_gsea_gene_set_resource_gate, build_gsea_parameter_manifest, build_gsea_preranked_input_gate, build_gsea_result_schema_gate, check_gsea_backend_dependencies
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
@@ -163,6 +163,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     ora_plot_gate = build_ora_plot_gate(root)
     gsea_plot_gate = build_gsea_plot_gate(root)
     gsea_gates = build_gsea_gate_state(project_root=root)
+    enrichment_production_preview = build_enrichment_production_preview(root, ora_state=ora_gates, gsea_state=gsea_gates)
     survival_clinical_state = build_survival_clinical_gate_state(project_root=root, result_entries=result_entries)
     km_real_plot_gate = build_survival_real_plot_gate(root, _latest_result_id(result_entries, {"survival_km_logrank"}))
     cox_real_plot_gate = build_survival_real_plot_gate(root, _latest_result_id(result_entries, {"cox_univariate", "cox_multivariate"}))
@@ -221,6 +222,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_parameter_gate=gsea_gates["parameter_gate"],
         gsea_result_schema_gate=gsea_gates["result_schema_gate"],
         gsea_dependency=gsea_gates["dependency_snapshot"],
+        enrichment_production_preview=enrichment_production_preview,
         survival_clinical_state=survival_clinical_state,
         km_real_plot_gate=km_real_plot_gate,
         cox_real_plot_gate=cox_real_plot_gate,
@@ -258,6 +260,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         formal_deg_gate_rows=deg_gates["gate_rows"],
         ora_gate_rows=ora_gates["gate_rows"],
         gsea_gate_rows=gsea_gates["gate_rows"],
+        enrichment_production_gate_rows=enrichment_production_preview["gate_rows"],
         survival_clinical_rows=survival_rows,
         dependency_rows=dependency_rows,
         external_capabilities={
@@ -280,6 +283,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for item in limma_rscript_gate.get("blockers", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
+        + [item for item in enrichment_production_preview.get("blockers", []) or []]
         + [item for gate in (km_report_gate, cox_report_gate, risk_score_report_gate) for item in gate.get("blockers", []) or []]
         + [item for item in full_integrated_docx_gate.get("blockers", []) or []]
         + [item for item in full_integrated_pdf_gate.get("blockers", []) or []]
@@ -293,6 +297,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for item in limma_rscript_gate.get("warnings", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("warnings", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("warnings", []) or []]
+        + [item for item in enrichment_production_preview.get("warnings", []) or []]
         + [item for gate in (km_report_gate, cox_report_gate, risk_score_report_gate) for item in gate.get("warnings", []) or []]
     )
     return {
@@ -315,6 +320,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "limma_rscript_gate": limma_rscript_gate,
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
+        "enrichment_production_gate_rows": enrichment_production_preview["gate_rows"],
         "survival_clinical_report_gate_rows": survival_clinical_report_gate_rows(km_report_gate=km_report_gate, cox_report_gate=cox_report_gate, risk_score_report_gate=risk_score_report_gate),
         "legacy_asset_pipeline": legacy_pipeline,
         "analysis_capability_map": capability_map,
@@ -337,6 +343,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "edger_runtime_detection": edger_runtime_detection,
             "limma_rscript_gate": limma_rscript_gate,
             "ora_gate_state": ora_gates,
+            "enrichment_production_preview": enrichment_production_preview,
             "ora_plot_gate": ora_plot_gate,
             "ora_report_ready_gate": ora_report_gate,
             "gsea_plot_gate": gsea_plot_gate,

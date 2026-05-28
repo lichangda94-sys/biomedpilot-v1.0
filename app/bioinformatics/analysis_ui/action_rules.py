@@ -64,6 +64,7 @@ def build_action_rows(
     gsea_parameter_gate: dict[str, Any] | None = None,
     gsea_result_schema_gate: dict[str, Any] | None = None,
     gsea_dependency: dict[str, Any] | None = None,
+    enrichment_production_preview: dict[str, Any] | None = None,
     survival_clinical_state: dict[str, Any] | None = None,
     legacy_asset_pipeline: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
@@ -121,6 +122,7 @@ def build_action_rows(
     gsea_parameter_gate = gsea_parameter_gate or {}
     gsea_result_schema_gate = gsea_result_schema_gate or {}
     gsea_dependency = gsea_dependency or {}
+    enrichment_production_preview = enrichment_production_preview or {}
     survival_clinical_state = survival_clinical_state or {}
     legacy_asset_pipeline = legacy_asset_pipeline or {}
 
@@ -151,6 +153,7 @@ def build_action_rows(
     rows.append(_ora_report_ready_action(ora_report_gate))
     rows.append(_gsea_plot_action(gsea_plot_gate))
     rows.append(_gsea_report_ready_action(gsea_report_gate))
+    rows.append(_enrichment_production_preview_action(enrichment_production_preview))
     rows.append(_full_integrated_report_action(full_integrated_report_gate))
     rows.append(_full_integrated_docx_rendered_export_action(full_integrated_docx_gate))
     rows.append(_full_integrated_pdf_rendered_export_action(full_integrated_pdf_gate))
@@ -841,6 +844,28 @@ def _gsea_report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
         }
     blockers = _list(gate.get("blockers")) or ["gsea_report_ready_gate_not_passed"]
     return _disabled("gsea_report_ready", "Export GSEA report-ready package", "blocked_gsea_report_ready_gate", "; ".join(blockers), "Resolve GSEA result index, table, gene set, dependency, task log, plot/table-only and provenance gates.")
+
+
+def _enrichment_production_preview_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed":
+        return {
+            "action_id": "enrichment_production_preview",
+            "label": "Preview enrichment production hardening",
+            "state": "preview_ready",
+            "button_behavior": "enabled_review_only_no_package_write",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review ORA/GSEA resource lock, background, statistical policy and result schema readiness only; audit package export remains explicit.",
+        }
+    blockers = _list(gate.get("blockers")) or ["enrichment_production_preview_not_passed"]
+    return _disabled(
+        "enrichment_production_preview",
+        "Preview enrichment production hardening",
+        "blocked_enrichment_production_gate",
+        "; ".join(blockers),
+        "Resolve ORA/GSEA resource lock, background, identifier, statistical policy and formal result schema gates.",
+    )
 
 
 def _full_integrated_report_action(gate: dict[str, Any]) -> dict[str, Any]:

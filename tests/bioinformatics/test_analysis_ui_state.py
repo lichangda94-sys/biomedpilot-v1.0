@@ -30,6 +30,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["dependency_rows"]
     assert state["gate_rows"]
     assert state["ora_gate_rows"]
+    assert state["enrichment_production_gate_rows"]
     assert state["survival_clinical_rows"]
     assert state["survival_clinical_report_gate_rows"]
     assert state["analysis_capability_map"]["schema_version"] == "biomedpilot.deep_analysis_capability_map.v1"
@@ -94,6 +95,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     ora_gate_text = "\n".join(str(row) for row in state["ora_gate_rows"])
     assert "ORA source DEG result" in ora_gate_text
     assert "B10.2 controlled ORA execution" in ora_gate_text
+    enrichment_production_text = "\n".join(str(row) for row in state["enrichment_production_gate_rows"])
+    assert "ORA resource lock" in enrichment_production_text
+    assert "GSEA background / identifier" in enrichment_production_text
+    assert "enrichment_production_preview" in {row["action_id"] for row in state["action_rows"]}
+    assert state["developer_diagnostics"]["enrichment_production_preview"]["action_boundary"] == "preview_only_no_package_write_no_report_ready_upgrade"
+    assert state["analysis_capability_map"]["rows"]
+    assert any(row["capability_id"] == "enrichment_production_hardening" for row in state["analysis_capability_map"]["rows"])
     survival_gate_text = "\n".join(str(row) for row in state["survival_clinical_report_gate_rows"])
     assert "KM/log-rank section report-ready" in survival_gate_text
     assert "missing_km_logrank_result" in survival_gate_text
