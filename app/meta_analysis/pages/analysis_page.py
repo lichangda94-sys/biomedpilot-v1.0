@@ -24,7 +24,7 @@ from app.meta_analysis.services.meta_statistics_engine_service import (
     META_STATISTICS_STANDARDIZED_RESULT_SCHEMA_VERSION,
     MetaStatisticsEngineService,
 )
-from app.meta_analysis.services.meta_result_contract_adapter import discover_meta_result_contracts
+from app.meta_analysis.services.meta_result_contract_adapter import MetaResultContractAdapter, discover_meta_result_contracts
 from app.meta_analysis.ui_text import (
     ANALYSIS_BLOCKED_METHOD_ZH,
     ANALYSIS_DESCRIPTION_ZH,
@@ -395,7 +395,7 @@ def meta_statistics_engine_state_from_project(
         input_validation_status=str(diagnostics.get("input_validation_status", "")),
         result_status=str(result.get("result_status", "testing_result_generated" if result else "not_started")),
         warnings=tuple(_dedupe(warnings)),
-        primary_actions=("运行统计分析", "查看分析计划", "查看输入校验", "查看统计结果"),
+        primary_actions=("运行统计分析", "查看分析计划", "查看输入校验", "查看统计结果", "生成 canonical result artifacts"),
         safety_flags={
             "requires_confirmed_analysis_plan": True,
             "modifies_extraction_records": False,
@@ -481,6 +481,7 @@ if QWidget is not None:
             self._figure_service = figure_service or FigureResultService(analysis_run_service=self._run_service)
             self._analysis_plan_service = AnalysisPlanService()
             self._statistics_engine_service = MetaStatisticsEngineService()
+            self._meta_result_contract_adapter = MetaResultContractAdapter(statistics_service=self._statistics_engine_service)
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -541,10 +542,13 @@ if QWidget is not None:
             view_validation_button.clicked.connect(self._view_statistics_validation)
             view_result_button = QPushButton("查看统计结果")
             view_result_button.clicked.connect(self._view_statistics_result)
+            canonical_artifacts_button = QPushButton("生成 canonical result artifacts")
+            canonical_artifacts_button.clicked.connect(self.generate_meta_result_contract_artifacts)
             stats_buttons.addWidget(run_stats_button)
             stats_buttons.addWidget(view_plan_button)
             stats_buttons.addWidget(view_validation_button)
             stats_buttons.addWidget(view_result_button)
+            stats_buttons.addWidget(canonical_artifacts_button)
             root.addLayout(stats_buttons)
             self._statistics_engine_label = QLabel("请先确认分析计划。")
             self._statistics_engine_label.setWordWrap(True)
@@ -756,6 +760,38 @@ if QWidget is not None:
                 f"Pooled effect：{result.get('pooled_effect', '')}\n"
                 f"Testing：{result.get('testing_level_notice', '')}"
             )
+
+        def generate_meta_result_contract_artifacts(self) -> dict[str, object] | None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                state = meta_statistics_engine_state_from_project(project_dir, service=self._statistics_engine_service)
+                if not state.latest_run_id:
+                    raise ValueError("meta_statistics_run_missing")
+                contract = self._meta_result_contract_adapter.build_contract(project_dir, state.latest_run_id)
+                table = self._meta_result_contract_adapter.export_result_table(project_dir, state.latest_run_id)
+                plot = self._meta_result_contract_adapter.generate_forest_plot(project_dir, state.latest_run_id)
+                report = self._meta_result_contract_adapter.export_report_artifact(project_dir, state.latest_run_id)
+                refreshed = meta_statistics_engine_state_from_project(project_dir, service=self._statistics_engine_service)
+                artifact_types = ", ".join(str(item.get("artifact_type", "")) for item in refreshed.canonical_artifacts)
+                self._statistics_engine_label.setText(
+                    f"Canonical contract：{refreshed.canonical_contract_path}\n"
+                    f"Run ID：{refreshed.latest_run_id}\n"
+                    f"source_statistics_result_hash：{refreshed.canonical_statistics_result_hash}\n"
+                    f"Artifacts：{artifact_types}\n"
+                    "Report/export：testing-level / developer-preview；未生成医学结论。"
+                )
+                self._error_label.setText("")
+                return {
+                    "contract": contract,
+                    "result_table": table,
+                    "forest_plot": plot,
+                    "report_export": report,
+                    "ui_state": refreshed,
+                }
+            except Exception as exc:
+                self._statistics_engine_label.setText("没有生成 canonical result artifacts。")
+                self._error_label.setText(f"Canonical result artifacts 生成失败：{exc}")
+                return None
 
         def _build_dataset(self) -> None:
             project_dir = Path(self._project_dir_input.text()).expanduser()

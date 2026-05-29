@@ -218,3 +218,54 @@ Old branches and legacy directories are material libraries only. Candidate featu
 ### Stop Point
 
 Stop after audit documents. No migration execution should begin until the next explicit instruction selects one candidate and one current UI path.
+
+## Phase 4: Meta Analysis Current UI Single-Point L3 Proof
+
+Date: 2026-05-29
+
+### Scope
+
+This phase proves one current Meta Analysis UI L3 loop from confirmed analysis plan to v2 statistics run, canonical contract, result table, real forest plot, and testing-level report/export artifact.
+
+No Bioinformatics code was modified. No generic Analysis Runner was created. No Meta statistics rewrite, Meta UI redesign, branch merge, cherry-pick, legacy workbench migration, OCR migration, or fulltext migration was performed.
+
+### Files Changed
+
+```text
+app/meta_analysis/pages/analysis_page.py
+tests/meta_analysis/test_meta_statistics_engine_v2.py
+tests/ui/test_meta_analysis_l3_loop.py
+docs/reports/META_L3_UI_PATH_MAP.md
+docs/reports/META_L3_COMPLETION_REPORT.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Result
+
+The current Meta Analysis UI now has a focused Phase 4 L3 proof:
+
+- `生成分析计划草稿` creates the analysis plan draft from current Meta services.
+- `确认分析计划` writes a locked confirmed analysis plan.
+- `运行统计分析` triggers a real v2 statistics run from the confirmed plan.
+- `生成 canonical result artifacts` generates the canonical contract, result table CSV, real forest plot PNG, and testing-level markdown report/export from the same v2 run.
+
+All canonical artifacts preserve the same `analysis_run_id` and `source_statistics_result_hash`.
+
+The report/export artifact remains Developer Preview / testing-level and explicitly does not generate medical, clinical, diagnostic, treatment, or production-grade conclusions.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_meta_analysis_l3_loop.py -q` | Passed, `1 passed` |
+| `python3 -m pytest tests/meta_analysis/test_meta_statistics_engine_v2.py::test_statistics_page_state_exposes_confirmed_plan_guardrails tests/meta_analysis/test_meta_result_contract_adapter.py -q` | Passed, `3 passed` |
+| `python3 -m app.main --smoke-test` | Passed, `git_head=7cd526a` |
+| `git diff --check` | Passed |
+| `python3 -m pytest tests/meta_analysis/test_meta_result_contract_adapter.py -q` | Passed, `2 passed` |
+| `python3 -m pytest tests/meta_analysis/test_meta_statistics_engine_v2.py -q` | Passed, `6 passed` |
+| `python3 -m pytest tests/meta_analysis/test_analysis_core_mvp.py tests/meta_analysis/test_figure_result_table_mvp.py tests/meta_analysis/test_publication_export_reproducibility.py -q` | Passed, `15 passed` |
+| `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_meta_analysis_workflow_pages.py tests/ui/test_meta_analysis_l3_loop.py -q` | Passed, `22 passed` |
+
+### Stop Point
+
+Phase 4 stops after the current Meta Analysis UI single-point L3 proof. It does not start old feature migration, OCR/fulltext work, full module completion, or production/clinical claims.
