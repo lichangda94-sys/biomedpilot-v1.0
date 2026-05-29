@@ -64,6 +64,9 @@ def run_formal_controlled_deg(
     confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_manifest, dependency_snapshot=dependency)
     if confirmation_gate.get("status") != "passed":
         return _blocked(*[str(item) for item in confirmation_gate.get("blockers", []) or []], deg_ready_package=deg_ready, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, result_schema_gate=schema_gate, confirmation_gate=confirmation_gate)
+    confirmed_parameter_manifest = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
+    if confirmed_parameter_manifest:
+        parameter_manifest = confirmed_parameter_manifest
 
     bundle = python_backend.run_controlled_deg(
         deg_ready,

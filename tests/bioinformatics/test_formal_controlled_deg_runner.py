@@ -40,6 +40,7 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     assert entry["result_semantics"] == "formal_computed_result"
     assert entry["input_package_id"]
     assert entry["parameters_manifest"]["method"] == "welch_t_test"
+    assert entry["parameters_manifest"] == confirmation["parameter_manifest"]
     assert entry["dependency_snapshot"]["status"] == "passed"
     assert entry["validation_status"] == "passed"
     assert entry["report_ready_eligible"] is False
