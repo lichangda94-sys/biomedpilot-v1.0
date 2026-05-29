@@ -237,7 +237,7 @@ def test_statistics_page_state_exposes_confirmed_plan_guardrails(tmp_path: Path)
     assert state.confirmed_plan_status == "confirmed"
     assert state.latest_run_id
     assert state.latest_result_id
-    assert state.primary_actions == ("运行统计分析", "查看分析计划", "查看输入校验", "查看统计结果")
+    assert state.primary_actions == ("运行统计分析", "查看分析计划", "查看输入校验", "查看统计结果", "生成 canonical result artifacts")
     assert state.safety_flags == {
         "requires_confirmed_analysis_plan": True,
         "modifies_extraction_records": False,
