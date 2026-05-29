@@ -83,7 +83,9 @@ from .labels import compact_list, label_package_type, label_semantics, label_sta
 def build_analysis_center_state(project_root: str | Path | None) -> dict[str, Any]:
     if project_root is None:
         return {
-            "schema_version": "biomedpilot.analysis_center_ui_state.v1",
+            "schema_version": "biomedpilot.bioinformatics_gate_shell_state.v1",
+            "analysis_center_schema_version": "biomedpilot.analysis_center_ui_state.v1",
+            "source_policy": "read_only_gate_preview_no_executor_no_artifact_write",
             "project_root": "",
             "project_summary": {},
             "package_rows": [],
@@ -91,9 +93,9 @@ def build_analysis_center_state(project_root: str | Path | None) -> dict[str, An
             "dependency_rows": [],
             "result_rows": [],
             "gate_rows": [],
-            "result_gate": {"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []},
-            "report_gate": {"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []},
-            "export_gate": {"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []},
+            "result_gate": _gate_shell_result_gate([]) | {"status": "blocked_missing_project", "blockers": ["missing_project_root"]},
+            "report_gate": _gate_shell_report_gate({"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []}),
+            "export_gate": _gate_shell_export_gate({"status": "blocked_missing_project", "blockers": ["missing_project_root"], "warnings": []}),
             "top_blockers": ["missing_project_root"],
             "top_warnings": [],
             "developer_diagnostics": {},
@@ -189,64 +191,66 @@ def build_analysis_center_state(project_root: str | Path | None) -> dict[str, An
     risk_score_report_gate = evaluate_risk_score_report_ready_gate(root, result_id=_latest_result_id(result_entries, {"risk_score"}))
     legacy_pipeline = build_legacy_asset_pipeline_state(root)
     package_rows = build_package_rows(packages)
-    action_rows = build_action_rows(
-        packages=packages,
-        tasks=tasks,
-        results=result_entries,
-        deg_dependency=deg_dependency,
-        deg_ready_gate=deg_gates["deg_ready_gate"],
-        parameter_gate=deg_gates["parameter_gate"],
-        confirmation_gate=deg_gates["confirmation_gate"],
-        result_schema_gate=deg_gates["result_schema_gate"],
-        limma_rscript_gate=limma_rscript_gate,
-        r_count_model_plans=r_count_model_plans,
-        survival_dependency=survival_dependency,
-        km_parameter_gate=survival_clinical_state["km_parameter_gate"],
-        km_confirmation_gate=survival_clinical_state["km_confirmation_gate"],
-        cox_parameter_gate=survival_clinical_state["cox_parameter_gate"],
-        cox_confirmation_gate=survival_clinical_state["cox_confirmation_gate"],
-        cox_multivariate_parameter_gate=survival_clinical_state["cox_multivariate_parameter_gate"],
-        cox_multivariate_confirmation_gate=survival_clinical_state["cox_multivariate_confirmation_gate"],
-        risk_score_design=survival_clinical_state["risk_score_contract_gate"],
-        risk_score_confirmation_gate=survival_clinical_state["risk_score_confirmation_gate"],
-        risk_score_result_schema_gate=survival_clinical_state["risk_score_result_schema_gate"],
-        risk_score_plot_nomogram_gate=survival_clinical_state["risk_score_plot_nomogram_gate"],
-        risk_score_plot_artifact_gate=survival_clinical_state["risk_score_plot_artifact_gate"],
-        risk_score_advanced_visualization_gate=survival_clinical_state["risk_score_advanced_visualization_gate"],
-        risk_score_advanced_runtime_plan=survival_clinical_state["risk_score_advanced_runtime_plan"],
-        risk_score_advanced_preflight_gate=survival_clinical_state["risk_score_advanced_preflight_gate"],
-        risk_score_advanced_artifact_gate=survival_clinical_state["risk_score_advanced_artifact_gate"],
-        risk_score_calibration_decision_curve_input_gate=survival_clinical_state["risk_score_calibration_decision_curve_input_gate"],
-        risk_score_calibration_decision_curve_statistics_gate=survival_clinical_state["risk_score_calibration_decision_curve_statistics_gate"],
-        risk_score_calibration_decision_curve_plot_gate=survival_clinical_state["risk_score_calibration_decision_curve_plot_gate"],
-        report_gate=report_gate,
-        formal_deg_report_gate=formal_deg_report_gate,
-        ora_input_gate=ora_gates["input_gate"],
-        ora_gene_set_gate=ora_gates["gene_set_gate"],
-        ora_parameter_gate=ora_gates["parameter_gate"],
-        ora_result_schema_gate=ora_gates["result_schema_gate"],
-        ora_dependency=ora_gates["dependency_snapshot"],
-        ora_plot_gate=ora_plot_gate,
-        ora_report_gate=ora_report_gate,
-        gsea_plot_gate=gsea_plot_gate,
-        gsea_report_gate=gsea_report_gate,
-        full_integrated_report_gate=full_integrated_report_gate,
-        full_integrated_docx_gate=full_integrated_docx_gate,
-        full_integrated_pdf_gate=full_integrated_pdf_gate,
-        gsea_input_gate=gsea_gates["input_gate"],
-        gsea_rank_metric_gate=gsea_gates["rank_metric_gate"],
-        gsea_gene_set_gate=gsea_gates["gene_set_gate"],
-        gsea_parameter_gate=gsea_gates["parameter_gate"],
-        gsea_result_schema_gate=gsea_gates["result_schema_gate"],
-        gsea_dependency=gsea_gates["dependency_snapshot"],
-        enrichment_production_preview=enrichment_production_preview,
-        survival_clinical_state=survival_clinical_state,
-        km_real_plot_gate=km_real_plot_gate,
-        cox_real_plot_gate=cox_real_plot_gate,
-        km_report_gate=km_report_gate,
-        cox_report_gate=cox_report_gate,
-        risk_score_report_gate=risk_score_report_gate,
-        legacy_asset_pipeline=legacy_pipeline,
+    action_rows = _with_gate_shell_action_compat(
+        build_action_rows(
+            packages=packages,
+            tasks=tasks,
+            results=result_entries,
+            deg_dependency=deg_dependency,
+            deg_ready_gate=deg_gates["deg_ready_gate"],
+            parameter_gate=deg_gates["parameter_gate"],
+            confirmation_gate=deg_gates["confirmation_gate"],
+            result_schema_gate=deg_gates["result_schema_gate"],
+            limma_rscript_gate=limma_rscript_gate,
+            r_count_model_plans=r_count_model_plans,
+            survival_dependency=survival_dependency,
+            km_parameter_gate=survival_clinical_state["km_parameter_gate"],
+            km_confirmation_gate=survival_clinical_state["km_confirmation_gate"],
+            cox_parameter_gate=survival_clinical_state["cox_parameter_gate"],
+            cox_confirmation_gate=survival_clinical_state["cox_confirmation_gate"],
+            cox_multivariate_parameter_gate=survival_clinical_state["cox_multivariate_parameter_gate"],
+            cox_multivariate_confirmation_gate=survival_clinical_state["cox_multivariate_confirmation_gate"],
+            risk_score_design=survival_clinical_state["risk_score_contract_gate"],
+            risk_score_confirmation_gate=survival_clinical_state["risk_score_confirmation_gate"],
+            risk_score_result_schema_gate=survival_clinical_state["risk_score_result_schema_gate"],
+            risk_score_plot_nomogram_gate=survival_clinical_state["risk_score_plot_nomogram_gate"],
+            risk_score_plot_artifact_gate=survival_clinical_state["risk_score_plot_artifact_gate"],
+            risk_score_advanced_visualization_gate=survival_clinical_state["risk_score_advanced_visualization_gate"],
+            risk_score_advanced_runtime_plan=survival_clinical_state["risk_score_advanced_runtime_plan"],
+            risk_score_advanced_preflight_gate=survival_clinical_state["risk_score_advanced_preflight_gate"],
+            risk_score_advanced_artifact_gate=survival_clinical_state["risk_score_advanced_artifact_gate"],
+            risk_score_calibration_decision_curve_input_gate=survival_clinical_state["risk_score_calibration_decision_curve_input_gate"],
+            risk_score_calibration_decision_curve_statistics_gate=survival_clinical_state["risk_score_calibration_decision_curve_statistics_gate"],
+            risk_score_calibration_decision_curve_plot_gate=survival_clinical_state["risk_score_calibration_decision_curve_plot_gate"],
+            report_gate=report_gate,
+            formal_deg_report_gate=formal_deg_report_gate,
+            ora_input_gate=ora_gates["input_gate"],
+            ora_gene_set_gate=ora_gates["gene_set_gate"],
+            ora_parameter_gate=ora_gates["parameter_gate"],
+            ora_result_schema_gate=ora_gates["result_schema_gate"],
+            ora_dependency=ora_gates["dependency_snapshot"],
+            ora_plot_gate=ora_plot_gate,
+            ora_report_gate=ora_report_gate,
+            gsea_plot_gate=gsea_plot_gate,
+            gsea_report_gate=gsea_report_gate,
+            full_integrated_report_gate=full_integrated_report_gate,
+            full_integrated_docx_gate=full_integrated_docx_gate,
+            full_integrated_pdf_gate=full_integrated_pdf_gate,
+            gsea_input_gate=gsea_gates["input_gate"],
+            gsea_rank_metric_gate=gsea_gates["rank_metric_gate"],
+            gsea_gene_set_gate=gsea_gates["gene_set_gate"],
+            gsea_parameter_gate=gsea_gates["parameter_gate"],
+            gsea_result_schema_gate=gsea_gates["result_schema_gate"],
+            gsea_dependency=gsea_gates["dependency_snapshot"],
+            enrichment_production_preview=enrichment_production_preview,
+            survival_clinical_state=survival_clinical_state,
+            km_real_plot_gate=km_real_plot_gate,
+            cox_real_plot_gate=cox_real_plot_gate,
+            km_report_gate=km_report_gate,
+            cox_report_gate=cox_report_gate,
+            risk_score_report_gate=risk_score_report_gate,
+            legacy_asset_pipeline=legacy_pipeline,
+        )
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(
@@ -318,7 +322,9 @@ def build_analysis_center_state(project_root: str | Path | None) -> dict[str, An
         + [item for gate in (km_report_gate, cox_report_gate, risk_score_report_gate) for item in gate.get("warnings", []) or []]
     )
     return {
-        "schema_version": "biomedpilot.analysis_center_ui_state.v1",
+        "schema_version": "biomedpilot.bioinformatics_gate_shell_state.v1",
+        "analysis_center_schema_version": "biomedpilot.analysis_center_ui_state.v1",
+        "source_policy": "read_only_gate_preview_no_executor_no_artifact_write",
         "project_root": str(root),
         "project_summary": _project_summary(root),
         "standardized_asset_summary": _standardized_asset_summary(resolver),
@@ -342,13 +348,9 @@ def build_analysis_center_state(project_root: str | Path | None) -> dict[str, An
         "legacy_asset_pipeline": legacy_pipeline,
         "analysis_capability_map": capability_map,
         "result_rows": result_rows,
-        "result_gate": {
-            "status": "available" if result_rows else "blocked_missing_result",
-            "blockers": [] if result_rows else ["missing_result_index_entry"],
-            "warnings": [],
-        },
-        "report_gate": report_gate,
-        "export_gate": full_integrated_report_gate,
+        "result_gate": _gate_shell_result_gate(result_entries, status="available" if result_rows else "blocked_missing_result", blockers=[] if result_rows else ["missing_result_index_entry"]),
+        "report_gate": _gate_shell_report_gate(report_gate),
+        "export_gate": _gate_shell_export_gate(full_integrated_report_gate),
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
         "top_blockers": blockers[:8],
@@ -389,6 +391,81 @@ def build_analysis_center_state(project_root: str | Path | None) -> dict[str, An
             "formal_deg_report_ready_gate": formal_deg_report_gate,
         },
     }
+
+
+def _with_gate_shell_action_compat(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        if item.get("action_id") == "deg_preflight" and not item.get("enabled"):
+            item["enabled"] = True
+            item["button_behavior"] = "enabled_preflight_shell_no_artifact_write"
+            item["next_action"] = "Open DEG preflight shell; resolver repair is still required before formal DEG."
+        item.setdefault("formal_action_enabled", False)
+        normalized.append(item)
+    by_id = {str(row.get("action_id") or ""): row for row in normalized}
+    aliases = {
+        "formal_ora": ("run_ora_enrichment", "Run formal ORA"),
+        "km_logrank": ("km_cox_logrank", "Run two-group KM/log-rank"),
+        "report_ready_package": ("report_ready_export", "Generate report-ready package"),
+        "export_package": ("full_integrated_report_export", "Export full integrated package"),
+    }
+    for alias, (source_id, label) in aliases.items():
+        if alias in by_id:
+            continue
+        source = by_id.get(source_id)
+        if source is None:
+            continue
+        item = dict(source)
+        item["action_id"] = alias
+        item["label"] = label
+        item.setdefault("formal_action_enabled", False)
+        normalized.append(item)
+    return normalized
+
+
+def _gate_shell_result_gate(entries: list[dict[str, Any]], *, status: str | None = None, blockers: list[str] | None = None) -> dict[str, Any]:
+    semantics = [normalize_result_semantics(item.get("result_semantics")) for item in entries if isinstance(item, dict)]
+    formal_count = semantics.count("formal_computed_result")
+    imported_count = semantics.count("imported_external_result")
+    preflight_count = semantics.count("preflight_only")
+    testing_count = semantics.count("testing_level")
+    exploratory_count = semantics.count("exploratory")
+    if formal_count:
+        semantic_key = "result.semantic.formal_computed_result"
+    elif imported_count:
+        semantic_key = "result.semantic.imported_external_result"
+    else:
+        semantic_key = "result.semantic.testing_summary_only"
+    return {
+        "status": status or ("available" if entries else "blocked_missing_result"),
+        "blockers": list(blockers or ([] if entries else ["missing_result_index_entry"])),
+        "warnings": [],
+        "result_semantic_key": semantic_key,
+        "formal_computed_result_count": formal_count,
+        "imported_external_result_count": imported_count,
+        "preflight_only_count": preflight_count,
+        "testing_level_count": testing_count,
+        "exploratory_count": exploratory_count,
+        "fake_result_allowed": False,
+        "fake_plot_allowed": False,
+    }
+
+
+def _gate_shell_report_gate(report_gate: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(report_gate)
+    status = str(payload.get("status") or "")
+    payload.setdefault("report_status_key", "report.status.draft")
+    payload.setdefault("report_ready_package_allowed", status in {"passed", "eligible", "report_ready"})
+    return payload
+
+
+def _gate_shell_export_gate(export_gate: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(export_gate)
+    status = str(payload.get("status") or "")
+    payload.setdefault("export_gate", "enabled" if status in {"passed", "eligible", "full_integrated_report_package_created"} else "disabled_missing_report_ready")
+    payload.setdefault("export_enabled", payload.get("export_gate") == "enabled")
+    return payload
 
 
 def build_legacy_asset_pipeline_state(project_root: str | Path) -> dict[str, Any]:
