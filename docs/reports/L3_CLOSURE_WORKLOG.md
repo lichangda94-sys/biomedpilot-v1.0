@@ -158,3 +158,63 @@ All derived artifacts preserve the same `analysis_run_id` and `source_statistics
 ### Stop Point
 
 Phase 3 stops here. Meta Analysis is not claimed L3. Phase 4 is still required to prove the current Meta UI loop end to end.
+
+## Phase 2.5: Branch Inventory and Migration Candidate Audit
+
+Date: 2026-05-29
+
+### Scope
+
+This phase was audit-only. No branch was checked out, merged, or cherry-picked. No UI code, analysis algorithm, or legacy runtime path was modified.
+
+### Reports Added
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+```
+
+### Findings
+
+The local branch set contains substantial historical Bioinformatics and Meta Analysis material, but no branch is safe to merge wholesale.
+
+Highest-value Bioinformatics sources:
+
+- `dev/release-internal-test`
+- `codex/releasebuild-formal-deg-carryover`
+- `codex/mainline-survival-clinical-carryover`
+- `stable/mainline`
+
+Highest-value Meta Analysis sources:
+
+- current `dev/bioinformatics` Meta services/pages
+- `dev/meta-analysis` for OCR/fulltext/package history only
+- `codex/meta-workflow-ui` and `codex/meta-analysis-refresh` as UI references only
+
+Legacy directories remain quarantined:
+
+- `app/bioinformatics/legacy/**`
+- `app/meta_analysis/legacy/**`
+
+### Decision
+
+Old branches and legacy directories are material libraries only. Candidate features require a current UI entry, current contract mapping, current tests, and real output evidence before they can be marked usable.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `git status --short && git branch --show-current && git rev-parse HEAD` | Passed |
+| `git branch --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname` | Passed |
+| `git branch -r --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname` | Passed; no remote branches listed |
+| `git diff --name-status HEAD..<branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics scripts` | Passed for sampled relevant branches |
+| `git log --oneline --max-count=8 <branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs scripts` | Passed for sampled relevant branches |
+| `rg --files app \| rg '(^\|/)legacy(/\|_)|legacy'` | Passed |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy -maxdepth 2 -type d` | Passed |
+
+### Stop Point
+
+Stop after audit documents. No migration execution should begin until the next explicit instruction selects one candidate and one current UI path.
