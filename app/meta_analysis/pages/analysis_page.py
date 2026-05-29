@@ -24,6 +24,7 @@ from app.meta_analysis.services.meta_statistics_engine_service import (
     META_STATISTICS_STANDARDIZED_RESULT_SCHEMA_VERSION,
     MetaStatisticsEngineService,
 )
+from app.meta_analysis.services.meta_result_contract_adapter import discover_meta_result_contracts
 from app.meta_analysis.ui_text import (
     ANALYSIS_BLOCKED_METHOD_ZH,
     ANALYSIS_DESCRIPTION_ZH,
@@ -205,6 +206,10 @@ class MetaStatisticsEnginePageState:
     warnings: tuple[str, ...]
     primary_actions: tuple[str, ...]
     safety_flags: dict[str, bool]
+    canonical_contract_path: str = ""
+    canonical_statistics_result_hash: str = ""
+    canonical_artifact_count: int = 0
+    canonical_artifacts: tuple[dict[str, object], ...] = ()
     testing_level_notice: str = "testing-level statistics only; not production-grade."
     title_zh: str = "统计引擎"
     status_label_zh: str = "内部测试"
@@ -365,6 +370,9 @@ def meta_statistics_engine_state_from_project(
     latest_result_id = str(manifest.get("latest_result_id", ""))
     result = stats_service.load_standardized_result(project_dir, latest_run_id) if latest_run_id else {}
     diagnostics = dict(result.get("diagnostics", {})) if isinstance(result.get("diagnostics"), dict) else {}
+    contracts = [item for item in discover_meta_result_contracts(project_dir) if item.get("analysis_run_id") == latest_run_id] if latest_run_id else []
+    canonical_contract = contracts[-1] if contracts else {}
+    canonical_artifacts = canonical_contract.get("artifacts", []) if isinstance(canonical_contract.get("artifacts"), list) else []
     warnings: list[str] = []
     if not confirmed_plan_path.exists():
         warnings.append("confirmed_analysis_plan_missing")
@@ -396,6 +404,12 @@ def meta_statistics_engine_state_from_project(
             "generates_medical_conclusion": False,
             "production_grade": False,
         },
+        canonical_contract_path=str(project_dir / "analysis" / "meta_result_contracts" / latest_run_id / "meta_result_contract.json")
+        if canonical_contract
+        else "",
+        canonical_statistics_result_hash=str(canonical_contract.get("source_statistics_result_hash", "")) if canonical_contract else "",
+        canonical_artifact_count=len(canonical_artifacts),
+        canonical_artifacts=tuple(dict(item) for item in canonical_artifacts if isinstance(item, dict)),
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
     )
 

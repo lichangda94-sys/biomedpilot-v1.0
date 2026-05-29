@@ -109,3 +109,52 @@ Bioinformatics controlled formal DEG has a current UI single-point L3 proof.
 Bioinformatics full module should not be claimed complete.
 Meta should not be claimed complete until one canonical result contract feeds statistics, forest plot, table, and report/export from the same run.
 ```
+
+## Phase 3: Meta Result Contract Unification
+
+Date: 2026-05-29
+
+### Scope
+
+This phase touched only the Meta Analysis result contract layer. Bioinformatics was not modified.
+
+### Files Changed
+
+```text
+app/meta_analysis/services/meta_result_contract_adapter.py
+app/meta_analysis/pages/analysis_page.py
+tests/meta_analysis/test_meta_result_contract_adapter.py
+docs/reports/META_RESULT_CONTRACT_MAP.md
+docs/reports/META_RESULT_CONTRACT_UNIFICATION_REPORT.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Result
+
+Meta statistics v2 now has a narrow canonical contract bridge. One real `MetaStatisticsEngineService.run_statistics()` result can drive:
+
+- a canonical contract manifest,
+- a result table artifact,
+- a real forest plot PNG artifact,
+- a testing-level markdown report/export artifact.
+
+All derived artifacts preserve the same `analysis_run_id` and `source_statistics_result_hash`.
+
+### UI Discovery
+
+`meta_statistics_engine_state_from_project()` now exposes the canonical contract path, source statistics hash, artifact count, and artifact list for the latest v2 run. This is discovery only; it does not redesign the Meta UI and does not claim Meta L3.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `python3 -m pytest tests/meta_analysis/test_meta_result_contract_adapter.py -q` | Passed, `2 passed` |
+| `python3 -m pytest tests/meta_analysis/test_meta_statistics_engine_v2.py -q` | Passed, `6 passed` |
+| `python3 -m pytest tests/meta_analysis/test_analysis_core_mvp.py tests/meta_analysis/test_figure_result_table_mvp.py tests/meta_analysis/test_publication_export_reproducibility.py -q` | Passed, `15 passed` |
+| `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_meta_analysis_workflow_pages.py -q` | Passed, `21 passed` |
+| `python3 -m app.main --smoke-test` | Passed, `git_head=8036e50` |
+| `git diff --check` | Passed |
+
+### Stop Point
+
+Phase 3 stops here. Meta Analysis is not claimed L3. Phase 4 is still required to prove the current Meta UI loop end to end.
