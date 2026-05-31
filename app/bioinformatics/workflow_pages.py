@@ -958,7 +958,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         actions = QHBoxLayout(actions_frame)
         actions.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
         self._registered_count_label = _status_label("已保存数据来源：0 个；待处理：0 个；可识别：0 个")
-        self._next_button = _button("下一步：数据检查与准备", "primaryButton", self.continue_to_recognition)
+        self._next_button = _button("下一步：数据识别", "primaryButton", self.continue_to_recognition)
         self._next_button.setEnabled(False)
         actions.addWidget(self._registered_count_label)
         actions.addStretch(1)
@@ -3098,7 +3098,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         bottom_layout = QHBoxLayout(bottom_frame)
         bottom_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
         self._registered_count_label = _status_label("已选 GEO 0 个，TCGA 0 个，GTEx 0 个；0 个可进入识别。")
-        self._continue_button = _button("下一步：数据检查与准备", "primaryButton", self.continue_to_recognition)
+        self._continue_button = _button("下一步：数据识别", "primaryButton", self.continue_to_recognition)
         self._continue_button.setEnabled(False)
         bottom_layout.addWidget(self._registered_count_label)
         bottom_layout.addStretch(1)
@@ -3501,16 +3501,16 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         total_count = len(rows)
         ready_count = _ready_chinese_source_count(self._project_root)
         source_counts = {key: len(value) for key, value in grouped_rows.items()}
-        prefix = f"已选 GEO {source_counts['geo']} 个，TCGA {source_counts['tcga_gdc']} 个，GTEx {source_counts['gtex']} 个；{ready_count} 个可进入数据检查。"
+        prefix = f"已选 GEO {source_counts['geo']} 个，TCGA {source_counts['tcga_gdc']} 个，GTEx {source_counts['gtex']} 个；{ready_count} 个可进入数据识别。"
         if ready_count:
-            self._registered_count_label.setText(f"{prefix} 当前状态：可进入数据检查。")
+            self._registered_count_label.setText(f"{prefix} 当前状态：可进入数据识别。")
         elif total_count:
             self._registered_count_label.setText(f"{prefix} 当前建议操作：先补全表达矩阵。")
         else:
             self._registered_count_label.setText(f"{prefix} 当前建议操作：先选择数据源。")
         can_continue = ready_count > 0 and self._project_root is not None
         self._continue_button.setEnabled(can_continue)
-        self._continue_button.setText("下一步：数据检查与准备")
+        self._continue_button.setText("下一步：数据识别")
         self._refresh_geo_download_list()
         self._refresh_chinese_search_status_summary()
 

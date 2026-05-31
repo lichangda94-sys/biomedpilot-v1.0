@@ -1502,8 +1502,8 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     assert not widget.findChild(QPushButton, "local_importCopyPathButton").isVisible()
     assert not widget._dataset_list_panel._download_selected_button.isEnabled()
     assert not widget._dataset_list_panel._delete_selected_button.isEnabled()
-    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据检查" in button.text()]
-    assert check_buttons == ["下一步：数据检查与准备"]
+    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
+    assert check_buttons == ["下一步：数据识别"]
     assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：0 个"
     assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
     assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据检查：0 个"
@@ -1531,8 +1531,8 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     assert not widget._dataset_list_panel._download_selected_button.isEnabled()
     assert widget._dataset_list_panel._delete_selected_button.isEnabled()
     assert widget._next_button.isEnabled()
-    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据检查" in button.text()]
-    assert check_buttons == ["下一步：数据检查与准备"]
+    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
+    assert check_buttons == ["下一步：数据识别"]
     assert widget._registered_count_label.text() == "已保存数据来源：1 个；待处理：0 个；可识别：1 个"
     assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：1 个"
     assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
@@ -1703,7 +1703,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "GEO/GSE" == widget._tabs.tabText(0)
     assert "TCGA/GDC" == widget._tabs.tabText(1)
     assert "GTEx" == widget._tabs.tabText(2)
-    assert widget._continue_button.text() == "下一步：数据检查与准备"
+    assert widget._continue_button.text() == "下一步：数据识别"
 
     widget.set_query_text("甲状腺癌")
     result = widget.generate_terms()
@@ -2052,10 +2052,10 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert Path(result.downloaded_files[0]).exists()
     assert "元数据已下载" in widget.status_message()
     assert "表达矩阵待下载" in widget.status_message()
-    assert widget._registered_count_label.text() == "已选 GEO 1 个，TCGA 0 个，GTEx 0 个；1 个可进入数据检查。 当前状态：可进入数据检查。"
+    assert widget._registered_count_label.text() == "已选 GEO 1 个，TCGA 0 个，GTEx 0 个；1 个可进入数据识别。 当前状态：可进入数据识别。"
     assert widget._continue_button.isEnabled()
-    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据检查" in button.text()]
-    assert check_buttons == ["下一步：数据检查与准备"]
+    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
+    assert check_buttons == ["下一步：数据识别"]
     assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵待下载 / 已发现补充文件 / 可进入识别"
     widget._show_candidate_detail(candidate)
     assert "元数据已下载" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
@@ -2326,11 +2326,11 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert summary.source_type == "tcga_project"
     assert widget._tcga_registered_table.rowCount() == 1
     assert widget._tcga_registered_table.item(0, 0).text() == "TCGA-THCA"
-    assert widget._registered_count_label.text() == "已选 GEO 0 个，TCGA 1 个，GTEx 0 个；0 个可进入数据检查。 当前建议操作：先补全表达矩阵。"
+    assert widget._registered_count_label.text() == "已选 GEO 0 个，TCGA 1 个，GTEx 0 个；0 个可进入数据识别。 当前建议操作：先补全表达矩阵。"
     assert not widget._continue_button.isEnabled()
-    assert widget._continue_button.text() == "下一步：数据检查与准备"
-    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据检查" in button.text()]
-    assert check_buttons == ["下一步：数据检查与准备"]
+    assert widget._continue_button.text() == "下一步：数据识别"
+    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
+    assert check_buttons == ["下一步：数据识别"]
     assert widget.status_message() == "已选择候选来源，待下载数据文件。"
     assert "已选择，待创建下载任务" in _source_card_text(widget, "tcga_gdc")
     download_result = widget.generate_candidate_download_task("tcga_gdc", "TCGA-THCA")
@@ -2410,14 +2410,14 @@ def test_chinese_dataset_search_continue_enters_recognition(qt_app, project_summ
     )
     widget._chinese_search_page._candidates = {("geo", "GSE33630"): _geo_candidate()}
     widget._chinese_search_page.download_geo_candidate("GSE33630")
-    check_buttons = [button.text() for button in widget._chinese_search_page.findChildren(QPushButton) if "数据检查" in button.text()]
-    assert check_buttons == ["下一步：数据检查与准备"]
+    check_buttons = [button.text() for button in widget._chinese_search_page.findChildren(QPushButton) if "数据识别" in button.text()]
+    assert check_buttons == ["下一步：数据识别"]
     widget._chinese_search_page._continue_button.click()
 
-    assert widget.current_page_object_name() == "bioinformaticsReadinessDashboardPage"
-    table = widget._readiness_page.findChild(QTableWidget, "dataCheckFileStatusTable")
+    assert widget.current_page_object_name() == "bioinformaticsRecognitionPage"
+    table = widget._recognition_page.findChild(QTableWidget, "preRecognitionInputList")
     assert table.rowCount() == 1
-    assert "GSE33630" in table.item(0, 0).text()
+    assert "GSE33630" in table.item(0, 2).text()
 
 
 def test_acquisition_status_empty_and_continue_signal(qt_app, project_summary) -> None:
@@ -4362,7 +4362,14 @@ def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> Non
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
     widget._data_source_page.register_local_paths([source], strategy="reference", selected_kind="file", summary_key="local_import")
+    pending_table = widget._data_source_page._dataset_list_panel._table
+    checkbox = pending_table.cellWidget(0, 0)
+    assert isinstance(checkbox, QCheckBox)
+    checkbox.setChecked(True)
     widget._data_source_page.continue_to_recognition()
+    assert widget.current_page_object_name() == "bioinformaticsRecognitionPage"
+    assert widget._recognition_page.run_recognition() is not None
+    widget._recognition_page.continue_to_readiness()
     assert widget.current_page_object_name() == "bioinformaticsReadinessDashboardPage"
     widget.show_standardization(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsStandardizedAssetsPage"

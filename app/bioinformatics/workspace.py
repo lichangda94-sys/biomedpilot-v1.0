@@ -63,13 +63,13 @@ if QWidget is not None:
                 on_back=on_back,
             )
             self._data_source_page = BioinformaticsDataSourceWidget(
-                on_continue=self.show_readiness,
+                on_continue=self.show_recognition,
                 on_back=self.show_project_home,
             )
             self._data_source_page.chinese_search_requested.connect(self.show_chinese_search)
             self._chinese_search_page = BioinformaticsChineseDatasetSearchWidget(
                 on_back=self.show_data_source,
-                on_continue=self.show_readiness,
+                on_continue=self.show_recognition,
                 on_source_registered=lambda summary: self._data_source_page.refresh_project(self._current_project),
             )
             self._acquisition_status_page = BioinformaticsAcquisitionStatusWidget(
