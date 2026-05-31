@@ -205,7 +205,18 @@ def test_main_window_module_buttons_enter_expected_workspaces(qt_app) -> None:
         labtools_button = window._dashboard_page.findChild(QPushButton, "labToolsModuleButton")
         labtools_button.click()
         assert window.current_workspace_key() == "labtools"
-        assert window._labtools_page.page_keys() == ("image_analysis",)
+        assert window._labtools_page.page_keys() == (
+            "home",
+            "general_calculators",
+            "reagent_preparation",
+            "experiment_modules",
+            "cell_experiments",
+            "protein_experiments",
+            "nucleic_acid_experiments",
+            "immuno_absorbance",
+            "ihc",
+        )
+        assert window._labtools_page.current_page_key() == "home"
 
         window.show_dashboard()
         labtools_button = window._dashboard_page.findChild(QPushButton, "labtoolsModuleButton")
