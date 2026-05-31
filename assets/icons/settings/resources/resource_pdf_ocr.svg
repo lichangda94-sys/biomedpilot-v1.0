@@ -1,0 +1,11 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_pdf_ocr</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <path d='M20 10h18l9 9v35H20z' fill='#F5FAFF' stroke='#35506B' stroke-width='3' stroke-linejoin='round'/>
+      <path d='M38 10v10h9' fill='none' stroke='#35506B' stroke-width='3' stroke-linejoin='round'/>
+      <path d='M17 26h8M17 38h8M39 26h8M39 38h8' stroke='#2F80ED' stroke-width='3' stroke-linecap='round'/>
+      <rect x='25' y='24' width='14' height='16' rx='3' fill='none' stroke='#1DA6A8' stroke-width='3'/>
+
+  </g>
+</svg>

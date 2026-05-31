@@ -4,8 +4,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -17,8 +17,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.app_identity import load_app_icon, load_ui01_login_icon, load_ui01_login_pixmap
-from app.ui_style_tokens import COLORS, SPACING, login_stylesheet
+from app.app_identity import load_app_icon, load_ui01_login_icon, load_ui01_login_pixmap, load_welcome_hero_pixmap
+from app.ui_style_tokens import SPACING, login_stylesheet
 
 
 @dataclass(frozen=True)
@@ -30,27 +30,66 @@ class LocalSession:
     login_time: str
 
 
+class _ScaledPixmapLabel(QLabel):
+    def __init__(self, pixmap: QPixmap, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._source_pixmap = QPixmap()
+        self.setAlignment(Qt.AlignCenter)
+        self.setMinimumSize(320, 255)
+        self.setMaximumSize(832, 663)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.set_hero_pixmap(pixmap)
+
+    def set_hero_pixmap(self, pixmap: QPixmap) -> None:
+        self._source_pixmap = pixmap
+        self._update_pixmap()
+
+    def resizeEvent(self, event) -> None:  # type: ignore[override]
+        super().resizeEvent(event)
+        self._update_pixmap()
+
+    def _update_pixmap(self) -> None:
+        if self._source_pixmap.isNull():
+            self.clear()
+            return
+        target = self.contentsRect().size()
+        if target.width() <= 0 or target.height() <= 0:
+            return
+        self.setPixmap(self._source_pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
+
 class BioMedPilotLoginWidget(QWidget):
+    """Welcome shell kept under the legacy class name for existing imports."""
+
     login_succeeded = Signal(object)
+    settings_requested = Signal()
+    about_requested = Signal()
 
     def __init__(
         self,
         on_login: Callable[[LocalSession], None] | None = None,
+        on_settings: Callable[[], None] | None = None,
+        on_about: Callable[[], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._session: LocalSession | None = None
-        self.setObjectName("loginPage")
+        self.setObjectName("welcomePage")
         self.setStyleSheet(login_stylesheet())
         self._build_ui()
         if on_login is not None:
             self.login_succeeded.connect(on_login)
+        if on_settings is not None:
+            self.settings_requested.connect(on_settings)
+        if on_about is not None:
+            self.about_requested.connect(on_about)
 
     def session(self) -> LocalSession | None:
         return self._session
 
     def reset_session(self) -> None:
         self._session = None
+        self._username_input.setText("local_workspace_user")
         self._password_input.clear()
         self._error_label.clear()
         self._error_label.setVisible(False)
@@ -62,15 +101,11 @@ class BioMedPilotLoginWidget(QWidget):
         self._username_input.setText(username)
         self._password_input.setText(password)
 
-    def attempt_login(self) -> LocalSession | None:
-        username = self._username_input.text().strip()
-        password = self._password_input.text()
-        if not username or not password:
-            self._session = None
-            self._error_label.setText("请输入用户名和密码。")
-            self._error_label.setVisible(True)
-            return None
+    def attempt_login(self) -> LocalSession:
+        return self.enter_workspace()
 
+    def enter_workspace(self) -> LocalSession:
+        username = self._username_input.text().strip() or "local_workspace_user"
         session = LocalSession(
             username=username,
             role="local_test_user",
@@ -90,15 +125,22 @@ class BioMedPilotLoginWidget(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        root.addWidget(self._build_top_bar())
-
         main = QWidget()
         main.setObjectName("loginMainContent")
-        main_layout = QHBoxLayout(main)
-        main_layout.setContentsMargins(20, 18, 20, 18)
-        main_layout.setSpacing(18)
-        main_layout.addWidget(self._build_brand_panel(), 5)
-        main_layout.addWidget(self._build_login_card(), 4)
+        main_layout = QVBoxLayout(main)
+        main_layout.setContentsMargins(40, 34, 40, 34)
+        main_layout.setSpacing(24)
+        main_layout.addStretch(1)
+
+        hero = _ScaledPixmapLabel(load_welcome_hero_pixmap())
+        hero.setObjectName("welcomeHeroImage")
+        hero.setAccessibleName("Welcome firefly laboratory image")
+        if hero.pixmap() is None or hero.pixmap().isNull():
+            hero.setText("萤火虫 / Firefly")
+            hero.setObjectName("loginBrandIcon")
+        main_layout.addWidget(hero, 7, alignment=Qt.AlignHCenter | Qt.AlignBottom)
+        main_layout.addWidget(self._build_welcome_card(), 0, alignment=Qt.AlignHCenter | Qt.AlignTop)
+        main_layout.addStretch(1)
         root.addWidget(main, 1)
 
     def _build_top_bar(self) -> QFrame:
@@ -120,13 +162,13 @@ class BioMedPilotLoginWidget(QWidget):
         layout.addWidget(traffic)
         layout.addStretch(1)
 
-        title = QLabel("BioMedPilot / 医研智析")
+        title = QLabel("萤火虫 / Firefly")
         title.setObjectName("loginTopTitle")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
         layout.addStretch(1)
 
-        version = QLabel("0.1.0-internal-beta  /  Developer Preview  /  本地测试版")
+        version = QLabel("BioMedPilot / 医研智析  ·  0.1.0-internal-beta  ·  Developer Preview")
         version.setObjectName("loginTopVersion")
         layout.addWidget(version)
 
@@ -135,8 +177,8 @@ class BioMedPilotLoginWidget(QWidget):
         settings_button.setFixedSize(28, 28)
         settings_button.setIcon(load_ui01_login_icon("preview"))
         settings_button.setIconSize(QSize(18, 18))
-        settings_button.setToolTip("设置入口占位")
-        settings_button.setEnabled(False)
+        settings_button.setToolTip("设置中心")
+        settings_button.clicked.connect(self.settings_requested.emit)
         layout.addWidget(settings_button)
         return bar
 
@@ -157,14 +199,15 @@ class BioMedPilotLoginWidget(QWidget):
         icon = load_app_icon()
         brand_icon.setPixmap(icon.pixmap(96, 96) if not icon.isNull() else load_ui01_login_pixmap("brand", 96))
         brand_icon.setVisible(not brand_icon.pixmap().isNull())
-        title = QLabel("BioMedPilot")
+
+        title = QLabel("萤火虫 / Firefly")
         title.setObjectName("brandTitle")
         title.setAlignment(Qt.AlignCenter)
         title.setWordWrap(True)
-        chinese_name = QLabel("医研智析")
+        chinese_name = QLabel("BioMedPilot / 医研智析")
         chinese_name.setObjectName("brandChineseName")
         chinese_name.setAlignment(Qt.AlignCenter)
-        subtitle = QLabel("面向临床与转化医学研究的数据分析与报告生成平台")
+        subtitle = QLabel("低保真全局壳层：统一入口、三模块工作台、测试反馈与设置中心")
         subtitle.setObjectName("brandSubtitle")
         subtitle.setAlignment(Qt.AlignCenter)
         subtitle.setWordWrap(True)
@@ -178,7 +221,11 @@ class BioMedPilotLoginWidget(QWidget):
 
         tag_row = QHBoxLayout()
         tag_row.setSpacing(SPACING["md"])
-        for icon_key, tag in (("brand", "生信分析"), ("security", "Meta 分析"), ("license", "科研报告生成")):
+        for icon_key, tag in (
+            ("brand", "Bioinformatics"),
+            ("security", "Meta Analysis"),
+            ("license", "LabTools"),
+        ):
             label = QLabel(tag)
             label.setObjectName("capabilityTag")
             pixmap = load_ui01_login_pixmap(icon_key, 22)
@@ -190,53 +237,32 @@ class BioMedPilotLoginWidget(QWidget):
         layout.addLayout(tag_row)
         layout.addStretch(1)
 
-        version = QLabel("0.1.0-internal-beta / Developer Preview / 本地测试版")
+        version = QLabel("Developer Preview / 本地测试版：不含正式登录、订阅或授权流程。")
         version.setObjectName("brandVersionLabel")
         version.setWordWrap(True)
         layout.addWidget(version)
         return panel
 
-    def _build_login_card(self) -> QFrame:
+    def _build_welcome_card(self) -> QFrame:
         card = QFrame()
         card.setObjectName("loginCard")
-        card.setMinimumWidth(330)
-        card.setMaximumWidth(520)
-        card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        card.setFixedWidth(260)
+        card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(30, 28, 30, 24)
-        layout.setSpacing(SPACING["sm"])
-
-        title = QLabel("欢迎使用 BioMedPilot")
-        title.setObjectName("loginTitle")
-        title.setAlignment(Qt.AlignCenter)
-        hint = QLabel("登录以进入项目、工作流与分析任务")
-        hint.setObjectName("loginHint")
-        hint.setAlignment(Qt.AlignCenter)
-        hint.setWordWrap(True)
-        layout.addWidget(title)
-        layout.addWidget(hint)
-        layout.addSpacing(SPACING["md"])
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(11)
 
         self._username_input = QLineEdit()
         self._username_input.setObjectName("usernameInput")
-        self._username_input.setPlaceholderText("用户名")
-        user_icon = load_ui01_login_icon("user")
-        if not user_icon.isNull():
-            self._username_input.addAction(user_icon, QLineEdit.LeadingPosition)
+        self._username_input.setText("local_workspace_user")
+        self._username_input.setVisible(False)
         layout.addWidget(self._username_input)
 
         self._password_input = QLineEdit()
         self._password_input.setObjectName("passwordInput")
-        self._password_input.setPlaceholderText("密码")
         self._password_input.setEchoMode(QLineEdit.Password)
-        security_icon = load_ui01_login_icon("security")
-        if not security_icon.isNull():
-            self._password_input.addAction(security_icon, QLineEdit.LeadingPosition)
-        forgot_icon = load_ui01_login_icon("forgot")
-        if not forgot_icon.isNull():
-            self._password_input.addAction(forgot_icon, QLineEdit.TrailingPosition)
-        self._password_input.returnPressed.connect(self.attempt_login)
+        self._password_input.setVisible(False)
         layout.addWidget(self._password_input)
 
         self._error_label = QLabel("")
@@ -245,131 +271,41 @@ class BioMedPilotLoginWidget(QWidget):
         self._error_label.setVisible(False)
         layout.addWidget(self._error_label)
 
-        login_button = QPushButton("进入 BioMedPilot")
-        login_button.setObjectName("primaryButton")
-        login_button.setIcon(load_ui01_login_icon("login"))
-        login_button.setIconSize(QSize(22, 22))
-        login_button.clicked.connect(self.attempt_login)
-        layout.addWidget(login_button)
+        enter_button = QPushButton("进入本地工作台")
+        enter_button.setObjectName("primaryButton")
+        enter_button.setAccessibleName("Enter local workspace")
+        enter_button.setProperty("usabilityRole", "primary_entry_action")
+        enter_button.setDefault(True)
+        enter_button.setIcon(load_ui01_login_icon("welcome_enter"))
+        enter_button.setIconSize(QSize(16, 16))
+        enter_button.setFixedSize(260, 47)
+        enter_button.clicked.connect(self.enter_workspace)
+        layout.addWidget(enter_button)
 
-        link_row = QHBoxLayout()
-        link_row.setContentsMargins(10, 4, 10, 2)
-        register_button = QPushButton("注册账号（占位）")
-        register_button.setObjectName("linkButton")
-        register_button.setIcon(load_ui01_login_icon("register"))
-        register_button.setIconSize(QSize(18, 18))
-        register_button.setEnabled(False)
-        forgot_button = QPushButton("忘记密码（占位）")
-        forgot_button.setObjectName("linkButton")
-        forgot_button.setIcon(load_ui01_login_icon("forgot"))
-        forgot_button.setIconSize(QSize(18, 18))
-        forgot_button.setEnabled(False)
-        link_row.addWidget(register_button)
-        link_row.addStretch(1)
-        link_row.addWidget(forgot_button)
-        layout.addLayout(link_row)
-
-        layout.addSpacing(SPACING["sm"])
-        layout.addWidget(self._build_account_panel())
-        layout.addStretch(1)
+        about_button = QPushButton("关于")
+        about_button.setObjectName("aboutButton")
+        about_button.setAccessibleName("Open about")
+        about_button.setProperty("usabilityRole", "secondary_entry_action")
+        about_button.setIcon(load_ui01_login_icon("welcome_about"))
+        about_button.setIconSize(QSize(14, 14))
+        about_button.setFixedSize(260, 42)
+        about_button.clicked.connect(self.about_requested.emit)
+        layout.addWidget(about_button)
         return card
 
-    def _field_label(self, text: str) -> QLabel:
-        label = QLabel(text)
-        label.setObjectName("loginFieldLabel")
-        return label
-
-    def _meta_value(self, label: str, value: str, *, icon_key: str | None = None) -> QWidget:
-        row = QWidget()
-        row.setStyleSheet("background: transparent;")
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(SPACING["sm"])
-        if icon_key:
-            icon_label = QLabel()
-            icon_label.setObjectName("loginMetaIcon")
-            icon_label.setFixedSize(24, 24)
-            icon_label.setPixmap(load_ui01_login_pixmap(icon_key, 20))
-            icon_label.setVisible(not icon_label.pixmap().isNull())
-            layout.addWidget(icon_label)
-        name = QLabel(label)
-        name.setObjectName("loginMetaLabel")
-        name.setFixedWidth(112)
-        value_label = QLabel(value)
-        value_label.setObjectName("loginMetaValue")
-        value_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        layout.addWidget(name)
-        layout.addWidget(value_label, 1)
-        return row
-
-    def _build_account_panel(self) -> QFrame:
+    def _build_scope_panel(self) -> QFrame:
         panel = QFrame()
         panel.setObjectName("loginAccountPanel")
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(SPACING["sm"])
-
-        header = QWidget()
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(SPACING["md"])
-        user_icon = QLabel()
-        user_icon.setObjectName("loginMetaIcon")
-        user_icon.setFixedSize(38, 38)
-        user_icon.setPixmap(load_ui01_login_pixmap("user", 34))
-        user_icon.setVisible(not user_icon.pixmap().isNull())
-        header_layout.addWidget(user_icon)
-
-        account_text = QWidget()
-        account_layout = QVBoxLayout(account_text)
-        account_layout.setContentsMargins(0, 0, 0, 0)
-        account_layout.setSpacing(2)
-        account_label = QLabel("当前账号等级")
-        account_label.setObjectName("loginMetaLabel")
-        account_value = QLabel("本地测试用户")
-        account_value.setObjectName("loginAccountValue")
-        account_layout.addWidget(account_label)
-        account_layout.addWidget(account_value)
-        header_layout.addWidget(account_text, 1)
-
-        shield_icon = QLabel()
-        shield_icon.setObjectName("loginMetaIcon")
-        shield_icon.setFixedSize(28, 28)
-        shield_icon.setPixmap(load_ui01_login_pixmap("security", 24))
-        shield_icon.setVisible(not shield_icon.pixmap().isNull())
-        header_layout.addWidget(shield_icon)
-        layout.addWidget(header)
-
-        status_row = QHBoxLayout()
-        status_row.setSpacing(SPACING["xs"])
-        status_row.addWidget(self._status_tile("订阅服务", "未启用", "subscription"))
-        status_row.addWidget(self._status_tile("VIP 服务", "占位", "vip"))
-        status_row.addWidget(self._status_tile("License 状态", "本地测试", "license"))
-        layout.addLayout(status_row)
+        for text in (
+            "一级入口：Dashboard、Bioinformatics、Meta Analysis、LabTools、Settings。",
+            "辅助入口：About、Test Feedback。",
+            "当前阶段只提供低保真壳层，不代表正式分析能力。",
+        ):
+            label = QLabel(text)
+            label.setObjectName("loginMetaLabel")
+            label.setWordWrap(True)
+            layout.addWidget(label)
         return panel
-
-    def _status_tile(self, title: str, value: str, icon_key: str) -> QFrame:
-        tile = QFrame()
-        tile.setObjectName("loginStatusTile")
-        layout = QHBoxLayout(tile)
-        layout.setContentsMargins(8, 7, 8, 7)
-        layout.setSpacing(SPACING["xs"])
-        icon_label = QLabel()
-        icon_label.setObjectName("loginMetaIcon")
-        icon_label.setFixedSize(28, 28)
-        icon_label.setPixmap(load_ui01_login_pixmap(icon_key, 24))
-        icon_label.setVisible(not icon_label.pixmap().isNull())
-        layout.addWidget(icon_label)
-
-        text_holder = QWidget()
-        text_layout = QVBoxLayout(text_holder)
-        text_layout.setContentsMargins(0, 0, 0, 0)
-        text_layout.setSpacing(1)
-        title_label = QLabel(title)
-        title_label.setObjectName("loginStatusTitle")
-        value_label = QLabel(value)
-        value_label.setObjectName("loginStatusValue")
-        text_layout.addWidget(title_label)
-        text_layout.addWidget(value_label)
-        layout.addWidget(text_holder, 1)
-        return tile

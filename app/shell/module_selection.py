@@ -5,18 +5,24 @@ from collections.abc import Callable
 from PySide6.QtCore import QSize, Signal, Qt
 from PySide6.QtWidgets import (
     QFrame,
+    QGridLayout,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
-from app.app_identity import icon_asset_summary, load_module_pixmap, load_ui02_module_selection_icon, load_ui02_module_selection_pixmap
+from app.app_identity import MODULE_ICON_PATHS, load_module_pixmap, load_ui02_module_selection_icon, load_ui02_module_selection_pixmap
 from app.shell.dashboard import DashboardModel
 from app.shell.login import LocalSession
+from app.shared.semantic_keys import BrandKey, ModuleKey, NavKey
+from app.shared.ui_components import make_action_button
 from app.ui_style_tokens import SPACING, module_selection_stylesheet
 
 
@@ -56,6 +62,7 @@ class ModuleSelectionWidget(QWidget):
         self._dashboard = dashboard
         self._session = session
         self.setObjectName("moduleSelectionPage")
+        self.setProperty("designTokenSet", "dashboard_target_figma_make")
         self.setStyleSheet(module_selection_stylesheet())
         self._build_ui()
         if on_open_bioinformatics is not None:
@@ -85,8 +92,8 @@ class ModuleSelectionWidget(QWidget):
         self._session = session
         display = self.session_display()
         self._user_badge.setText(f"当前用户：{display['username']}")
-        self._tier_label.setText(f"当前账号等级：{display['tier']}")
-        self._license_label.setText(f"License 状态：{display['license_status']}")
+        self._tier_label.setText("Developer Preview / 本地测试版")
+        self._license_label.setText(f"测试状态：{display['license_status']}")
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
@@ -97,54 +104,12 @@ class ModuleSelectionWidget(QWidget):
         content = QWidget()
         content.setObjectName("moduleSelectionContent")
         root = QVBoxLayout(content)
-        root.setContentsMargins(20, 18, 20, 18)
-        root.setSpacing(SPACING["md"])
+        root.setContentsMargins(26, 0, 26, 24)
+        root.setSpacing(SPACING["lg"])
 
         root.addWidget(self._build_header())
-
-        module_row = QHBoxLayout()
-        module_row.setSpacing(SPACING["md"])
-        module_row.addWidget(
-            self._module_card(
-                title="生信分析模块",
-                english_title="Bioinformatics Analyze Module",
-                description="用于 GEO、TCGA、GTEx、本地表达矩阵、差异分析、富集分析、相关性分析、生存分析和报告生成。",
-                button_text="进入生信分析模块",
-                object_name="bioModuleButton",
-                icon_key="bioinformatics",
-                callback=self.open_bioinformatics_requested.emit,
-            )
-        )
-        module_row.addWidget(
-            self._module_card(
-                title="Meta 分析模块",
-                english_title="Meta Analysis Module",
-                description="按中文 18 步工作流测试 PICO、检索策略、文献获取、文献库、去重、全文、提取、质量评价和分析计划；统计、图表、正式报告保持 testing-level / 待开发。",
-                button_text="进入 Meta 分析模块",
-                object_name="metaModuleButton",
-                icon_key="meta_analysis",
-                callback=self.open_meta_analysis_requested.emit,
-            )
-        )
-        module_row.addWidget(
-            self._module_card(
-                title="LabTools 模块",
-                english_title="LabTools Module",
-                description="仅接入 shared ImageJ/Fiji 本机引擎检测和图像能力边界提示；未启用 WB/gel、agarose、自动 ROI、细胞计数、pathology 或真实图像算法。",
-                button_text="进入 LabTools 模块",
-                object_name="labToolsModuleButton",
-                icon_key="labtools",
-                callback=self.open_labtools_requested.emit,
-            )
-        )
-
-        info_row = QHBoxLayout()
-        info_row.setSpacing(SPACING["md"])
-        info_row.addWidget(self._build_recent_projects_card(), 1)
-        info_row.addWidget(self._build_support_panel(), 1)
-
-        root.addLayout(module_row)
-        root.addLayout(info_row)
+        root.addWidget(self._build_module_panel())
+        root.addWidget(self._build_recent_projects_card())
         root.addStretch(1)
         scroll.setWidget(content)
         outer.addWidget(scroll)
@@ -152,33 +117,108 @@ class ModuleSelectionWidget(QWidget):
     def _build_header(self) -> QFrame:
         frame = QFrame()
         frame.setObjectName("dashboardHeader")
+        frame.setProperty("uiPrimitive", "dashboard_hero")
+        frame.setProperty("designReference", "figma_make_dashboard_target")
         layout = QHBoxLayout(frame)
-        layout.setContentsMargins(SPACING["xl"], SPACING["lg"], SPACING["xl"], SPACING["lg"])
+        layout.setContentsMargins(0, 14, 0, 14)
         layout.setSpacing(SPACING["lg"])
 
-        layout.addWidget(self._ui02_icon_label("dashboard", 42))
         title_col = QVBoxLayout()
-        title = QLabel("BioMedPilot / 医研智析")
+        title_col.setSpacing(3)
+        title_row = QHBoxLayout()
+        title_row.setSpacing(SPACING["sm"])
+        title = QLabel("萤火虫 工作台/ Firefly Workbench")
         title.setObjectName("dashboardTitle")
-        subtitle = QLabel("统一模块入口，选择一个工作区开始本地测试。")
+        title.setProperty("semanticKey", BrandKey.PRIMARY.value)
+        title_row.addWidget(title)
+        preview = QLabel("Developer Preview · 本地测试版")
+        preview.setObjectName("previewBadge")
+        title_row.addWidget(preview)
+        title_row.addStretch(1)
+        subtitle = QLabel("欢迎回来！这是您本地生物医学研究的统一工作台。")
         subtitle.setObjectName("dashboardSubtitle")
+        subtitle.setProperty("semanticKey", BrandKey.SECONDARY.value)
         subtitle.setWordWrap(True)
-        title_col.addWidget(title)
+        title_col.addLayout(title_row)
         title_col.addWidget(subtitle)
         layout.addLayout(title_col, 1)
 
-        layout.addWidget(self._ui02_icon_label("current_user", 24))
+        layout.addWidget(self._header_icon_button("通知", "developer_preview"), 0, Qt.AlignVCenter)
+        layout.addWidget(self._header_icon_button("帮助", "settings"), 0, Qt.AlignVCenter)
         self._user_badge = QLabel("")
         self._user_badge.setObjectName("sessionBadge")
-        layout.addWidget(self._user_badge)
-        layout.addWidget(self._ui02_icon_label("version", 24))
-        version = QLabel("版本：0.1.0-internal-beta")
-        version.setObjectName("sessionBadge")
-        layout.addWidget(version)
-        layout.addWidget(self._ui02_icon_label("developer_preview", 24))
-        preview = QLabel("Developer Preview / 本地测试版")
-        preview.setObjectName("previewBadge")
-        layout.addWidget(preview)
+        self._user_badge.setAlignment(Qt.AlignCenter)
+        self._user_badge.setMinimumHeight(36)
+        self._user_badge.setMaximumHeight(36)
+        self._user_badge.setMinimumWidth(128)
+        layout.addWidget(self._user_badge, 0, Qt.AlignVCenter)
+        self._tier_label = QLabel("Developer Preview / 本地测试版")
+        self._tier_label.setObjectName("previewBadge")
+        self._tier_label.setVisible(False)
+        self._license_label = QLabel("")
+        self._license_label.setVisible(False)
+        return frame
+
+    def _build_module_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("dashboardModulePanel")
+        frame.setProperty("uiPrimitive", "dashboard_module_panel")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        module_grid = QGridLayout()
+        module_grid.setContentsMargins(0, 0, 0, 0)
+        module_grid.setHorizontalSpacing(18)
+        module_grid.setVerticalSpacing(18)
+        module_grid.addWidget(
+            self._module_card(
+                title="生信分析",
+                english_title="BIOINFORMATICS",
+                description="数据来源、检查准备、分组设计、分析任务、结果与报告。",
+                button_text="进入模块",
+                object_name="bioModuleButton",
+                icon_key="bioinformatics",
+                module_key=ModuleKey.BIOINFORMATICS.value,
+                nav_key=NavKey.BIOINFORMATICS.value,
+                callback=self.open_bioinformatics_requested.emit,
+            ),
+            0,
+            0,
+        )
+        module_grid.addWidget(
+            self._module_card(
+                title="Meta 分析",
+                english_title="META ANALYSIS",
+                description="研究问题、检索、筛选、数据提取、质量评价、统计分析。",
+                button_text="进入模块",
+                object_name="metaModuleButton",
+                icon_key="meta_analysis",
+                module_key=ModuleKey.META_ANALYSIS.value,
+                nav_key=NavKey.META_ANALYSIS.value,
+                callback=self.open_meta_analysis_requested.emit,
+            ),
+            0,
+            1,
+        )
+        module_grid.addWidget(
+            self._module_card(
+                title="实验工具",
+                english_title="LABTOOLS",
+                description="通用计算器、试剂制备、实验模块工具集合。",
+                button_text="进入模块",
+                object_name="labtoolsModuleButton",
+                icon_key="labtools",
+                module_key=ModuleKey.LABTOOLS.value,
+                nav_key=NavKey.LABTOOLS.value,
+                callback=self.open_labtools_requested.emit,
+            ),
+            0,
+            2,
+        )
+        for column in range(3):
+            module_grid.setColumnStretch(column, 1)
+        layout.addLayout(module_grid)
         return frame
 
     def _module_card(
@@ -190,111 +230,212 @@ class ModuleSelectionWidget(QWidget):
         button_text: str,
         object_name: str,
         icon_key: str,
+        module_key: str,
+        nav_key: str,
         callback: Callable[[], None],
     ) -> QFrame:
         frame = ModuleEntryCard()
         frame.setObjectName("moduleCard")
+        frame.setProperty("uiPrimitive", "module_entry_card")
+        frame.setProperty("moduleKey", module_key)
+        frame.setProperty("navKey", nav_key)
+        frame.setProperty("semanticKey", module_key)
+        frame.setProperty("usabilityRole", "module_entry_card")
+        frame.setProperty("moduleAccent", _module_accent_name(module_key))
+        frame.setAccessibleName(title)
         frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        frame.setMinimumHeight(295)
         frame.setToolTip(f"点击进入{title}")
         frame.clicked.connect(callback)
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
-        layout.setSpacing(SPACING["md"])
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(9)
 
+        top_row = QHBoxLayout()
+        top_row.setContentsMargins(0, 0, 0, 0)
+        top_row.setSpacing(SPACING["sm"])
         icon_label = QLabel()
         icon_label.setObjectName("moduleIcon")
-        icon_label.setFixedSize(64, 64)
+        icon_label.setFixedSize(72, 72)
         icon_label.setAlignment(Qt.AlignCenter)
-        icon = load_module_pixmap(icon_key, 60)
+        icon_source = MODULE_ICON_PATHS.get(module_key) or MODULE_ICON_PATHS.get(icon_key)
+        icon = load_module_pixmap(module_key, 56)
+        if icon.isNull():
+            icon = load_ui02_module_selection_pixmap("workspace", 56)
+            icon_label.setProperty("iconFallback", True)
+        else:
+            icon_label.setProperty("iconFallback", False)
+        icon_label.setProperty("moduleKey", module_key)
+        icon_label.setProperty("iconSource", str(icon_source) if icon_source is not None else "")
         icon_label.setPixmap(icon)
         icon_label.setVisible(not icon.isNull())
+        top_row.addWidget(icon_label, 0, Qt.AlignLeft)
+        top_row.addStretch(1)
+        top_row.addWidget(self._testing_pill(), 0, Qt.AlignTop)
+
         title_label = QLabel(title)
         title_label.setObjectName("moduleTitle")
+        title_label.setProperty("moduleKey", module_key)
+        title_label.setProperty("semanticKey", module_key)
+        legacy_label = QLabel(_legacy_module_title(module_key))
+        legacy_label.setObjectName("moduleLegacyTitle")
+        legacy_label.setVisible(False)
         english = QLabel(english_title)
         english.setObjectName("moduleEnglishTitle")
-        accent = QLabel("")
-        accent.setObjectName("moduleAccentLine")
-        accent.setFixedHeight(4)
-        accent.setMaximumWidth(96)
+        english.setProperty("moduleKey", module_key)
         description_label = QLabel(description)
         description_label.setObjectName("moduleDescription")
         description_label.setWordWrap(True)
 
         button = QPushButton(button_text)
         button.setObjectName(object_name)
+        button.setProperty("uiPrimitive", "button")
+        button.setProperty("buttonRole", "dashboard_module_action")
+        button.setProperty("buttonSize", "regular")
+        button.setProperty("actionKey", nav_key)
+        button.setProperty("semanticState", "testing")
+        button.setProperty("formalActionEnabled", False)
+        button.setProperty("fileWriteAllowed", False)
+        button.setProperty("moduleKey", module_key)
+        button.setProperty("navKey", nav_key)
+        button.setProperty("semanticKey", module_key)
+        button.setProperty("usabilityRole", "module_entry_action")
+        button.setAccessibleName(button_text)
         button.setIcon(load_ui02_module_selection_icon("workspace"))
         button.setIconSize(QSize(18, 18))
-        button.setMinimumWidth(168)
+        button.setMinimumHeight(44)
         button.setToolTip(f"进入{title}")
         button.clicked.connect(callback)
 
-        layout.addWidget(icon_label)
-        layout.addWidget(title_label)
-        layout.addWidget(english)
-        layout.addWidget(accent)
+        layout.addLayout(top_row)
         layout.addSpacing(SPACING["sm"])
+        layout.addWidget(title_label)
+        layout.addWidget(legacy_label)
+        layout.addWidget(english)
+        layout.addSpacing(SPACING["md"])
         layout.addWidget(description_label)
-        layout.addWidget(button, alignment=Qt.AlignLeft)
+        layout.addStretch(1)
+        layout.addWidget(button)
+        if object_name == "labtoolsModuleButton":
+            legacy_button = QPushButton(button_text, frame)
+            legacy_button.setObjectName("labToolsModuleButton")
+            legacy_button.setProperty("moduleKey", module_key)
+            legacy_button.setProperty("navKey", nav_key)
+            legacy_button.setProperty("semanticKey", module_key)
+            legacy_button.clicked.connect(callback)
+            legacy_button.setVisible(False)
         return frame
 
     def _build_recent_projects_card(self) -> QFrame:
         frame = QFrame()
-        frame.setObjectName("supportCard")
+        frame.setObjectName("dashboardRecentProjectsCard")
+        frame.setProperty("uiPrimitive", "dashboard_recent_projects")
+        frame.setProperty("projectCenter", False)
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
-        layout.setSpacing(SPACING["sm"])
-        layout.addLayout(self._title_row("最近项目", "recent_projects"))
-        projects = list(self._dashboard.recent_projects[:3])
-        if not projects:
-            layout.addLayout(self._support_line_with_icon("暂无最近项目，本阶段保留入口占位。", "project_entry"))
-        for project in projects:
-            layout.addLayout(self._support_line_with_icon(project.display_label(), "project_entry"))
-        return frame
-
-    def _build_support_panel(self) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("supportCard")
-        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-        layout.setSpacing(SPACING["md"])
-
-        layout.addLayout(self._title_row("本地测试信息", "settings"))
-        self._tier_label = self._support_line("")
-        self._license_label = self._support_line("")
-        layout.addWidget(self._tier_label)
-        layout.addWidget(self._license_label)
-        layout.addWidget(self._support_line("订阅 / VIP 服务：预留功能"))
-        layout.addWidget(self._support_line("设置入口：占位"))
-        icon_summary = icon_asset_summary()
-        layout.addWidget(
-            self._support_line(
-                f"图标资源：已生成 {icon_summary['generated']} / {icon_summary['total']}；"
-                f"待生成 {icon_summary['pending']}。详情见设置中心。"
-            )
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(18, 14, 18, 12)
+        title_row.setSpacing(SPACING["sm"])
+        title_col = QVBoxLayout()
+        title_col.setSpacing(2)
+        title = QLabel("最近项目 / Recent Projects")
+        title.setObjectName("dashboardSectionTitle")
+        subtitle = QLabel("继续打开最近使用的本地研究项目。")
+        subtitle.setObjectName("dashboardSectionSubtitle")
+        subtitle.setWordWrap(True)
+        title_col.addWidget(title)
+        title_col.addWidget(subtitle)
+        title_row.addLayout(title_col, 1)
+        open_more = make_action_button(
+            "打开更多项目...",
+            role="secondary",
+            semantic_state="disabled",
+            action_key="open_more_projects",
+            enabled=False,
+            disabled_reason="Project Center 尚未作为正式项目中心开放。",
         )
-        layout.addSpacing(SPACING["md"])
+        open_more.setObjectName("dashboardOpenMoreProjectsButton")
+        open_more.setIcon(load_ui02_module_selection_icon("project_entry"))
+        open_more.setIconSize(QSize(18, 18))
+        title_row.addWidget(open_more)
+        layout.addLayout(title_row)
 
-        layout.addLayout(self._title_row("本地环境状态", "local_environment"))
-        environment = self._dashboard.environment
-        layout.addWidget(self._support_line(f"Python：{environment.python_version}"))
-        layout.addWidget(self._support_line(f"PySide6：{'可用' if environment.pyside6_available else '不可用'}"))
-        layout.addWidget(self._support_line("环境检查详情：后续接入设置中心。"))
-        layout.addStretch(1)
-
-        settings_button = QPushButton("设置入口（预留）")
-        settings_button.setObjectName("secondaryButton")
-        settings_button.setIcon(load_ui02_module_selection_icon("settings"))
-        settings_button.setIconSize(QSize(18, 18))
-        settings_button.setEnabled(False)
-        logout_button = QPushButton("退出登录")
-        logout_button.setObjectName("logoutButton")
-        logout_button.setIcon(load_ui02_module_selection_icon("logout"))
-        logout_button.setIconSize(QSize(18, 18))
-        logout_button.clicked.connect(self.logout_requested.emit)
-        layout.addWidget(settings_button)
-        layout.addWidget(logout_button)
+        table = self._recent_projects_table()
+        table.setProperty("dashboardOnly", True)
+        layout.addWidget(table)
+        view_all = QPushButton("查看全部项目（12）")
+        view_all.setObjectName("dashboardViewAllProjectsButton")
+        view_all.setEnabled(False)
+        view_all.setToolTip("Project Center 尚未作为正式项目中心开放。")
+        layout.addWidget(view_all, 0, Qt.AlignHCenter)
         return frame
+
+    def _recent_projects_table(self) -> QTableWidget:
+        rows = self._recent_project_rows()
+        table = QTableWidget(len(rows), 5)
+        table.setObjectName("dashboardRecentProjectsTable")
+        table.setProperty("uiPrimitive", "project_recent_table")
+        table.setProperty("readOnly", True)
+        table.setProperty("createsProject", False)
+        table.setProperty("opensProject", False)
+        table.setProperty("horizontalOverflow", True)
+        table.setProperty("fakeRecords", not self._dashboard.recent_projects)
+        table.setHorizontalHeaderLabels(("项目名称", "模块类型", "最近修改时间", "状态", "操作"))
+        table.verticalHeader().setVisible(False)
+        table.setShowGrid(False)
+        table.setAlternatingRowColors(False)
+        table.setSelectionMode(QTableWidget.NoSelection)
+        table.setFocusPolicy(Qt.NoFocus)
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        table.setMinimumHeight(356)
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        for row_index, row in enumerate(rows):
+            for column_index, value in enumerate(row):
+                item = QTableWidgetItem(value)
+                item.setFlags(Qt.ItemIsEnabled)
+                if column_index in (2, 4):
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                else:
+                    item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                table.setItem(row_index, column_index, item)
+            table.setRowHeight(row_index, 52)
+        return table
+
+    def _recent_project_rows(self) -> list[tuple[str, str, str, str, str]]:
+        projects = list(self._dashboard.recent_projects[:5])
+        if projects:
+            return [
+                (
+                    project.project_name,
+                    "生信分析" if project.project_type == "bioinformatics" else "Meta 分析",
+                    project.updated_at,
+                    "测试中 testing",
+                    "打开",
+                )
+                for project in projects
+            ]
+        return [
+            ("BRCA 单细胞表达分析", "生信分析", "2025-05-20 14:30", "测试中 testing", "打开"),
+            ("肺癌生存 Meta 分析", "Meta 分析", "2025-05-19 09:15", "测试中 testing", "打开"),
+            ("Western Blot 灰度分析记录", "实验工具", "2025-05-18 17:22", "测试中 testing", "打开"),
+            ("蛋白浓度计算与配制", "实验工具", "2025-05-17 16:05", "测试中 testing", "打开"),
+            ("GEO 数据预处理流程", "生信分析", "2025-05-16 11:48", "测试中 testing", "打开"),
+        ]
+
+    def _testing_pill(self) -> QLabel:
+        pill = QLabel("● 测试中 testing")
+        pill.setObjectName("dashboardTestingPill")
+        pill.setAlignment(Qt.AlignCenter)
+        pill.setProperty("uiPrimitive", "status_chip")
+        pill.setProperty("statusKey", "testing")
+        pill.setProperty("semanticKey", NavKey.DASHBOARD.value)
+        return pill
 
     def _support_line(self, text: str) -> QLabel:
         label = QLabel(text)
@@ -311,6 +452,18 @@ class ModuleSelectionWidget(QWidget):
         label.setPixmap(pixmap)
         label.setVisible(not pixmap.isNull())
         return label
+
+    def _header_icon_button(self, text: str, icon_key: str) -> QPushButton:
+        button = make_action_button(text, role="secondary", size="small", semantic_state="available")
+        button.setObjectName("dashboardHeaderIconButton")
+        button.setMinimumSize(40, 40)
+        button.setMaximumSize(44, 44)
+        button.setToolTip(text)
+        button.setText("")
+        button.setIcon(load_ui02_module_selection_icon(icon_key))
+        button.setIconSize(QSize(18, 18))
+        button.setAccessibleName(text)
+        return button
 
     def _title_row(self, title: str, icon_key: str) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -330,3 +483,29 @@ class ModuleSelectionWidget(QWidget):
         row.addWidget(self._ui02_icon_label(icon_key, 18))
         row.addWidget(self._support_line(text), 1)
         return row
+
+
+def _module_status_key(module_key: str) -> str:
+    if module_key == ModuleKey.META_ANALYSIS.value:
+        return "testing"
+    return "testing"
+
+
+def _module_accent_name(module_key: str) -> str:
+    if module_key == ModuleKey.BIOINFORMATICS.value:
+        return "bio"
+    if module_key == ModuleKey.META_ANALYSIS.value:
+        return "meta"
+    if module_key == ModuleKey.LABTOOLS.value:
+        return "labtools"
+    return "default"
+
+
+def _legacy_module_title(module_key: str) -> str:
+    if module_key == ModuleKey.BIOINFORMATICS.value:
+        return "Bioinformatics / 生信分析"
+    if module_key == ModuleKey.META_ANALYSIS.value:
+        return "Meta Analysis / Meta 分析"
+    if module_key == ModuleKey.LABTOOLS.value:
+        return "LabTools / 实验工具"
+    return ""
