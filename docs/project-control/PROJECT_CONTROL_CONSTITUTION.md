@@ -849,3 +849,49 @@ git diff --name-status
 ```text
 docs(project-control): add constitution v2 for UI baseline governance
 ```
+
+---
+
+## 21. Historical UI Line Recovery Evidence
+
+`docs/ui/UI线路既往检查.md` is the sealed historical UI line evidence document imported from UIShell into the software remediation control branch. It must be treated as evidence, not as migration authorization.
+
+Recorded facts from that document:
+
+```text
+Preferred recovery source:
+codex/integration-labtools-ui-c2-carryover
+
+Recorded carryover HEAD:
+e13d0f5f5dfda36a5c60a00ddc7820748fa1677f
+
+Accepted packaged preview identity:
+9d4edf3
+
+Old dev/integration issue:
+missing Bioinformatics / Meta Analysis / LabTools page commits
+```
+
+The recovery evidence lists Bioinformatics, Meta Analysis, LabTools, and shared UI foundation commits that may be useful for scoped recovery planning. These commits are not permission to merge or cherry-pick.
+
+Governance rules:
+
+1. Keep `9d4edf3` as UI Shell / packaged preview evidence only.
+2. Keep `e13d0f5` and `codex/integration-labtools-ui-c2-carryover` as historical page recovery evidence only.
+3. Do not merge whole `codex/integration-labtools-ui-c2-carryover`.
+4. Do not cherry-pick historical UI commits without a scoped file list and conflict plan.
+5. Do not treat recovered page presence as connected runtime.
+6. Do not use LabTools recovered pages as final Figma/new pages until page-style audit passes.
+7. Do not touch `project_storage/` during Project Control or recovery planning.
+
+The detailed matrices live in:
+
+```text
+docs/project-control/UI_SHELL_BASELINE_DECISION.md
+docs/project-control/UI_ROUTE_FEATURE_INVENTORY.md
+docs/project-control/LABTOOLS_RECONCILIATION_LEDGER.md
+docs/project-control/LEGACY_FEATURE_TRIAGE.md
+docs/project-control/MAINLINE_MIGRATION_LEDGER.md
+docs/project-control/PROJECT_MANAGEMENT_RESTORE_PLAN.md
+docs/ui/UI线路既往检查.md
+```

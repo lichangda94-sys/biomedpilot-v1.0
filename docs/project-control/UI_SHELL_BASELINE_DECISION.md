@@ -51,3 +51,17 @@ It is not a feature-complete baseline and must not be used as proof that module 
 | Project Management restore source search | pending | `PROJECT_MANAGEMENT_RESTORE_PLAN.md` updates |
 | Module route inventory | pending | `UI_ROUTE_FEATURE_INVENTORY.md` filled rows |
 | LabTools reconciliation | pending | `LABTOOLS_RECONCILIATION_LEDGER.md` filled rows |
+
+## Provenance Addendum: `9d4edf3` / `e13d0f5`
+
+`docs/ui/UI线路既往检查.md` records `codex/integration-labtools-ui-c2-carryover` as the preferred historical UI recovery source. In that check, `e13d0f5f5dfda36a5c60a00ddc7820748fa1677f` is the recorded carryover HEAD and `9d4edf3` is the later packaged preview identity accepted by the user.
+
+| Item | Decision |
+| --- | --- |
+| Accepted packaged preview | `9d4edf3` remains the UI Shell / visual preview baseline. |
+| Historical carryover HEAD | `e13d0f5f5dfda36a5c60a00ddc7820748fa1677f` is the recorded UI recovery line HEAD in `docs/ui/UI线路既往检查.md`. |
+| Relationship | `e13d0f5` is part of the carryover line used as UI recovery evidence; `9d4edf3` is the later accepted preview identity. |
+| Migration boundary | Neither `9d4edf3` nor `e13d0f5` authorizes whole-branch merge or direct cherry-pick. |
+| Governance result | Use `9d4edf3` for Shell baseline evidence; use `codex/integration-labtools-ui-c2-carryover` and the commit matrices as feature-page recovery evidence subject to scoped audit. |
+
+`e13d0f5..9d4edf3` is treated as UI gate / Settings detect-first / release preview refinement evidence, not proof of feature completeness.

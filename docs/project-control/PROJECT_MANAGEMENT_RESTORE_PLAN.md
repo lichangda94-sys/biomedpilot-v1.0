@@ -36,3 +36,14 @@ MainLine home cannot be called complete until Project Management is restored or 
 ## Next Required Audit
 
 Find the best historical implementation for project creation, settings, file import, history, and workspace/session state, then prepare a scoped restore plan.
+
+## Historical UI Line Evidence
+
+`docs/ui/UI线路既往检查.md` confirms that the accepted packaged preview `9d4edf3` is useful as UI Shell evidence, but it does not prove Project Management completeness. Project Management must remain a separate restore track.
+
+Evidence to preserve:
+
+- The accepted preview may show a Project Management surface, but a static image, decorative card, or non-interactive visual block is not a project management module.
+- Complete Project Management still requires project creation, project settings, file import, history/recent projects, workspace/session records, project path/storage policy, and user-visible project status.
+- No Project Management recovery may touch `project_storage/` during planning.
+- Any restore must use a scoped source search and keep the restore strategy template above.
