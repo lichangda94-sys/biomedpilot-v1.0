@@ -7,7 +7,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QPushButton
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QTabWidget
 
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import ModuleKey, PageKey
@@ -91,14 +91,14 @@ def test_experiment_modules_route_to_expected_second_level_list(labtools_window)
 @pytest.mark.parametrize(
     ("page_key", "semantic_key", "expected_text"),
     [
-        ("cell_experiments", "labtools.page.cell_experiments", "cell information"),
-        ("protein_experiments", "labtools.page.protein_experiments", "WB loading"),
         ("nucleic_acid_experiments", "labtools.page.nucleic_acid_experiments", "PCR/qPCR adapters"),
         ("immuno_absorbance", "labtools.page.immuno_absorbance", "ELISA/BCA formal"),
         ("ihc", "labtools.page.ihc", "IHC record model"),
     ],
 )
-def test_labtools_c1_secondary_routes_are_explicitly_disabled(labtools_window, page_key: str, semantic_key: str, expected_text: str) -> None:
+def test_labtools_unconnected_secondary_routes_are_explicitly_disabled(
+    labtools_window, page_key: str, semantic_key: str, expected_text: str
+) -> None:
     page = labtools_window._labtools_page
     _primary_button(labtools_window, "experiment_modules").click()
 
@@ -113,6 +113,55 @@ def test_labtools_c1_secondary_routes_are_explicitly_disabled(labtools_window, p
     assert disabled is not None
     assert not disabled.isEnabled()
     assert expected_text in disabled.property("disabledReason")
+
+
+def test_labtools_c2_primary_routes_call_backend_widgets(labtools_window) -> None:
+    page = labtools_window._labtools_page
+
+    _primary_button(labtools_window, "general_calculators").click()
+
+    calculator_page = page.current_page_widget()
+    calculator_tabs = calculator_page.findChild(QTabWidget, "labToolsCalculatorTabs")
+    assert page.current_page_key() == "general_calculators"
+    assert page.property("semanticKey") == PageKey.LABTOOLS_GENERAL_CALCULATORS.value
+    assert calculator_page.property("connectionStatus") == "connected"
+    assert calculator_tabs is not None
+    assert calculator_tabs.count() >= 2
+
+    page.show_home()
+    _primary_button(labtools_window, "reagent_preparation").click()
+
+    reagent_page = page.current_page_widget()
+    assert page.current_page_key() == "reagent_preparation"
+    assert page.property("semanticKey") == PageKey.LABTOOLS_REAGENT_PREPARATION.value
+    assert reagent_page.property("connectionStatus") == "connected"
+    assert reagent_page.objectName() == "labToolsReagentPreparationFlow"
+
+
+def test_labtools_c2_secondary_routes_call_backend_widgets(labtools_window) -> None:
+    page = labtools_window._labtools_page
+    _primary_button(labtools_window, "experiment_modules").click()
+
+    _secondary_button(labtools_window, "cell_experiments").click()
+
+    cell_page = page.current_page_widget()
+    cell_tabs = cell_page.findChild(QTabWidget, "cellExperimentTopTabs")
+    assert page.current_page_key() == "cell_experiments"
+    assert page.property("semanticKey") == PageKey.LABTOOLS_CELL_EXPERIMENTS.value
+    assert cell_page.property("connectionStatus") == "connected"
+    assert cell_tabs is not None
+    assert cell_tabs.count() >= 2
+
+    page.show_experiment_modules()
+    _secondary_button(labtools_window, "protein_experiments").click()
+
+    protein_page = page.current_page_widget()
+    western_tabs = protein_page.findChild(QTabWidget, "westernBlotTabs")
+    assert page.current_page_key() == "protein_experiments"
+    assert page.property("semanticKey") == PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value
+    assert protein_page.property("connectionStatus") == "connected"
+    assert western_tabs is not None
+    assert western_tabs.count() >= 5
 
 
 def test_labtools_image_processing_is_not_a_module_entry(labtools_window) -> None:

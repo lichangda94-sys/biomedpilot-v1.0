@@ -39,6 +39,9 @@ try:
         get_labtools_secondary_entry,
         labtools_secondary_entries,
     )
+    from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget, ReagentPreparationWorkflowWidget
+    from app.labtools.ui.cell_experiment_widgets import LabToolsCellExperimentPage
+    from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING, button_stylesheet, status_chip_stylesheet
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -81,6 +84,9 @@ if QWidget is not None:
         def show_general_calculator(self) -> None:
             self._show_page("general_calculators")
 
+        def show_general_calculators(self) -> None:
+            self.show_general_calculator()
+
         def show_reagent_preparation(self) -> None:
             self._show_page("reagent_preparation")
 
@@ -90,7 +96,13 @@ if QWidget is not None:
         def show_western_blot(self) -> None:
             self._show_page("protein_experiments")
 
+        def show_protein_experiments(self) -> None:
+            self._show_page("protein_experiments")
+
         def show_cell_info(self) -> None:
+            self._show_page("cell_experiments")
+
+        def show_cell_experiments(self) -> None:
             self._show_page("cell_experiments")
 
         def _show_page(self, key: str) -> None:
@@ -132,11 +144,23 @@ if QWidget is not None:
             self._home_page.primary_requested.connect(self.show_primary)
             self._route_pages = {
                 "home": self._home_page,
-                "general_calculators": self._primary_placeholder_page(get_labtools_primary_entry("general_calculators")),
-                "reagent_preparation": self._primary_placeholder_page(get_labtools_primary_entry("reagent_preparation")),
+                "general_calculators": self._connected_page(
+                    get_labtools_primary_entry("general_calculators"),
+                    LabToolsCalculatorWidget(),
+                ),
+                "reagent_preparation": self._connected_page(
+                    get_labtools_primary_entry("reagent_preparation"),
+                    ReagentPreparationWorkflowWidget(),
+                ),
                 "experiment_modules": self._experiment_modules_page(),
-                "cell_experiments": self._secondary_placeholder_page(get_labtools_secondary_by_page("cell_experiments")),
-                "protein_experiments": self._secondary_placeholder_page(get_labtools_secondary_by_page("protein_experiments")),
+                "cell_experiments": self._connected_page(
+                    get_labtools_secondary_by_page("cell_experiments"),
+                    LabToolsCellExperimentPage(),
+                ),
+                "protein_experiments": self._connected_page(
+                    get_labtools_secondary_by_page("protein_experiments"),
+                    LabToolsWesternBlotWidget(),
+                ),
                 "nucleic_acid_experiments": self._secondary_placeholder_page(
                     get_labtools_secondary_by_page("nucleic_acid_experiments")
                 ),
@@ -188,6 +212,14 @@ if QWidget is not None:
             layout.addWidget(provenance)
             layout.addStretch(1)
             return page
+
+        def _connected_page(self, entry: LabToolsPrimaryEntry | LabToolsSecondaryEntry, widget: QWidget) -> QWidget:
+            widget.setProperty("pageKey", entry.page_key)
+            widget.setProperty("semanticKey", entry.semantic_key)
+            widget.setProperty("toolId", entry.tool_id)
+            widget.setProperty("sourceCommits", " / ".join(entry.source_commits))
+            widget.setProperty("connectionStatus", "connected")
+            return widget
 
         def _experiment_modules_page(self) -> QWidget:
             page = QWidget()

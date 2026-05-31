@@ -7,6 +7,8 @@ import subprocess
 from app.shared.local_engines.engine_config import LocalEngineConfig, LocalEngineConfigStore
 from app.shared.local_engines.engine_status import ENGINE_STATUS_CONFIGURED_UNVERIFIED, EngineStatus
 from app.shared.local_engines.imagej_fiji_detector import IMAGEJ_FIJI_ENGINE_ID, default_imagej_fiji_status, detect_imagej_fiji_status
+from app.shared.local_engines.imagej_fiji_installer import ImageJFijiRuntimeInstallResult, prepare_imagej_fiji_runtime
+from app.shared.local_engines.imagej_fiji_runtime import default_imagej_fiji_runtime_root
 
 
 class ImageJFijiBridge:
@@ -32,6 +34,26 @@ class ImageJFijiBridge:
             )
         self._store.save(config)
         return config
+
+    def configure_runtime_root(self, runtime_root: str | Path | None = None) -> LocalEngineConfig:
+        return self.configure_path(runtime_root or default_imagej_fiji_runtime_root())
+
+    def prepare_runtime(self, *, runtime_root: str | Path | None = None, allow_network_download: bool = False, **kwargs) -> ImageJFijiRuntimeInstallResult:
+        result = prepare_imagej_fiji_runtime(
+            runtime_root=runtime_root or default_imagej_fiji_runtime_root(),
+            allow_network_download=allow_network_download,
+            **kwargs,
+        )
+        self._store.save(
+            LocalEngineConfig(
+                engine_id=IMAGEJ_FIJI_ENGINE_ID,
+                configured_path_or_endpoint=result.runtime_root,
+                last_status=default_imagej_fiji_status(ENGINE_STATUS_CONFIGURED_UNVERIFIED, configured_path=result.runtime_root),
+            )
+        )
+        if kwargs.get("run_smoke_test", True):
+            self.check_status(persist=True, runner=kwargs.get("runner", subprocess.run))
+        return result
 
     def check_status(self, *, persist: bool = True, runner=subprocess.run) -> EngineStatus:
         config = self._store.load()

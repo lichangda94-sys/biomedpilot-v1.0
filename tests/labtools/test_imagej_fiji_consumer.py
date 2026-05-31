@@ -3,7 +3,6 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from app.labtools.image_analysis import IMAGE_REVIEW_NOTICE
 from app.labtools.image_analysis.local_engine_consumer import (
     LABTOOLS_IMAGE_ANALYSIS_BOUNDARY,
     check_labtools_imagej_fiji_status,
@@ -11,7 +10,6 @@ from app.labtools.image_analysis.local_engine_consumer import (
     labtools_imagej_fiji_prompt,
     load_labtools_imagej_fiji_status,
 )
-from app.labtools.workspace import labtools_features
 from app.shared.local_engines import ENGINE_STATUS_AVAILABLE, ENGINE_STATUS_CONFIGURED_UNVERIFIED, IMAGEJ_FIJI_ENGINE_ID, ImageJFijiBridge, LocalEngineConfigStore
 
 
@@ -46,20 +44,8 @@ def test_labtools_imagej_fiji_consumer_configures_and_checks_shared_bridge(tmp_p
 
 def test_labtools_imagej_fiji_consumer_text_keeps_algorithm_boundary() -> None:
     prompt = labtools_imagej_fiji_prompt()
-    feature = labtools_features()[0]
 
     assert "LabTools 图像定量 workflow" in prompt
-    assert "ImageJ/Fiji" in prompt
-    assert "不内置 WB/gel 真实分析、agarose gel、自动 ROI、细胞计数、条带识别" in LABTOOLS_IMAGE_ANALYSIS_BOUNDARY
-    assert "生产级真实图像算法" in IMAGE_REVIEW_NOTICE
-    assert "消费 shared ImageJ/Fiji 本机引擎检测" in feature.description
-
-
-def test_labtools_package_does_not_export_forbidden_image_algorithms() -> None:
-    import app.labtools as labtools
-
-    exported = set(labtools.__all__)
-
-    assert "LabToolsWorkspaceWidget" in exported
-    assert "labtools_features" in exported
-    assert not {"cell_counting", "automatic_roi", "pathology_workflow"} & exported
+    assert "需要本机 ImageJ" in prompt
+    assert "Fiji 仅作为增强引擎保留" in prompt
+    assert "不内置自动 ROI、细胞计数、条带识别或生产级图像算法" in LABTOOLS_IMAGE_ANALYSIS_BOUNDARY

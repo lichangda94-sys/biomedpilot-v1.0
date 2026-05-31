@@ -14,8 +14,8 @@ from app.shared.local_engines import (
 
 LABTOOLS_IMAGEJ_FIJI_WORKFLOW_NAME = "LabTools 图像定量 workflow"
 LABTOOLS_IMAGE_ANALYSIS_BOUNDARY = (
-    "LabTools 不内置 WB/gel 真实分析、agarose gel、自动 ROI、细胞计数、条带识别、"
-    "pathology workflow 或生产级图像算法；ImageJ/Fiji 仅作为用户显式配置和检测的本机外部引擎。"
+    "LabTools 不内置自动 ROI、细胞计数、条带识别或生产级图像算法；"
+    "轻量 ImageJ 是基础外部引擎，Fiji 仅作为后续插件型 macro 的增强引擎。"
 )
 
 

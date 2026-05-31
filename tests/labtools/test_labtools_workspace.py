@@ -7,7 +7,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QPushButton
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QTabWidget
 
     from app.labtools.workspace import LabToolsWorkspaceWidget
 except Exception as exc:  # pragma: no cover
@@ -87,29 +87,91 @@ def test_experiment_modules_expose_second_level_entries(qt_app) -> None:
     assert "image_processing_boundary" not in [button.property("pageKey") for button in buttons]
 
 
-def test_labtools_c1_secondary_placeholder_has_disabled_reason(qt_app) -> None:
+def test_labtools_c2_primary_routes_connect_to_workbench_widgets(qt_app) -> None:
+    widget = LabToolsWorkspaceWidget()
+
+    widget.show_general_calculator()
+
+    calculator_page = widget.current_page_widget()
+    calculator_tabs = calculator_page.findChild(QTabWidget, "labToolsCalculatorTabs")
+    assert widget.current_page_key() == "general_calculators"
+    assert widget.property("semanticKey") == "labtools.page.general_calculators"
+    assert calculator_page.property("connectionStatus") == "connected"
+    assert calculator_tabs is not None
+    assert calculator_tabs.count() >= 2
+
+    widget.show_reagent_preparation()
+
+    reagent_page = widget.current_page_widget()
+    assert widget.current_page_key() == "reagent_preparation"
+    assert widget.property("semanticKey") == "labtools.page.reagent_preparation"
+    assert reagent_page.property("connectionStatus") == "connected"
+    assert reagent_page.objectName() == "labToolsReagentPreparationFlow"
+
+
+def test_labtools_c2_secondary_routes_connect_cell_and_protein_workbenches(qt_app) -> None:
     widget = LabToolsWorkspaceWidget()
     widget.show_experiment_modules()
-    button = next(
+
+    cell_button = next(
+        item
+        for item in widget.current_page_widget().findChildren(QPushButton, "labtoolsSecondaryEntryButton")
+        if item.property("pageKey") == "cell_experiments"
+    )
+    protein_button = next(
         item
         for item in widget.current_page_widget().findChildren(QPushButton, "labtoolsSecondaryEntryButton")
         if item.property("pageKey") == "protein_experiments"
     )
 
+    cell_button.click()
+
+    cell_page = widget.current_page_widget()
+    cell_tabs = cell_page.findChild(QTabWidget, "cellExperimentTopTabs")
+    assert widget.current_page_key() == "cell_experiments"
+    assert widget.property("semanticKey") == "labtools.page.cell_experiments"
+    assert cell_page.property("connectionStatus") == "connected"
+    assert cell_tabs is not None
+    assert cell_tabs.count() >= 2
+
+    widget.show_experiment_modules()
+    protein_button = next(
+        item
+        for item in widget.current_page_widget().findChildren(QPushButton, "labtoolsSecondaryEntryButton")
+        if item.property("pageKey") == "protein_experiments"
+    )
+    protein_button.click()
+
+    protein_page = widget.current_page_widget()
+    western_tabs = protein_page.findChild(QTabWidget, "westernBlotTabs")
+    assert widget.current_page_key() == "protein_experiments"
+    assert widget.property("semanticKey") == "labtools.page.protein_experiments"
+    assert protein_page.property("connectionStatus") == "connected"
+    assert western_tabs is not None
+    assert western_tabs.count() >= 5
+
+
+@pytest.mark.parametrize(
+    "page_key",
+    ["nucleic_acid_experiments", "immuno_absorbance", "ihc"],
+)
+def test_labtools_unconnected_secondary_placeholders_keep_disabled_reason(qt_app, page_key: str) -> None:
+    widget = LabToolsWorkspaceWidget()
+    widget.show_experiment_modules()
+    button = next(
+        item
+        for item in widget.current_page_widget().findChildren(QPushButton, "labtoolsSecondaryEntryButton")
+        if item.property("pageKey") == page_key
+    )
+
     button.click()
 
     current_page = widget.current_page_widget()
-    labels = "\n".join(label.text() for label in current_page.findChildren(QLabel))
     disabled = current_page.findChild(QPushButton, "labToolsC1DisabledActionButton")
-    assert widget.current_page_key() == "protein_experiments"
-    assert widget.property("semanticKey") == "labtools.page.protein_experiments"
-    assert "Disabled reason: UI-LABTOOLS-C2 will connect WB loading" in labels
+    assert widget.current_page_key() == page_key
     assert disabled is not None
     assert not disabled.isEnabled()
-    assert (
-        disabled.property("disabledReason")
-        == "UI-LABTOOLS-C2 will connect WB loading, SDS-PAGE, BCA/OD, records, and report gates."
-    )
+    assert disabled.property("disabledReason")
 
 
 def test_labtools_experiment_modules_do_not_expose_image_processing_entry(qt_app) -> None:
