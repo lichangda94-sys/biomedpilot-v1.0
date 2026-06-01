@@ -76,13 +76,9 @@ def test_ui1a_meta_workspace_entry_is_chinese_friendly() -> None:
     assert state.title == "Meta 分析模块"
     assert "0.1.0-internal-beta" in state.status_label
     assert "内部测试版 / Developer Preview / testing" in state.status_label
-    assert labels[0] == "项目首页"
-    assert "检索策略" in labels
-    assert "文献库与导入" in labels
-    assert "数据提取与质量评价" in labels
-    assert "统计分析" in labels
-    assert "报告导出" in labels
-    assert "不能作为正式临床" in state.testing_notice
+    assert labels == ["Meta UIShell target IA"]
+    assert state.default_page_key == "target_ia"
+    assert "旧页面仅作为后端能力来源" in state.testing_notice
 
 
 def test_ui1a_app_dashboard_keeps_version_and_internal_beta_copy() -> None:

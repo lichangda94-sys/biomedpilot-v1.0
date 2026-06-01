@@ -92,9 +92,9 @@ def test_release_ui_button_contracts_cover_labtools_bio_meta_and_centers(qt_app,
     meta_project = create_meta_analysis_project("Release Contract Meta", tmp_path / "meta")
     meta = MetaAnalysisWorkspaceWidget()
     meta.set_project_dir(meta_project.project_root)
-    for page_key in meta.page_keys():
-        meta.show_step(page_key)
-        _assert_buttons_have_release_contract(meta._page_stack.currentWidget().widget(), scope=f"meta:{page_key}")
+    for page_key in meta.target_ia_page_keys():
+        meta.show_target_ia_page(page_key)
+        _assert_buttons_have_release_contract(meta, scope=f"meta:{page_key}")
 
     centers = build_centers_page(
         project_center=ProjectCenter(tmp_path / "centers" / "projects.json"),

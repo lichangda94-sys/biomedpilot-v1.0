@@ -194,11 +194,12 @@ def test_main_window_module_buttons_enter_expected_workspaces(qt_app) -> None:
         meta_button = window._dashboard_page.findChild(QPushButton, "metaModuleButton")
         meta_button.click()
         assert window.current_workspace_key() == "meta_analysis"
-        assert window._meta_analysis_page.page_keys()[:4] == (
-            "workflow_home",
-            "pico_workspace",
+        assert window._meta_analysis_page.page_keys() == ("target_ia",)
+        assert window._meta_analysis_page.target_ia_page_keys()[:4] == (
+            "project_home",
+            "question_meta_type",
             "search_strategy",
-            "literature_import",
+            "import_dedup",
         )
 
         window.show_dashboard()

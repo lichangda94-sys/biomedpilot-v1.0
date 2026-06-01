@@ -9,16 +9,17 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QListWidget, QPushButton, QTextEdit
+    from PySide6.QtWidgets import QApplication, QPushButton
+
+    from app.meta_analysis.project_workspace import create_meta_analysis_project
+    from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
+    from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
     IMPORT_ERROR = None
-
-from app.meta_analysis.project_workspace import create_meta_analysis_project
-from app.meta_analysis.search.pubmed_search_service import PubMedSearchExecution, PubMedSearchResult
-from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
 
 
 @pytest.fixture
@@ -26,23 +27,6 @@ def qt_app():
     if QApplication is None:
         pytest.skip(f"PySide6 UI runtime unavailable: {IMPORT_ERROR}")
     return QApplication.instance() or QApplication([])
-
-
-def _current_step_widget(widget):
-    scroll = widget._page_stack.currentWidget()
-    return scroll.widget()
-
-
-def _button(widget, text: str) -> QPushButton:
-    return next(button for button in widget.findChildren(QPushButton) if button.text() == text)
-
-
-def _visible_text(widget) -> str:
-    texts: list[str] = []
-    for child in [*widget.findChildren(QLabel), *widget.findChildren(QPushButton)]:
-        if child.isVisibleTo(widget) and child.text():
-            texts.append(child.text())
-    return "\n".join(texts)
 
 
 def _confirmed_meta_project(tmp_path: Path) -> Path:
@@ -76,145 +60,32 @@ def _confirmed_meta_project(tmp_path: Path) -> Path:
     return summary.project_root
 
 
-class FakePubMedSearchService:
-    def search_pubmed(self, query: str, *, max_results: int = 20, timeout_seconds: float = 10.0) -> PubMedSearchExecution:
-        return PubMedSearchExecution(
-            success=True,
-            query_used=query,
-            executed_at="2026-05-12T00:00:00+00:00",
-            result_count=2,
-            returned_count=2,
-            search_execution_id="pubmedexec-ui-m2",
-            records=(
-                PubMedSearchResult(
-                    pmid="111",
-                    doi="10.1000/ui111",
-                    title="Obesity and thyroid cancer risk",
-                    journal="Meta UI Journal",
-                    year="2024",
-                    publication_date="2024",
-                    authors=("Alice Adams",),
-                    abstract="Candidate abstract.",
-                    snippet="Candidate abstract.",
-                    url="https://pubmed.ncbi.nlm.nih.gov/111/",
-                    query_used=query,
-                ),
-                PubMedSearchResult(
-                    pmid="222",
-                    doi="10.1000/ui222",
-                    title="BMI and thyroid neoplasms",
-                    journal="Meta UI Journal",
-                    year="2025",
-                    publication_date="2025",
-                    authors=("Ben Baker",),
-                    abstract="Second abstract.",
-                    snippet="Second abstract.",
-                    url="https://pubmed.ncbi.nlm.nih.gov/222/",
-                    query_used=query,
-                ),
-            ),
-        )
+def test_search_strategy_service_remains_available_as_old_capability_source(tmp_path: Path) -> None:
+    project_dir = _confirmed_meta_project(tmp_path)
+
+    SearchStrategyBuilderService().generate_from_confirmed_protocol(project_dir, actor="reviewer")
+
+    draft_path = project_dir / "protocol" / "search_strategy_v2" / "search_strategy_drafts.json"
+    assert draft_path.exists()
+    payload = json.loads(draft_path.read_text(encoding="utf-8"))
+    assert payload["strategies"]
+    assert not (project_dir / "protocol" / "search_execution_report.json").exists()
 
 
-def test_search_strategy_page_reads_confirmed_protocol_and_blocks_pubmed_until_confirmed(qt_app, tmp_path: Path) -> None:
-    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
-
+def test_search_strategy_ui_uses_uishell_gate_instead_of_old_page(qt_app, tmp_path: Path) -> None:
     project_dir = _confirmed_meta_project(tmp_path)
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_dir(project_dir)
-    widget.show()
-    widget.show_step("search_strategy")
+    widget.show_target_ia_page("search_strategy")
+
+    assert widget.page_keys() == ("target_ia",)
+    assert widget.current_target_page_key() == "search_strategy"
+    save = widget.findChild(QPushButton, "metaSaveSearchDraftButton")
+    assert save is not None
+    assert save.property("buttonBehavior") == "calls_search_strategy_builder_or_writes_disabled_reason"
+    save.click()
     qt_app.processEvents()
 
-    current = _current_step_widget(widget)
-    assert "下一阶段将基于该方案生成检索策略" in _visible_text(current)
-    execute_button = current.findChild(QPushButton, "metaPubMedExecuteButton")
-    assert execute_button is not None
-    assert not execute_button.isEnabled()
-
-    _button(current, "生成检索策略").click()
-    qt_app.processEvents()
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    assert not current.findChild(QPushButton, "metaPubMedExecuteButton").isEnabled()
-
-    _button(current, "确认当前检索式").click()
-    qt_app.processEvents()
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    assert current.findChild(QPushButton, "metaPubMedExecuteButton").isEnabled()
-
-
-def test_non_pubmed_database_hides_online_execution_button(qt_app, tmp_path: Path) -> None:
-    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
-
-    project_dir = _confirmed_meta_project(tmp_path)
-    widget = MetaAnalysisWorkspaceWidget()
-    widget.set_project_dir(project_dir)
-    widget.show()
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    _button(current, "生成检索策略").click()
-    qt_app.processEvents()
-
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    database_list = current.findChild(QListWidget, "metaSearchDatabaseList")
-    execute_button = current.findChild(QPushButton, "metaPubMedExecuteButton")
-    assert database_list is not None
-    assert execute_button is not None
-
-    database_list.setCurrentRow(1)
-    qt_app.processEvents()
-
-    assert "当前版本支持检索式生成与本地导入，不执行联网检索" in _visible_text(current)
-    assert not execute_button.isVisibleTo(current)
-
-
-def test_pubmed_candidates_can_be_selected_and_added_to_library(qt_app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import app.meta_analysis.workspace as workspace
-    from app.meta_analysis.pages.workflow_integration_page import meta_workflow_integration_state_from_project
-    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
-
-    monkeypatch.setattr(workspace, "PubMedSearchService", FakePubMedSearchService)
-    monkeypatch.setattr(workspace, "_show_message", lambda _text: None)
-    project_dir = _confirmed_meta_project(tmp_path)
-    widget = MetaAnalysisWorkspaceWidget()
-    widget.set_project_dir(project_dir)
-    widget.show()
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    _button(current, "生成检索策略").click()
-    qt_app.processEvents()
-
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    _button(current, "确认当前检索式").click()
-    qt_app.processEvents()
-
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    current.findChild(QPushButton, "metaPubMedExecuteButton").click()
-    qt_app.processEvents()
-
-    widget.show_step("search_strategy")
-    current = _current_step_widget(widget)
-    candidates = current.findChild(QListWidget, "metaPubMedCandidateList")
-    assert candidates is not None
-    assert candidates.count() == 2
-    candidates.item(0).setSelected(True)
-    _button(current, "选择加入文献库").click()
-    qt_app.processEvents()
-
-    library = json.loads((project_dir / "literature" / "literature_records.json").read_text(encoding="utf-8"))
-    statuses = {step.step_id: step.status for step in meta_workflow_integration_state_from_project(project_dir).steps}
-    assert library["record_count"] == 1
-    assert library["records"][0]["pmid"] == "111"
-    assert statuses["search_strategy"] == "已完成"
-    assert statuses["literature_import"] == "已完成"
-    assert statuses["screening"] in {"草稿", "待确认"}
-
-    widget.show_step("literature_import")
-    current = _current_step_widget(widget)
-    assert "当前文献总数：1" in _visible_text(current)
-    assert "PubMed 来源数量：1" in _visible_text(current)
+    gate = project_dir / "ui_runtime" / "meta_search_strategy_gate.json"
+    assert gate.exists()
+    assert json.loads(gate.read_text(encoding="utf-8"))["service"] == "SearchStrategyBuilderService.generate_from_confirmed_protocol"

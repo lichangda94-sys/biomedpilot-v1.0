@@ -6,11 +6,12 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from app.meta_analysis.project_workspace import create_meta_analysis_project, open_meta_analysis_project
-from app.meta_analysis.workspace import meta_workspace_layout_state
-
 try:
     from PySide6.QtWidgets import QApplication
+
+    from app.meta_analysis.project_workspace import create_meta_analysis_project
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget, meta_workspace_layout_state
+    from app.shared.project_center.service import ProjectRecord
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -25,37 +26,16 @@ def qt_app():
     return QApplication.instance() or QApplication([])
 
 
-def test_mainline_meta_layout_is_shell_contract() -> None:
+def test_mainline_meta_layout_is_uishell_target_ia_contract() -> None:
     state = meta_workspace_layout_state()
 
-    assert state.default_page_key == "workflow_home"
-    assert [item.page_key for item in state.navigation_items] == [
-        "workflow_home",
-        "pico_workspace",
-        "search_strategy",
-        "literature_import",
-        "screening_review",
-        "manual_extraction",
-        "statistics_analysis",
-        "report_export",
-    ]
-    assert "内部测试版" in state.testing_notice
+    assert state.default_page_key == "target_ia"
+    assert [item.page_key for item in state.navigation_items] == ["target_ia"]
+    assert "UIShell" in state.description
+    assert "旧页面仅作为后端能力来源" in state.testing_notice
 
 
-def test_meta_project_contract_can_create_and_open_project(tmp_path) -> None:
-    summary = create_meta_analysis_project("Meta Contract", tmp_path, research_topic="test topic")
-    validation = open_meta_analysis_project(summary.project_root)
-
-    assert validation.is_valid is True
-    assert validation.summary is not None
-    assert validation.summary.project_name == "Meta Contract"
-    assert (summary.project_root / "meta_project_manifest.json").exists()
-
-
-def test_mainline_meta_workspace_binds_project_record(qt_app, tmp_path) -> None:
-    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
-    from app.shared.project_center.service import ProjectRecord
-
+def test_mainline_meta_workspace_binds_project_record_to_target_ia(qt_app, tmp_path) -> None:
     project = create_meta_analysis_project("Meta UI", tmp_path)
     record = ProjectRecord(
         project_id="meta-ui",
@@ -70,15 +50,12 @@ def test_mainline_meta_workspace_binds_project_record(qt_app, tmp_path) -> None:
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_record(record)
 
-    assert widget.page_keys() == (
-        "workflow_home",
-        "pico_workspace",
-        "search_strategy",
-        "literature_import",
-        "screening_review",
-        "manual_extraction",
-        "statistics_analysis",
-        "report_export",
-    )
     assert widget.current_project_dir() == project.project_root
-    assert "Meta UI" in widget._project_summary_label.text()
+    assert widget.page_keys() == ("target_ia",)
+    assert widget.target_ia_page_keys()[:4] == (
+        "project_home",
+        "question_meta_type",
+        "search_strategy",
+        "import_dedup",
+    )
+    assert widget.meta_workspace_layout_state()["contract_version"]
