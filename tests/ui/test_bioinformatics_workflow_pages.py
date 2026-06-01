@@ -646,8 +646,14 @@ def test_data_source_tcga_metadata_preview_and_plan_draft(qt_app, project_summar
     widget._tcga_preview_service = FakeTcgaPreviewService()
     widget.refresh_project(project_summary)
 
-    summary = widget.preview_tcga_downloadable_data()
-    acquisition = widget.create_tcga_download_plan_draft()
+    preview_button = widget.findChild(QPushButton, "previewTcgaDownloadableDataButton")
+    plan_button = widget.findChild(QPushButton, "createTcgaDownloadPlanDraftButton")
+    assert preview_button.property("buttonBehavior") == "calls_tcga_metadata_preview_service"
+    assert plan_button.property("buttonBehavior") == "writes_tcga_download_plan_draft"
+    preview_button.click()
+    plan_button.click()
+    summary = widget._tcga_preview_summary
+    acquisition = widget._latest_summary
 
     assert summary is not None
     assert acquisition is not None
@@ -1222,21 +1228,34 @@ def test_data_source_gtex_g6_preview_download_build_flow(qt_app, project_summary
     assert "构建 GTEx 表达矩阵" in button_texts
     assert widget.findChild(QPushButton, "createGtexDownloadPlanDraftButton").isEnabled() is False
 
-    preview = widget.preview_gtex_downloadable_data()
+    preview_button = widget.findChild(QPushButton, "previewGtexDownloadableDataButton")
+    plan_button = widget.findChild(QPushButton, "createGtexDownloadPlanDraftButton")
+    download_button = widget.findChild(QPushButton, "downloadGtexRawFilesButton")
+    build_button = widget.findChild(QPushButton, "buildGtexExpressionMatrixButton")
+    assert preview_button.property("buttonBehavior") == "calls_gtex_metadata_preview_service"
+    assert plan_button.property("buttonBehavior") == "writes_gtex_download_plan_draft"
+    assert download_button.property("buttonBehavior") == "executes_gtex_download_plan"
+    assert build_button.property("buttonBehavior") == "builds_gtex_expression_matrix_artifacts"
+
+    preview_button.click()
+    preview = widget._gtex_preview_summary
     assert preview is not None
     assert preview.file_count == 1
     assert widget.findChild(QPushButton, "createGtexDownloadPlanDraftButton").isEnabled() is True
 
-    plan = widget.create_gtex_download_plan_draft()
+    plan_button.click()
+    plan = widget._latest_summary
     assert plan is not None
     assert widget.findChild(QPushButton, "downloadGtexRawFilesButton").isEnabled() is True
 
-    download = widget.download_gtex_raw_files()
+    download_button.click()
+    download = widget._gtex_download_result
     assert download is not None
     assert download.success_count == 1
     assert widget.findChild(QPushButton, "buildGtexExpressionMatrixButton").isEnabled() is True
 
-    build = widget.build_gtex_expression_matrix()
+    build_button.click()
+    build = widget._gtex_expression_build_result
     assert build is not None
     assert build.sample_count == 2
     assert build.donor_count == 2
