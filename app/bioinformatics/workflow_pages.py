@@ -10759,6 +10759,8 @@ def _header(title: str, subtitle: str, *, back_text: str, back_signal: Signal) -
     layout.addLayout(text_col, 1)
     button = QPushButton(back_text)
     button.setObjectName("secondaryButton")
+    button.setProperty("buttonBehavior", _default_bio_button_behavior(back_text, "secondaryButton"))
+    button.setProperty("formalActionEnabled", False)
     button.clicked.connect(back_signal.emit)
     layout.addWidget(button)
     return frame

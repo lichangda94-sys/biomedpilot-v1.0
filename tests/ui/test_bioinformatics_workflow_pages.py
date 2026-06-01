@@ -177,20 +177,46 @@ def test_bio_c1_pages_expose_auditable_button_connection_metadata(qt_app, projec
     pages = [
         BioinformaticsDataSourceWidget(),
         BioinformaticsChineseDatasetSearchWidget(),
+        BioinformaticsAcquisitionStatusWidget(),
         BioinformaticsRecognitionWidget(),
         BioinformaticsReadinessDashboardWidget(),
         BioinformaticsStandardizedAssetsWidget(),
         BioinformaticsGroupComparisonDesignWidget(),
+        BioinformaticsWorkflowStatusWidget(),
         BioinformaticsAnalysisTaskCenterWidget(),
         BioinformaticsResultsBrowserWidget(),
         BioinformaticsReportViewerWidget(),
+        BioinformaticsSettingsAndLocalAIWidget(),
         EnrichmentPage(),
         SurvivalPage(),
     ]
 
     for page in pages:
-        page.refresh_project(project_summary)
+        if hasattr(page, "refresh_project"):
+            page.refresh_project(project_summary)
         _assert_buttons_are_auditable(page)
+
+
+@pytest.mark.parametrize(
+    "page_factory",
+    [
+        BioinformaticsAcquisitionStatusWidget,
+        BioinformaticsWorkflowStatusWidget,
+        BioinformaticsSettingsAndLocalAIWidget,
+    ],
+)
+def test_bio_auxiliary_header_back_buttons_emit_navigation_signal(qt_app, page_factory) -> None:
+    page = page_factory()
+    events: list[bool] = []
+    page.back_requested.connect(lambda: events.append(True))
+    back_button = next(button for button in page.findChildren(QPushButton) if button.text().startswith("返回"))
+
+    assert back_button.property("buttonBehavior") == "navigates_back_to_previous_bio_page"
+    assert back_button.property("formalActionEnabled") is False
+
+    back_button.click()
+
+    assert events == [True]
 
 
 def test_data_source_gated_source_buttons_write_request_artifacts(qt_app, project_summary) -> None:
