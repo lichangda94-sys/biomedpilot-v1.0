@@ -222,6 +222,7 @@ RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
 export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
 export PYTHONDONTWRITEBYTECODE="1"
+LOG_FILE="${{TMPDIR:-/tmp}}/biomedpilot_integration_preview_launch.log"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
@@ -233,7 +234,20 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 cd "$RESOURCE_ROOT"
-exec "$PYTHON_BIN" -m app.main "$@"
+case " $* " in
+  *" --smoke-test "*)
+    exec "$PYTHON_BIN" -m app.main "$@"
+    ;;
+  *)
+    {{
+      echo "started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+      echo "python=$PYTHON_BIN"
+      echo "resource_root=$RESOURCE_ROOT"
+      echo "args=$*"
+    }} > "$LOG_FILE"
+    exec "$PYTHON_BIN" -m app.main "$@" >> "$LOG_FILE" 2>&1
+    ;;
+esac
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)

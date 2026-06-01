@@ -49,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
+        from PySide6.QtCore import QTimer
         from PySide6.QtWidgets import QApplication
 
         from app.app_identity import apply_app_identity
@@ -65,11 +66,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"python={environment.python_executable}")
         return 0
 
-    qt_app = QApplication(sys.argv)
+    qt_app = QApplication([sys.argv[0], *[arg for arg in sys.argv[1:] if not arg.startswith("-psn_")]])
     apply_light_app_theme(qt_app)
     apply_app_identity(qt_app)
     window = MainWindow()
     window.show()
+    window.raise_()
+    window.activateWindow()
+    QTimer.singleShot(0, window.raise_)
+    QTimer.singleShot(0, window.activateWindow)
     try:
         return qt_app.exec()
     finally:
