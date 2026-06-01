@@ -167,6 +167,12 @@ def _write_bio_ui_standardized_state(root: Path, assets: list[dict[str, object]]
     registry_path.write_text(json.dumps(registry), encoding="utf-8")
 
 
+def _bio_button_by_text(widget, text: str) -> QPushButton:
+    matches = [button for button in widget.findChildren(QPushButton) if button.text() == text]
+    assert len(matches) == 1, text
+    return matches[0]
+
+
 def test_bio_c1_pages_expose_auditable_button_connection_metadata(qt_app, project_summary) -> None:
     pages = [
         BioinformaticsDataSourceWidget(),
@@ -2612,6 +2618,65 @@ def test_recognition_readiness_standardization_pages(qt_app, project_summary) ->
     standardization.refresh_project(project_summary)
     generated = standardization.generate_assets()
     assert generated is not None
+    assert "标准化数据" in standardization.status_message()
+
+
+def test_bio_data_check_standardization_buttons_click_services_and_write_artifacts(qt_app, project_summary) -> None:
+    raw_file = project_summary.project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    raw_file.write_text("gene\tcase_1\tcontrol_1\nTP53\t4\t1\nEGFR\t1\t3\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression_matrix.tsv",
+        strategy="reference",
+        selected_paths=[raw_file],
+    )
+
+    recognition = BioinformaticsRecognitionWidget()
+    recognition.refresh_project(project_summary)
+    checkbox = recognition.findChild(QCheckBox)
+    assert checkbox is not None
+    checkbox.setChecked(True)
+    start_button = _bio_button_by_text(recognition, "开始识别")
+    assert start_button.property("buttonBehavior") == "runs_bio_preflight_or_gated_service"
+    start_button.click()
+
+    recognition_path = project_summary.project_root / "logs" / "recognition" / "recognition_report.json"
+    assert recognition_path.is_file()
+    recognition_payload = json.loads(recognition_path.read_text(encoding="utf-8"))
+    assert recognition_payload["selected_input_count"] == 1
+    assert recognition.findChild(QTableWidget, "recognitionResultTable").rowCount() >= 1
+    assert "本次只识别已勾选的数据" in recognition.status_message()
+
+    readiness = BioinformaticsReadinessDashboardWidget()
+    readiness.refresh_project(project_summary)
+    run_check_button = readiness.findChild(QPushButton, "bioinformaticsRunDataCheckButton")
+    assert run_check_button is not None
+    assert run_check_button.property("buttonBehavior") == "runs_bio_preflight_or_gated_service"
+    run_check_button.click()
+
+    readiness_path = readiness._last_artifacts.get("readiness_path")
+    assert readiness_path is not None
+    assert Path(str(readiness_path)).is_file()
+    assert "继续" in readiness.status_message()
+
+    standardization = BioinformaticsStandardizedAssetsWidget()
+    standardization.refresh_project(project_summary)
+    generate_button = _bio_button_by_text(standardization, "生成标准化数据")
+    assert generate_button.property("buttonBehavior") == "writes_bio_project_draft_or_artifact"
+    generate_button.click()
+
+    registry_path = project_summary.project_root / "manifests" / "standardized_assets_registry.json"
+    manifest_path = project_summary.project_root / "standardized_data" / "analysis_ready_assets" / "analysis_ready_manifest.json"
+    repository_path = project_summary.project_root / "standardized_data" / "repositories" / "repository_manifest.json"
+    assert registry_path.is_file()
+    assert manifest_path.is_file()
+    assert repository_path.is_file()
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    assets = registry.get("assets", [])
+    assert any(item.get("asset_role") == "expression_matrix" for item in assets if isinstance(item, dict))
+    assert standardization.findChild(QTableWidget, "standardizationUserAssetTable").rowCount() >= 1
     assert "标准化数据" in standardization.status_message()
 
 
