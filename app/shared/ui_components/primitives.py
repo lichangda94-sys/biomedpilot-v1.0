@@ -610,6 +610,7 @@ else:
                 button.setProperty("current", item.key == active_key)
                 button.setProperty("formalActionEnabled", False)
                 button.setProperty("fileWriteAllowed", False)
+                button.setProperty("buttonBehavior", f"navigates_to_shell_route_{item.key}")
                 button.setAccessibleName(item.label)
                 button.setToolTip(item.tooltip or item.label)
                 button.setMinimumHeight(44)
