@@ -20,6 +20,7 @@ from app.labtools.western_blot import (
     read_wb_measurement_csv,
     unsupported_image_format_message,
 )
+from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 
 
 WB_REVIEW_NOTICE = "自动预处理和灰度测量结果仅用于辅助分析，请人工复核 ROI、背景区域和归一化关系。"
@@ -116,6 +117,10 @@ class WesternBlotROIAnalysisWidget(QWidget):
     def __init__(self, *, task_store: ImageAnalysisTaskStore | None = None) -> None:
         super().__init__()
         self.setObjectName("westernBlotRoiAnalysisPage")
+        self.setProperty("uiPrimitive", "labtools_c2_gated_workbench")
+        self.setProperty("connectionStatus", "connected")
+        self.setProperty("formalActionEnabled", False)
+        self.setStyleSheet(self._stylesheet())
         self._task_store = task_store or ImageAnalysisTaskStore()
         self._roi_collection = WBROICollection()
         self._selected_roi_id = ""
@@ -142,7 +147,26 @@ class WesternBlotROIAnalysisWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.addWidget(QLabel("Western Blot 结果与灰度分析"))
+        root.setContentsMargins(0, SPACING["md"], 0, 0)
+        root.setSpacing(SPACING["md"])
+        header = QFrame()
+        header.setObjectName("wbRoiHeader")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
+        title = QLabel("Western Blot 结果与灰度分析")
+        title.setObjectName("wbRoiTitle")
+        subtitle = QLabel("手动矩形 ROI 工作流：导入 WB 图片、绘制 lane/band/background ROI、生成 run request，等待外部引擎后再执行灰度测量。")
+        subtitle.setObjectName("wbRoiSubtitle")
+        subtitle.setWordWrap(True)
+        state_row = QHBoxLayout()
+        state_row.addWidget(_chip("testing / 可测试", "testing"))
+        state_row.addWidget(_chip("manual ROI", "available"))
+        state_row.addWidget(_chip("ImageJ gate", "blocked"))
+        state_row.addStretch(1)
+        header_layout.addWidget(title)
+        header_layout.addWidget(subtitle)
+        header_layout.addLayout(state_row)
+        root.addWidget(header)
         root.addWidget(_label(WB_REVIEW_NOTICE, "wbRoiReviewNotice"))
         root.addWidget(_label(ENGINE_NOT_READY_NOTICE, "wbRoiEngineNotice"))
         root.addWidget(self._import_card())
@@ -158,6 +182,7 @@ class WesternBlotROIAnalysisWidget(QWidget):
         self._image_path_input.setObjectName("wbImagePathInput")
         import_button = QPushButton("导入图片")
         import_button.setObjectName("wbImageImportButton")
+        import_button.setProperty("buttonBehavior", "loads_local_wb_image_preview")
         import_button.clicked.connect(self._import_image)
         self._image_info = QLabel("尚未导入图片。支持 TIFF / TIF / PNG / JPG / JPEG；专有格式需先导出为通用图片。")
         self._image_info.setObjectName("wbImageImportInfo")
@@ -191,7 +216,10 @@ class WesternBlotROIAnalysisWidget(QWidget):
         self._output_format.addItems(("TIF", "PNG"))
         preprocess = QPushButton("预处理图片")
         preprocess.setObjectName("wbPreprocessButton")
-        preprocess.clicked.connect(lambda: self._status.setText(ENGINE_NOT_READY_NOTICE))
+        preprocess.setEnabled(False)
+        preprocess.setProperty("buttonBehavior", "disabled_external_engine_missing")
+        preprocess.setProperty("disabledReason", ENGINE_NOT_READY_NOTICE)
+        preprocess.setToolTip(ENGINE_NOT_READY_NOTICE)
         for widget in (self._convert_8bit, self._invert_mode, self._subtract_background, self._rolling_ball_radius, self._analysis_area, self._output_format, preprocess):
             layout.addWidget(widget)
         return frame
@@ -229,6 +257,7 @@ class WesternBlotROIAnalysisWidget(QWidget):
         for label, object_name, callback in buttons:
             button = QPushButton(label)
             button.setObjectName(object_name)
+            button.setProperty("buttonBehavior", _wb_roi_button_behavior(object_name))
             button.clicked.connect(callback)
             row.addWidget(button)
         layout.addLayout(row, 2, 0, 1, 2)
@@ -251,6 +280,7 @@ class WesternBlotROIAnalysisWidget(QWidget):
         self._measurement_path.setObjectName("wbMeasurementCsvPathInput")
         load = QPushButton("读取测量结果 CSV")
         load.setObjectName("wbLoadMeasurementCsvButton")
+        load.setProperty("buttonBehavior", "loads_external_measurement_csv")
         load.clicked.connect(self._load_measurement_csv)
         row.addWidget(self._measurement_path)
         row.addWidget(load)
@@ -269,6 +299,7 @@ class WesternBlotROIAnalysisWidget(QWidget):
         for label, object_name, callback in (("计算目标 / 内参比值", "wbCalculateTargetControlButton", self._calculate_normalization), ("计算目标 / 总蛋白比值", "wbCalculateTargetTotalButton", self._calculate_normalization), ("导出 WB 分析结果", "wbExportNormalizedResultsButton", self._export_normalized)):
             button = QPushButton(label)
             button.setObjectName(object_name)
+            button.setProperty("buttonBehavior", _wb_roi_button_behavior(object_name))
             button.clicked.connect(callback)
             row.addWidget(button)
         layout.addLayout(row)
@@ -280,6 +311,79 @@ class WesternBlotROIAnalysisWidget(QWidget):
         layout.addWidget(self._normalization_table)
         layout.addWidget(self._status)
         return frame
+
+    def _stylesheet(self) -> str:
+        return f"""
+        QWidget#westernBlotRoiAnalysisPage {{
+            background: {COLORS["background"]};
+            color: {COLORS["text"]};
+            font-size: {FONT_SIZE["body"]}px;
+        }}
+        QFrame#wbRoiHeader,
+        QFrame#wbImageImportSection,
+        QFrame#wbPreprocessSection,
+        QFrame#wbRoiEditorSection,
+        QFrame#wbMeasurementResultSection,
+        QFrame#wbNormalizationSection {{
+            background: {COLORS["surface"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+        }}
+        QLabel#wbRoiTitle {{
+            color: {COLORS["bio"]};
+            font-size: {FONT_SIZE["page_title"]}px;
+            font-weight: 780;
+        }}
+        QLabel#wbRoiSubtitle,
+        QLabel#wbImageImportInfo,
+        QLabel#wbFixedRoiSizeLabel,
+        QLabel#wbRoiStatusLabel {{
+            color: {COLORS["muted"]};
+        }}
+        QLabel#wbRoiReviewNotice {{
+            color: {COLORS["text_secondary"]};
+            background: {COLORS["warning_soft"]};
+            border: 1px solid {COLORS["warning_border"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 9px 11px;
+        }}
+        QLabel#wbRoiEngineNotice {{
+            color: {COLORS["bio"]};
+            background: {COLORS["bio_soft"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 9px 11px;
+        }}
+        QLineEdit,
+        QSpinBox,
+        QComboBox,
+        QTableWidget {{
+            background: {COLORS["surface"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 6px;
+        }}
+        QPushButton {{
+            color: {COLORS["bio"]};
+            background: {COLORS["bio_soft"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 8px 12px;
+            font-weight: 650;
+        }}
+        QPushButton#wbMeasureRoiButton,
+        QPushButton#wbSaveRoiButton,
+        QPushButton#wbExportNormalizedResultsButton {{
+            color: #FFFFFF;
+            background: {COLORS["bio"]};
+            border-color: {COLORS["bio"]};
+        }}
+        QPushButton:disabled {{
+            color: {COLORS["muted"]};
+            background: {COLORS["surface_muted"]};
+            border: 1px solid {COLORS["border"]};
+        }}
+        """
 
     def _import_image(self) -> None:
         path = self._image_path_input.text().strip()
@@ -382,6 +486,40 @@ def _card(object_name: str) -> QFrame:
     frame = QFrame()
     frame.setObjectName(object_name)
     return frame
+
+
+def _chip(text: str, status: str) -> QLabel:
+    label = QLabel(text)
+    label.setObjectName("wbRoiStatusChip")
+    label.setProperty("statusKey", status)
+    colors = {
+        "available": (COLORS["success_soft"], COLORS["success_border"], COLORS["success"]),
+        "testing": (COLORS["bio_soft"], COLORS["border"], COLORS["bio"]),
+        "blocked": (COLORS["warning_soft"], COLORS["warning_border"], COLORS["warning"]),
+    }.get(status, (COLORS["surface_muted"], COLORS["border"], COLORS["muted"]))
+    label.setStyleSheet(
+        f"QLabel#wbRoiStatusChip {{ background: {colors[0]}; border: 1px solid {colors[1]}; color: {colors[2]}; "
+        f"border-radius: {RADIUS['sm']}px; padding: 5px 9px; font-weight: 700; }}"
+    )
+    return label
+
+
+def _wb_roi_button_behavior(object_name: str) -> str:
+    return {
+        "wbCreateRoiButton": "creates_manual_wb_roi",
+        "wbSetFixedRoiSizeButton": "stores_fixed_roi_size_from_selected_roi",
+        "wbCopyRoiNextLaneButton": "copies_selected_roi_to_next_lane",
+        "wbCopyRoiAllLanesButton": "copies_selected_roi_to_all_lanes",
+        "wbUnifyRoiSizeButton": "normalizes_manual_roi_dimensions",
+        "wbDeleteSelectedRoiButton": "deletes_selected_manual_roi",
+        "wbClearRoiButton": "clears_manual_roi_collection",
+        "wbSaveRoiButton": "exports_manual_roi_csv_and_json",
+        "wbExportRoiButton": "exports_manual_roi_csv_and_json",
+        "wbMeasureRoiButton": "creates_wb_roi_run_request_without_running_engine",
+        "wbCalculateTargetControlButton": "calculates_target_control_ratio_from_loaded_measurements",
+        "wbCalculateTargetTotalButton": "calculates_target_total_ratio_from_loaded_measurements",
+        "wbExportNormalizedResultsButton": "exports_wb_normalized_results_csv",
+    }.get(object_name, "labtools_wb_roi_action")
 
 
 def _label(text: str, object_name: str) -> QLabel:

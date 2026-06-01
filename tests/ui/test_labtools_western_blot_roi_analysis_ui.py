@@ -25,7 +25,7 @@ def _visible_text(widget) -> str:
 
 
 def test_western_blot_roi_page_contains_five_workflow_sections_and_review_notice(qapp) -> None:
-    from PySide6.QtWidgets import QComboBox, QFrame, QTabWidget
+    from PySide6.QtWidgets import QComboBox, QFrame, QPushButton, QTabWidget
 
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
@@ -37,12 +37,27 @@ def test_western_blot_roi_page_contains_five_workflow_sections_and_review_notice
     text = _visible_text(page)
 
     assert tabs.tabText(tabs.currentIndex()) == "结果与灰度分析"
+    assert page.property("uiPrimitive") == "labtools_c2_gated_workbench"
+    assert page.property("connectionStatus") == "connected"
+    assert page.property("formalActionEnabled") is False
+    assert page.findChild(QFrame, "wbRoiHeader") is not None
     for object_name in ("wbImageImportSection", "wbPreprocessSection", "wbRoiEditorSection", "wbMeasurementResultSection", "wbNormalizationSection"):
         assert page.findChild(QFrame, object_name) is not None
     assert "自动预处理和灰度测量结果仅用于辅助分析" in text
     assert "图像分析引擎未准备好" in text
     combo = page.findChild(QComboBox, "wbRoiTypeCombo")
     assert [combo.itemText(index) for index in range(combo.count())] == ["目标蛋白", "内参蛋白", "总蛋白 / Lane", "背景"]
+    preprocess = page.findChild(QPushButton, "wbPreprocessButton")
+    assert preprocess is not None
+    assert not preprocess.isEnabled()
+    assert preprocess.property("buttonBehavior") == "disabled_external_engine_missing"
+    assert "图像分析引擎未准备好" in preprocess.property("disabledReason")
+    measure = page.findChild(QPushButton, "wbMeasureRoiButton")
+    assert measure is not None
+    assert measure.property("buttonBehavior") == "creates_wb_roi_run_request_without_running_engine"
+    save = page.findChild(QPushButton, "wbSaveRoiButton")
+    assert save is not None
+    assert save.property("buttonBehavior") == "exports_manual_roi_csv_and_json"
     assert "运行 ImageJ macro" not in text
 
 
