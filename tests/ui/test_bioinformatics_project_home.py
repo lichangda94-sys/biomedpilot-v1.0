@@ -53,6 +53,44 @@ def test_project_home_uses_ui03_icons(qt_app) -> None:
     assert create_button is not None and not create_button.icon().isNull()
 
 
+def test_project_home_buttons_expose_auditable_connection_metadata(qt_app, tmp_path) -> None:
+    widget = BioinformaticsProjectHomeWidget()
+    widget.set_new_project_inputs("Audited Project", tmp_path)
+
+    expected_behaviors = {
+        "返回模块选择首页": "navigates_back_to_module_selection",
+        "选择保存位置": "opens_new_project_save_location_picker",
+        "创建项目并继续": "calls_create_bioinformatics_project_and_writes_project_manifest",
+        "选择项目文件夹": "opens_existing_project_folder_picker",
+        "确认并继续": "calls_open_bioinformatics_project_and_validates_manifest",
+        "继续：选择数据来源": "navigates_to_data_source_when_project_summary_exists",
+        "打开项目文件夹": "opens_current_project_folder_when_project_summary_exists",
+        "查看项目结构": "renders_expected_project_directory_structure_summary",
+        "技术详情": "toggles_project_manifest_technical_details",
+    }
+    buttons = {button.text(): button for button in widget.findChildren(QPushButton)}
+
+    assert set(expected_behaviors).issubset(buttons)
+    for text, behavior in expected_behaviors.items():
+        button = buttons[text]
+        assert button.property("buttonBehavior") == behavior
+        assert button.property("formalActionEnabled") is False
+
+    created_events = []
+    widget.continue_requested.connect(created_events.append)
+    buttons["创建项目并继续"].click()
+    assert widget.current_summary() is not None
+    assert widget.current_summary().manifest_path.exists()
+    assert created_events == [widget.current_summary()]
+
+    buttons["查看项目结构"].click()
+    assert "raw_data" in widget.status_message()
+
+    buttons["技术详情"].click()
+    details = widget.findChild(QPlainTextEdit, "bioProjectTechnicalDetails")
+    assert details is not None and not details.isHidden()
+
+
 def test_project_home_create_project_generates_summary(qt_app, tmp_path) -> None:
     events = []
     widget = BioinformaticsProjectHomeWidget(on_continue=events.append)

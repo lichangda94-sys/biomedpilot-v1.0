@@ -56,6 +56,7 @@ class BioinformaticsProjectHomeWidget(QWidget):
         self.setObjectName("bioinformaticsProjectHomePage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
+        self._annotate_buttons()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
         if on_back is not None:
@@ -129,6 +130,13 @@ class BioinformaticsProjectHomeWidget(QWidget):
         scroll.setWidget(content)
         outer.addWidget(scroll)
 
+    def _annotate_buttons(self) -> None:
+        for button in self.findChildren(QPushButton):
+            if button.property("buttonBehavior") is None:
+                button.setProperty("buttonBehavior", "bio_project_home_action_requires_explicit_audit")
+            if button.property("formalActionEnabled") is None:
+                button.setProperty("formalActionEnabled", False)
+
     def _build_header(self) -> QFrame:
         frame = QFrame()
         frame.setObjectName("bioProjectHeader")
@@ -148,6 +156,8 @@ class BioinformaticsProjectHomeWidget(QWidget):
         layout.addLayout(title_col, 1)
         back_button = QPushButton("返回模块选择首页")
         back_button.setObjectName("secondaryButton")
+        back_button.setProperty("buttonBehavior", "navigates_back_to_module_selection")
+        back_button.setProperty("formalActionEnabled", False)
         back_button.clicked.connect(self.back_requested.emit)
         layout.addWidget(back_button)
         return frame
@@ -177,6 +187,8 @@ class BioinformaticsProjectHomeWidget(QWidget):
         layout.addWidget(self._save_location_input)
         choose_button = QPushButton("选择保存位置")
         choose_button.setObjectName("secondaryButton")
+        choose_button.setProperty("buttonBehavior", "opens_new_project_save_location_picker")
+        choose_button.setProperty("formalActionEnabled", False)
         choose_button.setIcon(load_ui03_project_home_icon("folder_picker"))
         choose_button.setIconSize(QSize(18, 18))
         choose_button.clicked.connect(self._choose_save_location)
@@ -197,6 +209,8 @@ class BioinformaticsProjectHomeWidget(QWidget):
         layout.addWidget(details)
         create_button = QPushButton("创建项目并继续")
         create_button.setObjectName("primaryButton")
+        create_button.setProperty("buttonBehavior", "calls_create_bioinformatics_project_and_writes_project_manifest")
+        create_button.setProperty("formalActionEnabled", False)
         create_button.setIcon(load_ui03_project_home_icon("create_project"))
         create_button.setIconSize(QSize(18, 18))
         create_button.clicked.connect(self.create_project_from_inputs)
@@ -219,6 +233,8 @@ class BioinformaticsProjectHomeWidget(QWidget):
         layout.addWidget(self._existing_project_input)
         choose_button = QPushButton("选择项目文件夹")
         choose_button.setObjectName("secondaryButton")
+        choose_button.setProperty("buttonBehavior", "opens_existing_project_folder_picker")
+        choose_button.setProperty("formalActionEnabled", False)
         choose_button.setIcon(load_ui03_project_home_icon("folder_picker"))
         choose_button.setIconSize(QSize(18, 18))
         choose_button.clicked.connect(self._choose_existing_project)
@@ -241,6 +257,8 @@ class BioinformaticsProjectHomeWidget(QWidget):
         layout.addWidget(recent)
         open_button = QPushButton("确认并继续")
         open_button.setObjectName("primaryButton")
+        open_button.setProperty("buttonBehavior", "calls_open_bioinformatics_project_and_validates_manifest")
+        open_button.setProperty("formalActionEnabled", False)
         open_button.setIcon(load_ui03_project_home_icon("open_existing_project"))
         open_button.setIconSize(QSize(18, 18))
         open_button.clicked.connect(self.open_selected_project)
@@ -307,14 +325,20 @@ class BioinformaticsProjectHomeWidget(QWidget):
         right.addWidget(self._health_card)
         self._continue_button = QPushButton("继续：选择数据来源")
         self._continue_button.setObjectName("primaryButton")
+        self._continue_button.setProperty("buttonBehavior", "navigates_to_data_source_when_project_summary_exists")
+        self._continue_button.setProperty("formalActionEnabled", False)
         self._continue_button.clicked.connect(self._continue_to_data_source)
         right.addWidget(self._continue_button)
         secondary_actions = QHBoxLayout()
         self._open_folder_button = QPushButton("打开项目文件夹")
         self._open_folder_button.setObjectName("secondaryButton")
+        self._open_folder_button.setProperty("buttonBehavior", "opens_current_project_folder_when_project_summary_exists")
+        self._open_folder_button.setProperty("formalActionEnabled", False)
         self._open_folder_button.clicked.connect(self._open_project_folder)
         self._structure_button = QPushButton("查看项目结构")
         self._structure_button.setObjectName("secondaryButton")
+        self._structure_button.setProperty("buttonBehavior", "renders_expected_project_directory_structure_summary")
+        self._structure_button.setProperty("formalActionEnabled", False)
         self._structure_button.clicked.connect(self._show_project_structure)
         secondary_actions.addWidget(self._open_folder_button)
         secondary_actions.addWidget(self._structure_button)
@@ -345,6 +369,8 @@ class BioinformaticsProjectHomeWidget(QWidget):
 
         self._technical_toggle = QPushButton("技术详情")
         self._technical_toggle.setObjectName("secondaryButton")
+        self._technical_toggle.setProperty("buttonBehavior", "toggles_project_manifest_technical_details")
+        self._technical_toggle.setProperty("formalActionEnabled", False)
         self._technical_toggle.setCheckable(True)
         self._technical_toggle.toggled.connect(self._toggle_technical_details)
         content_layout.addWidget(self._technical_toggle, alignment=Qt.AlignLeft)

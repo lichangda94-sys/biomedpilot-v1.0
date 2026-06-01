@@ -10824,19 +10824,33 @@ def _default_bio_button_behavior(text: str, object_name: str) -> str:
         return "navigates_back_to_previous_bio_page"
     if normalized.startswith("继续") or normalized.startswith("下一步") or normalized.startswith("进入准备"):
         return "navigates_to_next_bio_gate_after_validation"
+    if normalized == "进入":
+        return "opens_bio_data_source_subsection_or_entry_panel"
+    if "参数总览" in normalized:
+        return "disabled_analysis_parameter_overview_placeholder"
+    if "分析文档" in normalized:
+        return "disabled_analysis_documentation_placeholder"
     if "技术" in normalized or "诊断" in normalized or "详情" in normalized:
         return "toggles_or_opens_bio_diagnostics"
     if "刷新" in normalized or "重新读取" in normalized:
         return "reloads_current_bio_project_artifacts"
     if "检索" in normalized or "预览" in normalized:
         return "calls_bio_search_or_preview_service"
+    if "手动" in normalized or "修改" in normalized:
+        return "opens_manual_bio_input_or_design_preview"
+    if "忽略" in normalized or "稍后处理" in normalized or "暂不做" in normalized:
+        return "records_bio_user_skip_or_ignore_decision"
+    if "清空" in normalized:
+        return "clears_current_bio_ui_input_state"
+    if "翻译" in normalized or "提炼" in normalized:
+        return "runs_bio_metadata_translation_preview"
     if "选择" in normalized or "上传" in normalized or "导入" in normalized:
         return "opens_file_picker_or_imports_local_bio_asset"
-    if "保存" in normalized or "确认" in normalized or "创建" in normalized or "生成" in normalized:
+    if "保存" in normalized or "确认" in normalized or "创建" in normalized or "生成" in normalized or "添加" in normalized:
         return "writes_bio_project_draft_or_artifact"
     if "下载" in normalized or "导出" in normalized or "打开" in normalized or "复制" in normalized:
         return "exports_opens_or_copies_existing_bio_artifact"
-    if "删除" in normalized or "清理" in normalized or "移除" in normalized:
+    if "删除" in normalized or "清理" in normalized or "移除" in normalized or "拒绝" in normalized:
         return "removes_selected_bio_project_binding_after_gate"
     if "运行" in normalized or "开始" in normalized:
         return "runs_bio_preflight_or_gated_service"
