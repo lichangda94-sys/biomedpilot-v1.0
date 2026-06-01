@@ -167,6 +167,8 @@ if QWidget is not None:
                 "immuno_absorbance": self._secondary_placeholder_page(get_labtools_secondary_by_page("immuno_absorbance")),
                 "ihc": self._secondary_placeholder_page(get_labtools_secondary_by_page("ihc")),
             }
+            for page in self._route_pages.values():
+                self._annotate_button_contracts(page)
             for key, page in self._route_pages.items():
                 self._page_keys.append(key)
                 self._stack.addWidget(page)
@@ -382,6 +384,118 @@ if QWidget is not None:
                 padding: 8px 12px;
             }}
             """
+
+        def _annotate_button_contracts(self, page: QWidget) -> None:
+            for button in page.findChildren(QPushButton):
+                if button.property("buttonBehavior") is None:
+                    button.setProperty("buttonBehavior", self._button_behavior(button))
+                if not button.isEnabled() and button.property("disabledReason") is None:
+                    reason = self._button_disabled_reason(button)
+                    button.setProperty("disabledReason", reason)
+                    button.setToolTip(reason)
+                    button.setAccessibleDescription(reason)
+
+        def _button_behavior(self, button: QPushButton) -> str:
+            name = button.objectName()
+            text = button.text()
+            page_key = str(button.property("pageKey") or "")
+            if name == "labtoolsEntryButton":
+                return f"navigates_to_labtools_primary_{page_key}"
+            if name == "labtoolsSecondaryEntryButton":
+                return f"navigates_to_labtools_secondary_{page_key}"
+            if name == "quickAccessButton":
+                return "disabled_labtools_quick_access_placeholder"
+            if name == "labToolsC1DisabledActionButton":
+                return "disabled_labtools_secondary_backend_not_connected"
+            if name.startswith("cellExperimentDisabledRecordButton_"):
+                return "disabled_figma_summary_record_card_uses_backend_record_tabs"
+            if name == "cellExperimentSeedingHelperButton":
+                return "scrolls_to_cell_seeding_backend_calculator"
+            if name == "cellExperimentCreateFromLastDisabledButton":
+                return "disabled_requires_saved_cell_record_history"
+            if name == "cellExperimentSettingsRouteDisabledButton":
+                return "disabled_settings_route_available_from_shell_sidebar"
+            if name == "cellExperimentRunImageAnalysisDisabledButton":
+                return "disabled_image_engine_execution_gated_creates_run_request_only"
+            if name.startswith("wbRecordSaveButton_"):
+                return "saves_western_blot_workflow_record"
+            if name.startswith("wbRecordSaveSopTemplateButton_"):
+                return "saves_western_blot_sop_template"
+            if name.startswith("wbRecordLoadLastButton_"):
+                return "loads_latest_western_blot_workflow_record"
+            if name.startswith("wbRecordExportTextButton_"):
+                return "exports_western_blot_workflow_record_text"
+            if name.startswith("wbWorkflowStepButton_"):
+                return "navigates_western_blot_workflow_step"
+            explicit_by_name = {
+                "refreshBlankLaneLayoutButton": "generates_blank_sds_page_lane_layout",
+                "importLoadingLaneLayoutButton": "imports_wb_loading_lane_layout",
+                "sdsPageTemplateJsonExportButton": "exports_sds_page_template_json_when_available",
+                "sdsPageTemplateJsonImportButton": "imports_sds_page_template_json",
+                "sdsPageXlsxExportButton": "exports_sds_page_calculation_xlsx_when_available",
+                "proteinLoadingAddSampleRowButton": "adds_protein_loading_sample_row",
+                "proteinLoadingCalculateButton": "calculates_protein_loading_plan",
+                "proteinLoadingCopyResultButton": "copies_protein_loading_markdown_when_available",
+                "wbLoadingSaveRecordButton": "saves_wb_loading_record_when_calculation_exists",
+                "wbLoadingCopyMarkdownButton": "copies_wb_loading_markdown_when_available",
+                "wbLoadingExportMarkdownButton": "exports_wb_loading_markdown_when_available",
+                "wbLoadingExportCsvButton": "exports_wb_loading_csv_when_available",
+                "wbLoadingViewRecordButton": "loads_selected_wb_loading_record",
+                "wbLoadingDeleteRecordButton": "deletes_selected_wb_loading_record",
+                "wbLoadingRefreshRecordHistoryButton": "refreshes_wb_loading_record_history",
+                "bcaParseOdMatrixButton": "parses_bca_od_matrix",
+                "bcaApplyBatchAnnotationButton": "applies_bca_batch_well_annotation",
+                "bcaApplySelectedAnnotationButton": "applies_bca_selected_well_annotation",
+                "bcaSetBlankButton": "sets_bca_selected_wells_blank",
+                "bcaSetStandardButton": "sets_bca_selected_wells_standard",
+                "bcaSetSampleButton": "sets_bca_selected_wells_sample",
+                "bcaSetUnusedButton": "sets_bca_selected_wells_unused",
+                "bcaCalculateButton": "calculates_bca_standard_curve_and_samples",
+                "bcaCopyResultButton": "copies_bca_result_when_available",
+                "openBcaAssayToolButton": "navigates_to_bca_assay_tool",
+                "openProteinLoadingToolButton": "navigates_to_protein_loading_tool",
+                "openSdsPageGelToolButton": "navigates_to_sds_page_gel_tool",
+            }
+            if name in explicit_by_name:
+                return explicit_by_name[name]
+            explicit_by_text = {
+                "计算配制用量": "calls_solution_preparation_calculator",
+                "计算稀释体积": "calls_dilution_calculator",
+                "换算浓度": "calls_concentration_unit_conversion",
+                "计算摩尔浓度": "calls_molar_concentration_calculator",
+                "计算称量质量": "calls_molar_mass_weighing_calculator",
+                "复制结果": "copies_latest_calculation_result_when_available",
+                "计算批量用量": "calls_sds_page_gel_batch_calculator",
+            }
+            return explicit_by_text.get(text, f"labtools_connected_action_{name}")
+
+        def _button_disabled_reason(self, button: QPushButton) -> str:
+            name = button.objectName()
+            text = button.text()
+            if name == "quickAccessButton":
+                return "LabTools quick access center is planned for UI-SHELL-CENTERS-C1."
+            if name.startswith("cellExperimentDisabledRecordButton_"):
+                return "This visual Figma summary card is not the write path; use the Cell Experiment Record tabs below for connected save/export actions."
+            if name == "cellExperimentCreateFromLastDisabledButton":
+                return "Requires saved cell experiment history; connected from-last actions are available in backend record tabs once records exist."
+            if name == "cellExperimentSettingsRouteDisabledButton":
+                return "Settings is reachable from the shell sidebar; this LabTools summary-card shortcut is intentionally not wired."
+            if name == "cellExperimentRunImageAnalysisDisabledButton":
+                return "Cell image analysis execution is gated; current workbenches generate run request artifacts but do not run ImageJ/Fiji macros."
+            if text == "复制结果":
+                return "Requires a successful calculation result on the current calculator tab."
+            if name in {
+                "sdsPageTemplateJsonExportButton",
+                "sdsPageXlsxExportButton",
+                "proteinLoadingCopyResultButton",
+                "wbLoadingSaveRecordButton",
+                "wbLoadingCopyMarkdownButton",
+                "wbLoadingExportMarkdownButton",
+                "wbLoadingExportCsvButton",
+                "bcaCopyResultButton",
+            }:
+                return "Requires a generated calculation or analysis result before export/copy/save is enabled."
+            return "This LabTools action is intentionally disabled until the required upstream state exists."
 
 else:  # pragma: no cover
 

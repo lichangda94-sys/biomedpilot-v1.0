@@ -188,3 +188,23 @@ def test_labtools_home_button_returns_from_second_level_page(labtools_window) ->
     labtools_window.findChild(QPushButton, "labToolsHomeButton").click()
 
     assert page.current_page_key() == "home"
+
+
+def test_labtools_visible_buttons_have_click_contracts(labtools_window) -> None:
+    page = labtools_window._labtools_page
+    gaps: list[str] = []
+
+    for page_key in page.page_keys():
+        if page_key == "home":
+            page.show_home()
+        else:
+            page._show_page(page_key)
+        for button in page.current_page_widget().findChildren(QPushButton):
+            behavior = button.property("buttonBehavior")
+            reason = button.property("disabledReason")
+            if behavior is None:
+                gaps.append(f"{page_key}:{button.objectName()}:{button.text()}:missing-buttonBehavior")
+            if not button.isEnabled() and reason is None:
+                gaps.append(f"{page_key}:{button.objectName()}:{button.text()}:missing-disabledReason")
+
+    assert gaps == []
