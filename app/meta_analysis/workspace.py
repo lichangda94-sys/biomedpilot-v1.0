@@ -607,6 +607,7 @@ if QWidget is not None:
                 self._page_stack.addWidget(_scroll_page(self._page_for_step(step, state)))
                 self._page_keys.append(step.route_key)
             self._navigation_list.setCurrentRow(0)
+            _annotate_meta_page_buttons(self)
 
         def _project_dir_for_state(self) -> Path:
             return self._current_project_dir or (default_storage_root() / "projects" / "__meta_empty_state__" / "meta_analysis")
@@ -2650,6 +2651,117 @@ if QWidget is not None:
         layout.addWidget(button)
         layout.addWidget(detail)
         return frame
+
+
+    def _annotate_meta_page_buttons(root: QWidget) -> None:
+        for button in root.findChildren(QPushButton):
+            if button.property("buttonBehavior") is None:
+                button.setProperty("buttonBehavior", _default_meta_button_behavior(button.text(), button.objectName()))
+            if button.property("formalActionEnabled") is None:
+                button.setProperty("formalActionEnabled", False)
+            if not button.isEnabled() and button.property("disabledReason") is None:
+                reason = _default_meta_disabled_reason(button.text(), button.objectName())
+                button.setProperty("disabledReason", reason)
+                if not button.toolTip():
+                    button.setToolTip(reason)
+
+
+    def _default_meta_disabled_reason(text: str, object_name: str) -> str:
+        normalized = " ".join(str(text or "").replace("\n", " ").split())
+        if "PubMed" in normalized:
+            return "requires_confirmed_pubmed_search_strategy"
+        if "运行统计分析" in normalized:
+            return "requires_confirmed_analysis_plan"
+        if "继续：研究问题" in normalized:
+            return "requires_meta_project_open"
+        if "保存当前编辑" in normalized or "确认当前检索式" in normalized or "复制检索式" in normalized:
+            return "requires_generated_search_strategy_draft"
+        return f"requires_meta_gate_for_{object_name or 'unnamed_button'}"
+
+
+    def _default_meta_button_behavior(text: str, object_name: str) -> str:
+        normalized = " ".join(str(text or "").replace("\n", " ").split())
+        if normalized.startswith("返回"):
+            return "navigates_back_or_returns_to_meta_home"
+        if normalized.startswith("下一步") or normalized.startswith("继续"):
+            return "navigates_to_next_meta_gate_after_validation"
+        if "开发者诊断" in normalized or "技术" in normalized:
+            return "toggles_meta_developer_diagnostics"
+        if "选择保存位置" in normalized:
+            return "opens_meta_project_save_location_picker"
+        if "选择已有项目文件夹" in normalized:
+            return "opens_existing_meta_project_folder_picker"
+        if "打开已有项目" in normalized:
+            return "opens_existing_meta_project_folder_picker"
+        if "创建项目" in normalized or "新建 Meta 项目" in normalized:
+            return "calls_create_meta_analysis_project_and_writes_manifest"
+        if "生成 PICO 草稿" in normalized:
+            return "calls_pico_workspace_service_generate_draft"
+        if "保存草稿编辑" in normalized:
+            return "calls_pico_workspace_service_edit_draft"
+        if "确认研究问题" in normalized:
+            return "calls_pico_workspace_service_confirm_protocol"
+        if "生成检索策略" in normalized:
+            return "calls_search_strategy_builder_generate_from_confirmed_protocol"
+        if "保存当前编辑" in normalized:
+            return "calls_search_strategy_builder_edit_draft"
+        if "确认当前检索式" in normalized:
+            return "calls_search_strategy_builder_confirm_selected_database"
+        if "确认全部检索式" in normalized:
+            return "calls_search_strategy_builder_confirm_all_databases"
+        if "复制检索式" in normalized:
+            return "copies_current_search_strategy_query_to_clipboard"
+        if "执行 PubMed" in normalized:
+            return "calls_pubmed_search_service_testing_level_and_writes_candidates_preview"
+        if "选择加入文献库" in normalized or "导入选中文献" in normalized:
+            return "calls_pubmed_candidates_handoff_import_selected"
+        if "选择文件导入" in normalized:
+            return "opens_literature_file_picker_and_calls_multisource_import"
+        if "导出文献库摘要" in normalized:
+            return "writes_literature_library_summary_artifact"
+        if "保存备注" in normalized:
+            return "writes_manual_literature_note"
+        if "生成重复组" in normalized:
+            return "calls_dedup_review_service_build_review_queue"
+        if "保存人工决定" in normalized:
+            return "calls_dedup_review_service_save_decision"
+        if "生成去重后文献库" in normalized:
+            return "calls_dedup_review_service_generate_deduplicated_library"
+        if "创建标题摘要筛选队列" in normalized or "生成筛选队列" in normalized:
+            return "calls_title_abstract_screening_service_create_queue"
+        if "新建 study unit" in normalized:
+            return "calls_manual_extraction_service_create_study_unit"
+        if "新建提取行" in normalized:
+            return "calls_manual_extraction_service_create_effect_row"
+        if "完成本行提取" in normalized:
+            return "calls_manual_extraction_service_complete_effect_row"
+        if "标记缺失数据" in normalized:
+            return "calls_manual_extraction_service_mark_missing_data"
+        if "导出空模板 CSV" in normalized:
+            return "writes_manual_extraction_empty_template_csv"
+        if "导出当前 CSV" in normalized:
+            return "writes_manual_extraction_current_csv"
+        if "导入 CSV 草稿" in normalized:
+            return "opens_csv_picker_and_imports_manual_extraction_draft"
+        if "运行统计分析" in normalized:
+            return "calls_meta_statistics_engine_when_confirmed_plan_exists"
+        if "生成 Markdown 草稿" in normalized:
+            return "calls_formal_markdown_report_builder"
+        if "导出 HTML" in normalized:
+            return "calls_publication_export_service_export_html_report"
+        if "导出 DOCX" in normalized:
+            return "calls_publication_export_service_export_word_report"
+        if "取消全选" in normalized:
+            return "clears_visible_meta_candidate_selection"
+        if "全选" in normalized:
+            return "selects_all_visible_meta_candidates"
+        if "忽略本批次" in normalized:
+            return "records_meta_candidate_batch_ignored_without_import"
+        if "导出" in normalized:
+            return "writes_meta_export_artifact"
+        if "保存" in normalized or "确认" in normalized:
+            return "writes_meta_user_review_or_gate_artifact"
+        return f"meta_button_behavior_explicit_{object_name or 'unnamed'}"
 
 
     def _kv_label(label: str, value: str) -> QLabel:
