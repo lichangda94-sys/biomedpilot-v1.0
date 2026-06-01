@@ -3876,6 +3876,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._project_label.setText(_project_header_text(summary))
         self._refresh_registered_sources()
         self._refresh_candidate_registration_buttons()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_search_candidate_selected")
 
     def set_query_text(self, text: str) -> None:
         self._query_input.setText(text)
@@ -4721,17 +4722,29 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         layout.addLayout(grid)
 
         actions = QHBoxLayout()
-        register_button = QPushButton("保存")
-        register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+        register_button = _candidate_action_button(
+            "保存",
+            f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}",
+            "writes_candidate_acquisition_record",
+        )
         register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
-        detail_button = QPushButton("查看详情")
-        detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
+        detail_button = _candidate_action_button(
+            "查看详情",
+            f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}",
+            "opens_candidate_detail_panel",
+        )
         detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-        ignore_button = QPushButton("忽略")
-        ignore_button.setObjectName(f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+        ignore_button = _candidate_action_button(
+            "忽略",
+            f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}",
+            "marks_candidate_ignored_in_current_search",
+        )
         ignore_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.ignore_candidate(s, a))
-        download_button = QPushButton("加入下载列表")
-        download_button.setObjectName(f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}")
+        download_button = _candidate_action_button(
+            "加入下载列表",
+            f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}",
+            "creates_candidate_download_task_or_manifest",
+        )
         download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
         actions.addWidget(register_button)
         actions.addWidget(detail_button)
@@ -4819,18 +4832,30 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             action_widget = QWidget()
             layout = QHBoxLayout(action_widget)
             layout.setContentsMargins(0, 0, 0, 0)
-            detail_button = QPushButton("查看详情")
-            detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
+            detail_button = _candidate_action_button(
+                "查看详情",
+                f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}",
+                "opens_candidate_detail_panel",
+            )
             detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
             layout.addWidget(detail_button)
-            register_button = QPushButton("保存")
-            register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+            register_button = _candidate_action_button(
+                "保存",
+                f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}",
+                "writes_candidate_acquisition_record",
+            )
             register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
-            ignore_button = QPushButton("忽略")
-            ignore_button.setObjectName(f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+            ignore_button = _candidate_action_button(
+                "忽略",
+                f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}",
+                "marks_candidate_ignored_in_current_search",
+            )
             ignore_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.ignore_candidate(s, a))
-            download_button = QPushButton("加入下载列表")
-            download_button.setObjectName(f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}")
+            download_button = _candidate_action_button(
+                "加入下载列表",
+                f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}",
+                "creates_candidate_download_task_or_manifest",
+            )
             download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
             layout.addWidget(register_button)
             layout.addWidget(ignore_button)
@@ -4954,8 +4979,10 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             registered = self._is_candidate_registered(source, accession)
             if registered:
                 button.setText("已保存")
+                button.setProperty("disabledReason", "candidate_already_saved_to_project")
             else:
                 button.setText("保存")
+                button.setProperty("disabledReason", "")
             button.setEnabled(not registered)
         for (source, accession), button in self._candidate_download_buttons.items():
             ready = self._is_candidate_ready_for_recognition(source, accession)
@@ -4965,18 +4992,22 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                 if pending_assets:
                     button.setText("下载补充文件")
                     button.setEnabled(True)
+                    button.setProperty("disabledReason", "")
                 else:
                     status_text = _candidate_record_status_text(self._project_root, source, accession)
                     button.setText("补充文件已下载" if "补充文件已下载" in status_text else ("元数据已下载" if ready else "加入下载列表"))
                     button.setEnabled(not ready)
+                    button.setProperty("disabledReason", "candidate_geo_assets_already_ready_for_recognition" if ready else "")
             else:
                 manifest_created = _candidate_has_download_manifest(self._project_root, source, accession)
                 if manifest_created:
                     button.setText("下载清单已创建")
                     button.setEnabled(False)
+                    button.setProperty("disabledReason", "candidate_download_manifest_already_created")
                 else:
                     button.setText("加入下载列表")
                     button.setEnabled(True)
+                    button.setProperty("disabledReason", "")
 
     def _refresh_candidate_status_cells(self) -> None:
         for key, label in self._candidate_status_labels.items():
@@ -10761,6 +10792,14 @@ def _button(text: str, object_name: str, callback: Callable[..., Any]) -> QPushB
     button.setProperty("buttonBehavior", _default_bio_button_behavior(text, object_name))
     button.setProperty("formalActionEnabled", False)
     button.clicked.connect(callback)
+    return button
+
+
+def _candidate_action_button(text: str, object_name: str, behavior: str) -> QPushButton:
+    button = QPushButton(text)
+    button.setObjectName(object_name)
+    button.setProperty("buttonBehavior", behavior)
+    button.setProperty("formalActionEnabled", False)
     return button
 
 

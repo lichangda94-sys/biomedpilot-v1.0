@@ -176,6 +176,7 @@ def _bio_button_by_text(widget, text: str) -> QPushButton:
 def test_bio_c1_pages_expose_auditable_button_connection_metadata(qt_app, project_summary) -> None:
     pages = [
         BioinformaticsDataSourceWidget(),
+        BioinformaticsChineseDatasetSearchWidget(),
         BioinformaticsRecognitionWidget(),
         BioinformaticsReadinessDashboardWidget(),
         BioinformaticsStandardizedAssetsWidget(),
@@ -2504,6 +2505,52 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert record["metadata"]["project_name"] == "Thyroid Carcinoma"
     assert record["metadata"]["source_origin"] == "local_mapping"
     assert record["metadata"]["registration_status"] == "registered_as_planned_source"
+
+
+def test_chinese_dataset_search_candidate_buttons_click_write_artifacts(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    widget.set_query_text("甲状腺癌")
+    widget.generate_terms()
+
+    register_button = widget.findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
+    assert register_button is not None
+    assert register_button.property("buttonBehavior") == "writes_candidate_acquisition_record"
+    assert register_button.property("formalActionEnabled") is False
+    register_button.click()
+
+    records = sorted(path for path in (project_summary.project_root / "acquisition" / "records").glob("*.json") if path.name != "latest_acquisition_record.json")
+    assert len(records) == 1
+    record = json.loads(records[0].read_text(encoding="utf-8"))
+    assert record["source_type"] == "tcga_project"
+    assert record["metadata"]["registration_status"] == "registered_as_planned_source"
+    assert "已选择候选来源" in widget.status_message()
+
+    register_button = widget.findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
+    assert register_button is not None
+    assert register_button.text() == "已保存"
+    assert not register_button.isEnabled()
+    assert register_button.property("disabledReason") == "candidate_already_saved_to_project"
+
+    download_button = widget.findChild(QPushButton, "candidateDownloadButton_tcga_gdc_TCGA-THCA")
+    assert download_button is not None
+    assert download_button.property("buttonBehavior") == "creates_candidate_download_task_or_manifest"
+    assert download_button.property("formalActionEnabled") is False
+    download_button.click()
+
+    manifests = sorted(project_summary.project_root.glob("**/*_gdc_download_manifest.json"))
+    assert len(manifests) == 1
+    manifest = json.loads(manifests[0].read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == "biomedpilot.tcga_gdc_download_manifest.v1"
+    assert manifest["project_id"] == "TCGA-THCA"
+    assert manifest["status"] == "pending_data_file_download"
+    assert "GDC 下载任务清单" in widget.status_message()
+
+    download_button = widget.findChild(QPushButton, "candidateDownloadButton_tcga_gdc_TCGA-THCA")
+    assert download_button is not None
+    assert download_button.text() == "下载清单已创建"
+    assert not download_button.isEnabled()
+    assert download_button.property("disabledReason") == "candidate_download_manifest_already_created"
 
 
 def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, project_summary) -> None:
