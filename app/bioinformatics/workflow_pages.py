@@ -157,6 +157,7 @@ from app.bioinformatics.gene_set_resources import (
     validate_gene_set_registry,
 )
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
+from app.bioinformatics.reports.export_package import create_report_export_package
 from app.bioinformatics.results.project_results import load_result_index, write_result_index
 from app.bioinformatics.search_center import (
     BioinformaticsSearchCenterResult,
@@ -6736,6 +6737,54 @@ class BioinformaticsReportViewerWidget(QWidget):
         self._render(payload)
         return payload
 
+    def export_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        analysis_state = build_analysis_center_state(self._project_root)
+        action = _analysis_ui_action(analysis_state.get("action_rows", []), "report_ready_export")
+        if not bool(action.get("enabled")):
+            reason = str(action.get("disabled_reason") or "report-ready gate 未通过")
+            self._status_label.setText(f"Report-ready export 未开放：{reason}")
+            self._render_report_ready_export_gate(action, analysis_state)
+            return {
+                "status": str(action.get("state") or "blocked_report_ready_gate"),
+                "disabled_reason": reason,
+                "action": action,
+            }
+        diagnostics = analysis_state.get("developer_diagnostics") if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}
+        formal_gate = diagnostics.get("formal_deg_report_ready_gate") if isinstance(diagnostics.get("formal_deg_report_ready_gate"), dict) else {}
+        if formal_gate.get("status") == "eligible_for_formal_deg_report_ready":
+            result = create_formal_deg_report_ready_package(
+                self._project_root,
+                result_id=str(formal_gate.get("selected_result_id") or "") or None,
+            )
+            if result.get("status") == "formal_deg_report_ready_package_created":
+                self.refresh_report()
+                self._status_label.setText(
+                    "已导出 formal DEG report-ready package；"
+                    f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
+                    "GSEA、survival、clinical report-ready 仍保持 gate。"
+                )
+            else:
+                blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG report-ready gate 未通过"
+                self._status_label.setText(f"formal DEG report-ready package 未导出：{blockers}")
+                self._render_report_ready_export_gate(action, build_analysis_center_state(self._project_root))
+            return result
+        payload = load_project_report(self._project_root)
+        markdown = str(payload.get("markdown") or "")
+        if not markdown:
+            payload = generate_project_report(self._project_root)
+            markdown = str(payload.get("markdown") or "")
+        result = create_report_export_package(self._project_root, report_markdown=markdown)
+        self._render(load_project_report(self._project_root))
+        if result.get("status") == "report_ready_package_created":
+            self._status_label.setText(f"已导出 report-ready package；输出位置：{result.get('package_path') or ''}。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "report-ready gate 未通过"
+            self._status_label.setText(f"report-ready package 未导出：{blockers}")
+        return result
+
     def status_message(self) -> str:
         return self._status_label.text()
 
@@ -6744,7 +6793,7 @@ class BioinformaticsReportViewerWidget(QWidget):
         root.addWidget(_header("项目报告", "生成和查看项目报告草稿，保持导入、测试级和未运行状态的边界。", back_text="返回结果浏览", back_signal=self.back_requested))
         actions = QHBoxLayout()
         actions.addWidget(_button("刷新报告草稿", "primaryButton", self.generate_report))
-        actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
+        actions.addWidget(_button("打开报告草稿文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
         actions.addWidget(_button("复制报告摘要", "secondaryButton", self.copy_report_summary))
         actions.addStretch(1)
         root.addLayout(actions)
@@ -6774,6 +6823,15 @@ class BioinformaticsReportViewerWidget(QWidget):
         root.addWidget(self._report_ready_gate)
         _set_table_widths(self._report_ready_gate, [170, 170, 230, 320, 300])
         self._report_ready_gate.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        export_actions = QHBoxLayout()
+        self._report_ready_export_button = _button("导出 report-ready package", "primaryButton", self.export_report_ready_package)
+        self._report_ready_export_button.setObjectName("reportReadyExportButton")
+        self._report_ready_export_status = _muted("Report-ready export 只在 formal DEG 或通用 report-ready gate 通过后开放。")
+        self._report_ready_export_status.setObjectName("reportReadyExportStatus")
+        export_actions.addWidget(self._report_ready_export_button)
+        export_actions.addWidget(self._report_ready_export_status)
+        export_actions.addStretch(1)
+        root.addLayout(export_actions)
 
         self._markdown = _text_preview(220)
         self._markdown.setObjectName("reportDraftUserPreview")
@@ -6782,7 +6840,7 @@ class BioinformaticsReportViewerWidget(QWidget):
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._manifest)))
-        developer_actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
+        developer_actions.addWidget(_button("打开报告草稿文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
         developer_actions.addStretch(1)
         developer_layout.addLayout(developer_actions)
         self._manifest = _text_preview(140)
@@ -6807,8 +6865,29 @@ class BioinformaticsReportViewerWidget(QWidget):
         _fill_table(self._sections, _report_section_rows(self._project_root, entries, records, bool(markdown)))
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._report_ready_gate, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
+        action = _analysis_ui_action(analysis_state.get("action_rows", []), "report_ready_export")
+        self._render_report_ready_export_gate(action, analysis_state)
         self._markdown.setPlainText(_report_user_preview_text(markdown, entries, records))
         self._manifest.setPlainText(_json({"markdown": markdown, "report_payload": payload, "report_manifest": manifest, "result_index": result_payload, "task_records": records, "analysis_center_state": analysis_state}))
+
+    def _render_report_ready_export_gate(self, action: dict[str, object], analysis_state: dict[str, object]) -> None:
+        if not hasattr(self, "_report_ready_export_button"):
+            return
+        enabled = bool(action.get("enabled"))
+        self._report_ready_export_button.setEnabled(enabled)
+        label = str(action.get("label") or "导出 report-ready package")
+        self._report_ready_export_button.setText(label)
+        if enabled:
+            next_action = str(action.get("next_action") or "Report-ready gate passed.")
+            self._report_ready_export_status.setText(f"Report-ready export gate passed：{next_action}")
+            return
+        reason = str(action.get("disabled_reason") or "")
+        if not reason:
+            diagnostics = analysis_state.get("developer_diagnostics") if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}
+            gate = diagnostics.get("report_ready_gate") if isinstance(diagnostics.get("report_ready_gate"), dict) else {}
+            reason = "；".join(str(item) for item in gate.get("blockers", []) or []) or "report-ready gate 未通过"
+        next_action = str(action.get("next_action") or "Resolve report-ready gate first.")
+        self._report_ready_export_status.setText(f"Report-ready export disabled：{reason}；{next_action}")
 
     def copy_report_summary(self) -> str:
         summary = self._markdown.toPlainText().strip()

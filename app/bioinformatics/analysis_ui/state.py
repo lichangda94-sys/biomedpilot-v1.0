@@ -269,6 +269,19 @@ def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate
         and any(isinstance(item, dict) and item.get("artifact_type") == "deg_result_table" for item in entry.get("output_artifacts", []) or [])
     ]
     preflight_sources = [entry for entry in result_entries if normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics")) == "preflight_only"]
+    formal_deg_report_ready = (formal_deg_report_gate or {}).get("status") == "eligible_for_formal_deg_report_ready"
+    report_ready = report_gate.get("status") == "eligible_for_internal_report"
+    report_export_basis = (
+        str(report_gate.get("status") or "")
+        if report_ready
+        else str((formal_deg_report_gate or {}).get("status") or report_gate.get("status") or "blocked")
+    )
+    report_export_blockers = [] if formal_deg_report_ready or report_ready else report_gate.get("blockers", []) or []
+    report_export_warnings = (
+        (formal_deg_report_gate or {}).get("warnings", []) or []
+        if formal_deg_report_ready and not report_ready
+        else report_gate.get("warnings", []) or []
+    )
     return [
         {
             "gate": "Result index v2",
@@ -293,10 +306,10 @@ def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate
         },
         {
             "gate": "Report-ready export",
-            "status": "available" if report_gate.get("status") == "eligible_for_internal_report" else "blocked_report_ready_gate",
-            "basis": str(report_gate.get("status") or "blocked"),
-            "blockers": compact_list(report_gate.get("blockers", []) or []),
-            "warnings": compact_list(report_gate.get("warnings", []) or []),
+            "status": "available" if formal_deg_report_ready or report_ready else "blocked_report_ready_gate",
+            "basis": report_export_basis,
+            "blockers": compact_list(report_export_blockers),
+            "warnings": compact_list(report_export_warnings),
         },
     ]
 

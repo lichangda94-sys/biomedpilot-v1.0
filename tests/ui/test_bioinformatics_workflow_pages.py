@@ -4510,6 +4510,118 @@ def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_
     assert "Report-ready export" in gate_text
     assert "blocked_report_ready_gate" in gate_text
     assert "unverified_testing_exploratory_or_imported_results_present" in gate_text
+    export_button = widget.findChild(QPushButton, "reportReadyExportButton")
+    assert export_button is not None
+    assert not export_button.isEnabled()
+    export_status = widget.findChild(QLabel, "reportReadyExportStatus")
+    assert export_status is not None
+    assert "Report-ready export disabled" in export_status.text()
+    blocked_export = widget.export_report_ready_package()
+    assert blocked_export is not None
+    assert blocked_export["status"] == "blocked_report_ready_gate"
+    assert "未开放" in widget.status_message()
+
+
+def test_report_viewer_exports_formal_deg_package_only_after_gate_pass(qt_app, project_summary) -> None:
+    table_path = project_summary.project_root / "results" / "tables" / "formal_deg_report_viewer.tsv"
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    table_path.write_text(
+        "feature_id\tgene_symbol\tbase_mean_or_mean_expression\tcase_mean\tcontrol_mean\tlog2_fold_change\tstatistic\tp_value\tadjusted_p_value\tsignificance_label\twarnings\n"
+        "g1\tTP53\t10\t12\t4\t1.5\t3.0\t0.001\t0.003\tup\t\n",
+        encoding="utf-8",
+    )
+    parameters = {
+        "status": "passed",
+        "method": "welch_t_test",
+        "log2fc_threshold": 1.0,
+        "p_value_threshold": 0.05,
+        "fdr_threshold": 0.05,
+        "case_samples": ["case1", "case2"],
+        "control_samples": ["ctrl1", "ctrl2"],
+    }
+    dependency = {
+        "status": "passed",
+        "packages": {
+            "numpy": {"version": "2.4.6"},
+            "pandas": {"version": "3.0.3"},
+            "scipy": {"version": "1.17.1"},
+            "statsmodels": {"version": "0.14.6"},
+        },
+    }
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(
+            result_id="formal-report-viewer",
+            task_run_id="task-formal-report-viewer",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            input_package_id="pkg-report-viewer",
+            source_dataset_id="dataset-ui",
+            source_repository_manifest="standardized_data/repositories/repository_manifest.json",
+            parameters_manifest=parameters,
+            engine_name="python_scipy_statsmodels_deg_mvp",
+            engine_version="0.1.0",
+            dependency_snapshot=dependency,
+            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            plot_artifacts=(),
+            report_artifacts=(),
+            validation_status="passed",
+            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-report-viewer_run_log.json"},),
+            report_ready_eligible=False,
+        ),
+    )
+    confirmation_path = project_summary.project_root / CONFIRMATION_PATH
+    confirmation_path.parent.mkdir(parents=True, exist_ok=True)
+    confirmation_path.write_text(
+        json.dumps(
+            {
+                "schema_version": CONFIRMATION_SCHEMA_VERSION,
+                "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                "status": "confirmed",
+                "confirmed_by_user": True,
+                "parameter_manifest": parameters,
+                "dependency_snapshot": dependency,
+                "output_plan": {
+                    "task_run_id": "task-formal-report-viewer",
+                    "result_id": "formal-report-viewer",
+                    "result_table_path": str(table_path.relative_to(project_summary.project_root)),
+                    "task_run_log_path": "analysis/formal_deg/formal-report-viewer_run_log.json",
+                    "result_index_registry_path": "results/summaries/result_index.json",
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    plot = create_formal_deg_plot_artifact(project_summary.project_root, result_id="formal-report-viewer")
+    assert plot["status"] == "passed"
+
+    widget = BioinformaticsReportViewerWidget()
+    widget.refresh_project(project_summary)
+
+    export_button = widget.findChild(QPushButton, "reportReadyExportButton")
+    assert export_button is not None
+    assert export_button.isEnabled()
+    assert export_button.text() == "Export formal DEG report-ready package"
+    export_status = widget.findChild(QLabel, "reportReadyExportStatus")
+    assert export_status is not None
+    assert "Report-ready export gate passed" in export_status.text()
+    gate = widget.findChild(QTableWidget, "reportReadyGateTable")
+    assert gate is not None
+    gate_text = _table_text(gate)
+    assert "Report-ready export" in gate_text
+    assert "eligible_for_formal_deg_report_ready" in gate_text
+
+    manifest = widget.export_report_ready_package()
+
+    assert manifest is not None
+    assert manifest["status"] == "formal_deg_report_ready_package_created"
+    assert manifest["section_scope"] == "formal_deg_only"
+    assert manifest["gsea_enabled"] is False
+    assert manifest["survival_enabled"] is False
+    assert Path(str(manifest["user_visible_package_path"])).is_dir()
+    assert "已导出 formal DEG report-ready package" in widget.status_message()
 
 
 def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) -> None:
