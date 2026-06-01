@@ -222,7 +222,7 @@ RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
 export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
 export PYTHONDONTWRITEBYTECODE="1"
-LOG_FILE="${{TMPDIR:-/tmp}}/biomedpilot_integration_preview_launch.log"
+LOG_FILE="/tmp/biomedpilot_integration_preview_launch.log"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
