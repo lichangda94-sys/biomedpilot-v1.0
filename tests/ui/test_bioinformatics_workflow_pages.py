@@ -21,7 +21,7 @@ try:
     from app.bioinformatics.plots import create_formal_deg_plot_artifact
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.models import ResultIndexEntry
-    from app.bioinformatics.results.project_results import write_result_index
+    from app.bioinformatics.results.project_results import load_result_index, write_result_index
     from app.bioinformatics.results.registry import register_result
     from app.bioinformatics.standardized_asset_selection import save_standardized_asset_selection
     import app.bioinformatics.project_recognition as project_recognition
@@ -89,6 +89,82 @@ def _assert_buttons_are_auditable(widget) -> None:
             missing_disabled_reason.append(f"{button.objectName()}::{button.text()}")
     assert missing_behavior == []
     assert missing_disabled_reason == []
+
+
+def _passed_deg_dependency_snapshot() -> dict[str, object]:
+    return {
+        "schema_version": "biomedpilot.deg_dependency_snapshot.v2",
+        "status": "passed",
+        "engine_candidate": "python_scipy_statsmodels",
+        "dependency_policy": "detect_first_no_install",
+        "blockers": [],
+        "warnings": [],
+        "packages": {
+            "numpy": {"status": "installed", "version": "2.4.6"},
+            "pandas": {"status": "installed", "version": "3.0.3"},
+            "scipy": {"status": "installed", "version": "1.17.1"},
+            "statsmodels": {"status": "installed", "version": "0.14.6"},
+        },
+    }
+
+
+def _patch_formal_deg_backend(monkeypatch) -> dict[str, object]:
+    class Stats:
+        @staticmethod
+        def ttest_ind(case_values, control_values, equal_var=False, nan_policy="omit"):
+            return SimpleNamespace(pvalue=0.01, statistic=2.5)
+
+        @staticmethod
+        def mannwhitneyu(case_values, control_values, alternative="two-sided"):
+            return SimpleNamespace(pvalue=0.02, statistic=3.0)
+
+    def multipletests(p_values, method="fdr_bh"):
+        return None, [min(1.0, value * len(p_values)) for value in p_values]
+
+    from app.bioinformatics.analysis_ui import state as analysis_state
+    from app.bioinformatics.deg_engine import confirmation, formal_runner, python_backend
+
+    dependency = _passed_deg_dependency_snapshot()
+    monkeypatch.setattr(analysis_state, "check_deg_backend_dependencies", lambda: dependency)
+    monkeypatch.setattr(confirmation, "check_deg_backend_dependencies", lambda: dependency)
+    monkeypatch.setattr(formal_runner, "check_deg_backend_dependencies", lambda: dependency)
+    monkeypatch.setattr(python_backend, "_import_backends", lambda: (Stats, multipletests))
+    return dependency
+
+
+def _bio_ui_asset(asset_id: str, asset_type: str, repository: str, path: Path, *, value_type: str = "", gene_id_type: str = "symbol") -> dict[str, object]:
+    return {
+        "asset_id": asset_id,
+        "asset_type": asset_type,
+        "asset_role": "expression_matrix" if "expression" in asset_type or "count" in asset_type else asset_type,
+        "repository": repository,
+        "path": str(path),
+        "file_path": str(path),
+        "validation_status": "passed",
+        "analysis_ready": True,
+        "expression_value_type": value_type,
+        "gene_id_type": gene_id_type,
+    }
+
+
+def _write_bio_ui_standardized_state(root: Path, assets: list[dict[str, object]], *, default_expression: str) -> None:
+    selection = {"expression": {"asset_id": default_expression, "selection_state": "user_confirmed"}}
+    payload = {
+        "schema_version": "biomedpilot.repository_manifest.v1",
+        "assets": assets,
+        "default_asset_selection": selection,
+    }
+    registry = {
+        "schema_version": "biomedpilot.standardized_assets_registry.v2",
+        "assets": assets,
+        "default_asset_selection": selection,
+    }
+    repo_path = root / "standardized_data" / "repositories" / "repository_manifest.json"
+    registry_path = root / "manifests" / "standardized_assets_registry.json"
+    repo_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    repo_path.write_text(json.dumps(payload), encoding="utf-8")
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
 
 
 def test_bio_c1_pages_expose_auditable_button_connection_metadata(qt_app, project_summary) -> None:
@@ -3394,6 +3470,78 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert "预检已生成" in widget._survival_page.findChild(QLabel, "survivalRunStatus").text()
 
 
+def test_analysis_tasks_formal_deg_buttons_confirm_run_and_register_result(qt_app, project_summary, tmp_path: Path, monkeypatch) -> None:
+    matrix = tmp_path / "matrix.tsv"
+    matrix.write_text("gene\tcase1\tcase2\tctrl1\tctrl2\nTP53\t10\t12\t5\t6\nEGFR\t2\t2\t8\t9\n", encoding="utf-8")
+    sample = tmp_path / "sample.tsv"
+    sample.write_text("sample_id\tgroup\ncase1\tcase\ncase2\tcase\nctrl1\tcontrol\nctrl2\tcontrol\n", encoding="utf-8")
+    group = tmp_path / "group.json"
+    group.write_text(
+        json.dumps(
+            {
+                "group_design": {
+                    "sample_group_assignments": {
+                        "case1": "case",
+                        "case2": "case",
+                        "ctrl1": "control",
+                        "ctrl2": "control",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_bio_ui_standardized_state(
+        project_summary.project_root,
+        [
+            _bio_ui_asset("expr", "raw_count_matrix", "expression_repository", matrix, value_type="count", gene_id_type="symbol"),
+            _bio_ui_asset("sample", "sample_metadata", "sample_metadata_repository", sample),
+            _bio_ui_asset("group", "group_design", "group_design_repository", group),
+        ],
+        default_expression="expr",
+    )
+    _patch_formal_deg_backend(monkeypatch)
+
+    widget = BioinformaticsAnalysisTaskCenterWidget()
+    widget.refresh_project(project_summary)
+
+    confirm_button = widget.findChild(QPushButton, "analysisTaskConfirmFormalDegParametersButton")
+    run_button = widget.findChild(QPushButton, "analysisTaskRunFormalControlledDegButton")
+    assert confirm_button is not None
+    assert run_button is not None
+    assert confirm_button.property("buttonBehavior") == "writes_formal_deg_parameter_confirmation"
+    assert run_button.property("buttonBehavior") == "runs_formal_controlled_deg_when_gate_passes"
+    assert confirm_button.isEnabled()
+    assert not run_button.isEnabled()
+
+    confirm_button.click()
+
+    confirmation_path = project_summary.project_root / CONFIRMATION_PATH
+    assert confirmation_path.is_file()
+    confirmation = json.loads(confirmation_path.read_text(encoding="utf-8"))
+    assert confirmation["status"] == "confirmed"
+    assert confirmation["confirmed_by_user"] is True
+    assert "已确认 formal DEG 参数" in widget.status_message()
+    assert run_button.isEnabled()
+
+    run_button.click()
+
+    result_index = load_result_index(project_summary.project_root)
+    entries = result_index.get("entries", [])
+    formal_entries = [item for item in entries if item.get("result_semantics") == "formal_computed_result"]
+    assert len(formal_entries) == 1
+    formal_entry = formal_entries[0]
+    assert formal_entry["task_type"] == "deg"
+    assert formal_entry["validation_status"] == "passed"
+    assert formal_entry["report_ready_eligible"] is False
+    assert formal_entry["plot_artifacts"] == []
+    assert formal_entry["report_artifacts"] == []
+    output_path = project_summary.project_root / formal_entry["output_artifacts"][0]["path"]
+    assert output_path.is_file()
+    assert "写入 result index v2" in widget.status_message()
+    assert "未生成 GSEA、plot、report-ready 或 survival 输出" in widget.status_message()
+
+
 def test_bio_gate_pages_auto_select_project_artifacts(qt_app, project_summary, tmp_path: Path) -> None:
     from app.bioinformatics.services.enrichment_service import EnrichmentService
     from app.bioinformatics.services.survival_service import SurvivalService
@@ -4568,18 +4716,23 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
     assert plot_button is not None
     assert plot_button.isEnabled()
 
-    exported = widget.export_formal_deg_review_csv()
+    csv_button = widget.findChild(QPushButton, "formalDegReviewExportCsvButton")
+    assert csv_button is not None
+    assert csv_button.property("buttonBehavior") == "exports_formal_deg_review_table_when_gate_passes"
+    csv_button.click()
+    exported_files = sorted((project_summary.project_root / "results" / "exports" / "formal_deg_review").glob("*_review.csv"))
 
-    assert exported is not None
-    assert exported["status"] == "passed"
-    assert exported["report_ready_eligible"] is False
-    assert Path(str(exported["export_path"])).is_file()
+    assert len(exported_files) == 1
     assert "未生成 report-ready" in widget.status_message()
-    plot_result = widget.generate_formal_deg_plot_artifact()
-    assert plot_result is not None
-    assert plot_result["status"] == "passed"
-    assert plot_result["report_ready_eligible"] is False
-    assert plot_result["plot_artifact"]["source_result_semantics"] == "formal_computed_result"
+
+    plot_button.click()
+
+    refreshed = load_result_index(project_summary.project_root)
+    formal = next(item for item in refreshed.get("entries", []) if item.get("result_id") == "formal-ui")
+    plot_artifacts = formal.get("plot_artifacts", [])
+    assert len(plot_artifacts) == 1
+    assert plot_artifacts[0]["source_result_semantics"] == "formal_computed_result"
+    assert plot_artifacts[0]["plot_artifact_scope"] == "formal_deg_plot"
     assert "未生成 report-ready" in widget.status_message()
 
 
@@ -4667,7 +4820,12 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     button = widget.findChild(QPushButton, "formalDegReportReadyButton")
     assert button is not None
     assert button.isEnabled()
-    manifest = widget.generate_formal_deg_report_ready_package()
+
+    button.click()
+
+    manifest_files = sorted((project_summary.project_root / "report_package" / "formal_deg").glob("*/*/formal_deg_report_package_manifest.json"))
+    assert len(manifest_files) == 1
+    manifest = json.loads(manifest_files[0].read_text(encoding="utf-8"))
 
     assert manifest is not None
     assert manifest["status"] == "formal_deg_report_ready_package_created"
@@ -4895,7 +5053,11 @@ def test_report_viewer_exports_formal_deg_package_only_after_gate_pass(qt_app, p
     assert "Report-ready export" in gate_text
     assert "eligible_for_formal_deg_report_ready" in gate_text
 
-    manifest = widget.export_report_ready_package()
+    export_button.click()
+
+    manifest_files = sorted((project_summary.project_root / "report_package" / "formal_deg").glob("*/*/formal_deg_report_package_manifest.json"))
+    assert len(manifest_files) == 1
+    manifest = json.loads(manifest_files[0].read_text(encoding="utf-8"))
 
     assert manifest is not None
     assert manifest["status"] == "formal_deg_report_ready_package_created"
