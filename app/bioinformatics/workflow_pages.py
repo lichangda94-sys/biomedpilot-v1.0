@@ -1607,6 +1607,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_tcga_clinical_build_state()
         self._refresh_tcga_workflow_state()
         self._refresh_gtex_workflow_state()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_data_source_project_gate_passes")
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1857,6 +1858,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         root.addWidget(actions_frame)
         actions_frame.setVisible(False)
         root.addWidget(self._data_source_quick_access())
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_data_source_project_gate_passes")
 
     def _data_source_header(self) -> QFrame:
         frame = QFrame()
@@ -5194,6 +5196,7 @@ class BioinformaticsRecognitionWidget(QWidget):
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
         self.refresh_report()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_recognition_input_selected")
 
     def run_recognition(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -5337,6 +5340,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         root.addWidget(_button("技术操作", "secondaryButton", lambda: tech_ops.setVisible(not tech_ops.isVisible())), alignment=Qt.AlignLeft)
         root.addWidget(tech_ops)
         root.addWidget(_button("继续：数据准备与标准化", "primaryButton", self.continue_to_readiness), alignment=Qt.AlignLeft)
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_recognition_input_selected")
 
     def _render_report(self, report: dict[str, object]) -> None:
         self._last_report = report
@@ -5770,6 +5774,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
         self.refresh_status()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_data_check_artifact_exists")
 
     def run_readiness_check(self) -> dict[str, object] | None:
         return self.save_and_rerun_readiness()
@@ -6071,6 +6076,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         bottom_actions.addWidget(_button("继续：标准化数据", "primaryButton", self.continue_to_standardization))
         bottom_actions.addStretch(1)
         root.addLayout(bottom_actions)
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_data_check_artifact_exists")
 
     def _data_check_header(self) -> QFrame:
         frame = QFrame()
@@ -6693,6 +6699,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
         self.refresh_assets()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_standardized_assets_or_confirmation_exists")
 
     def generate_assets(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -6909,6 +6916,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         self._manifest = self._developer_details
         root.addWidget(developer_card)
         root.addWidget(_button("继续到分析任务中心", "primaryButton", self.continue_to_workflow), alignment=Qt.AlignLeft)
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_standardized_assets_or_confirmation_exists")
 
     def _render(self, artifacts: dict[str, object]) -> None:
         registry = artifacts.get("registry") or {}
@@ -7006,6 +7014,7 @@ class BioinformaticsGroupComparisonDesignWidget(QWidget):
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
         self.refresh_design()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_group_design_context_ready")
 
     def refresh_design(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -7129,6 +7138,7 @@ class BioinformaticsGroupComparisonDesignWidget(QWidget):
         continue_button.setProperty("formalActionEnabled", False)
         continue_button.setToolTip("进入 Analysis Tasks 的 gated 任务矩阵；不启动正式分析。")
         root.addWidget(continue_button, alignment=Qt.AlignLeft)
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_group_design_context_ready")
 
     def _group_design_header(self) -> QFrame:
         frame = QFrame()
@@ -7967,6 +7977,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
         self.refresh_task_center()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_analysis_task_gate_passes")
 
     def refresh_task_center(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -8596,6 +8607,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         continue_button.setProperty("buttonBehavior", "opens_result_report_after_task_record_exists")
         continue_button.setProperty("formalActionEnabled", False)
         root.addWidget(continue_button, alignment=Qt.AlignLeft)
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_analysis_task_gate_passes")
 
     def _render(self, center: dict[str, object]) -> None:
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
@@ -9423,6 +9435,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
         self.refresh_results()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_result_or_report_gate_exists")
 
     def refresh_results(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -9886,6 +9899,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._formal_deg_plot_button.setObjectName("formalDegPlotButton")
         self._formal_deg_plot_button.setProperty("buttonBehavior", "creates_formal_deg_plot_artifact_when_gate_passes")
         self._formal_deg_plot_button.setProperty("formalActionEnabled", True)
+        self._formal_deg_plot_button.setEnabled(False)
         plot_controls.addWidget(self._formal_deg_plot_button)
         self._formal_deg_plot_status = _muted("Formal plot artifact 只接受 formal_computed_result DEG source；不生成 report-ready。")
         self._formal_deg_plot_status.setObjectName("formalDegPlotStatus")
@@ -9900,6 +9914,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._formal_deg_report_button.setObjectName("formalDegReportReadyButton")
         self._formal_deg_report_button.setProperty("buttonBehavior", "creates_formal_deg_report_ready_package_when_gate_passes")
         self._formal_deg_report_button.setProperty("formalActionEnabled", True)
+        self._formal_deg_report_button.setEnabled(False)
         self._formal_deg_report_status = _muted("Formal DEG report-ready gate 需要完整 result index、未过期 confirmation、passed dependency/table validation 和 formal plot artifact；无图 table-only 模式需显式勾选，且不表示 volcano/heatmap 已生成。")
         self._formal_deg_report_status.setObjectName("formalDegReportReadyStatus")
         report_controls.addWidget(self._formal_deg_table_only_report)
@@ -9963,6 +9978,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         continue_button.setProperty("buttonBehavior", "opens_report_export_gate_when_result_exists")
         continue_button.setProperty("formalActionEnabled", False)
         root.addWidget(continue_button, alignment=Qt.AlignLeft)
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_result_or_report_gate_exists")
 
     def _render(self, payload: dict[str, object]) -> None:
         self._render_result_report_visual_state(payload)
@@ -10185,6 +10201,7 @@ class BioinformaticsReportViewerWidget(QWidget):
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
         self.refresh_report()
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_report_ready_gate_passes")
 
     def generate_report(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -10412,6 +10429,7 @@ class BioinformaticsReportViewerWidget(QWidget):
         self._report_ready_export_button.setObjectName("reportReadyExportButton")
         self._report_ready_export_button.setProperty("buttonBehavior", "exports_report_ready_package_when_gate_passes")
         self._report_ready_export_button.setProperty("formalActionEnabled", True)
+        self._report_ready_export_button.setEnabled(False)
         self._report_ready_export_status = _muted("Report-ready export 只在 formal DEG 或通用 report-ready gate 通过后开放。")
         self._report_ready_export_status.setObjectName("reportReadyExportStatus")
         export_actions.addWidget(self._report_ready_export_button)
@@ -10442,6 +10460,7 @@ class BioinformaticsReportViewerWidget(QWidget):
         self._manifest.setVisible(False)
         developer_layout.addWidget(self._manifest)
         root.addWidget(developer_card)
+        _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_report_ready_gate_passes")
 
     def _render(self, payload: dict[str, object]) -> None:
         markdown = str(payload.get("markdown") or "")
@@ -10739,8 +10758,83 @@ def _readiness_todo_row(title: str, purpose: str, state: str, buttons: list[QPus
 def _button(text: str, object_name: str, callback: Callable[..., Any]) -> QPushButton:
     button = QPushButton(text)
     button.setObjectName(object_name)
+    button.setProperty("buttonBehavior", _default_bio_button_behavior(text, object_name))
+    button.setProperty("formalActionEnabled", False)
     button.clicked.connect(callback)
     return button
+
+
+def _default_bio_button_behavior(text: str, object_name: str) -> str:
+    normalized = " ".join(str(text or "").replace("\n", " ").split())
+    if "TabButton" in object_name:
+        return "disabled_until_tab_router_connected"
+    if "QuickAccessButton" in object_name:
+        return "disabled_until_project_help_center_connected"
+    if normalized.startswith("返回"):
+        return "navigates_back_to_previous_bio_page"
+    if normalized.startswith("继续") or normalized.startswith("下一步") or normalized.startswith("进入准备"):
+        return "navigates_to_next_bio_gate_after_validation"
+    if "技术" in normalized or "诊断" in normalized or "详情" in normalized:
+        return "toggles_or_opens_bio_diagnostics"
+    if "刷新" in normalized or "重新读取" in normalized:
+        return "reloads_current_bio_project_artifacts"
+    if "检索" in normalized or "预览" in normalized:
+        return "calls_bio_search_or_preview_service"
+    if "选择" in normalized or "上传" in normalized or "导入" in normalized:
+        return "opens_file_picker_or_imports_local_bio_asset"
+    if "保存" in normalized or "确认" in normalized or "创建" in normalized or "生成" in normalized:
+        return "writes_bio_project_draft_or_artifact"
+    if "下载" in normalized or "导出" in normalized or "打开" in normalized or "复制" in normalized:
+        return "exports_opens_or_copies_existing_bio_artifact"
+    if "删除" in normalized or "清理" in normalized or "移除" in normalized:
+        return "removes_selected_bio_project_binding_after_gate"
+    if "运行" in normalized or "开始" in normalized:
+        return "runs_bio_preflight_or_gated_service"
+    return "bio_ui_action"
+
+
+_BIO_DISABLED_REASON_BY_OBJECT_NAME = {
+    "dataSourceTabButton": "disabled_pending_data_source_tab_router",
+    "dataSourceQuickAccessButton": "disabled_pending_project_help_center",
+    "createTcgaDownloadPlanDraftButton": "requires_tcga_metadata_preview_artifact",
+    "downloadTcgaRawFilesButton": "requires_tcga_download_plan_draft",
+    "buildTcgaExpressionMatrixButton": "requires_tcga_raw_download_receipt",
+    "fetchTcgaClinicalMetadataButton": "requires_tcga_expression_matrix_or_project_clinical_preview_gate",
+    "enterTcgaDataCheckButton": "requires_ready_registered_dataset_source",
+    "createGtexDownloadPlanDraftButton": "requires_gtex_metadata_preview_artifact",
+    "downloadGtexRawFilesButton": "requires_gtex_download_plan_draft",
+    "buildGtexExpressionMatrixButton": "requires_gtex_raw_download_receipt",
+    "enterGtexDataCheckButton": "requires_ready_registered_dataset_source",
+    "dataCheckTabButton": "disabled_pending_data_check_tab_router",
+    "groupDesignTabButton": "disabled_pending_group_design_tab_router",
+    "groupDesignPrimaryButton": "disabled_manual_design_editor_not_connected",
+    "groupDesignGhostButton": "disabled_manual_design_aux_action_not_connected",
+    "bioinformaticsRunPreflightGatedButton": "disabled_preflight_preview_only_no_formal_model_run",
+    "analysisTaskPrimaryButton": "disabled_analysis_overview_placeholder",
+    "analysisTaskGhostButton": "disabled_analysis_documentation_placeholder",
+    "analysisTaskConfirmFormalDegParametersButton": "requires_formal_deg_parameter_manifest_and_dependency_snapshot",
+    "analysisTaskRunFormalControlledDegButton": "requires_confirmed_formal_deg_gate",
+    "resultReportTabButton": "disabled_pending_result_report_tab_router",
+    "resultReportPrimaryButton": "requires_formal_result_for_report_draft",
+    "resultReportGhostButton": "requires_existing_result_or_route_context",
+    "formalDegPlotButton": "requires_formal_computed_deg_result",
+    "formalDegReportReadyButton": "requires_formal_deg_plot_or_table_only_gate",
+    "reportReadyExportButton": "requires_report_ready_gate_passed",
+}
+
+
+def _annotate_bio_page_buttons(root: QWidget, *, default_disabled_reason: str) -> None:
+    for button in root.findChildren(QPushButton):
+        if button.property("buttonBehavior") is None:
+            button.setProperty("buttonBehavior", _default_bio_button_behavior(button.text(), button.objectName()))
+        if button.property("formalActionEnabled") is None:
+            button.setProperty("formalActionEnabled", False)
+        if not button.isEnabled() and button.property("disabledReason") is None:
+            reason = _BIO_DISABLED_REASON_BY_OBJECT_NAME.get(button.objectName(), default_disabled_reason)
+            button.setProperty("disabledReason", reason)
+            tooltip = button.toolTip()
+            if not tooltip:
+                button.setToolTip(reason)
 
 
 def _muted(text: str) -> QLabel:

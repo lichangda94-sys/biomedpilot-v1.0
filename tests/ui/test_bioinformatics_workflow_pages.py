@@ -76,6 +76,57 @@ def project_summary(tmp_path: Path):
     return create_bioinformatics_project("UI Workflow Project", tmp_path)
 
 
+def _assert_buttons_are_auditable(widget) -> None:
+    missing_behavior = []
+    missing_disabled_reason = []
+    for button in widget.findChildren(QPushButton):
+        if button.property("buttonBehavior") is None:
+            missing_behavior.append(f"{button.objectName()}::{button.text()}")
+        if not button.isEnabled() and button.property("disabledReason") is None:
+            missing_disabled_reason.append(f"{button.objectName()}::{button.text()}")
+    assert missing_behavior == []
+    assert missing_disabled_reason == []
+
+
+def test_bio_c1_pages_expose_auditable_button_connection_metadata(qt_app, project_summary) -> None:
+    pages = [
+        BioinformaticsDataSourceWidget(),
+        BioinformaticsRecognitionWidget(),
+        BioinformaticsReadinessDashboardWidget(),
+        BioinformaticsStandardizedAssetsWidget(),
+        BioinformaticsGroupComparisonDesignWidget(),
+        BioinformaticsAnalysisTaskCenterWidget(),
+        BioinformaticsResultsBrowserWidget(),
+        BioinformaticsReportViewerWidget(),
+    ]
+
+    for page in pages:
+        page.refresh_project(project_summary)
+        _assert_buttons_are_auditable(page)
+
+
+def test_data_source_gated_source_buttons_write_request_artifacts(qt_app, project_summary) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    for source_key in ("geo", "tcga", "gtex", "local_file"):
+        button = next(
+            item
+            for item in widget.findChildren(QPushButton, "bioinformaticsDataSourceSelectPreviewButton")
+            if item.property("sourceKey") == source_key
+        )
+        assert button.property("buttonBehavior") == "creates_data_source_request_draft_when_project_open"
+        button.click()
+
+        request_path = widget.latest_data_source_request_path()
+        assert request_path is not None
+        assert request_path.exists()
+        request = json.loads(request_path.read_text(encoding="utf-8"))
+        assert request["internal_selection"]["source_key"] == source_key
+        assert request["internal_selection"]["next_gate"] == "Data Check & Preparation"
+        assert request["status"] == "draft"
+
+
 def _write_xlsx_count_matrix(path: Path) -> Path:
     rows = [
         ["gene_id", "A1_count", "A2_count", "B1_count"],
