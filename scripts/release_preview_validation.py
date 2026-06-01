@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -45,9 +47,12 @@ def main() -> None:
     payload = {
         "schema_version": "biomedpilot.release_preview_validation.v1",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "branch": _git_output("branch", "--show-current"),
+        "head": _git_output("rev-parse", "HEAD"),
         "run_root": str(RUN_ROOT),
         "screenshot_dir": str(SCREENSHOT_DIR),
         "ui": ui,
+        "button_audit_summary": _button_audit_summary(ui.get("clicks", [])),
         "bioinformatics": bio,
         "meta_analysis": meta,
     }
@@ -268,6 +273,8 @@ def write_markdown_report(payload: dict[str, Any]) -> None:
         "# Release Preview UI Shell and Live Function Validation",
         "",
         f"- created_at: `{payload['created_at']}`",
+        f"- branch: `{payload['branch']}`",
+        f"- head: `{payload['head']}`",
         f"- run_root: `{payload['run_root']}`",
         f"- screenshot_dir: `{payload['screenshot_dir']}`",
         "",
@@ -277,10 +284,20 @@ def write_markdown_report(payload: dict[str, Any]) -> None:
         "- Dashboard/Home: UIShell runtime baseline retained; Integration Centers entry is preserved.",
         "- About: restored to UIShell mature dark text page baseline.",
         "- Settings: UIShell settings shell retained with Integration R enrichment backend detect-only gate.",
-        "- Sidebar: UIShell AppSidebar visual structure retained with current Integration routes.",
-        "",
-        "## Live Bioinformatics Validation",
-        "",
+            "- Sidebar: UIShell AppSidebar visual structure retained with current Integration routes.",
+            "",
+            "## Button Audit Summary",
+            "",
+            f"- screenshot_count: `{len(payload['ui']['screenshots'])}`",
+            f"- button_records: `{payload['button_audit_summary']['button_records']}`",
+            f"- clicked_records: `{payload['button_audit_summary']['clicked_records']}`",
+            f"- disabled_with_reason: `{payload['button_audit_summary']['disabled_with_reason']}`",
+            f"- disabled_without_reason: `{payload['button_audit_summary']['disabled_without_reason']}`",
+            f"- click_failed: `{payload['button_audit_summary']['click_failed']}`",
+            f"- safety_gated_not_clicked: `{payload['button_audit_summary']['safety_gated_not_clicked']}`",
+            "",
+            "## Live Bioinformatics Validation",
+            "",
         "| Dataset | Search | Download | Recognition | Readiness | Project |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
@@ -290,6 +307,16 @@ def write_markdown_report(payload: dict[str, Any]) -> None:
                 **item
             )
         )
+    lines.extend(
+        [
+            "",
+            "### Bioinformatics Validation Boundaries",
+            "",
+            "- `GSE6004`: retrieval, recognition, and readiness artifact path is callable; readiness remains `ready_with_warnings` because multiple expression candidates require manual review.",
+            "- `GSE153659`: retrieval and recognition path is callable; readiness remains `not_ready` because the downloaded assets do not expose a usable expression matrix in the current automated gate.",
+            "- Formal DEG, ORA/GSEA, survival/clinical execution and report-ready export remain controlled by their module gates unless their required runtime artifacts are present.",
+        ]
+    )
     lines.extend(
         [
             "",
@@ -305,6 +332,11 @@ def write_markdown_report(payload: dict[str, Any]) -> None:
             f"- screening_queue_success: `{payload['meta_analysis']['screening_queue_success']}`",
             f"- screening_record_count: `{payload['meta_analysis']['screening_record_count']}`",
             f"- project_dir: `{payload['meta_analysis']['project_dir']}`",
+            "",
+            "### Meta Analysis Validation Boundaries",
+            "",
+            "- PubMed search, preview candidate creation, selected-candidate handoff, and screening queue creation are callable in the current runtime.",
+            "- Full text retrieval, risk-of-bias completion, formal statistics, and report-ready export remain gated until their required review/store artifacts are present.",
             "",
             "## Screenshot Evidence",
             "",
@@ -436,6 +468,33 @@ def _is_safe_click(button: QPushButton) -> bool:
         "quickAccessButton",
         "centersActionButton",
     } or "navigates_to" in behavior or "toggles_" in behavior or "calls_" in behavior
+
+
+def _button_audit_summary(clicks: list[dict[str, Any]]) -> dict[str, Any]:
+    counter = Counter(str(entry.get("click_result", "")) for entry in clicks)
+    return {
+        "button_records": len(clicks),
+        "clicked_records": sum(1 for entry in clicks if entry.get("clicked")),
+        "disabled_with_reason": counter.get("disabled_with_reason", 0),
+        "disabled_without_reason": counter.get("disabled_without_reason", 0),
+        "click_failed": sum(count for result, count in counter.items() if result.startswith("click_failed")),
+        "safety_gated_not_clicked": counter.get("not_clicked_safety_gate", 0),
+        "click_result_counts": dict(counter),
+    }
+
+
+def _git_output(*args: str) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+    return completed.stdout.strip()
 
 
 def _md_cell(value: object) -> str:

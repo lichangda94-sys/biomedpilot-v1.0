@@ -111,6 +111,14 @@ def test_bioinformatics_workspace_renders_high_fidelity_mockup_sourced_shell(bio
     assert all(str(item.property("buttonBehavior")).startswith("navigates_to_bio_target_ia_page_") for item in nav_items)
 
 
+def test_bioinformatics_project_home_disabled_quick_access_buttons_explain_reason(bio_workspace) -> None:
+    buttons = bio_workspace.findChildren(QPushButton, "quickAccessButton")
+
+    assert {button.property("quickAccessKey") for button in buttons} == {"最近使用", "使用指南", "常见问题", "意见反馈"}
+    assert all(not button.isEnabled() for button in buttons)
+    assert all(button.property("disabledReason") for button in buttons)
+
+
 def test_bioinformatics_nav_items_carry_status_and_semantic_keys(bio_workspace) -> None:
     by_page = {item.property("pageKey"): item for item in bio_workspace.findChildren(QPushButton, "bioinformaticsIANavItem")}
 

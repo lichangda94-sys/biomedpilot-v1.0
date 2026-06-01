@@ -593,6 +593,8 @@ if QWidget is not None:
                 button.setObjectName("quickAccessButton")
                 button.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
                 button.setProperty("quickAccessKey", text)
+                button.setProperty("disabledReason", "Bioinformatics quick access center is planned for Project Center remediation.")
+                button.setToolTip(str(button.property("disabledReason")))
                 button.setProperty("formalActionEnabled", False)
                 button.setMinimumHeight(64)
                 button.setMinimumWidth(170)
