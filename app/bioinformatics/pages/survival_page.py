@@ -50,6 +50,7 @@ if QWidget is not None:
             self.setObjectName("bioinformaticsSurvivalPage")
             self.setStyleSheet(bioinformatics_project_home_stylesheet())
             self._project_id = project_id
+            self._project_root: Path | None = None
             self._service = service or SurvivalService()
             self._state = initial_survival_state()
             if on_back is not None:
@@ -74,6 +75,10 @@ if QWidget is not None:
             self._project_label = QLabel(f"项目：{self._project_id}")
             self._project_label.setObjectName("survivalProjectLabel")
             root.addWidget(self._project_label)
+            self._source_status_label = QLabel("项目 artifact：尚未检查 cleaning plan。")
+            self._source_status_label.setObjectName("survivalProjectArtifactStatus")
+            self._source_status_label.setWordWrap(True)
+            root.addWidget(self._source_status_label)
             status_chip = QLabel(f"功能状态：{self._state.status_label}")
             status_chip.setObjectName("survivalFeatureStatus")
             root.addWidget(status_chip)
@@ -125,11 +130,16 @@ if QWidget is not None:
 
         def refresh_project(self, summary: object | None) -> None:
             self._project_id = _project_id_from_summary(summary, fallback=self._project_id)
+            self._project_root = _project_root_from_summary(summary)
             self._project_label.setText(f"项目：{self._project_id}")
+            self._auto_select_project_artifact()
 
         def run_preflight_from_path(self, path: str | Path) -> SurvivalPreflightResult:
             self._path_input.setText(str(path))
             return self._create_preflight()
+
+        def selected_preflight_path(self) -> str:
+            return self._path_input.text()
 
         def _choose_file(self) -> None:
             path, _selected_filter = QFileDialog.getOpenFileName(self, "选择数据清洗计划", "", "Cleaning plan (*.json)")
@@ -137,6 +147,8 @@ if QWidget is not None:
                 self._path_input.setText(path)
 
         def _create_preflight(self) -> SurvivalPreflightResult:
+            if not self._path_input.text().strip():
+                self._auto_select_project_artifact()
             result = self._service.create_preflight(project_id=self._project_id, cleaning_plan_path=self._path_input.text())
             if result.success:
                 self._status_label.setText("生存分析状态：预检已生成")
@@ -154,6 +166,21 @@ if QWidget is not None:
                 self._error_label.setText(result.message)
             return result
 
+        def _auto_select_project_artifact(self) -> None:
+            if self._project_root is None:
+                self._source_status_label.setText("项目 artifact：没有当前项目，无法自动定位 cleaning plan。")
+                return
+            candidates = _candidate_cleaning_plans(self._project_root)
+            if candidates:
+                selected = candidates[0]
+                self._path_input.setText(str(selected))
+                self._source_status_label.setText(f"项目 artifact：已自动选择 cleaning plan：{selected}")
+            else:
+                self._source_status_label.setText(
+                    "项目 artifact：未找到包含 cleaning_items 的 cleaning plan JSON；"
+                    "请先完成数据清洗/标准化前置步骤，或手动选择 JSON。"
+                )
+
 else:
 
     class SurvivalPage:  # type: ignore[no-redef]
@@ -170,3 +197,34 @@ def _project_id_from_summary(summary: object | None, *, fallback: str) -> str:
         return Path(str(summary)).expanduser().name or fallback
     except Exception:
         return fallback
+
+
+def _project_root_from_summary(summary: object | None) -> Path | None:
+    if summary is None:
+        return None
+    project_root = getattr(summary, "project_root", None)
+    if project_root is not None:
+        return Path(project_root).expanduser().resolve()
+    try:
+        path = Path(str(summary)).expanduser().resolve()
+    except Exception:
+        return None
+    return path if path.exists() else None
+
+
+def _candidate_cleaning_plans(project_root: Path) -> list[Path]:
+    patterns = ("geo_cleaning_plan*.json", "*cleaning_plan*.json")
+    candidates: dict[Path, float] = {}
+    for pattern in patterns:
+        for path in project_root.rglob(pattern):
+            if path.is_file() and _looks_like_cleaning_plan(path):
+                candidates[path] = path.stat().st_mtime
+    return [path for path, _mtime in sorted(candidates.items(), key=lambda item: item[1], reverse=True)]
+
+
+def _looks_like_cleaning_plan(path: Path) -> bool:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:
+        return False
+    return '"cleaning_items"' in text

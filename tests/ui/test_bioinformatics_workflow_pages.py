@@ -3168,6 +3168,87 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert "预检已生成" in widget._survival_page.findChild(QLabel, "survivalRunStatus").text()
 
 
+def test_bio_gate_pages_auto_select_project_artifacts(qt_app, project_summary, tmp_path: Path) -> None:
+    from app.bioinformatics.services.enrichment_service import EnrichmentService
+    from app.bioinformatics.services.survival_service import SurvivalService
+    from app.shared.data_center.service import DataCenter
+    from app.shared.task_center.service import TaskCenter
+
+    deg_preflight = project_summary.project_root / "analysis" / "deg" / "preflight" / "deg_preflight_manifest.json"
+    deg_preflight.parent.mkdir(parents=True, exist_ok=True)
+    deg_preflight.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.deg_preflight_manifest.v1",
+                "status": "passed",
+                "execution": "not_run",
+                "preflight_items": [
+                    {
+                        "accession": "GSEAUTO",
+                        "deg_result_files": ["deg.csv"],
+                        "upregulated_gene_count": 3,
+                        "downregulated_gene_count": 2,
+                        "status": "ready_for_deg_runner",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    cleaning_plan = project_summary.project_root / "analysis" / "geo" / "cleaning" / "geo_cleaning_plan_latest.json"
+    cleaning_plan.parent.mkdir(parents=True, exist_ok=True)
+    cleaning_plan.write_text(
+        json.dumps(
+            {
+                "project_id": "bio-test",
+                "cleaning_executed": False,
+                "cleaning_items": [
+                    {
+                        "accession": "GSEAUTO",
+                        "expression_files": ["counts.tsv"],
+                        "metadata_files": ["clinical.tsv"],
+                        "survival_fields": ["os_time_days", "vital_status"],
+                        "status": "ready_for_cleaning",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    widget = BioinformaticsWorkspaceWidget()
+    widget.show_analysis_tasks(project_summary)
+
+    assert widget._analysis_task_page.open_enrichment_preflight() is not None
+    assert widget._enrichment_page.selected_preflight_path() == str(deg_preflight)
+    status = widget._enrichment_page.findChild(QLabel, "enrichmentProjectArtifactStatus")
+    assert status is not None
+    assert "已自动选择 DEG preflight manifest" in status.text()
+    widget._enrichment_page._service = EnrichmentService(
+        task_center=TaskCenter(tmp_path / "auto_enrichment_tasks.json"),
+        data_center=DataCenter(tmp_path / "auto_enrichment_assets.json"),
+        storage_root=tmp_path,
+    )
+    enrichment_result = widget._enrichment_page.run_preflight_from_path(widget._enrichment_page.selected_preflight_path())
+    assert enrichment_result.success
+    assert Path(enrichment_result.output_path).is_file()
+
+    widget.show_analysis_tasks(project_summary)
+    assert widget._analysis_task_page.open_survival_preflight() is not None
+    assert widget._survival_page.selected_preflight_path() == str(cleaning_plan)
+    status = widget._survival_page.findChild(QLabel, "survivalProjectArtifactStatus")
+    assert status is not None
+    assert "已自动选择 cleaning plan" in status.text()
+    widget._survival_page._service = SurvivalService(
+        task_center=TaskCenter(tmp_path / "auto_survival_tasks.json"),
+        data_center=DataCenter(tmp_path / "auto_survival_assets.json"),
+        storage_root=tmp_path,
+    )
+    survival_result = widget._survival_page.run_preflight_from_path(widget._survival_page.selected_preflight_path())
+    assert survival_result.success
+    assert Path(survival_result.output_path).is_file()
+
+
 def test_imported_deg_browser_user_page_and_report_candidate(qt_app, project_summary, tmp_path: Path) -> None:
     imported_deg = tmp_path / "deg_results.csv"
     imported_deg.write_text(

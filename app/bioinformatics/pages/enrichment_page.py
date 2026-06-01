@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from app.bioinformatics.deg_task_plan import DEG_PREFLIGHT_MANIFEST
 from app.bioinformatics.services.enrichment_service import EnrichmentPreflightResult, EnrichmentService
 from app.shared.feature_availability import get_feature
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
@@ -50,6 +51,7 @@ if QWidget is not None:
             self.setObjectName("bioinformaticsEnrichmentPage")
             self.setStyleSheet(bioinformatics_project_home_stylesheet())
             self._project_id = project_id
+            self._project_root: Path | None = None
             self._service = service or EnrichmentService()
             self._state = initial_enrichment_state()
             if on_back is not None:
@@ -74,6 +76,10 @@ if QWidget is not None:
             self._project_label = QLabel(f"项目：{self._project_id}")
             self._project_label.setObjectName("enrichmentProjectLabel")
             root.addWidget(self._project_label)
+            self._source_status_label = QLabel("项目 artifact：尚未检查 DEG preflight manifest。")
+            self._source_status_label.setObjectName("enrichmentProjectArtifactStatus")
+            self._source_status_label.setWordWrap(True)
+            root.addWidget(self._source_status_label)
             status_chip = QLabel(f"功能状态：{self._state.status_label}")
             status_chip.setObjectName("enrichmentFeatureStatus")
             root.addWidget(status_chip)
@@ -125,11 +131,16 @@ if QWidget is not None:
 
         def refresh_project(self, summary: object | None) -> None:
             self._project_id = _project_id_from_summary(summary, fallback=self._project_id)
+            self._project_root = _project_root_from_summary(summary)
             self._project_label.setText(f"项目：{self._project_id}")
+            self._auto_select_project_artifact()
 
         def run_preflight_from_path(self, path: str | Path) -> EnrichmentPreflightResult:
             self._path_input.setText(str(path))
             return self._create_preflight()
+
+        def selected_preflight_path(self) -> str:
+            return self._path_input.text()
 
         def _choose_file(self) -> None:
             path, _selected_filter = QFileDialog.getOpenFileName(self, "选择差异表达分析预检", "", "Differential expression preflight (*.json)")
@@ -137,6 +148,8 @@ if QWidget is not None:
                 self._path_input.setText(path)
 
         def _create_preflight(self) -> EnrichmentPreflightResult:
+            if not self._path_input.text().strip():
+                self._auto_select_project_artifact()
             result = self._service.create_preflight(project_id=self._project_id, differential_expression_path=self._path_input.text())
             if result.success:
                 self._status_label.setText("富集状态：预检已生成")
@@ -155,6 +168,20 @@ if QWidget is not None:
                 self._error_label.setText(result.message)
             return result
 
+        def _auto_select_project_artifact(self) -> None:
+            if self._project_root is None:
+                self._source_status_label.setText("项目 artifact：没有当前项目，无法自动定位 DEG preflight manifest。")
+                return
+            candidate = self._project_root / DEG_PREFLIGHT_MANIFEST
+            if candidate.is_file():
+                self._path_input.setText(str(candidate))
+                self._source_status_label.setText(f"项目 artifact：已自动选择 DEG preflight manifest：{candidate}")
+            else:
+                self._source_status_label.setText(
+                    "项目 artifact：未找到 analysis/deg/preflight/deg_preflight_manifest.json；"
+                    "请先在 DEG 配置页生成 preflight，或手动选择 JSON。"
+                )
+
 else:
 
     class EnrichmentPage:  # type: ignore[no-redef]
@@ -171,3 +198,16 @@ def _project_id_from_summary(summary: object | None, *, fallback: str) -> str:
         return Path(str(summary)).expanduser().name or fallback
     except Exception:
         return fallback
+
+
+def _project_root_from_summary(summary: object | None) -> Path | None:
+    if summary is None:
+        return None
+    project_root = getattr(summary, "project_root", None)
+    if project_root is not None:
+        return Path(project_root).expanduser().resolve()
+    try:
+        path = Path(str(summary)).expanduser().resolve()
+    except Exception:
+        return None
+    return path if path.exists() else None
