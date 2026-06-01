@@ -39,6 +39,27 @@ from app.labtools.ui.image_analysis_widgets import fluorescence_workbench_widget
 from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 
 
+def _cell_profile_button_behavior(object_name: str) -> str:
+    return {
+        "cellProfileNewButton": "clears_cell_profile_form",
+        "cellProfileSaveButton": "upserts_cell_profile_store",
+        "cellProfileCopyButton": "copies_selected_cell_profile_store",
+        "cellProfileExportButton": "exports_selected_cell_profile_txt",
+    }.get(object_name, "cell_profile_action")
+
+
+def _cell_record_button_behavior(object_name: str) -> str:
+    if object_name.startswith("cellRecordSaveButton_"):
+        return "saves_cell_experiment_record"
+    if object_name.startswith("cellRecordFromLastButton_"):
+        return "creates_draft_from_last_cell_record"
+    if object_name.startswith("cellRecordCopyButton_"):
+        return "copies_current_cell_record_draft"
+    if object_name.startswith("cellRecordExportButton_"):
+        return "exports_cell_experiment_record_txt"
+    return "cell_experiment_record_action"
+
+
 class LabToolsCellExperimentPage(QWidget):
     def __init__(
         self,
@@ -333,6 +354,7 @@ class CellProfileWidget(QWidget):
         ):
             button = QPushButton(label)
             button.setObjectName(name)
+            button.setProperty("buttonBehavior", _cell_profile_button_behavior(name))
             button.clicked.connect(callback)
             actions.addWidget(button)
         root.addLayout(actions)
@@ -377,6 +399,7 @@ class CellProfileWidget(QWidget):
         self._start_position.setPlaceholderText("起始位置")
         create = QPushButton("新建冻存批次并生成冻存管")
         create.setObjectName("freezingBatchCreateButton")
+        create.setProperty("buttonBehavior", "creates_freezing_batch_and_cryovial_inventory")
         create.clicked.connect(self._create_freezing_batch)
         for widget in (self._batch_code, self._vial_count, self._tank, self._rack, self._box, self._start_position, create):
             controls.addWidget(widget)
@@ -394,6 +417,7 @@ class CellProfileWidget(QWidget):
         self._cryovial_status.addItems(CRYOVIAL_STATUSES)
         update = QPushButton("编辑冻存管位置和状态")
         update.setObjectName("cryovialUpdateButton")
+        update.setProperty("buttonBehavior", "updates_cryovial_location_and_status")
         update.clicked.connect(self._update_cryovial)
         for widget in (self._cryovial_id, self._cryovial_position, self._cryovial_status, update):
             edit_controls.addWidget(widget)
@@ -578,6 +602,7 @@ class RecordTemplateWidget(QWidget):
         ):
             button = QPushButton(label_text)
             button.setObjectName(name)
+            button.setProperty("buttonBehavior", _cell_record_button_behavior(name))
             button.clicked.connect(callback)
             actions.addWidget(button)
         root.addLayout(actions)
@@ -683,6 +708,7 @@ class RecordTemplateWidget(QWidget):
         self._seed_extra = _double("seedingCalcExtraPercent", 10)
         calculate = QPushButton("计算接种体积")
         calculate.setObjectName("seedingCalculationButton")
+        calculate.setProperty("buttonBehavior", "calculates_cell_seeding_preparation_preview")
         calculate.clicked.connect(self._calculate_seeding)
         self._seed_result = QLabel("")
         self._seed_result.setObjectName("seedingCalculationResult")

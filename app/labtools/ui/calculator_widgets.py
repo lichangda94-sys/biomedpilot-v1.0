@@ -82,6 +82,16 @@ if QWidget is not None:
         return combo
 
 
+    def _reagent_template_button_behavior(object_name: str) -> str:
+        return {
+            "reagentTemplateNewButton": "clears_reagent_template_form",
+            "reagentTemplateSaveButton": "upserts_reagent_template_local_json",
+            "reagentTemplateCopyButton": "copies_selected_reagent_template_local_json",
+            "reagentTemplateDeleteButton": "deletes_selected_reagent_template_after_confirmation",
+            "reagentTemplateReloadButton": "loads_reagent_templates_from_local_json",
+        }.get(object_name, "reagent_template_action")
+
+
     class ResultPanel(QTextEdit):
         def __init__(self) -> None:
             super().__init__()
@@ -572,6 +582,9 @@ if QWidget is not None:
         def __init__(self, store: ReagentTemplateStore | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsReagentTemplateManager")
+            self.setProperty("uiPrimitive", "labtools_c2_reagent_template_manager")
+            self.setProperty("connectionStatus", "connected")
+            self.setProperty("formalActionEnabled", False)
             self._store = store or ReagentTemplateStore()
             self._templates: tuple[ReagentTemplate, ...] = ()
             self._components: list[ReagentComponent] = []
@@ -705,12 +718,15 @@ if QWidget is not None:
             component_layout.addLayout(checks, 16, 0, 1, 2)
             add_component = QPushButton("添加组分")
             add_component.setObjectName("reagentTemplateAddComponentButton")
+            add_component.setProperty("buttonBehavior", "adds_reagent_template_component_draft")
             add_component.clicked.connect(self._handle_add_component)
             remove_component = QPushButton("移除最后组分")
             remove_component.setObjectName("reagentTemplateRemoveLastComponentButton")
+            remove_component.setProperty("buttonBehavior", "removes_last_reagent_template_component_draft")
             remove_component.clicked.connect(self._handle_remove_last_component)
             clear_components = QPushButton("清空组分")
             clear_components.setObjectName("reagentTemplateClearComponentsButton")
+            clear_components.setProperty("buttonBehavior", "clears_reagent_template_component_draft")
             clear_components.clicked.connect(self._handle_clear_components)
             component_actions = QHBoxLayout()
             component_actions.addWidget(add_component)
@@ -772,6 +788,7 @@ if QWidget is not None:
             ):
                 button = QPushButton(text)
                 button.setObjectName(name)
+                button.setProperty("buttonBehavior", _reagent_template_button_behavior(name))
                 button.clicked.connect(handler)
                 actions.addWidget(button)
             actions.addStretch(1)
@@ -1013,6 +1030,9 @@ if QWidget is not None:
         def __init__(self, store: ReagentTemplateStore | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsReagentPreparationWorkspace")
+            self.setProperty("uiPrimitive", "labtools_c2_reagent_preparation")
+            self.setProperty("connectionStatus", "connected")
+            self.setProperty("formalActionEnabled", False)
             self._store = store or ReagentTemplateStore()
             self._templates: tuple[ReagentTemplate, ...] = ()
             self._build_ui()
@@ -1064,9 +1084,11 @@ if QWidget is not None:
             actions = QHBoxLayout()
             reload_button = QPushButton("重新读取模板")
             reload_button.setObjectName("preparationReloadTemplatesButton")
+            reload_button.setProperty("buttonBehavior", "loads_reagent_templates_from_local_json")
             reload_button.clicked.connect(self.refresh_templates)
             calculate_button = QPushButton("生成制备清单")
             calculate_button.setObjectName("preparationCalculateButton")
+            calculate_button.setProperty("buttonBehavior", "generates_reagent_preparation_preview_without_record_write")
             calculate_button.clicked.connect(self._handle_calculate)
             actions.addWidget(reload_button)
             actions.addWidget(calculate_button)
@@ -1123,6 +1145,9 @@ if QWidget is not None:
         def __init__(self, store: ReagentTemplateStore | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsReagentPreparationFlow")
+            self.setProperty("uiPrimitive", "labtools_c2_reagent_workflow")
+            self.setProperty("connectionStatus", "connected")
+            self.setProperty("formalActionEnabled", False)
             root = QVBoxLayout(self)
             root.setContentsMargins(0, 0, 0, 0)
             scroll = QScrollArea()
@@ -1243,7 +1268,6 @@ if QWidget is not None:
                 padding: 10px;
             }}
             """
-
 else:  # pragma: no cover
 
     class LabToolsCalculatorWidget:  # type: ignore[no-redef]

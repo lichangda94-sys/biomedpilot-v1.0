@@ -59,10 +59,18 @@ def test_cell_profile_page_can_save_profile_and_create_inventory(qapp, tmp_path)
 
     page.findChild(QLineEdit, "cellProfileField_cell_name").setText("A549")
     page.findChild(QLineEdit, "cellProfileField_current_passage").setText("P8")
-    page.findChild(QPushButton, "cellProfileSaveButton").click()
+    save_profile = page.findChild(QPushButton, "cellProfileSaveButton")
+    create_batch = page.findChild(QPushButton, "freezingBatchCreateButton")
+    update_cryovial = page.findChild(QPushButton, "cryovialUpdateButton")
+
+    assert save_profile.property("buttonBehavior") == "upserts_cell_profile_store"
+    assert create_batch.property("buttonBehavior") == "creates_freezing_batch_and_cryovial_inventory"
+    assert update_cryovial.property("buttonBehavior") == "updates_cryovial_location_and_status"
+
+    save_profile.click()
     page.findChild(QLineEdit, "freezingBatchCodeInput").setText("A549-FZ")
     page.findChild(QLineEdit, "cryovialTankInput").setText("LN2-1")
-    page.findChild(QPushButton, "freezingBatchCreateButton").click()
+    create_batch.click()
 
     profile_table = page.findChild(QTableWidget, "cellProfileTable")
     vial_table = page.findChild(QTableWidget, "cellProfileCryovialTable")
@@ -85,9 +93,19 @@ def test_record_templates_have_from_last_export_and_seeding_calculation(qapp, tm
     profile_store.save_profile(CellProfile(cell_name="HeLa", current_passage="P3"))
     page = LabToolsCellExperimentPage(profile_store=profile_store, inventory_store=inventory_store, record_store=record_store)
 
-    assert page.findChild(QPushButton, "cellRecordFromLastButton_seeding").text() == "从上次记录创建"
-    assert page.findChild(QPushButton, "cellRecordExportButton_seeding").text() == "导出 TXT"
-    page.findChild(QPushButton, "seedingCalculationButton").click()
+    from_last = page.findChild(QPushButton, "cellRecordFromLastButton_seeding")
+    export = page.findChild(QPushButton, "cellRecordExportButton_seeding")
+    save = page.findChild(QPushButton, "cellRecordSaveButton_seeding")
+    calculate = page.findChild(QPushButton, "seedingCalculationButton")
+
+    assert from_last.text() == "从上次记录创建"
+    assert from_last.property("buttonBehavior") == "creates_draft_from_last_cell_record"
+    assert export.text() == "导出 TXT"
+    assert export.property("buttonBehavior") == "exports_cell_experiment_record_txt"
+    assert save.property("buttonBehavior") == "saves_cell_experiment_record"
+    assert calculate.property("buttonBehavior") == "calculates_cell_seeding_preparation_preview"
+
+    calculate.click()
 
     result = page.findChild(QLabel, "seedingCalculationResult").text()
     assert "需要细胞悬液体积" in result
