@@ -1,7 +1,9 @@
 # Release Preview UI Shell and Live Function Validation
 
-- created_at: `2026-06-01T09:54:10+00:00`
-- run_root: `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_175254`
+- created_at: `2026-06-01T15:42:24+00:00`
+- branch: `integration/release-bio-c1-ui-shell`
+- head: `bab0373108aead41e359367790d3067a780ac76b`
+- run_root: `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_234115`
 - screenshot_dir: `/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_release_preview_validation`
 
 ## UI Shell Baseline Restore
@@ -12,12 +14,28 @@
 - Settings: UIShell settings shell retained with Integration R enrichment backend detect-only gate.
 - Sidebar: UIShell AppSidebar visual structure retained with current Integration routes.
 
+## Button Audit Summary
+
+- screenshot_count: `46`
+- button_records: `399`
+- clicked_records: `192`
+- disabled_with_reason: `51`
+- disabled_without_reason: `0`
+- click_failed: `0`
+- safety_gated_not_clicked: `156`
+
 ## Live Bioinformatics Validation
 
 | Dataset | Search | Download | Recognition | Readiness | Project |
 | --- | --- | --- | --- | --- | --- |
-| GSE6004 | completed ['GSE6004'] | geo_metadata_downloaded; geo_assets_downloaded | current; files=2 | ready_with_warnings | `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_175254/bioinformatics/GSE6004` |
-| GSE153659 | completed ['GSE153659'] | geo_metadata_downloaded; geo_assets_downloaded | current; files=2 | not_ready | `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_175254/bioinformatics/GSE153659` |
+| GSE6004 | completed ['GSE6004'] | geo_metadata_downloaded; geo_assets_downloaded | current; files=2 | ready_with_warnings | `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_234115/bioinformatics/GSE6004` |
+| GSE153659 | completed ['GSE153659'] | geo_metadata_downloaded; geo_assets_downloaded | current; files=2 | not_ready | `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_234115/bioinformatics/GSE153659` |
+
+### Bioinformatics Validation Boundaries
+
+- `GSE6004`: retrieval, recognition, and readiness artifact path is callable; readiness remains `ready_with_warnings` because multiple expression candidates require manual review.
+- `GSE153659`: retrieval and recognition path is callable; readiness remains `not_ready` because the downloaded assets do not expose a usable expression matrix in the current automated gate.
+- Formal DEG, ORA/GSEA, survival/clinical execution and report-ready export remain controlled by their module gates unless their required runtime artifacts are present.
 
 ## Live Meta Analysis PubMed Validation
 
@@ -30,7 +48,12 @@
 - imported_count: `3`
 - screening_queue_success: `True`
 - screening_record_count: `3`
-- project_dir: `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_175254/meta_analysis/thyroid_cancer_adiponectin`
+- project_dir: `/Users/changdali/Developer/biomedpilot v1.0/Integration/logs/validation/release_preview_validation_20260601_234115/meta_analysis/thyroid_cancer_adiponectin`
+
+### Meta Analysis Validation Boundaries
+
+- PubMed search, preview candidate creation, selected-candidate handoff, and screening queue creation are callable in the current runtime.
+- Full text retrieval, risk-of-bias completion, formal statistics, and report-ready export remain gated until their required review/store artifacts are present.
 
 ## Screenshot Evidence
 
@@ -222,6 +245,7 @@
 
 | Scope | Object | Text | Enabled | Click Result | Disabled Reason |
 | --- | --- | --- | --- | --- | --- |
+| welcome | `loginTopIconButton` |  | True | not_clicked_safety_gate |  |
 | welcome | `primaryButton` | 进入本地工作台 | True | not_clicked_safety_gate |  |
 | welcome | `aboutButton` | 关于 | True | not_clicked_safety_gate |  |
 | welcome | `aboutButton` | 关于 | True | about |  |
@@ -234,13 +258,13 @@
 | dashboard | `appSidebarAuxButton` | 设置中心 / Settings | True | not_clicked_safety_gate |  |
 | dashboard | `appSidebarAuxButton` | 测试反馈 / Test Feedback | True | not_clicked_safety_gate |  |
 | dashboard | `appSidebarAuxButton` | 关于 / About | True | not_clicked_safety_gate |  |
-| dashboard | `dashboardHeaderIconButton` |  | True | not_clicked_safety_gate |  |
-| dashboard | `dashboardHeaderIconButton` |  | True | not_clicked_safety_gate |  |
+| dashboard | `dashboardHeaderIconButton` |  | False | disabled_with_reason | 通知 入口保留，当前不执行动作。 |
+| dashboard | `dashboardHeaderIconButton` |  | False | disabled_with_reason | 帮助 入口保留，当前不执行动作。 |
 | dashboard | `bioModuleButton` | 进入模块 | True | not_clicked_safety_gate |  |
 | dashboard | `metaModuleButton` | 进入模块 | True | not_clicked_safety_gate |  |
 | dashboard | `labtoolsModuleButton` | 进入模块 | True | not_clicked_safety_gate |  |
 | dashboard | `dashboardOpenMoreProjectsButton` | 打开更多项目... | False | disabled_with_reason | Project Center 尚未作为正式项目中心开放。 |
-| dashboard | `dashboardViewAllProjectsButton` | 查看全部项目（12） | False | disabled_without_reason |  |
+| dashboard | `dashboardViewAllProjectsButton` | 查看全部项目（12） | False | disabled_with_reason | Project Center 尚未作为正式项目中心开放。 |
 | sidebar | `appSidebarAuxButton` | 设置中心 / Settings | True | settings |  |
 | settings | `appSidebarButton` | 工作台 / Dashboard | True | clicked; workspace settings->dashboard |  |
 | settings | `appSidebarButton` | 生信分析 / Bioinformatics | True | clicked; workspace dashboard->bioinformatics |  |
@@ -268,19 +292,19 @@
 | bio_project_home | `appSidebarAuxButton` | 设置中心 / Settings | True | not_clicked_safety_gate |  |
 | bio_project_home | `appSidebarAuxButton` | 测试反馈 / Test Feedback | True | not_clicked_safety_gate |  |
 | bio_project_home | `appSidebarAuxButton` | 关于 / About | True | not_clicked_safety_gate |  |
-| bio_project_home | `bioinformaticsIANavItem` | 01 / 项目首页 / Project Home / 管理项目与团队 / 查看进度与关键状态 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 02 / 数据来源 / Data Source / 连接并获取数据 / 支持多种来源检索 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 03 / 数据检查与准备 / Data Check & Prep / 完成质量检查与预处理 / 构建分析数据集 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 04 / 分组与分析设计 / Group & Design / 定义分组与比较方案 / 设置协变量设计 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 05 / 分析任务 / Analysis Tasks / 配置任务并查看 gate / 管理执行状态 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 06 / 结果与报告 / Result & Report / 审阅结果与报告草稿 / 区分结果语义 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 07 / 报告导出 / Report Export / 检查 report-ready gate / 导出受控报告包 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 生信分析设置 / Resources / 管理资源、参数配置与外部工具连接。 | False | disabled_without_reason |  |
-| bio_project_home | `bioinformaticsIANavItem` | 项目日志与技术详情 / Project Logs & Details / 查看运行记录与技术细节。 | False | disabled_without_reason |  |
-| bio_project_home | `quickAccessButton` | 最近使用 / 快速访问最近项目或流程 | False | disabled_without_reason |  |
-| bio_project_home | `quickAccessButton` | 使用指南 / 查看流程说明与示例 | False | disabled_without_reason |  |
-| bio_project_home | `quickAccessButton` | 常见问题 / 查看常见问题与解决方案 | False | disabled_without_reason |  |
-| bio_project_home | `quickAccessButton` | 意见反馈 / 提出建议或报告问题 | False | disabled_without_reason |  |
+| bio_project_home | `bioinformaticsIANavItem` | 01 / 项目首页 / Project Home / 管理项目与团队 / 查看进度与关键状态 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 02 / 数据来源 / Data Source / 连接并获取数据 / 支持多种来源检索 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 03 / 数据检查与准备 / Data Check & Prep / 完成质量检查与预处理 / 构建分析数据集 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 04 / 分组与分析设计 / Group & Design / 定义分组与比较方案 / 设置协变量设计 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 05 / 分析任务 / Analysis Tasks / 配置任务并查看 gate / 管理执行状态 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 06 / 结果与报告 / Result & Report / 审阅结果与报告草稿 / 区分结果语义 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 07 / 报告导出 / Report Export / 检查 report-ready gate / 导出受控报告包 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 生信分析设置 / Resources / 管理资源、参数配置与外部工具连接。 | True | not_clicked_safety_gate |  |
+| bio_project_home | `bioinformaticsIANavItem` | 项目日志与技术详情 / Project Logs & Details / 查看运行记录与技术细节。 | True | not_clicked_safety_gate |  |
+| bio_project_home | `quickAccessButton` | 最近使用 / 快速访问最近项目或流程 | False | disabled_with_reason | Bioinformatics quick access center is planned for Project Center remediation. |
+| bio_project_home | `quickAccessButton` | 使用指南 / 查看流程说明与示例 | False | disabled_with_reason | Bioinformatics quick access center is planned for Project Center remediation. |
+| bio_project_home | `quickAccessButton` | 常见问题 / 查看常见问题与解决方案 | False | disabled_with_reason | Bioinformatics quick access center is planned for Project Center remediation. |
+| bio_project_home | `quickAccessButton` | 意见反馈 / 提出建议或报告问题 | False | disabled_with_reason | Bioinformatics quick access center is planned for Project Center remediation. |
 | bio_data_source | `appSidebarButton` | 工作台 / Dashboard | True | not_clicked_safety_gate |  |
 | bio_data_source | `appSidebarButton` | 生信分析 / Bioinformatics | True | not_clicked_safety_gate |  |
 | bio_data_source | `appSidebarButton` | Meta 分析 / Meta Analysis | True | not_clicked_safety_gate |  |
