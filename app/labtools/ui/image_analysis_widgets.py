@@ -76,6 +76,22 @@ if QWidget is not None:
         return f"{size / (1024 * 1024):.1f} MB"
 
 
+    def _image_workbench_chip(text: str, status: str) -> QLabel:
+        label = QLabel(text)
+        label.setObjectName("imageWorkbenchStatusChip")
+        label.setProperty("statusKey", status)
+        colors = {
+            "available": (COLORS["success_soft"], COLORS["success_border"], COLORS["success"]),
+            "testing": (COLORS["bio_soft"], COLORS["border"], COLORS["bio"]),
+            "blocked": (COLORS["warning_soft"], COLORS["warning_border"], COLORS["warning"]),
+        }.get(status, (COLORS["surface_muted"], COLORS["border"], COLORS["muted"]))
+        label.setStyleSheet(
+            f"QLabel#imageWorkbenchStatusChip {{ background: {colors[0]}; border: 1px solid {colors[1]}; "
+            f"color: {colors[2]}; border-radius: {RADIUS['sm']}px; padding: 5px 9px; font-weight: 700; }}"
+        )
+        return label
+
+
     class LabToolsImageAnalysisWidget(QWidget):
         def __init__(self, *, imagej_bridge: ImageJFijiBridge | None = None) -> None:
             super().__init__()
@@ -644,6 +660,11 @@ if QWidget is not None:
         ) -> None:
             super().__init__()
             self.setObjectName("imageAnalysisWorkbench")
+            self.setProperty("uiPrimitive", "labtools_c2_gated_workbench")
+            self.setProperty("connectionStatus", "connected")
+            self.setProperty("formalActionEnabled", False)
+            self.setProperty("experimentModule", experiment_module)
+            self.setProperty("analysisType", analysis_type)
             self.setStyleSheet(self._stylesheet())
             self._experiment_module = experiment_module
             self._analysis_type = analysis_type
@@ -670,11 +691,23 @@ if QWidget is not None:
             root.setContentsMargins(0, SPACING["md"], 0, 0)
             root.setSpacing(SPACING["md"])
 
+            header = QFrame()
+            header.setObjectName("imageWorkbenchHeader")
+            header_layout = QVBoxLayout(header)
+            header_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
             title = QLabel(self._title)
             title.setObjectName("labToolsSectionTitle")
-            subtitle = QLabel("实验图像分析工作台：导入图片、检查预览、设置实验参数、生成运行请求并保存任务。")
+            subtitle = QLabel("实验图像分析工作台：导入图片、检查预览、设置实验参数、生成 run request；不直接执行外部图像引擎，不产出正式定量结论。")
             subtitle.setObjectName("imageTaskStatus")
             subtitle.setWordWrap(True)
+            chip_row = QHBoxLayout()
+            chip_row.addWidget(_image_workbench_chip("testing / 可测试", "testing"))
+            chip_row.addWidget(_image_workbench_chip("run request", "available"))
+            chip_row.addWidget(_image_workbench_chip("engine gated", "blocked"))
+            chip_row.addStretch(1)
+            header_layout.addWidget(title)
+            header_layout.addWidget(subtitle)
+            header_layout.addLayout(chip_row)
             engine_notice = QLabel(
                 "图像分析引擎未准备好。请在外部引擎设置中完成 ImageJ 配置；需要插件型 macro 时再配置 Fiji 增强路径。当前页面仍可用于导入图片、保存任务和准备分析参数。"
             )
@@ -683,8 +716,7 @@ if QWidget is not None:
             review = QLabel("自动图像识别和测量结果仅用于辅助分析，请人工复核 ROI、阈值和输出结果。")
             review.setObjectName("imageNotice")
             review.setWordWrap(True)
-            root.addWidget(title)
-            root.addWidget(subtitle)
+            root.addWidget(header)
             root.addWidget(engine_notice)
             root.addWidget(review)
 
@@ -716,12 +748,15 @@ if QWidget is not None:
             button_row = QHBoxLayout()
             add_files = QPushButton("导入图片")
             add_files.setObjectName("imageWorkbenchImportFilesButton")
+            add_files.setProperty("buttonBehavior", "opens_local_image_file_picker")
             add_files.clicked.connect(self._handle_import_files)
             add_folder = QPushButton("导入文件夹")
             add_folder.setObjectName("imageWorkbenchImportFolderButton")
+            add_folder.setProperty("buttonBehavior", "imports_supported_images_from_local_folder")
             add_folder.clicked.connect(self._handle_import_folder)
             remove = QPushButton("移除图片")
             remove.setObjectName("imageWorkbenchRemoveImageButton")
+            remove.setProperty("buttonBehavior", "removes_selected_image_reference")
             remove.clicked.connect(self._handle_remove_selected_image)
             for button in (add_files, add_folder, remove):
                 button_row.addWidget(button)
@@ -774,8 +809,14 @@ if QWidget is not None:
                 button = QPushButton(action)
                 button.setObjectName("imageWorkbenchPrimaryActionButton" if action != "导出结果，占位" else "imageWorkbenchExportPlaceholderButton")
                 if action == "导出结果，占位":
-                    button.clicked.connect(lambda: self._result_panel.setText(self._placeholder_export_text()))
+                    reason = "当前页面只生成 run request；尚未产生真实图像分析结果，不能导出正式结果。"
+                    button.setEnabled(False)
+                    button.setProperty("buttonBehavior", "disabled_missing_real_image_analysis_result")
+                    button.setProperty("disabledReason", reason)
+                    button.setToolTip(reason)
                 else:
+                    button.setProperty("buttonBehavior", "creates_image_analysis_run_request_without_running_engine")
+                    button.setProperty("formalActionEnabled", False)
                     button.clicked.connect(lambda _checked=False, action_text=action: self._handle_generate_run_request(action_text))
                 layout.addWidget(button)
             return frame
@@ -944,6 +985,11 @@ if QWidget is not None:
                 background: {COLORS["background"]};
                 color: {COLORS["text"]};
                 font-size: {FONT_SIZE["body"]}px;
+            }}
+            QFrame#imageWorkbenchHeader {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
             }}
             QLabel#labToolsSectionTitle {{
                 color: {COLORS["bio"]};

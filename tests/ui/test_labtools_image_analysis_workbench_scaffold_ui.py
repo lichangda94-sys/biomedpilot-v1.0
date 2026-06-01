@@ -52,7 +52,7 @@ def test_western_blot_result_tab_shows_image_analysis_workbench(qapp) -> None:
 
 
 def test_cell_experiment_page_has_three_image_analysis_entries(qapp) -> None:
-    from PySide6.QtWidgets import QTabWidget
+    from PySide6.QtWidgets import QFrame, QPushButton, QTabWidget
 
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
@@ -70,6 +70,21 @@ def test_cell_experiment_page_has_three_image_analysis_entries(qapp) -> None:
     assert "统计细胞数" in text
     assert "测量荧光强度" in text
     assert "ImageJ/Fiji 本地后端状态" not in text
+    for index, analysis_type in enumerate(("scratch_area", "transwell_count", "fluorescence_intensity")):
+        page = tabs.widget(index)
+        assert page.property("uiPrimitive") == "labtools_c2_gated_workbench"
+        assert page.property("connectionStatus") == "connected"
+        assert page.property("formalActionEnabled") is False
+        assert page.property("analysisType") == analysis_type
+        assert page.findChild(QFrame, "imageWorkbenchHeader") is not None
+        primary = page.findChild(QPushButton, "imageWorkbenchPrimaryActionButton")
+        assert primary is not None
+        assert primary.property("buttonBehavior") == "creates_image_analysis_run_request_without_running_engine"
+        export = page.findChild(QPushButton, "imageWorkbenchExportPlaceholderButton")
+        assert export is not None
+        assert not export.isEnabled()
+        assert export.property("buttonBehavior") == "disabled_missing_real_image_analysis_result"
+        assert "尚未产生真实图像分析结果" in export.property("disabledReason")
 
 
 def test_workbench_generates_run_request_without_running_engine(qapp, tmp_path) -> None:
@@ -89,8 +104,13 @@ def test_workbench_generates_run_request_without_running_engine(qapp, tmp_path) 
         task_store=ImageAnalysisTaskStore(tmp_path / "tasks"),
     )
 
+    assert widget.property("uiPrimitive") == "labtools_c2_gated_workbench"
+    assert widget.property("analysisType") == "transwell_count"
+    assert widget.findChild(QPushButton, "imageWorkbenchExportPlaceholderButton") is None
     widget.set_image_paths_for_testing((str(image_path),))
-    widget.findChildren(QPushButton, "imageWorkbenchPrimaryActionButton")[0].click()
+    action_button = widget.findChildren(QPushButton, "imageWorkbenchPrimaryActionButton")[0]
+    assert action_button.property("buttonBehavior") == "creates_image_analysis_run_request_without_running_engine"
+    action_button.click()
     workspace = widget.latest_workspace()
 
     assert workspace is not None
