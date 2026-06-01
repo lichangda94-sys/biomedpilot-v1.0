@@ -623,10 +623,12 @@ if QWidget is not None:
             item.setProperty("statusSemanticKey", page.semantic_key)
             item.setProperty("currentStep", False)
             item.setProperty("formalActionEnabled", False)
+            item.setProperty("buttonBehavior", f"navigates_to_bio_target_ia_page_{page.key}")
+            item.setProperty("fileWriteAllowed", False)
             item.setToolTip(page.label)
             item.setStyleSheet(_BIO_SHELL_STYLESHEET)
             _apply_bio_page_icon(item, page, size=icon_size)
-            item.setEnabled(False)
+            item.clicked.connect(lambda _checked=False, page_key=page.key: self.show_target_ia_page(page_key))
             self._target_ia_buttons[page.key] = item
             return item
 
@@ -640,6 +642,23 @@ if QWidget is not None:
         def show_project_home(self) -> None:
             self._set_current_route("project_home")
             self._stack.setCurrentWidget(self._project_home_page)
+
+        def show_target_ia_page(self, page_key: str) -> None:
+            route_by_target = {
+                "project_home": self.show_project_home,
+                "data_source": self.show_data_source,
+                "data_check_preparation": self.show_recognition,
+                "group_design": self.show_group_design,
+                "analysis_tasks": self.show_analysis_tasks,
+                "result_report": self.show_results_browser,
+                "report_export": self.show_report_viewer,
+                "settings_resources": self.show_settings,
+                "project_logs_technical_details": self.show_workflow_status,
+            }
+            handler = route_by_target.get(page_key)
+            if handler is None:
+                raise KeyError(f"Unknown Bioinformatics target IA page: {page_key}")
+            handler()
 
         def show_data_source(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)

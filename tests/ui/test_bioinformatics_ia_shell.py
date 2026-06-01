@@ -106,8 +106,9 @@ def test_bioinformatics_workspace_renders_high_fidelity_mockup_sourced_shell(bio
     assert stepper.property("formalActionEnabled") is False
     assert len(nav_items) == 9
     assert tuple(item.property("pageKey") for item in nav_items) == bio_workspace.target_ia_page_keys()
-    assert all(not item.isEnabled() for item in nav_items)
+    assert all(item.isEnabled() for item in nav_items)
     assert all(item.property("formalActionEnabled") is False for item in nav_items)
+    assert all(str(item.property("buttonBehavior")).startswith("navigates_to_bio_target_ia_page_") for item in nav_items)
 
 
 def test_bioinformatics_nav_items_carry_status_and_semantic_keys(bio_workspace) -> None:
@@ -124,6 +125,17 @@ def test_bioinformatics_nav_items_carry_status_and_semantic_keys(bio_workspace) 
     assert by_page["report_export"].property("statusKey") == "draft"
     assert by_page["report_export"].property("semanticKey") == PageKey.BIO_REPORT_EXPORT.value
     assert by_page["report_export"].property("statusSemanticKey") == ReportStatusKey.TESTING_SUMMARY.value
+
+
+def test_bioinformatics_ia_nav_items_live_click_target_pages(bio_workspace) -> None:
+    by_page = {item.property("pageKey"): item for item in bio_workspace.findChildren(QPushButton, "bioinformaticsIANavItem")}
+
+    for page_key in bio_workspace.target_ia_page_keys():
+        bio_workspace.show_project_home()
+        by_page[page_key].click()
+
+        assert bio_workspace.current_target_page_key() == page_key
+        assert by_page[page_key].property("currentStep") is True
 
 
 def test_bioinformatics_legacy_routes_are_mapped_to_target_pages() -> None:
