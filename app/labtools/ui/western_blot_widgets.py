@@ -72,8 +72,11 @@ try:
     from app.labtools.western_blot.widgets import WesternBlotLoadingCalculatorWidget
     from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
-except Exception:  # pragma: no cover
+except Exception as exc:  # pragma: no cover
+    WESTERN_BLOT_WIDGETS_IMPORT_ERROR = f"{exc.__class__.__name__}: {exc}"
     QWidget = None  # type: ignore[assignment]
+else:
+    WESTERN_BLOT_WIDGETS_IMPORT_ERROR = ""
 
 
 if QWidget is not None:
@@ -1161,6 +1164,28 @@ if QWidget is not None:
             """
 
 else:  # pragma: no cover
+    try:
+        from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget as FallbackQWidget
+    except Exception:
+        FallbackQWidget = object  # type: ignore[assignment]
+        QLabel = QVBoxLayout = None  # type: ignore[assignment]
 
-    class LabToolsWesternBlotWidget:  # type: ignore[no-redef]
-        pass
+    class LabToolsWesternBlotWidget(FallbackQWidget):  # type: ignore[no-redef, misc]
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__()
+            if QVBoxLayout is None or QLabel is None:
+                return
+            self.setObjectName("labToolsWesternBlotFallback")
+            layout = QVBoxLayout(self)
+            layout.setContentsMargins(24, 20, 24, 20)
+            title = QLabel("Western Blot 工作台暂时不可用")
+            title.setObjectName("westernBlotFallbackTitle")
+            detail = QLabel(
+                "Western Blot 页面依赖导入失败，当前页以安全占位显示，避免 LabTools 或主程序启动闪退。\n"
+                f"导入错误：{WESTERN_BLOT_WIDGETS_IMPORT_ERROR or 'unknown'}"
+            )
+            detail.setObjectName("westernBlotFallbackDetail")
+            detail.setWordWrap(True)
+            layout.addWidget(title)
+            layout.addWidget(detail)
+            layout.addStretch(1)

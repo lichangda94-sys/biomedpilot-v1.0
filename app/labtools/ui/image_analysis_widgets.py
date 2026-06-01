@@ -62,8 +62,11 @@ try:
     from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
     from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
-except Exception:  # pragma: no cover
+except Exception as exc:  # pragma: no cover
+    IMAGE_ANALYSIS_WIDGETS_IMPORT_ERROR = f"{exc.__class__.__name__}: {exc}"
     QWidget = None  # type: ignore[assignment]
+else:
+    IMAGE_ANALYSIS_WIDGETS_IMPORT_ERROR = ""
 
 
 if QWidget is not None:
@@ -1109,9 +1112,51 @@ if QWidget is not None:
         )
 
 else:  # pragma: no cover
+    try:
+        from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget as FallbackQWidget
+    except Exception:
+        FallbackQWidget = object  # type: ignore[assignment]
+        QLabel = QVBoxLayout = None  # type: ignore[assignment]
 
-    class LabToolsImageAnalysisWidget:  # type: ignore[no-redef]
+    def _fallback_image_workbench(title: str) -> FallbackQWidget:
+        widget = FallbackQWidget()
+        if QVBoxLayout is None or QLabel is None:
+            return widget
+        widget.setObjectName("imageAnalysisWorkbenchFallback")
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(24, 20, 24, 20)
+        heading = QLabel(title)
+        heading.setObjectName("imageAnalysisFallbackTitle")
+        detail = QLabel(
+            "图像分析工作台依赖导入失败，当前页以安全占位显示，避免 LabTools 或主程序启动闪退。\n"
+            f"导入错误：{IMAGE_ANALYSIS_WIDGETS_IMPORT_ERROR or 'unknown'}"
+        )
+        detail.setObjectName("imageAnalysisFallbackDetail")
+        detail.setWordWrap(True)
+        layout.addWidget(heading)
+        layout.addWidget(detail)
+        layout.addStretch(1)
+        return widget
+
+    class LabToolsImageAnalysisWidget(FallbackQWidget):  # type: ignore[no-redef, misc]
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__()
+            if QVBoxLayout is None or QLabel is None:
+                return
+            layout = QVBoxLayout(self)
+            layout.addWidget(_fallback_image_workbench("图像定量"))
+
+    class ImageAnalysisWorkbenchWidget(FallbackQWidget):  # type: ignore[no-redef, misc]
         pass
 
-    class ImageAnalysisWorkbenchWidget:  # type: ignore[no-redef]
-        pass
+    def wb_grayscale_workbench_widget() -> FallbackQWidget:
+        return _fallback_image_workbench("Western Blot 结果与灰度分析")
+
+    def scratch_area_workbench_widget() -> FallbackQWidget:
+        return _fallback_image_workbench("划痕实验图像分析")
+
+    def transwell_workbench_widget() -> FallbackQWidget:
+        return _fallback_image_workbench("Transwell 图像分析")
+
+    def fluorescence_workbench_widget() -> FallbackQWidget:
+        return _fallback_image_workbench("荧光图像分析")

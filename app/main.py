@@ -53,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         from PySide6.QtWidgets import QApplication
 
         from app.app_identity import apply_app_identity
+        from app.labtools.workspace import LABTOOLS_WORKSPACE_IMPORT_ERROR
         from app.shell.main_window import MainWindow
         from app.ui_theme import apply_light_app_theme
     except Exception as exc:
@@ -69,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     qt_app = QApplication([sys.argv[0], *[arg for arg in sys.argv[1:] if not arg.startswith("-psn_")]])
     apply_light_app_theme(qt_app)
     apply_app_identity(qt_app)
+    if LABTOOLS_WORKSPACE_IMPORT_ERROR:
+        print(f"LabTools workspace fallback active: {LABTOOLS_WORKSPACE_IMPORT_ERROR}", file=sys.stderr)
     window = MainWindow()
     window.show()
     window.raise_()

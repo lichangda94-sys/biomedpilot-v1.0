@@ -43,8 +43,11 @@ try:
     from app.labtools.ui.cell_experiment_widgets import LabToolsCellExperimentPage
     from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING, button_stylesheet, status_chip_stylesheet
-except Exception:  # pragma: no cover
+except Exception as exc:  # pragma: no cover
+    LABTOOLS_WORKSPACE_IMPORT_ERROR = f"{exc.__class__.__name__}: {exc}"
     QWidget = None  # type: ignore[assignment]
+else:
+    LABTOOLS_WORKSPACE_IMPORT_ERROR = ""
 
 
 if QWidget is not None:
@@ -498,8 +501,39 @@ if QWidget is not None:
             return "This LabTools action is intentionally disabled until the required upstream state exists."
 
 else:  # pragma: no cover
+    try:
+        from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget as FallbackQWidget
+    except Exception:
+        FallbackQWidget = object  # type: ignore[assignment]
+        QLabel = QPushButton = QVBoxLayout = None  # type: ignore[assignment]
 
-    class LabToolsWorkspaceWidget:  # type: ignore[no-redef]
+    class LabToolsWorkspaceWidget(FallbackQWidget):  # type: ignore[no-redef, misc]
+        def __init__(self, on_back: Callable[[], None] | None = None) -> None:
+            super().__init__()
+            self._on_back = on_back
+            if QVBoxLayout is None or QLabel is None:
+                return
+            self.setObjectName("labToolsWorkspaceFallback")
+            root = QVBoxLayout(self)
+            root.setContentsMargins(32, 28, 32, 28)
+            root.setSpacing(12)
+            title = QLabel("LabTools 工作台暂时不可用")
+            title.setObjectName("labToolsFallbackTitle")
+            detail = QLabel(
+                "LabTools 完整界面导入失败，主程序已进入安全降级页，避免启动闪退。\n"
+                f"导入错误：{LABTOOLS_WORKSPACE_IMPORT_ERROR or 'unknown'}"
+            )
+            detail.setObjectName("labToolsFallbackDetail")
+            detail.setWordWrap(True)
+            root.addWidget(title)
+            root.addWidget(detail)
+            if QPushButton is not None and on_back is not None:
+                back = QPushButton("返回首页")
+                back.setObjectName("labToolsFallbackBackButton")
+                back.clicked.connect(on_back)
+                root.addWidget(back)
+            root.addStretch(1)
+
         def page_keys(self) -> tuple[str, ...]:
             return (
                 "home",
