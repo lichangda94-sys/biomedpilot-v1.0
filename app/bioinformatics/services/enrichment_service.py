@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +25,16 @@ class EnrichmentPreflightResult:
     message: str
     error_count: int = 0
     details: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class REnrichmentBackendDetection:
+    status: str
+    rscript: str
+    packages: dict[str, dict[str, object]]
+    capabilities: dict[str, bool]
+    blockers: list[dict[str, str]]
+    message: str
 
 
 class EnrichmentService:
@@ -102,6 +114,56 @@ class EnrichmentService:
             )
             self._finish_task(task, result)
             return result
+
+    def detect_r_backend(self) -> REnrichmentBackendDetection:
+        rscript = shutil.which("Rscript") or ""
+        packages: dict[str, dict[str, object]] = {}
+        blockers: list[dict[str, str]] = []
+        package_names = ("ReactomePA", "msigdbr", "fgsea", "clusterProfiler")
+
+        if not rscript:
+            blockers.append({"code": "missing_rscript", "message": "Rscript is not available on PATH."})
+            for package_name in package_names:
+                packages[package_name] = {"available": False, "version": "", "missing_reason": "missing_rscript"}
+        else:
+            for package_name in package_names:
+                probe = (
+                    "pkg <- commandArgs(TRUE)[1]; "
+                    "ok <- requireNamespace(pkg, quietly=TRUE); "
+                    "if (ok) { cat(as.character(utils::packageVersion(pkg))) } else { quit(status=2) }"
+                )
+                try:
+                    result = subprocess.run(
+                        [rscript, "-e", probe, package_name],
+                        capture_output=True,
+                        text=True,
+                        timeout=8,
+                        check=False,
+                    )
+                except Exception as exc:
+                    packages[package_name] = {"available": False, "version": "", "missing_reason": exc.__class__.__name__}
+                    continue
+                packages[package_name] = {
+                    "available": result.returncode == 0,
+                    "version": result.stdout.strip() if result.returncode == 0 else "",
+                    "missing_reason": "none" if result.returncode == 0 else "package_not_installed_or_unavailable",
+                }
+
+        capabilities = {
+            "ora_reactome": bool(packages.get("ReactomePA", {}).get("available")),
+            "msigdb_metadata": bool(packages.get("msigdbr", {}).get("available")),
+            "gsea_preranked_fgsea": bool(packages.get("fgsea", {}).get("available")),
+            "gsea_preranked_clusterprofiler": bool(packages.get("clusterProfiler", {}).get("available")),
+        }
+        status = "available" if capabilities["ora_reactome"] and capabilities["msigdb_metadata"] else "blocked_missing_dependency"
+        return REnrichmentBackendDetection(
+            status=status,
+            rscript=rscript,
+            packages=packages,
+            capabilities=capabilities,
+            blockers=blockers,
+            message="R enrichment backend is detect-only; no install, download, ORA, or GSEA execution was started.",
+        )
 
     def _validate(self, differential_expression_path: str) -> str | None:
         if not differential_expression_path.strip():

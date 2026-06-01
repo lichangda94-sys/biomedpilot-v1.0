@@ -3523,6 +3523,37 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert enrichment_disabled.property("disabledReason") == "formal_ora_gsea_execution_and_correlation_gate_not_enabled"
     assert "disabled" in enrichment_disabled.toolTip()
 
+    detect_backend = widget._enrichment_page.findChild(QPushButton, "detectBioEnrichmentRBackendButton")
+    backend_detection_text = widget._enrichment_page.findChild(QPlainTextEdit, "bioEnrichmentRBackendDetectionText")
+    assert detect_backend is not None
+    assert detect_backend.isEnabled()
+    assert detect_backend.property("buttonBehavior") == "calls_enrichment_service_detect_r_backend"
+    assert detect_backend.property("detectOnly") is True
+    assert detect_backend.property("installAllowed") is False
+    assert detect_backend.property("downloadAllowed") is False
+    assert detect_backend.property("engineExecutionAllowed") is False
+    assert backend_detection_text is not None
+    detect_backend.click()
+    backend_result = backend_detection_text.toPlainText()
+    assert "ReactomePA:" in backend_result
+    assert "msigdbr:" in backend_result
+    assert "formal_ora_gsea_execution=disabled" in backend_result
+    assert "install_action=none_detect_first_only" in backend_result
+
+    ora_gsea_disabled_buttons = {
+        "confirmOraGseaParametersDisabledButton": "formal_ora_gsea_parameter_confirmation_requires_backend_and_result_schema",
+        "runFormalOraGseaDisabledButton": "formal_ora_gsea_executor_not_connected",
+        "reviewOraGseaResultsDisabledButton": "ora_gsea_result_index_not_available",
+        "oraGseaPlotReportDisabledButton": "ora_gsea_plot_and_report_ready_gate_not_enabled",
+    }
+    for object_name, disabled_reason in ora_gsea_disabled_buttons.items():
+        button = widget._enrichment_page.findChild(QPushButton, object_name)
+        assert button is not None
+        assert not button.isEnabled()
+        assert button.property("disabledReason") == disabled_reason
+        assert button.property("formalActionEnabled") is False
+        assert "disabled" in button.toolTip()
+
     enrichment_source = tmp_path / "geo_differential_expression_preflight.json"
     enrichment_source.write_text(
         json.dumps(

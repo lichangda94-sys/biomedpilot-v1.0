@@ -29,10 +29,10 @@ def initial_enrichment_state() -> EnrichmentPageState:
 
 try:
     from PySide6.QtCore import Signal
-    from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 except Exception:  # pragma: no cover
     Signal = None
-    QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QPushButton = QVBoxLayout = QWidget = None
+    QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QPlainTextEdit = QPushButton = QVBoxLayout = QWidget = None
 
 
 if QWidget is not None:
@@ -128,6 +128,66 @@ if QWidget is not None:
             self._error_label.setWordWrap(True)
             self._error_label.setStyleSheet("color: #B42318;")
             root.addWidget(self._error_label)
+
+            backend_button = QPushButton("检测 R 富集后端")
+            backend_button.setObjectName("detectBioEnrichmentRBackendButton")
+            backend_button.setProperty("buttonRole", "secondary")
+            backend_button.setProperty("buttonBehavior", "calls_enrichment_service_detect_r_backend")
+            backend_button.setProperty("formalActionEnabled", False)
+            backend_button.setProperty("detectOnly", True)
+            backend_button.setProperty("installAllowed", False)
+            backend_button.setProperty("downloadAllowed", False)
+            backend_button.setProperty("engineExecutionAllowed", False)
+            backend_button.clicked.connect(self._detect_r_backend)
+            root.addWidget(backend_button)
+
+            self._backend_detection_text = QPlainTextEdit()
+            self._backend_detection_text.setObjectName("bioEnrichmentRBackendDetectionText")
+            self._backend_detection_text.setReadOnly(True)
+            self._backend_detection_text.setMinimumHeight(118)
+            self._backend_detection_text.setPlainText(
+                "状态：尚未检测 R 富集后端。\n"
+                "必需包：ReactomePA、msigdbr；可选 GSEA 包：fgsea、clusterProfiler。\n"
+                "策略：detect-only，不安装、不下载数据库、不运行 ORA/GSEA。"
+            )
+            root.addWidget(self._backend_detection_text)
+
+            confirm_button = QPushButton("确认 ORA/GSEA 参数")
+            confirm_button.setObjectName("confirmOraGseaParametersDisabledButton")
+            confirm_button.setEnabled(False)
+            confirm_button.setProperty("buttonBehavior", "disabled_ora_gsea_parameter_confirmation_not_ready")
+            confirm_button.setProperty("disabledReason", "formal_ora_gsea_parameter_confirmation_requires_backend_and_result_schema")
+            confirm_button.setProperty("formalActionEnabled", False)
+            confirm_button.setToolTip("disabled：需要通过 R 后端检测、输入 schema、基因集资源和结果 schema gate 后才能确认正式 ORA/GSEA 参数。")
+            root.addWidget(confirm_button)
+
+            run_formal_button = QPushButton("运行正式 ORA/GSEA")
+            run_formal_button.setObjectName("runFormalOraGseaDisabledButton")
+            run_formal_button.setEnabled(False)
+            run_formal_button.setProperty("buttonBehavior", "disabled_formal_ora_gsea_executor_not_connected")
+            run_formal_button.setProperty("disabledReason", "formal_ora_gsea_executor_not_connected")
+            run_formal_button.setProperty("formalActionEnabled", False)
+            run_formal_button.setToolTip("disabled：当前只生成 ORA/GSEA preflight artifact，正式 ORA/GSEA executor 尚未纳入 release gate。")
+            root.addWidget(run_formal_button)
+
+            review_button = QPushButton("审阅 ORA/GSEA 结果")
+            review_button.setObjectName("reviewOraGseaResultsDisabledButton")
+            review_button.setEnabled(False)
+            review_button.setProperty("buttonBehavior", "disabled_ora_gsea_result_review_without_result_index")
+            review_button.setProperty("disabledReason", "ora_gsea_result_index_not_available")
+            review_button.setProperty("formalActionEnabled", False)
+            review_button.setToolTip("disabled：没有 ORA/GSEA result index 或 manifest，不能进入结果审阅。")
+            root.addWidget(review_button)
+
+            plot_report_button = QPushButton("生成富集图表 / report-ready")
+            plot_report_button.setObjectName("oraGseaPlotReportDisabledButton")
+            plot_report_button.setEnabled(False)
+            plot_report_button.setProperty("buttonBehavior", "disabled_ora_gsea_plot_report_gate_not_enabled")
+            plot_report_button.setProperty("disabledReason", "ora_gsea_plot_and_report_ready_gate_not_enabled")
+            plot_report_button.setProperty("formalActionEnabled", False)
+            plot_report_button.setToolTip("disabled：正式 ORA/GSEA plot、report-ready package 和导出 gate 尚未接入。")
+            root.addWidget(plot_report_button)
+
             next_button = QPushButton("下一步：相关性分析")
             next_button.setObjectName("enrichmentNextDisabledButton")
             next_button.setEnabled(False)
@@ -176,6 +236,31 @@ if QWidget is not None:
                 self._summary_label.setText("没有生成富集分析预检。")
                 self._error_label.setText(result.message)
             return result
+
+        def _detect_r_backend(self) -> None:
+            detection = self._service.detect_r_backend()
+            lines = [
+                f"status={detection.status}",
+                f"rscript={detection.rscript}",
+                "install_action=none_detect_first_only",
+                "database_download=none_detect_first_only",
+                "formal_ora_gsea_execution=disabled",
+                detection.message,
+            ]
+            for package_name in ("ReactomePA", "msigdbr", "fgsea", "clusterProfiler"):
+                row = detection.packages.get(package_name, {})
+                lines.append(
+                    f"{package_name}: available={row.get('available')} "
+                    f"version={row.get('version') or '-'} "
+                    f"disabled_reason={row.get('missing_reason') or 'none'}"
+                )
+            for key, available in detection.capabilities.items():
+                lines.append(f"{key}={available}")
+            if detection.blockers:
+                lines.append("blockers=" + ", ".join(str(item.get("code") or "unknown") for item in detection.blockers))
+            else:
+                lines.append("blockers=none")
+            self._backend_detection_text.setPlainText("\n".join(lines))
 
         def _auto_select_project_artifact(self) -> None:
             if self._project_root is None:
