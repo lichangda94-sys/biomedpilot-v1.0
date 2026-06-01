@@ -294,6 +294,7 @@ class ModuleSelectionWidget(QWidget):
         button.setProperty("buttonSize", "regular")
         button.setProperty("actionKey", nav_key)
         button.setProperty("semanticState", "testing")
+        button.setProperty("buttonBehavior", f"navigates_to_module_workspace_{nav_key}")
         button.setProperty("formalActionEnabled", False)
         button.setProperty("fileWriteAllowed", False)
         button.setProperty("moduleKey", module_key)
@@ -322,6 +323,9 @@ class ModuleSelectionWidget(QWidget):
             legacy_button.setProperty("moduleKey", module_key)
             legacy_button.setProperty("navKey", nav_key)
             legacy_button.setProperty("semanticKey", module_key)
+            legacy_button.setProperty("buttonBehavior", f"navigates_to_module_workspace_{nav_key}")
+            legacy_button.setProperty("formalActionEnabled", False)
+            legacy_button.setProperty("fileWriteAllowed", False)
             legacy_button.clicked.connect(callback)
             legacy_button.setVisible(False)
         return frame
@@ -356,6 +360,7 @@ class ModuleSelectionWidget(QWidget):
             disabled_reason="Project Center 尚未作为正式项目中心开放。",
         )
         open_more.setObjectName("dashboardOpenMoreProjectsButton")
+        open_more.setProperty("buttonBehavior", "disabled_project_center_open_more_not_connected")
         open_more.setIcon(load_ui02_module_selection_icon("project_entry"))
         open_more.setIconSize(QSize(18, 18))
         title_row.addWidget(open_more)
@@ -367,6 +372,10 @@ class ModuleSelectionWidget(QWidget):
         view_all = QPushButton("查看全部项目（12）")
         view_all.setObjectName("dashboardViewAllProjectsButton")
         view_all.setEnabled(False)
+        view_all.setProperty("buttonBehavior", "disabled_project_center_open_all_not_connected")
+        view_all.setProperty("formalActionEnabled", False)
+        view_all.setProperty("fileWriteAllowed", False)
+        view_all.setProperty("disabledReason", "Project Center 尚未作为正式项目中心开放。")
         view_all.setToolTip("Project Center 尚未作为正式项目中心开放。")
         layout.addWidget(view_all, 0, Qt.AlignHCenter)
         return frame
@@ -456,6 +465,9 @@ class ModuleSelectionWidget(QWidget):
     def _header_icon_button(self, text: str, icon_key: str) -> QPushButton:
         button = make_action_button(text, role="secondary", size="small", semantic_state="available")
         button.setObjectName("dashboardHeaderIconButton")
+        button.setProperty("buttonBehavior", f"disabled_dashboard_header_{icon_key}_not_connected")
+        button.setProperty("disabledReason", f"{text} 入口保留，当前不执行动作。")
+        button.setEnabled(False)
         button.setMinimumSize(40, 40)
         button.setMaximumSize(44, 44)
         button.setToolTip(text)

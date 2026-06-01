@@ -124,6 +124,7 @@ class BioMedPilotLoginWidget(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+        root.addWidget(self._build_top_bar(), 0)
 
         main = QWidget()
         main.setObjectName("loginMainContent")
@@ -162,13 +163,13 @@ class BioMedPilotLoginWidget(QWidget):
         layout.addWidget(traffic)
         layout.addStretch(1)
 
-        title = QLabel("萤火虫 / Firefly")
+        title = QLabel("Developer Preview")
         title.setObjectName("loginTopTitle")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
         layout.addStretch(1)
 
-        version = QLabel("BioMedPilot / 医研智析  ·  0.1.0-internal-beta  ·  Developer Preview")
+        version = QLabel("0.1.0-internal-beta  ·  Local Preview")
         version.setObjectName("loginTopVersion")
         layout.addWidget(version)
 
@@ -178,6 +179,9 @@ class BioMedPilotLoginWidget(QWidget):
         settings_button.setIcon(load_ui01_login_icon("preview"))
         settings_button.setIconSize(QSize(18, 18))
         settings_button.setToolTip("设置中心")
+        settings_button.setProperty("buttonBehavior", "navigates_to_shell_route_settings")
+        settings_button.setProperty("formalActionEnabled", False)
+        settings_button.setProperty("fileWriteAllowed", False)
         settings_button.clicked.connect(self.settings_requested.emit)
         layout.addWidget(settings_button)
         return bar
@@ -275,6 +279,9 @@ class BioMedPilotLoginWidget(QWidget):
         enter_button.setObjectName("primaryButton")
         enter_button.setAccessibleName("Enter local workspace")
         enter_button.setProperty("usabilityRole", "primary_entry_action")
+        enter_button.setProperty("buttonBehavior", "navigates_to_shell_route_dashboard")
+        enter_button.setProperty("formalActionEnabled", False)
+        enter_button.setProperty("fileWriteAllowed", False)
         enter_button.setDefault(True)
         enter_button.setIcon(load_ui01_login_icon("welcome_enter"))
         enter_button.setIconSize(QSize(16, 16))
@@ -286,6 +293,9 @@ class BioMedPilotLoginWidget(QWidget):
         about_button.setObjectName("aboutButton")
         about_button.setAccessibleName("Open about")
         about_button.setProperty("usabilityRole", "secondary_entry_action")
+        about_button.setProperty("buttonBehavior", "navigates_to_shell_route_about")
+        about_button.setProperty("formalActionEnabled", False)
+        about_button.setProperty("fileWriteAllowed", False)
         about_button.setIcon(load_ui01_login_icon("welcome_about"))
         about_button.setIconSize(QSize(14, 14))
         about_button.setFixedSize(260, 42)
