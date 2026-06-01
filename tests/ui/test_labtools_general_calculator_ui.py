@@ -70,10 +70,12 @@ def _issue_label(window: MainWindow, page_key: str) -> QLabel:
 
 def test_quick_calculator_task_list_is_rendered_from_backend_specs(labtools_general_window) -> None:
     combo = labtools_general_window.findChild(QComboBox, "labtoolsQuickTaskCombo")
+    title = labtools_general_window.findChild(QLabel, "labToolsCalculatorTitle")
     backend_tasks = labtools_runtime.list_quick_tasks()
     task_ids = [combo.itemData(index) for index in range(combo.count())]
     labels = "\n".join(combo.itemText(index) for index in range(combo.count()))
 
+    assert title.text() == "通用计算器"
     assert task_ids == [task.task_id for task in backend_tasks]
     assert "quick_dilution" in task_ids
     assert "quick_mass_molarity" in task_ids

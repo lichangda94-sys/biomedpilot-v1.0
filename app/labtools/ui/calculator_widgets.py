@@ -1152,11 +1152,11 @@ if QWidget is not None:
             self._record_summary = QLabel("最近一次计算：暂无")
             self._record_summary.setObjectName("labToolsRecordSummary")
             self._record_summary.setWordWrap(True)
-            title = QLabel("通用试剂制备")
+            title = QLabel("通用计算器")
             title.setObjectName("labToolsCalculatorTitle")
             subtitle = QLabel(
-                "本地通用试剂制备工作台：保留公式驱动快速计算，"
-                "并支持用户自定义试剂模板、本次制备换算、子模板展开与本地 JSON 保存；不替代实验 SOP。"
+                "本地通用计算工作台：保留公式驱动快速计算，并提供试剂制备子页；"
+                "试剂模板、本次制备换算、子模板展开与本地 JSON 保存仍按实验 SOP 复核，不替代实验 SOP。"
             )
             subtitle.setObjectName("labToolsCalculatorNotice")
             subtitle.setWordWrap(True)

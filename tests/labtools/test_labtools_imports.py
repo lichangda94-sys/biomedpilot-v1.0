@@ -89,8 +89,8 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert quick_tabs is not None
     assert [quick_tabs.tabText(index) for index in range(quick_tabs.count())] == ["浓度换算", "稀释计算", "溶液配制"]
     calculator_labels = "\n".join(label.text() for label in widget._stack.currentWidget().findChildren(QLabel))
-    assert "通用试剂制备" in calculator_labels
-    assert "本地通用试剂制备工作台" in calculator_labels
+    assert "通用计算器" in calculator_labels
+    assert "本地通用计算工作台" in calculator_labels
     assert "我的试剂模板" in calculator_labels
     assert "本次制备" in calculator_labels
     assert "不替代实验 SOP" in calculator_labels
