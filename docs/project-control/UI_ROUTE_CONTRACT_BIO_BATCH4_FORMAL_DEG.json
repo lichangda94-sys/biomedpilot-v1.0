@@ -1,0 +1,166 @@
+{
+  "schema_version": "ui_route_contract_bio_batch4_formal_deg.v1",
+  "created_at": "2026-06-01T15:57:12.231052+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "357576cb04a8a53c7e85557403c8710ab2021774",
+  "scope": "Bioinformatics Formal DEG positive runtime path: dependency detect, parameter confirmation, controlled run, result review, plot, report-ready package, and report export gate.",
+  "summary": {
+    "row_count": 8,
+    "connected": 8,
+    "disabled": 0,
+    "broken": 0,
+    "failures": []
+  },
+  "screenshots": [
+    {
+      "name": "01_analysis_tasks_formal_deg_ready",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/01_analysis_tasks_formal_deg_ready.png",
+      "workspace": "bioinformatics"
+    },
+    {
+      "name": "02_result_review_formal_deg",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/02_result_review_formal_deg.png",
+      "workspace": "bioinformatics"
+    },
+    {
+      "name": "03_result_review_plot_gate",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/03_result_review_plot_gate.png",
+      "workspace": "bioinformatics"
+    },
+    {
+      "name": "04_report_export_formal_deg_ready",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/04_report_export_formal_deg_ready.png",
+      "workspace": "bioinformatics"
+    }
+  ],
+  "rows": [
+    {
+      "contract_id": "BIO-FORMAL-DEG-DEPENDENCY-DETECT",
+      "surface": "Analysis Tasks",
+      "current_file": "app/bioinformatics/deg_engine/dependency_check.py",
+      "object_name": "check_deg_backend_dependencies",
+      "label": "Detect formal DEG Python dependencies",
+      "enabled": true,
+      "button_behavior": "detect_first_no_install",
+      "formal_action_enabled": false,
+      "runtime_effect": "detects numpy/pandas/scipy/statsmodels for formal DEG activation",
+      "artifact_evidence": "status=passed; packages=numpy,pandas,scipy,statsmodels",
+      "live_click_test": "direct_service_call",
+      "status": "connected",
+      "observed": "passed",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    },
+    {
+      "contract_id": "BIO-FORMAL-DEG-PARAMETER-CONFIRM",
+      "surface": "Analysis Tasks",
+      "current_file": "app/bioinformatics/workflow_pages.py",
+      "object_name": "analysisTaskConfirmFormalDegParametersButton",
+      "label": "确认 formal DEG 参数",
+      "enabled": true,
+      "button_behavior": "writes_formal_deg_parameter_confirmation",
+      "formal_action_enabled": false,
+      "runtime_effect": "writes formal DEG parameter confirmation and unlocks controlled run gate",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_ukerydp4/project/bio_batch_4_formal_deg/manifests/formal_deg_parameter_confirmation.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "confirmation_status=confirmed; run_enabled=True",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    },
+    {
+      "contract_id": "BIO-FORMAL-DEG-CONTROLLED-RUN",
+      "surface": "Analysis Tasks",
+      "current_file": "app/bioinformatics/workflow_pages.py",
+      "object_name": "analysisTaskRunFormalControlledDegButton",
+      "label": "运行两组 controlled DEG",
+      "enabled": true,
+      "button_behavior": "runs_formal_controlled_deg_when_gate_passes",
+      "formal_action_enabled": true,
+      "runtime_effect": "runs controlled two-group formal DEG and writes result index v2",
+      "artifact_evidence": "result_id=formal-deg-da3531d4bf; result_table=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_ukerydp4/project/bio_batch_4_formal_deg/results/tables/formal-deg-da3531d4bf.tsv; result_index=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_ukerydp4/project/bio_batch_4_formal_deg/results/summaries/result_index.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "formal_result_count=1",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    },
+    {
+      "contract_id": "BIO-FORMAL-DEG-RESULT-REVIEW",
+      "surface": "Result & Report",
+      "current_file": "app/bioinformatics/workflow_pages.py",
+      "object_name": "resultReportRefreshButton",
+      "label": "刷新结果",
+      "enabled": true,
+      "button_behavior": "calls_load_result_index_and_formal_deg_gates",
+      "formal_action_enabled": false,
+      "runtime_effect": "loads formal DEG result review table and provenance",
+      "artifact_evidence": "selected_result_id=formal-deg-da3531d4bf",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "formal_review_loaded",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    },
+    {
+      "contract_id": "BIO-FORMAL-DEG-REVIEW-CSV-EXPORT",
+      "surface": "Result & Report",
+      "current_file": "app/bioinformatics/workflow_pages.py",
+      "object_name": "formalDegReviewExportCsvButton",
+      "label": "导出 DEG CSV",
+      "enabled": true,
+      "button_behavior": "exports_formal_deg_review_table_when_gate_passes",
+      "formal_action_enabled": false,
+      "runtime_effect": "exports formal DEG review CSV without marking report-ready",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_ukerydp4/project/bio_batch_4_formal_deg/results/exports/formal_deg_review/formal-deg-da3531d4bf_review.csv",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "csv_export_count=1",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    },
+    {
+      "contract_id": "BIO-FORMAL-DEG-PLOT-ARTIFACT",
+      "surface": "Result & Report",
+      "current_file": "app/bioinformatics/workflow_pages.py",
+      "object_name": "formalDegPlotButton",
+      "label": "生成 formal DEG plot artifact",
+      "enabled": true,
+      "button_behavior": "creates_formal_deg_plot_artifact_when_gate_passes",
+      "formal_action_enabled": true,
+      "runtime_effect": "creates formal DEG plot artifact from formal_computed_result",
+      "artifact_evidence": "formal-deg-da3531d4bf-volcano_plot-artifact",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "plot_artifact_count=1",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    },
+    {
+      "contract_id": "BIO-FORMAL-DEG-REPORT-READY-PACKAGE",
+      "surface": "Result & Report",
+      "current_file": "app/bioinformatics/workflow_pages.py",
+      "object_name": "formalDegReportReadyButton",
+      "label": "生成 formal DEG report-ready package",
+      "enabled": true,
+      "button_behavior": "creates_formal_deg_report_ready_package_when_gate_passes",
+      "formal_action_enabled": true,
+      "runtime_effect": "creates formal DEG report-ready package after plot/report gate passes",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_ukerydp4/project/bio_batch_4_formal_deg/report_package/formal_deg/formal-deg-da3531d4bf/20260601T155709Z/formal_deg_report_package_manifest.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "package_manifest_count=1",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    },
+    {
+      "contract_id": "BIO-FORMAL-DEG-REPORT-EXPORT-GATE",
+      "surface": "Report Export",
+      "current_file": "app/bioinformatics/workflow_pages.py",
+      "object_name": "reportReadyExportButton",
+      "label": "Export formal DEG report-ready package",
+      "enabled": true,
+      "button_behavior": "exports_report_ready_package_when_gate_passes",
+      "formal_action_enabled": true,
+      "runtime_effect": "exports formal DEG report-ready package only after formal gate passes",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_ukerydp4/project/bio_batch_4_formal_deg/report_package/formal_deg/formal-deg-da3531d4bf/20260601T155709Z_2/formal_deg_report_package_manifest.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "report_export_manifest_count=2",
+      "batch": "Batch 4: Bioinformatics Formal DEG Positive Runtime"
+    }
+  ]
+}
