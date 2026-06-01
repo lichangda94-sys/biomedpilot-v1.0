@@ -238,6 +238,9 @@ def test_about_and_test_feedback_shells_are_reachable(qt_app) -> None:
         assert window.current_workspace_key() == "about"
         about_labels = [label.text() for label in window._about_page.findChildren(QLabel)]
         assert about_labels == [ABOUT_BIOMEDPILOT_TEXT]
+        assert window._about_page.objectName() == "aboutPage"
+        assert "background: #0D1B2D" in window._about_page.styleSheet()
+        assert window._about_page.findChild(QScrollArea, "aboutTextScroll") is not None
         assert "关于 BioMedPilot / 医研智析" in about_labels[0]
         assert "有一分热，发一分光" in about_labels[0]
 

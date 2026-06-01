@@ -53,3 +53,34 @@ def test_geo_search_blocks_broad_query_without_confirmation() -> None:
     assert response.search_status == "blocked_broad_query"
     assert response.executed_queries == ()
     assert response.results == ()
+
+
+def test_geo_search_handles_explicit_gse_accession_without_broad_query_fallback() -> None:
+    seen_urls: list[str] = []
+
+    def fake_accession_lookup(url: str) -> dict[str, object]:
+        seen_urls.append(url)
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        if parsed.path.endswith("esearch.fcgi"):
+            assert query["term"] == ["GSE6004[ACCN] AND GSE[ETYP]"]
+            return {"esearchresult": {"idlist": ["200006004"]}}
+        return {
+            "result": {
+                "uids": ["200006004"],
+                "200006004": {
+                    "uid": "200006004",
+                    "accession": "GSE6004",
+                    "title": "Papillary thyroid cancer invasion expression profiling",
+                    "summary": "Human papillary thyroid cancer and normal thyroid tissue.",
+                },
+            }
+        }
+
+    response = GeoSearchService(opener=fake_accession_lookup).search("GSE6004", max_results=5)
+
+    assert response.search_status == "completed"
+    assert response.executed_queries == ("GSE6004[ACCN] AND GSE[ETYP]",)
+    assert response.results[0].accession == "GSE6004"
+    assert "explicit_gse_accession_search" in response.warnings
+    assert seen_urls

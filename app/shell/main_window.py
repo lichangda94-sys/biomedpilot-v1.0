@@ -336,21 +336,53 @@ class MainWindow(QMainWindow):
         return page
 
     def _build_about_page(self) -> QWidget:
-        page = QScrollArea()
+        page = QWidget()
         page.setObjectName("aboutPage")
-        page.setWidgetResizable(True)
+        page.setStyleSheet(
+            """
+            QWidget#aboutPage {
+                background: #0D1B2D;
+                color: #E7EEF8;
+            }
+            QWidget#aboutTextContent {
+                background: transparent;
+            }
+            QScrollArea#aboutTextScroll {
+                background: transparent;
+                border: 0;
+            }
+            QScrollArea#aboutTextScroll > QWidget > QWidget {
+                background: transparent;
+            }
+            QLabel#aboutTextLabel {
+                color: #E7EEF8;
+                font-size: 15px;
+                line-height: 150%;
+                background: transparent;
+            }
+            """
+        )
+        root = QVBoxLayout(page)
+        root.setContentsMargins(40, 34, 40, 34)
+        root.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setObjectName("aboutTextScroll")
+        scroll.setWidgetResizable(True)
         content = QWidget()
-        root = QVBoxLayout(content)
-        root.setContentsMargins(32, 28, 32, 28)
-        root.setSpacing(14)
-        label = QLabel(ABOUT_BIOMEDPILOT_TEXT)
-        label.setObjectName("aboutText")
-        label.setWordWrap(True)
-        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        label.setStyleSheet("font-size: 14px; line-height: 1.45;")
-        root.addWidget(label)
-        root.addStretch(1)
-        page.setWidget(content)
+        content.setObjectName("aboutTextContent")
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        text = QLabel(ABOUT_BIOMEDPILOT_TEXT)
+        text.setObjectName("aboutTextLabel")
+        text.setWordWrap(True)
+        text.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        text.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        content_layout.addWidget(text)
+        content_layout.addStretch(1)
+        scroll.setWidget(content)
+        root.addWidget(scroll, 1)
         return page
 
     def _create_project_and_open(self, project_type: str) -> None:

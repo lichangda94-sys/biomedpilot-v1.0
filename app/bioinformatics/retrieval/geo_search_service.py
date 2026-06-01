@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import ssl
 from dataclasses import dataclass
 from pathlib import Path
@@ -90,6 +91,31 @@ class GeoSearchService:
         include_supplemental: bool = False,
     ) -> GeoSearchResponse:
         strategy = build_bioinformatics_query_strategy(query_text)
+        explicit_accessions = _explicit_gse_accessions(query_text)
+        if explicit_accessions:
+            queries = [f"{accession}[ACCN] AND GSE[ETYP]" for accession in explicit_accessions]
+            try:
+                results = self._execute_accession_queries(queries, max_results=max_results)
+            except Exception as exc:
+                return GeoSearchResponse(
+                    query_text=query_text,
+                    strategy=strategy,
+                    executed_queries=tuple(queries),
+                    results=(),
+                    total_found=0,
+                    search_status="failed",
+                    warnings=tuple(strategy.warnings),
+                    error_message=str(exc),
+                )
+            return GeoSearchResponse(
+                query_text=query_text,
+                strategy=strategy,
+                executed_queries=tuple(queries),
+                results=tuple(results[:max_results]),
+                total_found=len(results),
+                search_status="completed",
+                warnings=tuple([*_warnings_without_broad_query_guard(strategy.warnings), "explicit_gse_accession_search"]),
+            )
         if strategy.broad_query_guard_triggered and not include_supplemental:
             return GeoSearchResponse(
                 query_text=query_text,
@@ -160,6 +186,21 @@ class GeoSearchService:
                     by_accession[result.accession] = result
         return sorted(by_accession.values(), key=lambda item: (-item.rank_score, item.accession))
 
+    def _execute_accession_queries(self, queries: list[str], *, max_results: int) -> list[GeoDatasetResult]:
+        by_accession: dict[str, GeoDatasetResult] = {}
+        for query in queries:
+            ids = self._esearch(query, retmax=max_results)
+            for payload in self._esummary(ids):
+                result = _result_from_payload(
+                    payload,
+                    query_used=query,
+                    disease_terms=(),
+                    broad_query_match=False,
+                )
+                if result.accession:
+                    by_accession[result.accession] = result
+        return sorted(by_accession.values(), key=lambda item: item.accession)
+
     def _esearch(self, term: str, *, retmax: int) -> list[str]:
         payload = self._get_json(
             f"{EUTILS_BASE}/esearch.fcgi",
@@ -207,6 +248,14 @@ def _geo_series_query(query: str) -> str:
     if "GSE[ETYP]" in query:
         return query
     return f"({query}) AND GSE[ETYP]"
+
+
+def _explicit_gse_accessions(query_text: str) -> list[str]:
+    return _unique(match.upper() for match in re.findall(r"\bGSE\d+\b", query_text, flags=re.IGNORECASE))
+
+
+def _warnings_without_broad_query_guard(warnings: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(warning for warning in warnings if "宽泛 GEO query" not in warning)
 
 
 def _result_from_payload(
