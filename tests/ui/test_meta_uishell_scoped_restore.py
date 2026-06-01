@@ -53,6 +53,22 @@ def test_meta_uishell_target_ia_is_final_visual_baseline(qt_app) -> None:
     )
     assert widget.findChild(QPushButton, "metaTargetIANavItem") is not None
     assert not hasattr(widget, "execute_confirmed_pubmed_search")
+    for button in widget.findChildren(QPushButton, "metaTargetIANavItem"):
+        page_key = button.property("pageKey")
+        assert button.property("buttonBehavior") == f"navigates_to_meta_target_ia_page_{page_key}"
+        assert button.property("formalActionEnabled") is False
+        assert button.property("fileWriteAllowed") is False
+
+
+def test_meta_uishell_target_ia_nav_items_live_click_pages(qt_app) -> None:
+    widget = MetaAnalysisWorkspaceWidget()
+    by_page = {button.property("pageKey"): button for button in widget.findChildren(QPushButton, "metaTargetIANavItem")}
+
+    for page_key in widget.target_ia_page_keys():
+        by_page[page_key].click()
+        qt_app.processEvents()
+
+        assert widget.current_target_page_key() == page_key
 
 
 def test_meta_uishell_buttons_are_not_empty_and_disabled_buttons_explain_gate(qt_app) -> None:

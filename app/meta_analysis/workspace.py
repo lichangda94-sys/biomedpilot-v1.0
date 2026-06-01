@@ -765,7 +765,7 @@ if QWidget is not None:
 
         def show_target_ia_page(self, page_key: str) -> None:
             if page_key not in {page.key for page in meta_target_ia_pages()}:
-                return
+                raise KeyError(f"Unknown Meta Analysis target IA page: {page_key}")
             self._current_target_page_key = page_key
             self._sync_target_interaction_state()
 
@@ -1127,6 +1127,9 @@ if QWidget is not None:
                 item.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                 item.setProperty("statusSemanticKey", _META_STATUS_SEMANTIC_KEYS[page.status_key])
                 item.setProperty("interactionMode", "select_only")
+                item.setProperty("buttonBehavior", f"navigates_to_meta_target_ia_page_{page.key}")
+                item.setProperty("formalActionEnabled", False)
+                item.setProperty("fileWriteAllowed", False)
                 item.setStyleSheet(_META_FLOW_BUTTON_STYLESHEET)
                 _apply_meta_page_icon(item, _META_PAGE_SEMANTIC_KEYS[page.key], size=22)
                 self._target_ia_buttons[page.key] = item
