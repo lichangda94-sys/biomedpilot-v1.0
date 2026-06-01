@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -427,3 +428,23 @@ def test_meta_workspace_search_pubmed_candidate_import_click_chain(qt_app, tmp_p
     _button_by_text(current, "生成 Markdown 草稿").click()
     qt_app.processEvents()
     assert (summary.project_root / "reports" / "formal_meta_report.md").exists()
+
+    widget.show_step("report_export")
+    current = _current_step_widget(widget)
+    html_button = _button_by_text(current, "导出 HTML")
+    assert html_button.property("buttonBehavior") == "calls_publication_export_service_export_html_report"
+    html_button.click()
+    qt_app.processEvents()
+    html_path = summary.project_root / "reports" / "formal_meta_report.html"
+    assert html_path.exists()
+    assert "<html" in html_path.read_text(encoding="utf-8").lower()
+
+    widget.show_step("report_export")
+    current = _current_step_widget(widget)
+    docx_button = _button_by_text(current, "导出 DOCX")
+    assert docx_button.property("buttonBehavior") == "calls_publication_export_service_export_word_report"
+    docx_button.click()
+    qt_app.processEvents()
+    docx_path = summary.project_root / "reports" / "formal_meta_report.docx"
+    assert docx_path.exists()
+    assert zipfile.is_zipfile(docx_path)
