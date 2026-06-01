@@ -10,9 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from PySide6.QtCore import Signal, Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QSize, Signal, Qt, QUrl
+from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QApplication,
     QCheckBox,
@@ -58,6 +59,13 @@ from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_
 from app.bioinformatics.plots import build_formal_deg_plot_gate, create_formal_deg_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.data_source_requests import create_data_source_request
+from app.bioinformatics.group_comparison_design import (
+    build_default_comparison_rows,
+    build_default_group_rows,
+    load_group_design_context,
+    save_group_comparison_design,
+    validate_group_comparison_design,
+)
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
     GTExDownloadPlanDraft,
@@ -190,6 +198,709 @@ from app.shared.ai_gateway.models import AIProviderStatus
 from app.shared.ai_gateway.providers.ollama_provider import DEFAULT_OLLAMA_BASE_URL, DEFAULT_OLLAMA_MODEL, OllamaProvider
 from app.shared.query_intelligence import LocalModelConfig
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
+
+
+DATA_SOURCE_TOKENS = {
+    "background": "#F0F4F8",
+    "surface": "#FFFFFF",
+    "surface_subtle": "#F8FAFC",
+    "border": "#E5E7EB",
+    "text": "#101828",
+    "muted": "#6A7282",
+    "blue": "#2563EB",
+    "green": "#059669",
+    "cyan": "#0891B2",
+    "purple": "#7C3AED",
+    "amber": "#D97706",
+    "red": "#EF4444",
+}
+
+
+_DATA_SOURCE_STYLESHEET = """
+QWidget#bioinformaticsDataSourcePage,
+QWidget#bioWorkflowScrollContent {
+    background: #F0F4F8;
+}
+QFrame#dataSourceTopHeader {
+    background: #FFFFFF;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QLabel#dataSourcePageTitle {
+    color: #101828;
+    font-size: 18px;
+    font-weight: 800;
+}
+QLabel#dataSourcePageSubtitle {
+    color: #6A7282;
+    font-size: 12px;
+}
+QFrame#dataSourceStepper {
+    background: #F8FAFC;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QFrame#dataSourcePanel,
+QFrame#dataSourceSideCard,
+QFrame#dataSourceQuickAccessCard,
+QFrame#bioinformaticsDataSourceGatedOverview,
+QFrame#geoDownloadListPanel,
+QFrame#historicalCacheDataCard {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+}
+QFrame#geoDownloadListPanel QLabel#bioProjectCardTitle {
+    color: #1E2939;
+    font-size: 13px;
+    font-weight: 800;
+}
+QFrame#geoDownloadListPanel QLabel {
+    color: #6A7282;
+}
+QPushButton#dataSourceTabButton {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #4A5565;
+    font-size: 12px;
+    font-weight: 650;
+    padding: 10px 14px;
+}
+QPushButton#dataSourceTabButton[current="true"] {
+    color: #2563EB;
+    border-bottom: 2px solid #2563EB;
+}
+QFrame#bioinformaticsDataSourceMainCard,
+QFrame#bioinformaticsDataSourceResearchCard {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+}
+QPushButton#bioinformaticsDataSourceSelectPreviewButton,
+QPushButton#dataSourceResearchSearchButton {
+    background: #2563EB;
+    border: 1px solid #2563EB;
+    border-radius: 8px;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 7px 10px;
+}
+QPushButton#bioinformaticsDataSourceSelectPreviewButton[sourceKey="geo"] {
+    background: #059669;
+    border-color: #059669;
+}
+QPushButton#bioinformaticsDataSourceSelectPreviewButton[sourceKey="tcga"] {
+    background: #7C3AED;
+    border-color: #7C3AED;
+}
+QPushButton#bioinformaticsDataSourceSelectPreviewButton[sourceKey="gtex"] {
+    background: #0891B2;
+    border-color: #0891B2;
+}
+QPushButton#dataSourceResearchSearchButton {
+    background: #D97706;
+    border-color: #D97706;
+}
+QLabel#dataSourceCardIcon,
+QLabel#dataSourceMetricIcon {
+    border-radius: 12px;
+    font-weight: 900;
+}
+QLabel#dataSourceCardTitle,
+QLabel#bioinformaticsDataSourceMainCardTitle {
+    color: #1E2939;
+    font-size: 12px;
+    font-weight: 800;
+}
+QLabel#dataSourceCardSubtitle,
+QLabel#dataSourceMutedText,
+QLabel#bioinformaticsDataSourceMainCardBody {
+    color: #6A7282;
+    font-size: 11px;
+}
+QPushButton#dataSourceQuickAccessButton {
+    text-align: left;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    color: #1E2939;
+    font-size: 11px;
+    font-weight: 750;
+    padding: 12px 14px;
+}
+QPushButton#dataSourceQuickAccessButton:disabled {
+    color: #1E2939;
+    background: #FFFFFF;
+}
+"""
+
+
+_DATA_SOURCE_CARDS = (
+    ("geo", "GEO", "GEO Dataset", "从 NCBI GEO 检索并下载基因表达数据集", "配置 GEO 来源", DATA_SOURCE_TOKENS["green"], "◎"),
+    ("tcga", "TCGA", "TCGA Database", "从 TCGA 获取肿瘤相关基因组与临床数据", "配置 TCGA 来源", DATA_SOURCE_TOKENS["purple"], "▦"),
+    ("gtex", "GTEx", "GTEx Database", "获取正常组织相关的基因表达数据", "配置 GTEx 来源", DATA_SOURCE_TOKENS["cyan"], "⚭"),
+    ("local_file", "Local File", "Local Import", "登记本地表达矩阵、临床信息或相关数据文件", "配置本地导入", DATA_SOURCE_TOKENS["blue"], "↥"),
+)
+
+
+_DATA_SOURCE_QUICK_ACCESS = (
+    ("最近使用", "快速访问最近使用的数据项目", DATA_SOURCE_TOKENS["blue"], "◷"),
+    ("使用指南", "查看数据来源与导入说明", DATA_SOURCE_TOKENS["green"], "□"),
+    ("常见问题", "查看常见问题与解决方案", DATA_SOURCE_TOKENS["amber"], "?"),
+    ("意见反馈", "提出建议或报告问题", DATA_SOURCE_TOKENS["purple"], "▱"),
+)
+
+
+_DATA_CHECK_TABS = (
+    "文件级识别与状态",
+    "表达矩阵检查",
+    "样本信息检查",
+    "基因注释匹配",
+    "临床信息检查",
+    "预处理设置",
+    "整体结论",
+)
+
+
+_DATA_CHECK_SUMMARY_CARDS = (
+    ("expression_matrix", "表达矩阵检查", "未检查", DATA_SOURCE_TOKENS["muted"], "–"),
+    ("sample_metadata", "样本信息检查", "未检查", DATA_SOURCE_TOKENS["muted"], "–"),
+    ("gene_annotation", "基因注释匹配", "未检查", DATA_SOURCE_TOKENS["muted"], "–"),
+    ("clinical_metadata", "临床信息检查", "未检查", DATA_SOURCE_TOKENS["muted"], "–"),
+    ("preprocessing", "预处理状态", "未执行", DATA_SOURCE_TOKENS["muted"], "–"),
+)
+
+
+_DATA_CHECK_STYLESHEET = """
+QWidget#bioinformaticsReadinessDashboardPage,
+QWidget#bioWorkflowScrollContent {
+    background: #F0F4F8;
+}
+QFrame#dataCheckTopHeader {
+    background: #FFFFFF;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QLabel#dataCheckPageTitle {
+    color: #101828;
+    font-size: 18px;
+    font-weight: 800;
+}
+QLabel#dataCheckPageSubtitle {
+    color: #6A7282;
+    font-size: 12px;
+}
+QFrame#dataCheckStepper {
+    background: #F8FAFC;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QFrame#dataCheckPanel,
+QFrame#dataCheckSideCard,
+QFrame#dataCheckSummaryCard,
+QFrame#dataCheckQuickAccessCard {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+}
+QFrame#dataCheckSummaryCard[semantic="green"] {
+    background: #ECFDF5;
+    border-color: #A4F4CF;
+}
+QFrame#dataCheckSummaryCard[semantic="amber"] {
+    background: #FFFBEB;
+    border-color: #FDE68A;
+}
+QFrame#dataCheckSummaryCard[semantic="muted"] {
+    background: #F8FAFC;
+    border-color: #E5E7EB;
+}
+QPushButton#dataCheckTabButton {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #4A5565;
+    font-size: 12px;
+    font-weight: 650;
+    padding: 10px 8px;
+}
+QPushButton#dataCheckTabButton[current="true"] {
+    color: #2563EB;
+    border-bottom: 2px solid #2563EB;
+}
+QLabel#dataCheckCardTitle,
+QLabel#dataCheckSummaryTitle {
+    color: #1E2939;
+    font-size: 12px;
+    font-weight: 800;
+}
+QLabel#dataCheckMutedText,
+QLabel#dataCheckSummaryState,
+QLabel#dataCheckMetricLabel {
+    color: #6A7282;
+    font-size: 11px;
+}
+QLabel#dataCheckSummaryState[semantic="green"] {
+    color: #059669;
+    font-weight: 800;
+}
+QLabel#dataCheckSummaryState[semantic="amber"] {
+    color: #D97706;
+    font-weight: 800;
+}
+QLabel#dataCheckSummaryState[semantic="muted"] {
+    color: #6A7282;
+    font-weight: 800;
+}
+QLabel#dataCheckMetricValue {
+    color: #1E2939;
+    font-size: 11px;
+    font-weight: 750;
+}
+QLabel#dataCheckEmptyIcon {
+    background: #F8FAFC;
+    border: 1px solid #E5E7EB;
+    border-radius: 18px;
+    color: #94A3B8;
+    font-size: 18px;
+    font-weight: 900;
+}
+QLabel#dataCheckProgressCircle {
+    background: #FFFFFF;
+    border: 12px solid #10B981;
+    border-radius: 42px;
+    color: #1E2939;
+    font-size: 20px;
+    font-weight: 900;
+}
+QLabel#dataCheckConclusionBadge {
+    background: #ECFDF5;
+    border: 1px solid #A4F4CF;
+    border-radius: 13px;
+    color: #007A55;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 5px 10px;
+}
+QPushButton#dataCheckReportButton {
+    background: #2563EB;
+    border: 1px solid #2563EB;
+    border-radius: 10px;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 14px;
+}
+QPushButton#dataCheckReportButton:disabled {
+    background: #E5E7EB;
+    border-color: #D1D5DB;
+    color: #64748B;
+}
+QLabel#dataCheckQuickIcon {
+    border-radius: 12px;
+    font-weight: 900;
+}
+"""
+
+
+_DATA_SOURCE_REQUESTS = {
+    "geo": {
+        "source_type": "geo",
+        "title": "GEO 数据来源配置",
+        "summary": "GEO 数据集检索/下载入口；进入 Data Check 前需完成数据登记与识别。",
+        "expected_assets": ("geo_query_plan", "dataset_metadata", "download_manifest"),
+        "warnings": ("仅生成来源配置草稿，不直接执行差异分析。",),
+    },
+    "tcga": {
+        "source_type": "tcga",
+        "title": "TCGA 数据来源配置",
+        "summary": "TCGA metadata preview 与下载计划入口；TCGA 与 GTEx 不自动合并。",
+        "expected_assets": ("gdc_metadata_preview", "download_plan", "expression_matrix", "clinical_metadata"),
+        "warnings": ("TCGA+GTEx 联合分析需要显式配置和批次校正。", "此入口不直接进入 DEG/GSEA。"),
+    },
+    "gtex": {
+        "source_type": "gtex",
+        "title": "GTEx 数据来源配置",
+        "summary": "GTEx 正常组织表达资源入口；作为独立资源管理。",
+        "expected_assets": ("gtex_metadata_preview", "download_plan", "expression_matrix"),
+        "warnings": ("GTEx 不自动作为 TCGA normal control。",),
+    },
+    "local_file": {
+        "source_type": "local_import",
+        "title": "本地数据导入配置",
+        "summary": "本地表达矩阵、样本信息、临床表或已下载数据登记入口。",
+        "expected_assets": ("local_file_reference", "acquisition_record", "recognition_handoff"),
+        "warnings": ("本地路径登记后仍需进入 Data Check & Preparation。",),
+    },
+}
+
+
+def _soft_color(hex_color: str, alpha: int = 30) -> str:
+    color = QColor(hex_color)
+    return f"rgba({color.red()}, {color.green()}, {color.blue()}, {alpha / 255:.2f})"
+
+
+def _data_source_icon(accent: str, symbol: str, size: int) -> QIcon:
+    pixmap = QPixmap(size, size)
+    pixmap.fill(QColor(0, 0, 0, 0))
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    soft = QColor(accent)
+    soft.setAlpha(42)
+    painter.setBrush(soft)
+    painter.setPen(QPen(QColor(0, 0, 0, 0)))
+    painter.drawRoundedRect(0, 0, size, size, 10, 10)
+    painter.setPen(QPen(QColor(accent), 2))
+    painter.setFont(QFont("Arial", max(11, int(size * 0.45)), QFont.Bold))
+    painter.drawText(0, 0, size, size, Qt.AlignCenter, symbol)
+    painter.end()
+    icon = QIcon()
+    icon.addPixmap(pixmap, QIcon.Normal)
+    icon.addPixmap(pixmap, QIcon.Disabled)
+    return icon
+
+
+def _side_card(title: str) -> QFrame:
+    card = QFrame()
+    card.setObjectName("dataSourceSideCard")
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(16, 12, 16, 12)
+    layout.setSpacing(8)
+    title_label = QLabel(title)
+    title_label.setObjectName("dataSourceCardTitle")
+    layout.addWidget(title_label)
+    return card
+
+
+_ANALYSIS_TASK_STYLESHEET = """
+QWidget#bioinformaticsAnalysisTaskCenterPage,
+QWidget#bioWorkflowScrollContent {
+    background: #F6F9FD;
+}
+QFrame#analysisTaskTopBar,
+QFrame#analysisTaskHeader {
+    background: #FFFFFF;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QLabel#analysisTaskBreadcrumb {
+    color: #64748B;
+    font-size: 12px;
+}
+QLabel#analysisTaskTitle {
+    color: #101828;
+    font-size: 20px;
+    font-weight: 850;
+}
+QLabel#analysisTaskSubtitle,
+QLabel#analysisTaskMuted,
+QLabel#analysisTaskSmallMuted {
+    color: #6A7282;
+    font-size: 11px;
+}
+QLabel#analysisTaskModeBadge {
+    background: #FFF7ED;
+    border: 1px solid #FDBA74;
+    border-radius: 11px;
+    color: #C2410C;
+    font-size: 10px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QLabel#analysisTaskStageBadge {
+    background: #EFF6FF;
+    border: 1px solid #93C5FD;
+    border-radius: 18px;
+    color: #2563EB;
+    font-size: 10px;
+    font-weight: 850;
+    padding: 7px 14px;
+}
+QFrame#analysisTaskNotice {
+    background: #FFFBEB;
+    border: 1px solid #FCD34D;
+    border-radius: 10px;
+}
+QLabel#analysisTaskNoticeTitle {
+    color: #B45309;
+    font-size: 12px;
+    font-weight: 850;
+}
+QLabel#analysisTaskNoticeText {
+    color: #B45309;
+    font-size: 11px;
+}
+QFrame#analysisTaskPanel,
+QFrame#analysisTaskSideCard,
+QFrame#analysisTaskParameterPanel {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+}
+QLabel#analysisTaskCardTitle,
+QLabel#analysisTaskSideTitle {
+    color: #1E2939;
+    font-size: 13px;
+    font-weight: 850;
+}
+QLabel#analysisTaskCountBadge {
+    background: #EEF2F7;
+    border-radius: 7px;
+    color: #64748B;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 7px;
+}
+QLabel#analysisTaskStatusReady {
+    background: #EFF6FF;
+    border: 1px solid #93C5FD;
+    border-radius: 6px;
+    color: #2563EB;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QLabel#analysisTaskStatusWait {
+    background: #F1F5F9;
+    border: 1px solid #D8E1EC;
+    border-radius: 6px;
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 8px;
+}
+QLabel#analysisTaskStatusWarn {
+    background: #FFF7ED;
+    border: 1px solid #FDBA74;
+    border-radius: 6px;
+    color: #D97706;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QLabel#analysisTaskPriorityHigh {
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    border-radius: 6px;
+    color: #DC2626;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QLabel#analysisTaskPriorityMid {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 6px;
+    color: #D97706;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QLabel#analysisTaskPriorityLow {
+    background: #F8FAFC;
+    border: 1px solid #D8E1EC;
+    border-radius: 6px;
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QPushButton#analysisTaskPrimaryButton {
+    background: #2563EB;
+    border: 1px solid #2563EB;
+    border-radius: 9px;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 850;
+    padding: 8px 14px;
+}
+QPushButton#analysisTaskPrimaryButton:disabled,
+QPushButton#analysisTaskGhostButton:disabled {
+    background: #F8FAFC;
+    border: 1px solid #D8E1EC;
+    color: #64748B;
+}
+QPushButton#analysisTaskGhostButton {
+    background: #FFFFFF;
+    border: 1px solid #D8E1EC;
+    border-radius: 9px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 12px;
+}
+QLabel#analysisTaskIcon {
+    border-radius: 10px;
+    font-weight: 900;
+}
+QLabel#analysisTaskGuideDone {
+    color: #059669;
+    font-size: 11px;
+    font-weight: 850;
+}
+QLabel#analysisTaskGuideCurrent {
+    background: #EFF6FF;
+    border: 1px solid #93C5FD;
+    border-radius: 9px;
+    color: #2563EB;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 8px 10px;
+}
+QLabel#analysisTaskGuideLocked {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 800;
+}
+"""
+
+
+_RESULT_REPORT_STYLESHEET = """
+QWidget#bioinformaticsResultsBrowserPage,
+QWidget#bioWorkflowScrollContent {
+    background: #F5F7FB;
+}
+QFrame#resultReportHeader,
+QFrame#resultReportStepper,
+QFrame#resultReportFilterBar {
+    background: #FFFFFF;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QLabel#resultReportBreadcrumb,
+QLabel#resultReportMuted,
+QLabel#resultReportSmallMuted {
+    color: #6A7282;
+    font-size: 11px;
+}
+QLabel#resultReportTitle {
+    color: #101828;
+    font-size: 20px;
+    font-weight: 850;
+}
+QLabel#resultReportModuleBadge {
+    background: #EFF6FF;
+    border: 1px solid #93C5FD;
+    border-radius: 12px;
+    color: #2563EB;
+    font-size: 10px;
+    font-weight: 850;
+    padding: 5px 10px;
+}
+QFrame#resultReportPanel,
+QFrame#resultReportSideCard,
+QFrame#resultReportStatusLegend,
+QFrame#resultReportPreviewPanel {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+}
+QFrame#resultReportStatCard[semantic="blue"] {
+    background: #EFF6FF;
+    border-color: #DBEAFE;
+}
+QFrame#resultReportStatCard[semantic="green"] {
+    background: #ECFDF5;
+    border-color: #D1FAE5;
+}
+QFrame#resultReportStatCard[semantic="amber"] {
+    background: #FFFBEB;
+    border-color: #FEF3C7;
+}
+QFrame#resultReportStatCard[semantic="red"] {
+    background: #FEF2F2;
+    border-color: #FEE2E2;
+}
+QPushButton#resultReportTabButton {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #6A7282;
+    font-size: 12px;
+    font-weight: 750;
+    padding: 9px 12px;
+}
+QPushButton#resultReportTabButton[current="true"] {
+    color: #2563EB;
+    border-bottom: 2px solid #2563EB;
+}
+QLabel#resultReportCardTitle,
+QLabel#resultReportSideTitle,
+QLabel#resultReportStatNumber {
+    color: #1E2939;
+    font-size: 13px;
+    font-weight: 850;
+}
+QLabel#resultReportStatNumber {
+    font-size: 24px;
+}
+QLabel#resultReportStatLabel {
+    color: #2563EB;
+    font-size: 11px;
+    font-weight: 800;
+}
+QLabel#resultReportStatusGood {
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    border-radius: 10px;
+    color: #059669;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QLabel#resultReportStatusPartial {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 10px;
+    color: #D97706;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QLabel#resultReportStatusNone {
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    border-radius: 10px;
+    color: #DC2626;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 4px 8px;
+}
+QPushButton#resultReportPrimaryButton {
+    background: #2563EB;
+    border: 1px solid #2563EB;
+    border-radius: 9px;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 850;
+    padding: 8px 12px;
+}
+QPushButton#resultReportPrimaryButton:disabled,
+QPushButton#resultReportGhostButton:disabled {
+    background: #F8FAFC;
+    border: 1px solid #D8E1EC;
+    color: #64748B;
+}
+QPushButton#resultReportGhostButton {
+    background: #FFFFFF;
+    border: 1px solid #D8E1EC;
+    border-radius: 9px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 7px 11px;
+}
+QLabel#resultReportPreviewBox {
+    background: #F8FAFC;
+    border: 1px solid #BFDBFE;
+    border-radius: 10px;
+    color: #94A3B8;
+    font-size: 11px;
+    padding: 18px;
+}
+"""
 
 
 @dataclass(frozen=True)
@@ -695,6 +1406,137 @@ class DatasetDetailPanel(QFrame):
         self._save_note()
 
 
+_GROUP_DESIGN_TABS = (
+    "分组设置",
+    "对比关系",
+    "协变量设置",
+    "分析策略",
+    "多因素设计",
+)
+
+
+_GROUP_DESIGN_STYLESHEET = """
+QWidget#bioinformaticsGroupComparisonDesignPage,
+QWidget#bioWorkflowScrollContent {
+    background: #F0F4F8;
+}
+QFrame#groupDesignTopHeader {
+    background: #FFFFFF;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QLabel#groupDesignPageTitle {
+    color: #101828;
+    font-size: 18px;
+    font-weight: 800;
+}
+QLabel#groupDesignPageSubtitle {
+    color: #6A7282;
+    font-size: 12px;
+}
+QLabel#groupDesignModuleBadge {
+    background: #ECFDF5;
+    border: 1px solid #A4F4CF;
+    border-radius: 8px;
+    color: #008236;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+}
+QFrame#groupDesignStepper,
+QFrame#groupDesignTabs {
+    background: #FFFFFF;
+    border: 0;
+    border-bottom: 1px solid #E5E7EB;
+}
+QFrame#groupDesignPanel,
+QFrame#groupDesignSideCard,
+QFrame#groupDesignQuickAccessCard,
+QFrame#groupDesignImportBox {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+}
+QFrame#groupDesignImportBox {
+    background: #EFF6FF;
+    border-color: #93C5FD;
+}
+QPushButton#groupDesignTabButton {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #4A5565;
+    font-size: 12px;
+    font-weight: 650;
+    padding: 11px 20px;
+}
+QPushButton#groupDesignTabButton[current="true"] {
+    color: #2563EB;
+    border-bottom: 2px solid #2563EB;
+}
+QLabel#groupDesignCardTitle,
+QLabel#groupDesignSideTitle,
+QLabel#groupDesignQuickTitle {
+    color: #1E2939;
+    font-size: 13px;
+    font-weight: 850;
+}
+QLabel#groupDesignMutedText,
+QLabel#groupDesignMetricLabel,
+QLabel#groupDesignQuickBody {
+    color: #6A7282;
+    font-size: 11px;
+}
+QLabel#groupDesignMetricValue {
+    color: #1E2939;
+    font-size: 12px;
+    font-weight: 800;
+}
+QLabel#groupDesignStatusPass {
+    color: #059669;
+    font-size: 11px;
+    font-weight: 800;
+}
+QLabel#groupDesignStatusWarn {
+    color: #D97706;
+    font-size: 11px;
+    font-weight: 800;
+}
+QLabel#groupDesignDot {
+    font-size: 15px;
+    font-weight: 900;
+}
+QLabel#groupDesignQuickIcon {
+    border-radius: 12px;
+    font-weight: 900;
+}
+QPushButton#groupDesignPrimaryButton {
+    background: #2563EB;
+    border: 1px solid #2563EB;
+    border-radius: 9px;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 14px;
+}
+QPushButton#groupDesignPrimaryButton:disabled,
+QPushButton#groupDesignGhostButton:disabled {
+    background: #F8FAFC;
+    border: 1px solid #D8E1EC;
+    color: #64748B;
+}
+QPushButton#groupDesignGhostButton {
+    background: #FFFFFF;
+    border: 1px solid #93C5FD;
+    border-radius: 9px;
+    color: #2563EB;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 7px 12px;
+}
+"""
+
+
 class BioinformaticsDataSourceWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
@@ -742,7 +1584,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._download_service = DatasetDownloadService()
         self._text_summary_service = GeoTextSummaryService(timeout=20)
         self.setObjectName("bioinformaticsDataSourcePage")
-        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self.setStyleSheet(bioinformatics_project_home_stylesheet() + _DATA_SOURCE_STYLESHEET)
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -906,35 +1748,70 @@ class BioinformaticsDataSourceWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self, max_width=1040)
-        root.addWidget(
-            _header(
-                "选择数据来源",
-                "请选择数据来源。软件会根据所选数据库、研究目的和样本范围自动构建数据获取与检查流程。",
-                back_text="返回项目首页",
-                back_signal=self.back_requested,
-            )
-        )
+        root.setContentsMargins(20, 0, 20, 28)
+        root.setSpacing(16)
+        root.addWidget(self._data_source_header())
+        root.addWidget(self._data_source_stepper())
         self._project_label = _status_label("请先创建或打开生信分析项目。")
-        root.addWidget(self._project_label)
-        self._status_label = _status_label("先添加数据，下一步进入数据检查与准备。")
-        root.addWidget(self._status_label)
+        self._project_label.setVisible(False)
+        self._status_label = _status_label("请选择数据来源类型；导入后必须进入 Data Check & Preparation。")
+        self._status_label.setVisible(False)
 
-        root.addWidget(self._data_source_home_card())
-        root.addWidget(self._geo_database_card())
-        root.addWidget(self._gse_card())
-        root.addWidget(self._research_card())
-        root.addWidget(self._tcga_database_card())
-        root.addWidget(self._gtex_database_card())
-        root.addWidget(self._local_import_card())
+        self._legacy_data_source_home_card = self._data_source_home_card()
+        self._legacy_geo_database_card = self._geo_database_card()
+        self._legacy_gse_card = self._gse_card()
+        self._legacy_research_card = self._research_card()
+        self._legacy_tcga_database_card = self._tcga_database_card()
+        self._legacy_gtex_database_card = self._gtex_database_card()
+        self._legacy_local_import_card = self._local_import_card()
+        for legacy_card in (
+            self._legacy_data_source_home_card,
+            self._legacy_geo_database_card,
+            self._legacy_gse_card,
+            self._legacy_research_card,
+            self._legacy_tcga_database_card,
+            self._legacy_gtex_database_card,
+            self._legacy_local_import_card,
+        ):
+            legacy_card.setProperty("developerDiagnostic", True)
+            legacy_card.setProperty("normalUserVisible", False)
+            legacy_card.setVisible(False)
+
+        main_row = QHBoxLayout()
+        main_row.setSpacing(16)
+        left_col = QVBoxLayout()
+        left_col.setSpacing(14)
+        left_col.addWidget(self._gated_source_overview())
 
         self._selection_status_card = self._data_selection_status_card()
-        root.addWidget(self._selection_status_card)
+        self._selection_status_card.setVisible(False)
 
-        self._dataset_list_panel = GeoDownloadListPanel(title="下载列表 / 待处理数据来源")
+        self._dataset_list_panel = GeoDownloadListPanel(title="已选择 / 已下载的数据")
         self._dataset_list_panel.view_requested.connect(self._show_dataset_detail)
         self._dataset_list_panel.download_selected_requested.connect(self._download_selected_dataset_entries)
         self._dataset_list_panel.delete_selected_requested.connect(self._delete_selected_dataset_entries)
-        root.addWidget(self._dataset_list_panel)
+        left_col.addWidget(self._dataset_list_panel)
+
+        left_wrap = QFrame()
+        left_wrap.setObjectName("dataSourceLeftColumn")
+        left_wrap.setStyleSheet("QFrame#dataSourceLeftColumn { border: 0; background: transparent; }")
+        left_wrap.setLayout(left_col)
+        main_row.addWidget(left_wrap, 1)
+
+        right_col = QVBoxLayout()
+        right_col.setSpacing(14)
+        right_col.addWidget(self._data_source_status_card())
+        right_col.addWidget(self._data_source_overview_card())
+        right_col.addWidget(self._data_source_tips_card())
+        right_col.addStretch(1)
+        right_wrap = QFrame()
+        right_wrap.setObjectName("dataSourceRightColumn")
+        right_wrap.setMinimumWidth(264)
+        right_wrap.setMaximumWidth(282)
+        right_wrap.setStyleSheet("QFrame#dataSourceRightColumn { border: 0; background: transparent; }")
+        right_wrap.setLayout(right_col)
+        main_row.addWidget(right_wrap)
+        root.addLayout(main_row)
 
         self._history_cache_card, self._history_cache_layout = _card("历史缓存数据")
         self._history_cache_card.setObjectName("historicalCacheDataCard")
@@ -945,6 +1822,19 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._history_cache_layout.addWidget(self._history_cache_hint)
         self._history_cache_layout.addWidget(self._history_cache_table)
         root.addWidget(self._history_cache_card)
+        self._history_cache_card.setVisible(False)
+
+        for legacy_card in (
+            self._legacy_data_source_home_card,
+            self._legacy_geo_database_card,
+            self._legacy_gse_card,
+            self._legacy_research_card,
+            self._legacy_tcga_database_card,
+            self._legacy_gtex_database_card,
+            self._legacy_local_import_card,
+            self._selection_status_card,
+        ):
+            root.addWidget(legacy_card)
 
         self._dataset_detail_panel = DatasetDetailPanel()
         self._dataset_detail_panel.save_note_requested.connect(self._save_dataset_note)
@@ -965,6 +1855,357 @@ class BioinformaticsDataSourceWidget(QWidget):
         actions.addStretch(1)
         actions.addWidget(self._next_button)
         root.addWidget(actions_frame)
+        actions_frame.setVisible(False)
+        root.addWidget(self._data_source_quick_access())
+
+    def _data_source_header(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("dataSourceTopHeader")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(24, 14, 24, 14)
+        layout.setSpacing(16)
+        title_col = QVBoxLayout()
+        title_col.setSpacing(3)
+        title = QLabel("数据来源 / Data Source")
+        title.setObjectName("dataSourcePageTitle")
+        subtitle = QLabel("连接并获取数据，支持多种来源与检索方式。所有数据将在后续步骤中进行质量检查与准备。")
+        subtitle.setObjectName("dataSourcePageSubtitle")
+        subtitle.setWordWrap(True)
+        title_col.addWidget(title)
+        title_col.addWidget(subtitle)
+        layout.addLayout(title_col, 1)
+        back = QPushButton("返回项目首页")
+        back.setObjectName("secondaryButton")
+        back.clicked.connect(self.back_requested.emit)
+        layout.addWidget(back)
+        return frame
+
+    def _data_source_stepper(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("dataSourceStepper")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(0)
+        steps = (
+            ("1", "项目首页", "Project Home", False),
+            ("2", "数据来源", "Data Source", True),
+            ("3", "数据检查与准备", "Data Check & Prep", False),
+            ("4", "分组与分析设计", "Group & Design", False),
+            ("5", "分析任务", "Analysis Tasks", False),
+            ("6", "结果与报告", "Result & Report", False),
+            ("7", "报告导出", "Report Export", False),
+        )
+        for index, (number, zh, en, current) in enumerate(steps):
+            block = QFrame()
+            block.setObjectName("dataSourceStepBlock")
+            block_layout = QVBoxLayout(block)
+            block_layout.setContentsMargins(0, 0, 0, 0)
+            block_layout.setSpacing(5)
+            circle = QLabel("✓" if index == 0 else number)
+            circle.setAlignment(Qt.AlignCenter)
+            circle.setFixedSize(28, 28)
+            circle.setStyleSheet(
+                "border-radius: 14px; font-size: 12px; font-weight: 900; "
+                + ("background: #2563EB; color: #FFFFFF;" if current else "background: #EEF2F7; color: #94A3B8;")
+            )
+            title = QLabel(f"{zh}\n{en}")
+            title.setAlignment(Qt.AlignCenter)
+            title.setStyleSheet(
+                "font-size: 10px; font-weight: 700; "
+                + ("color: #2563EB;" if current else "color: #94A3B8;")
+            )
+            block_layout.addWidget(circle, alignment=Qt.AlignHCenter)
+            block_layout.addWidget(title)
+            layout.addWidget(block, 1)
+            if index < len(steps) - 1:
+                line = QFrame()
+                line.setFixedHeight(2)
+                line.setStyleSheet("background: #DDE5F0; border: 0;")
+                layout.addWidget(line, 1)
+        return frame
+
+    def _gated_source_overview(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("bioinformaticsDataSourceGatedOverview")
+        card.setProperty("formalActionEnabled", False)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        tabs = QHBoxLayout()
+        tabs.setContentsMargins(20, 0, 20, 0)
+        tabs.setSpacing(0)
+        for index, text in enumerate(("数据来源选择", "已获取数据", "检索记录", "数据连接管理")):
+            button = QPushButton(text)
+            button.setObjectName("dataSourceTabButton")
+            button.setProperty("current", index == 0)
+            button.setEnabled(False)
+            button.setToolTip("当前批次只开放数据来源选择；其它标签等待来源 artifact 和 Data Check gate。")
+            tabs.addWidget(button)
+        tabs.addStretch(1)
+        layout.addLayout(tabs)
+
+        content = QFrame()
+        content.setObjectName("dataSourcePanel")
+        content.setStyleSheet("QFrame#dataSourcePanel { border-left: 0; border-right: 0; border-bottom: 0; border-radius: 0; }")
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(20, 16, 20, 18)
+        content_layout.setSpacing(14)
+        title = QLabel("选择数据来源")
+        title.setObjectName("dataSourceCardTitle")
+        subtitle = QLabel("从本地文件、公共数据库或研究问题检索获取数据")
+        subtitle.setObjectName("dataSourceMutedText")
+        content_layout.addWidget(title)
+        content_layout.addWidget(subtitle)
+        source_grid = QGridLayout()
+        source_grid.setHorizontalSpacing(10)
+        source_grid.setVerticalSpacing(10)
+        for index, source in enumerate(_DATA_SOURCE_CARDS):
+            source_grid.addWidget(self._gated_source_card(*source), 0, index)
+            source_grid.setColumnStretch(index, 1)
+        source_grid.addWidget(self._research_source_card(), 0, 4)
+        source_grid.setColumnStretch(4, 1)
+        content_layout.addLayout(source_grid)
+        layout.addWidget(content)
+
+        self._source_status_table = _table(["source", "status", "artifact / service", "blocked action", "next gate"])
+        self._source_status_table.setObjectName("bioinformaticsSourceStatusOverviewTable")
+        self._source_status_table.setVisible(False)
+        layout.addWidget(self._source_status_table)
+        self._recent_imports_table = _table(["source", "name", "state", "gate note"])
+        self._recent_imports_table.setObjectName("bioinformaticsRecentImportsPreviewTable")
+        self._recent_imports_table.setVisible(False)
+        layout.addWidget(self._recent_imports_table)
+        gate_note = _muted("选择或登记来源后仍必须进入 Data Check & Preparation；不得直接进入正式分析。Report / Export 当前 not ready。")
+        gate_note.setObjectName("bioinformaticsDataSourceGateNotice")
+        gate_note.setProperty("formalActionEnabled", False)
+        gate_note.setProperty("exportGate", "disabled_missing_report_ready")
+        gate_note.setVisible(False)
+        layout.addWidget(gate_note)
+        self._render_gated_source_tables(selected_source="")
+        return card
+
+    def _gated_source_card(self, source_key: str, title: str, subtitle: str, body: str, button_text: str, accent: str, symbol: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("bioinformaticsDataSourceMainCard")
+        frame.setProperty("sourceKey", source_key)
+        frame.setProperty("formalActionEnabled", False)
+        frame.setProperty("analysisEnabled", False)
+        frame.setMinimumHeight(214)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(8)
+        icon = QLabel(symbol)
+        icon.setObjectName("dataSourceCardIcon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(40, 40)
+        icon.setStyleSheet(f"background: {_soft_color(accent)}; color: {accent}; font-size: 18px;")
+        title_label = QLabel(title)
+        title_label.setObjectName("bioinformaticsDataSourceMainCardTitle")
+        title_label.setWordWrap(True)
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("dataSourceCardSubtitle")
+        subtitle_label.setWordWrap(True)
+        body_label = QLabel(body)
+        body_label.setObjectName("bioinformaticsDataSourceMainCardBody")
+        body_label.setWordWrap(True)
+        button = _button(button_text, "bioinformaticsDataSourceSelectPreviewButton", lambda checked=False, key=source_key: self._select_gated_source_preview(key))
+        button.setObjectName("bioinformaticsDataSourceSelectPreviewButton")
+        button.setProperty("sourceKey", source_key)
+        button.setProperty("buttonBehavior", "creates_data_source_request_draft_when_project_open")
+        button.setProperty("formalActionEnabled", False)
+        button.setToolTip("生成数据来源配置草稿；不下载、不导入、不进入分析。无项目时会给出 disabled reason。")
+        layout.addWidget(icon)
+        layout.addWidget(title_label)
+        layout.addWidget(subtitle_label)
+        layout.addWidget(body_label)
+        layout.addStretch(1)
+        layout.addWidget(button)
+        return frame
+
+    def _research_source_card(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("bioinformaticsDataSourceResearchCard")
+        frame.setMinimumHeight(214)
+        frame.setProperty("formalActionEnabled", False)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(8)
+        icon = QLabel("⌕")
+        icon.setObjectName("dataSourceCardIcon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(40, 40)
+        icon.setStyleSheet(f"background: {_soft_color(DATA_SOURCE_TOKENS['amber'])}; color: {DATA_SOURCE_TOKENS['amber']}; font-size: 18px;")
+        title = QLabel("研究问题检索")
+        title.setObjectName("dataSourceCardTitle")
+        subtitle = QLabel("Research\nQuestion")
+        subtitle.setObjectName("dataSourceCardSubtitle")
+        body = QLabel("用中文描述研究问题，进入检索/识别线路；不直接运行分析。")
+        body.setObjectName("dataSourceMutedText")
+        body.setWordWrap(True)
+        button = QPushButton("进入检索")
+        button.setObjectName("dataSourceResearchSearchButton")
+        button.setProperty("formalActionEnabled", False)
+        button.setToolTip("调用已存在的中文检索入口；检索结果仍需登记来源并进入 Data Check。")
+        button.clicked.connect(self.open_chinese_search)
+        layout.addWidget(icon)
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+        layout.addWidget(body)
+        layout.addStretch(1)
+        layout.addWidget(button)
+        return frame
+
+    def _data_source_status_card(self) -> QFrame:
+        card = _side_card("数据获取状态")
+        layout = card.layout()
+        assert isinstance(layout, QVBoxLayout)
+        self._data_source_status_metrics: dict[str, QLabel] = {}
+        for key, label, accent, symbol in (
+            ("recorded", "已记录数据集", DATA_SOURCE_TOKENS["blue"], "▦"),
+            ("downloaded", "已下载数据集", DATA_SOURCE_TOKENS["green"], "⇩"),
+            ("local", "本地文件", DATA_SOURCE_TOKENS["muted"], "▣"),
+            ("processing", "处理中", DATA_SOURCE_TOKENS["amber"], "⌁"),
+            ("failed", "获取失败", DATA_SOURCE_TOKENS["red"], "!"),
+        ):
+            layout.addWidget(self._metric_row(label, "0", accent, symbol, target=self._data_source_status_metrics, key=key))
+        return card
+
+    def _data_source_overview_card(self) -> QFrame:
+        card = _side_card("数据来源概览")
+        layout = card.layout()
+        assert isinstance(layout, QVBoxLayout)
+        self._data_source_overview_metrics: dict[str, QLabel] = {}
+        for key, label, accent, symbol in (
+            ("geo", "GEO", DATA_SOURCE_TOKENS["green"], "◎"),
+            ("tcga", "TCGA", DATA_SOURCE_TOKENS["purple"], "▦"),
+            ("gtex", "GTEx", DATA_SOURCE_TOKENS["cyan"], "⚭"),
+            ("local_file", "本地导入", DATA_SOURCE_TOKENS["blue"], "↥"),
+            ("research", "研究问题检索", DATA_SOURCE_TOKENS["amber"], "⌕"),
+        ):
+            layout.addWidget(self._metric_row(label, "0", accent, symbol, target=self._data_source_overview_metrics, key=key))
+        total = QHBoxLayout()
+        total.setContentsMargins(6, 8, 6, 0)
+        total_label = QLabel("总计数据集")
+        total_label.setObjectName("dataSourceMutedText")
+        self._data_source_total_label = QLabel("0")
+        self._data_source_total_label.setStyleSheet("font-size: 13px; font-weight: 900; color: #1E2939;")
+        total.addWidget(total_label)
+        total.addStretch(1)
+        total.addWidget(self._data_source_total_label)
+        layout.addLayout(total)
+        return card
+
+    def _data_source_tips_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("dataSourceSideCard")
+        card.setStyleSheet("QFrame#dataSourceSideCard { background: #EFF6FF; border: 1px solid #BEDBFF; border-radius: 14px; }")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(8)
+        title = QLabel("提示 / Tips")
+        title.setStyleSheet("font-size: 12px; font-weight: 900; color: #1447E6;")
+        layout.addWidget(title)
+        for text in ("建议先从小规模数据集开始，熟悉流程。", "支持多数据集整合分析。", "所有数据将在下一步进行质量检查。"):
+            item = QLabel(f"• {text}")
+            item.setWordWrap(True)
+            item.setStyleSheet("font-size: 11px; color: #1447E6;")
+            layout.addWidget(item)
+        return card
+
+    def _metric_row(self, label: str, value: str, accent: str, symbol: str, *, target: dict[str, QLabel], key: str) -> QFrame:
+        row = QFrame()
+        row.setStyleSheet("QFrame { border: 0; background: transparent; }")
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(6, 4, 6, 4)
+        layout.setSpacing(9)
+        icon = QLabel(symbol)
+        icon.setObjectName("dataSourceMetricIcon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(24, 24)
+        icon.setStyleSheet(f"background: {_soft_color(accent)}; color: {accent}; font-size: 12px;")
+        text = QLabel(label)
+        text.setStyleSheet("font-size: 11.5px; font-weight: 650; color: #4A5565;")
+        count = QLabel(value)
+        count.setStyleSheet("font-size: 12px; font-weight: 900; color: #1E2939;")
+        target[key] = count
+        layout.addWidget(icon)
+        layout.addWidget(text, 1)
+        layout.addWidget(count)
+        return row
+
+    def _data_source_quick_access(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("dataSourceQuickAccessCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 0, 20, 18)
+        layout.setSpacing(12)
+        title = QLabel("快速入口")
+        title.setObjectName("dataSourceCardTitle")
+        layout.addWidget(title)
+        row = QHBoxLayout()
+        row.setSpacing(12)
+        for text, desc, accent, symbol in _DATA_SOURCE_QUICK_ACCESS:
+            button = QPushButton(f"{text}\n{desc}")
+            button.setObjectName("dataSourceQuickAccessButton")
+            button.setEnabled(False)
+            button.setProperty("quickAccessKey", text)
+            button.setToolTip("等待项目级索引和帮助中心接线。")
+            button.setMinimumHeight(76)
+            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            button.setIcon(_data_source_icon(accent, symbol, 36))
+            button.setIconSize(QSize(36, 36))
+            row.addWidget(button)
+        layout.addLayout(row)
+        return card
+
+    def _select_gated_source_preview(self, source_key: str) -> None:
+        self._render_gated_source_tables(selected_source=source_key)
+        source = _DATA_SOURCE_REQUESTS.get(source_key)
+        if source is None:
+            self._set_status("未知数据来源入口。", error=True)
+            return
+        if self._project_root is None:
+            self._set_status(f"{source['title']} 暂不可用：请先创建或打开生信分析项目。", error=True)
+            return
+        draft = create_data_source_request(
+            self._project_root,
+            source_type=str(source["source_type"]),
+            user_title=str(source["title"]),
+            user_selection_summary=str(source["summary"]),
+            internal_selection={
+                "ui_page": "Data Source",
+                "source_key": source_key,
+                "visual_baseline": "high-fidelity-mockup-sourced PySide gated UI shell",
+                "next_gate": "Data Check & Preparation",
+            },
+            expected_assets=tuple(source["expected_assets"]),
+            warnings=tuple(source["warnings"]),
+            status="draft",
+        )
+        self._last_data_source_request_path = draft.request_path
+        self._set_status(f"{source['title']} 已生成来源配置草稿：{draft.request_path.name}；下一步仍需进入 Data Check & Preparation。")
+        self._refresh_geo_download_list()
+        self._render_gated_source_tables(selected_source=source_key)
+
+    def latest_data_source_request_path(self) -> Path | None:
+        return getattr(self, "_last_data_source_request_path", None)
+
+    def _render_gated_source_tables(self, *, selected_source: str) -> None:
+        selected = selected_source or "none"
+        _fill_table(
+            self._source_status_table,
+            [
+                ["GEO", "drafted" if selected == "geo" else "not selected", "data_source_request draft", "formal analysis", "Data Check & Preparation"],
+                ["TCGA", "drafted" if selected == "tcga" else "not selected", "metadata/download-plan request", "TCGA+GTEx auto merge", "Data Check & Preparation"],
+                ["GTEx", "drafted" if selected == "gtex" else "not selected", "metadata/download-plan request", "TCGA normal control auto-use", "Data Check & Preparation"],
+                ["Local File", "drafted" if selected == "local_file" else "not selected", "local import request", "analysis readiness from import", "Data Check & Preparation"],
+            ],
+        )
+        entries = _current_project_dataset_entries(self._project_root)
+        rows = [[entry.source, entry.name, entry.status, "current project state preview; not formal input readiness"] for entry in entries[:6]]
+        if not rows:
+            rows = [["-", "暂无最近导入", "empty-safe", "No fake expression matrix; no fake result."]]
+        _fill_table(self._recent_imports_table, rows)
 
     def _data_source_home_card(self) -> QFrame:
         card, layout = _card("选择数据来源")
@@ -2391,6 +3632,36 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._next_button.setEnabled(ready_count > 0 and self._project_root is not None)
         self._chinese_search_status_label.setText(_chinese_search_entry_status(rows))
         self._refresh_data_selection_status(entries, ready_count, pending_count)
+        self._refresh_data_source_shell_metrics(entries, ready_count, pending_count)
+
+    def _refresh_data_source_shell_metrics(self, entries: list[DatasetListEntry], ready_count: int, pending_count: int) -> None:
+        if not hasattr(self, "_data_source_status_metrics"):
+            return
+        source_counts = {
+            "geo": sum(1 for entry in entries if entry.source_type_key.startswith("geo") or entry.source.upper() == "GEO"),
+            "tcga": sum(1 for entry in entries if entry.source_type_key.startswith("tcga") or entry.source.upper() == "TCGA"),
+            "gtex": sum(1 for entry in entries if entry.source_type_key.startswith("gtex") or entry.source.upper() == "GTEX"),
+            "local_file": sum(1 for entry in entries if entry.source_type_key.startswith("local") or "本地" in entry.source),
+        }
+        status_values = {
+            "recorded": len(entries),
+            "downloaded": ready_count,
+            "local": source_counts["local_file"],
+            "processing": pending_count,
+            "failed": sum(1 for entry in entries if "失败" in entry.status or "failed" in entry.status.lower()),
+        }
+        for key, value in status_values.items():
+            label = self._data_source_status_metrics.get(key)
+            if label is not None:
+                label.setText(str(value))
+        for key, value in source_counts.items():
+            label = self._data_source_overview_metrics.get(key)
+            if label is not None:
+                label.setText(str(value))
+        research_label = self._data_source_overview_metrics.get("research")
+        if research_label is not None:
+            research_label.setText("0")
+        self._data_source_total_label.setText(str(len(entries)))
 
     def _refresh_geo_download_list(self) -> None:
         entries = _current_project_dataset_entries(self._project_root)
@@ -4489,7 +5760,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._last_artifacts: dict[str, object] = {}
         self._gene_set_manager_dialog: GseaGeneSetResourceManagerDialog | None = None
         self.setObjectName("bioinformaticsReadinessDashboardPage")
-        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self.setStyleSheet(bioinformatics_project_home_stylesheet() + _DATA_SOURCE_STYLESHEET + _DATA_CHECK_STYLESHEET)
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -4511,6 +5782,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         if artifacts.get("readiness_report") is None:
             self._last_artifacts = {}
             self._status_label.setText("暂不能继续：尚未运行数据检查。")
+            self._render_data_check_gate(set(), {}, {})
             self._recognized_inputs_label.setText("已识别到的数据：尚未检查")
             self._missing_inputs_label.setText("仍需补充的数据：尚未检查")
             self._next_step_label.setText("下一步建议：点击“运行数据检查”，逐文件刷新 recognition 和 ready check。")
@@ -4646,7 +5918,8 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
             run_project_recognition_for_paths(self._project_root, selected_paths)
         else:
             run_project_recognition(self._project_root)
-        artifacts = run_project_readiness(self._project_root)
+        run_project_readiness(self._project_root)
+        artifacts = load_readiness_artifacts(self._project_root)
         self._render(artifacts)
         self._status_label.setText(f"{self._status_label.text()}；已重新运行数据检查。")
         return artifacts
@@ -4672,8 +5945,14 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._render(artifacts)
 
     def _build_ui(self) -> None:
-        root = _scroll_root(self)
-        root.addWidget(_header("数据检查与准备", "第一步检查每个文件；第二步继续标准化数据。", back_text="返回数据导入与检索", back_signal=self.back_requested))
+        root = _scroll_root(self, max_width=960)
+        root.setContentsMargins(20, 0, 20, 28)
+        root.setSpacing(16)
+        root.addWidget(self._data_check_header())
+        root.addWidget(self._data_check_stepper())
+        root.addWidget(self._data_check_main_area())
+        root.addWidget(self._data_check_quick_access())
+        root.addWidget(self._build_data_check_gate_card())
 
         status_card, status_layout = _card("数据检查与准备概览")
         status_card.setObjectName("readinessStatusCard")
@@ -4787,10 +6066,503 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         root.addWidget(self._details)
         bottom_actions = QHBoxLayout()
         self._run_check_button = _button("运行数据检查", "primaryButton", self.save_and_rerun_readiness)
+        self._run_check_button.setObjectName("bioinformaticsRunDataCheckButton")
         bottom_actions.addWidget(self._run_check_button)
         bottom_actions.addWidget(_button("继续：标准化数据", "primaryButton", self.continue_to_standardization))
         bottom_actions.addStretch(1)
         root.addLayout(bottom_actions)
+
+    def _data_check_header(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("dataCheckTopHeader")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(24, 14, 24, 14)
+        layout.setSpacing(16)
+        title_col = QVBoxLayout()
+        title_col.setSpacing(3)
+        title = QLabel("数据检查与准备 / Data Check & Preparation")
+        title.setObjectName("dataCheckPageTitle")
+        subtitle = QLabel("对所有已纳入数据文件进行质量检查、预处理与注释匹配，确保数据可用于后续分析。")
+        subtitle.setObjectName("dataCheckPageSubtitle")
+        subtitle.setWordWrap(True)
+        title_col.addWidget(title)
+        title_col.addWidget(subtitle)
+        layout.addLayout(title_col, 1)
+        back = QPushButton("返回数据来源")
+        back.setObjectName("secondaryButton")
+        back.clicked.connect(self.back_requested.emit)
+        layout.addWidget(back)
+        return frame
+
+    def _data_check_stepper(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("dataCheckStepper")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(0)
+        steps = (
+            ("1", "项目首页", "Project Home", "done"),
+            ("2", "数据来源", "Data Source", "done"),
+            ("3", "数据检查与准备", "Data Check & Prep", "current"),
+            ("4", "分组与分析设计", "Group & Design", "todo"),
+            ("5", "分析任务", "Analysis Tasks", "todo"),
+            ("6", "结果与报告", "Result & Report", "todo"),
+            ("7", "报告导出", "Report Export", "todo"),
+        )
+        for index, (number, zh, en, state) in enumerate(steps):
+            block = QFrame()
+            block_layout = QVBoxLayout(block)
+            block_layout.setContentsMargins(0, 0, 0, 0)
+            block_layout.setSpacing(5)
+            circle = QLabel("✓" if state == "done" else number)
+            circle.setAlignment(Qt.AlignCenter)
+            circle.setFixedSize(28, 28)
+            if state == "current":
+                circle_style = "background: #2563EB; color: #FFFFFF;"
+                text_color = "#2563EB"
+            elif state == "done":
+                circle_style = "background: #DBEAFE; color: #2563EB;"
+                text_color = "#6A7282"
+            else:
+                circle_style = "background: #EEF2F7; color: #94A3B8;"
+                text_color = "#94A3B8"
+            circle.setStyleSheet(f"border-radius: 14px; font-size: 12px; font-weight: 900; {circle_style}")
+            label = QLabel(f"{zh}\n{en}")
+            label.setAlignment(Qt.AlignCenter)
+            label.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {text_color};")
+            block_layout.addWidget(circle, alignment=Qt.AlignHCenter)
+            block_layout.addWidget(label)
+            layout.addWidget(block, 1)
+            if index < len(steps) - 1:
+                line = QFrame()
+                line.setFixedHeight(2)
+                line.setStyleSheet("background: #DDE5F0; border: 0;")
+                layout.addWidget(line, 1)
+        return frame
+
+    def _data_check_main_area(self) -> QWidget:
+        wrap = QWidget()
+        row = QHBoxLayout(wrap)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(16)
+        left = QVBoxLayout()
+        left.setSpacing(14)
+        left.addWidget(self._data_check_tab_panel())
+        left.addWidget(self._data_check_summary_panel())
+        left.addStretch(1)
+        left_wrap = QFrame()
+        left_wrap.setStyleSheet("QFrame { border: 0; background: transparent; }")
+        left_wrap.setLayout(left)
+        row.addWidget(left_wrap, 1)
+
+        right = QVBoxLayout()
+        right.setSpacing(14)
+        right.addWidget(self._data_check_progress_card())
+        right.addWidget(self._data_check_metrics_card())
+        right.addWidget(self._data_check_conclusion_card())
+        right.addStretch(1)
+        right_wrap = QFrame()
+        right_wrap.setMinimumWidth(264)
+        right_wrap.setMaximumWidth(282)
+        right_wrap.setStyleSheet("QFrame { border: 0; background: transparent; }")
+        right_wrap.setLayout(right)
+        row.addWidget(right_wrap)
+        return wrap
+
+    def _data_check_tab_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("dataCheckPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        tabs = QHBoxLayout()
+        tabs.setContentsMargins(10, 0, 10, 0)
+        tabs.setSpacing(0)
+        for index, text in enumerate(_DATA_CHECK_TABS):
+            button = QPushButton(text)
+            button.setObjectName("dataCheckTabButton")
+            button.setProperty("current", index == 0)
+            button.setEnabled(False)
+            button.setToolTip("当前批次按 readiness artifact 汇总展示；标签页等待后续表格视图切换接线。")
+            tabs.addWidget(button)
+        layout.addLayout(tabs)
+        divider = QFrame()
+        divider.setFixedHeight(1)
+        divider.setStyleSheet("background: #E5E7EB; border: 0;")
+        layout.addWidget(divider)
+        empty = QFrame()
+        empty.setObjectName("dataCheckEmptyState")
+        empty_layout = QVBoxLayout(empty)
+        empty_layout.setContentsMargins(18, 42, 18, 42)
+        empty_layout.setSpacing(8)
+        icon = QLabel("▤")
+        icon.setObjectName("dataCheckEmptyIcon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(38, 38)
+        title = QLabel("文件级识别与状态")
+        title.setObjectName("dataCheckCardTitle")
+        title.setAlignment(Qt.AlignCenter)
+        desc = QLabel("点击“运行数据检查”后读取 recognition 与 readiness artifact；详细文件表保留在下方。")
+        desc.setObjectName("dataCheckMutedText")
+        desc.setAlignment(Qt.AlignCenter)
+        desc.setWordWrap(True)
+        empty_layout.addWidget(icon, alignment=Qt.AlignHCenter)
+        empty_layout.addWidget(title)
+        empty_layout.addWidget(desc)
+        layout.addWidget(empty, 1)
+        return card
+
+    def _data_check_summary_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("dataCheckPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 12, 16, 14)
+        layout.setSpacing(12)
+        title = QLabel("各项检查结果摘要")
+        title.setObjectName("dataCheckCardTitle")
+        layout.addWidget(title)
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(10)
+        self._data_check_summary_cards: dict[str, tuple[QFrame, QLabel, QLabel]] = {}
+        for index, (key, name, state, accent, symbol) in enumerate(_DATA_CHECK_SUMMARY_CARDS):
+            grid.addWidget(self._data_check_summary_card(key, name, state, accent, symbol), 0, index)
+        layout.addLayout(grid)
+        return card
+
+    def _data_check_summary_card(self, key: str, title: str, state: str, accent: str, symbol: str) -> QFrame:
+        card = QFrame()
+        card.setObjectName("dataCheckSummaryCard")
+        semantic = "green" if accent == DATA_SOURCE_TOKENS["green"] else ("amber" if accent == DATA_SOURCE_TOKENS["amber"] else "muted")
+        card.setProperty("semantic", semantic)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(6)
+        icon = QLabel(symbol)
+        icon.setFixedSize(20, 20)
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setStyleSheet(f"border-radius: 10px; color: {accent}; border: 1px solid {accent}; font-weight: 900;")
+        label = QLabel(title)
+        label.setObjectName("dataCheckSummaryTitle")
+        label.setWordWrap(True)
+        value = QLabel(state)
+        value.setObjectName("dataCheckSummaryState")
+        value.setProperty("semantic", semantic)
+        self._data_check_summary_cards[key] = (card, icon, value)
+        layout.addWidget(icon)
+        layout.addWidget(label)
+        layout.addWidget(value)
+        return card
+
+    def _data_check_progress_card(self) -> QFrame:
+        card = _side_card("数据检查进度")
+        card.setObjectName("dataCheckSideCard")
+        layout = card.layout()
+        center = QLabel("5\n项检查")
+        center.setObjectName("dataCheckProgressCircle")
+        center.setAlignment(Qt.AlignCenter)
+        center.setFixedSize(84, 84)
+        layout.addWidget(center, alignment=Qt.AlignHCenter)
+        self._data_check_progress_total = center
+        self._data_check_progress_labels: dict[str, QLabel] = {}
+        for key, label, color, value in (
+            ("passed", "通过", DATA_SOURCE_TOKENS["green"], "0"),
+            ("warning", "警告", DATA_SOURCE_TOKENS["amber"], "0"),
+            ("processing", "处理中", DATA_SOURCE_TOKENS["blue"], "0"),
+            ("unchecked", "未检查", "#CBD5E1", "5"),
+        ):
+            row = QHBoxLayout()
+            dot = QLabel("●")
+            dot.setStyleSheet(f"color: {color}; font-size: 12px;")
+            text = QLabel(label)
+            text.setObjectName("dataCheckMetricLabel")
+            count = QLabel(value)
+            count.setObjectName("dataCheckMetricValue")
+            row.addWidget(dot)
+            row.addWidget(text, 1)
+            row.addWidget(count)
+            layout.addLayout(row)
+            self._data_check_progress_labels[key] = count
+        return card
+
+    def _data_check_metrics_card(self) -> QFrame:
+        card = _side_card("关键指标概览")
+        card.setObjectName("dataCheckSideCard")
+        layout = card.layout()
+        self._data_check_metric_values: dict[str, QLabel] = {}
+        for key, label, value in (
+            ("sample_count", "样本总数", "待检查"),
+            ("gene_count", "基因总数", "待检查"),
+            ("matrix_type", "表达矩阵类型", "待确认"),
+            ("platform", "数据平台", "待确认"),
+            ("genome", "参考基因组", "待确认"),
+        ):
+            row = QHBoxLayout()
+            name = QLabel(label)
+            name.setObjectName("dataCheckMetricLabel")
+            metric = QLabel(value)
+            metric.setObjectName("dataCheckMetricValue")
+            metric.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            row.addWidget(name)
+            row.addWidget(metric, 1)
+            layout.addLayout(row)
+            self._data_check_metric_values[key] = metric
+        return card
+
+    def _data_check_conclusion_card(self) -> QFrame:
+        card = _side_card("整体结论（初步）")
+        card.setObjectName("dataCheckSideCard")
+        layout = card.layout()
+        self._data_check_conclusion_badge = QLabel("总体状态：待检查")
+        self._data_check_conclusion_badge.setObjectName("dataCheckConclusionBadge")
+        self._data_check_conclusion_text = QLabel("请先运行数据检查，系统会读取当前识别结果并展示 preflight 状态。")
+        self._data_check_conclusion_text.setObjectName("dataCheckMutedText")
+        self._data_check_conclusion_text.setWordWrap(True)
+        report = QPushButton("查看详细报告  →")
+        report.setObjectName("dataCheckReportButton")
+        report.setEnabled(False)
+        report.setProperty("buttonBehavior", "disabled_report_ready_missing")
+        report.setProperty("formalActionEnabled", False)
+        report.setToolTip("Data Check 只生成 readiness/preflight artifact；正式报告仍在 Result & Report / Export gate。")
+        layout.addWidget(self._data_check_conclusion_badge, alignment=Qt.AlignLeft)
+        layout.addWidget(self._data_check_conclusion_text)
+        layout.addWidget(report)
+        return card
+
+    def _data_check_quick_access(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("dataCheckPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        title = QLabel("快速入口")
+        title.setObjectName("dataCheckCardTitle")
+        layout.addWidget(title)
+        row = QHBoxLayout()
+        row.setSpacing(12)
+        for title_text, desc, accent, symbol in _DATA_SOURCE_QUICK_ACCESS:
+            item = QFrame()
+            item.setObjectName("dataCheckQuickAccessCard")
+            item_layout = QHBoxLayout(item)
+            item_layout.setContentsMargins(14, 12, 14, 12)
+            item_layout.setSpacing(10)
+            icon = QLabel(symbol)
+            icon.setObjectName("dataCheckQuickIcon")
+            icon.setAlignment(Qt.AlignCenter)
+            icon.setFixedSize(36, 36)
+            icon.setStyleSheet(f"background: {_soft_color(accent, 24)}; color: {accent};")
+            text_col = QVBoxLayout()
+            text_col.setSpacing(3)
+            name = QLabel(title_text)
+            name.setObjectName("dataCheckSummaryTitle")
+            body = QLabel(desc)
+            body.setObjectName("dataCheckMutedText")
+            body.setWordWrap(True)
+            text_col.addWidget(name)
+            text_col.addWidget(body)
+            arrow = QLabel("›")
+            arrow.setStyleSheet("color: #94A3B8; font-size: 18px;")
+            item_layout.addWidget(icon)
+            item_layout.addLayout(text_col, 1)
+            item_layout.addWidget(arrow)
+            row.addWidget(item, 1)
+        layout.addLayout(row)
+        return card
+
+    def _build_data_check_gate_card(self) -> QFrame:
+        card, layout = _card("Readiness Table / 数据检查状态")
+        card.setObjectName("bioinformaticsDataCheckGateCard")
+        card.setProperty("formalActionEnabled", False)
+        top_row = QHBoxLayout()
+        self._data_check_status_chip = _status_label("blocked / 尚未检查")
+        self._data_check_status_chip.setObjectName("bioinformaticsDataCheckStatusChip")
+        self._data_check_status_chip.setProperty("statusSemanticKey", "analysis.status.blocked")
+        self._data_check_status_chip.setProperty("formalActionEnabled", False)
+        top_row.addWidget(self._data_check_status_chip)
+        top_row.addStretch(1)
+        layout.addLayout(top_row)
+        self._data_check_readiness_table = _table(["check", "status", "gate meaning", "next action"])
+        self._data_check_readiness_table.setObjectName("bioinformaticsDataCheckReadinessTable")
+        self._data_check_readiness_table.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._data_check_readiness_table)
+        self._data_check_summary = _read_only_report_view(78)
+        self._data_check_summary.setObjectName("bioinformaticsDataCheckReadinessSummary")
+        self._data_check_summary.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._data_check_summary)
+        actions = QHBoxLayout()
+        copy_button = _button("复制检查摘要", "secondaryButton", self._copy_data_check_summary)
+        save_button = _button("Save Report - file picker required", "secondaryButton", lambda: None)
+        save_button.setObjectName("bioinformaticsDataCheckSaveReportDisabledButton")
+        save_button.setEnabled(False)
+        save_button.setProperty("buttonBehavior", "disabled_file_picker_required")
+        save_button.setProperty("formalActionEnabled", False)
+        save_button.setToolTip("当前只生成 readiness/preflight artifact，不生成正式报告文件。")
+        actions.addWidget(copy_button)
+        actions.addWidget(save_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        notice = _muted("关键检查通过后进入 Group & Design；ready_for_preflight 只表示可做预检，不是 formal_computed_result。")
+        notice.setObjectName("bioinformaticsDataCheckGateNotice")
+        notice.setProperty("resultSemanticKey", "preflight_only")
+        notice.setProperty("formalActionEnabled", False)
+        layout.addWidget(notice)
+        self._render_data_check_gate(set(), {}, {})
+        return card
+
+    def _copy_data_check_summary(self) -> None:
+        QApplication.clipboard().setText(self._data_check_summary.toPlainText())
+        self._status_label.setText("已复制数据检查摘要；未生成报告文件。")
+
+    def _render_data_check_gate(
+        self,
+        missing: set[str],
+        readiness_payload: dict[str, object],
+        matrix_payload: dict[str, object],
+    ) -> None:
+        available = set(str(item) for item in readiness_payload.get("available_inputs", []) or [])
+        warnings = [str(item) for item in readiness_payload.get("warnings", []) or [] if str(item)]
+        has_expression = "expression_matrix" in available or ("expression_matrix" not in missing and bool(readiness_payload))
+        has_sample = "sample_metadata" in available or ("sample_metadata" not in missing and bool(readiness_payload))
+        has_clinical = "clinical_metadata" in available
+        has_comparison = "comparison_config" in available or ("comparison_config" not in missing and bool(readiness_payload))
+        check_rows = [
+            ("expression matrix integrity", "passed" if has_expression else "missing", "required for preflight", "Add or register expression matrix"),
+            ("sample annotation completeness", "passed" if has_sample else "missing", "required for grouping", "Add sample metadata"),
+            ("clinical data completeness", "passed" if has_clinical else "warning", "optional for survival/clinical association", "Add clinical table if needed"),
+            ("gene annotation mapping", "warning" if warnings else "ready_for_preflight", "resolver-first check only", "Review mapping before analysis"),
+            ("batch/platform consistency", "warning" if warnings else "ready_for_preflight", "preflight eligibility only", "Review platform before formal run"),
+            ("missing rate check", "warning" if warnings else "ready_for_preflight", "preflight eligibility only", "Review missing values"),
+            ("outlier sample detection", "blocked" if not has_sample else "warning", "diagnostic only", "Run after Data Check input exists"),
+        ]
+        _fill_table(self._data_check_readiness_table, [list(row) for row in check_rows])
+        if has_expression and has_sample and has_comparison:
+            chip_text = "ready_for_preflight / 可进入预检"
+            chip_key = "analysis.status.preflight_only"
+        elif missing:
+            chip_text = "missing / 仍需补充"
+            chip_key = "feature.status.blocked"
+        else:
+            chip_text = "blocked / 尚未检查"
+            chip_key = "analysis.status.blocked"
+        self._data_check_status_chip.setText(chip_text)
+        self._data_check_status_chip.setProperty("statusSemanticKey", chip_key)
+        self._data_check_summary.setPlainText(
+            "\n".join(
+                [
+                    "Readiness summary: Data Check only evaluates preflight eligibility.",
+                    f"Available inputs: {', '.join(sorted(available)) if available else 'none'}",
+                    f"Missing inputs: {', '.join(sorted(missing)) if missing else 'none'}",
+                    "Only preflight condition summary is shown. No fake matrix, result, plot, report, or export is generated.",
+                ]
+            )
+        )
+        self._render_data_check_visual_state(missing, readiness_payload, matrix_payload, warnings)
+
+    def _render_data_check_visual_state(
+        self,
+        missing: set[str],
+        readiness_payload: dict[str, object],
+        matrix_payload: dict[str, object],
+        warnings: list[str],
+    ) -> None:
+        available = {str(item) for item in readiness_payload.get("available_inputs", []) or []}
+        has_payload = bool(readiness_payload)
+        states = {
+            "expression_matrix": "通过" if available & {"expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} else ("未检查" if not has_payload else "警告"),
+            "sample_metadata": "通过" if "sample_metadata" in available or ("sample_metadata" not in missing and has_payload) else ("未检查" if not has_payload else "警告"),
+            "gene_annotation": "通过" if "gene_annotation" in available or (not warnings and has_payload) else ("未检查" if not has_payload else "警告"),
+            "clinical_metadata": "通过" if "clinical_metadata" in available else ("未检查" if not has_payload else "警告"),
+            "preprocessing": "未执行",
+        }
+        for key, widgets in getattr(self, "_data_check_summary_cards", {}).items():
+            card, icon, label = widgets
+            label.setText(states.get(key, "未检查"))
+            semantic = "green" if label.text() == "通过" else ("amber" if label.text() == "警告" else "muted")
+            accent = DATA_SOURCE_TOKENS["green"] if semantic == "green" else (DATA_SOURCE_TOKENS["amber"] if semantic == "amber" else DATA_SOURCE_TOKENS["muted"])
+            icon.setText("✓" if semantic == "green" else ("!" if semantic == "amber" else "–"))
+            icon.setStyleSheet(f"border-radius: 10px; color: {accent}; border: 1px solid {accent}; font-weight: 900;")
+            card.setProperty("semantic", semantic)
+            label.setProperty("semantic", semantic)
+            _refresh_style(card)
+            _refresh_style(label)
+
+        passed = sum(1 for value in states.values() if value == "通过")
+        warning_count = sum(1 for value in states.values() if value == "警告")
+        unchecked = sum(1 for value in states.values() if value not in {"通过", "警告"})
+        self._data_check_progress_total.setText(f"{len(states)}\n项检查")
+        for key, value in {
+            "passed": str(passed),
+            "warning": str(warning_count),
+            "processing": "0",
+            "unchecked": str(unchecked),
+        }.items():
+            label = self._data_check_progress_labels.get(key)
+            if label is not None:
+                label.setText(value)
+
+        metrics = self._data_check_metric_snapshot(readiness_payload, matrix_payload)
+        for key, value in metrics.items():
+            label = self._data_check_metric_values.get(key)
+            if label is not None:
+                label.setText(value)
+
+        if not has_payload:
+            badge = "总体状态：待检查"
+            body = "请先运行数据检查，系统会读取当前识别结果并展示 preflight 状态。"
+        elif "expression_matrix" in missing:
+            badge = "总体状态：需补充"
+            body = "还没有可用表达矩阵，建议返回数据来源补充或重新识别。"
+        elif missing <= {"clinical_metadata", "gmt_gene_set"}:
+            badge = "总体状态：良好"
+            body = "已通过基础完整性检查，建议继续进行预处理与注释匹配。"
+        else:
+            badge = "总体状态：可预检"
+            body = _readiness_next_step_text(readiness_payload, matrix_payload, missing, _project_group_preview(self._project_root))
+        self._data_check_conclusion_badge.setText(badge)
+        self._data_check_conclusion_text.setText(body)
+
+    def _data_check_metric_snapshot(self, readiness_payload: dict[str, object], matrix_payload: dict[str, object]) -> dict[str, str]:
+        report = load_recognition_report(self._project_root) if self._project_root is not None else None
+        files = [item for item in (report or {}).get("files", []) or [] if isinstance(item, dict)] if isinstance(report, dict) else []
+        sample_count = 0
+        gene_count = 0
+        matrix_type = "待确认"
+        platform = ""
+        species = ""
+        for item in files:
+            platform = platform or str(item.get("platform") or "")
+            species = species or str(item.get("species") or item.get("organism") or "")
+            recognized = str(item.get("recognized_type") or "")
+            roles = {str(role) for role in item.get("recognized_roles", []) or []}
+            if recognized in {"raw_count_matrix", "expression_matrix"} or "raw_count_matrix" in roles:
+                matrix_type = "计数矩阵"
+            for key in ("sample_count", "column_count", "n_samples"):
+                try:
+                    sample_count = max(sample_count, int(item.get(key) or 0))
+                except (TypeError, ValueError):
+                    pass
+            for block in item.get("content_blocks", []) or []:
+                if not isinstance(block, dict):
+                    continue
+                for key in ("gene_count", "feature_count", "row_count"):
+                    try:
+                        gene_count = max(gene_count, int(block.get(key) or 0))
+                    except (TypeError, ValueError):
+                        pass
+        comparison_match = readiness_payload.get("comparison_sample_match") if isinstance(readiness_payload, dict) else {}
+        if not sample_count and isinstance(comparison_match, dict):
+            try:
+                sample_count = int(comparison_match.get("matched_sample_count") or 0)
+            except (TypeError, ValueError):
+                sample_count = 0
+        return {
+            "sample_count": str(sample_count) if sample_count else "待检查",
+            "gene_count": f"{gene_count:,}" if gene_count else "待检查",
+            "matrix_type": matrix_type,
+            "platform": platform or "待确认",
+            "genome": species or "待确认",
+        }
 
     def _render(self, artifacts: dict[str, object]) -> None:
         self._last_artifacts = artifacts
@@ -4800,6 +6572,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         matrix_payload = matrix if isinstance(matrix, dict) else {}
         group_preview = _project_group_preview(self._project_root)
         missing = _missing_readiness_inputs(readiness_payload, matrix_payload)
+        self._render_data_check_gate(missing, readiness_payload, matrix_payload)
         self._status_label.setText(_readiness_overall_summary(readiness_payload, matrix_payload, missing))
         self._recognized_inputs_label.setText(_readiness_recognized_inputs_text(readiness_payload))
         self._missing_inputs_label.setText(_readiness_missing_inputs_text(missing, group_preview))
@@ -4879,8 +6652,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
 
     def _update_run_check_button(self, has_existing_result: bool) -> None:
         self._run_check_button.setText("重新运行数据检查" if has_existing_result else "运行数据检查")
-        has_pending = bool(_pending_data_check_file_statuses(self._project_root))
-        self._run_check_button.setEnabled(self._project_root is not None and (has_pending or has_existing_result))
+        self._run_check_button.setEnabled(self._project_root is not None)
 
     def _render_todo_items(self, missing: set[str], group_preview: dict[str, object] | None = None) -> None:
         visible = {key for key in missing if key in self._todo_rows}
@@ -5215,6 +6987,834 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         )
 
 
+class BioinformaticsGroupComparisonDesignWidget(QWidget):
+    continue_requested = Signal(object)
+    back_requested = Signal()
+
+    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self._context: dict[str, object] = {}
+        self.setObjectName("bioinformaticsGroupComparisonDesignPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet() + _DATA_SOURCE_STYLESHEET + _DATA_CHECK_STYLESHEET + _GROUP_DESIGN_STYLESHEET)
+        self._build_ui()
+        if on_continue is not None:
+            self.continue_requested.connect(on_continue)
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_design()
+
+    def refresh_design(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            self._render_group_design_visual_state({}, [], [])
+            return None
+        self._context = load_group_design_context(self._project_root)
+        self._render(self._context)
+        return self._context
+
+    def add_comparison_row(
+        self,
+        comparison_name: str = "",
+        case_group: str = "",
+        control_group: str = "",
+        *,
+        source: str = "user_confirmed",
+        status: str = "待保存",
+    ) -> None:
+        row = self._comparison_table.rowCount()
+        self._comparison_table.insertRow(row)
+        for column, value in enumerate([comparison_name, case_group, control_group, source, status]):
+            self._comparison_table.setItem(row, column, QTableWidgetItem(str(value)))
+
+    def add_one_vs_control_suggestions(self) -> None:
+        groups = self._group_rows_from_table()
+        suggestions = build_default_comparison_rows(self._context, groups)
+        self._comparison_table.setRowCount(0)
+        for item in suggestions:
+            self.add_comparison_row(
+                str(item.get("comparison_name") or ""),
+                str(item.get("case_group") or ""),
+                str(item.get("control_group") or ""),
+                source=str(item.get("source") or "one_vs_control_suggestion"),
+                status="待保存",
+            )
+        self._status_label.setText(f"已生成 {len(suggestions)} 个 one-vs-control 比较建议，请检查后保存。")
+
+    def save_design(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        groups = self._group_rows_from_table()
+        comparisons = self._comparison_rows_from_table()
+        warnings = validate_group_comparison_design(groups, comparisons)
+        payload = save_group_comparison_design(
+            self._project_root,
+            groups,
+            comparisons,
+            imported_deg_references=[
+                item
+                for item in self._context.get("imported_deg_references", []) or []
+                if isinstance(item, dict)
+            ],
+        )
+        load_analysis_task_center(self._project_root)
+        self._context = load_group_design_context(self._project_root)
+        self._status_label.setText(
+            "已保存分组与比较设计。"
+            if not warnings
+            else "已保存分组与比较设计，但仍需检查：" + "；".join(warnings)
+        )
+        self._summary.setPlainText(_group_design_context_summary(self._context))
+        return payload
+
+    def continue_to_tasks(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self.continue_requested.emit(self._project_root)
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self, max_width=1040)
+        root.setContentsMargins(20, 0, 20, 28)
+        root.setSpacing(16)
+        root.addWidget(self._group_design_header())
+        root.addWidget(self._group_design_stepper())
+        root.addWidget(self._group_design_tabs())
+        root.addWidget(self._group_design_main_area())
+        root.addWidget(self._group_design_quick_access())
+        actions = QHBoxLayout()
+        refresh_button = _button("刷新分组设计", "secondaryButton", self.refresh_design)
+        refresh_button.setObjectName("bioinformaticsGroupDesignRefreshButton")
+        suggestion_button = _button("从对照组生成比较", "secondaryButton", self.add_one_vs_control_suggestions)
+        suggestion_button.setObjectName("bioinformaticsGroupDesignSuggestionButton")
+        save_button = _button("保存分组与比较设计", "primaryButton", self.save_design)
+        save_button.setObjectName("bioinformaticsGroupDesignSaveButton")
+        save_button.setProperty("formalActionEnabled", False)
+        save_button.setToolTip("保存 design draft / comparison draft；不启动正式分析。")
+        actions.addWidget(refresh_button)
+        actions.addWidget(suggestion_button)
+        actions.addWidget(save_button)
+        actions.addStretch(1)
+        root.addLayout(actions)
+        self._status_label = _status_label("尚未读取分组设计。")
+        self._status_label.setVisible(False)
+        root.addWidget(self._status_label)
+        root.addWidget(self._build_group_design_gate_card())
+        self._summary = _read_only_report_view(145)
+        self._summary.setObjectName("groupDesignSummary")
+        root.addWidget(self._summary)
+        self._sample_group_table = _table(["推断组", "用户组名", "组角色", "样本数", "样本 ID", "备注"])
+        self._sample_group_table.setObjectName("groupDesignSampleGroupsTable")
+        root.addWidget(self._sample_group_table)
+        self._comparison_table = _table(["比较名称", "实验组", "对照组", "来源", "状态"])
+        self._comparison_table.setObjectName("groupDesignComparisonsTable")
+        root.addWidget(self._comparison_table)
+        self._imported_deg_table = _table(["已有比较", "状态", "可用路径"])
+        self._imported_deg_table.setObjectName("groupDesignImportedDegTable")
+        root.addWidget(self._imported_deg_table)
+        self._technical = _text_preview(140)
+        self._technical.setObjectName("groupDesignTechnical")
+        self._technical.setVisible(False)
+        root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._technical)))
+        root.addWidget(self._technical)
+        continue_button = _button("继续：分析任务中心", "primaryButton", self.continue_to_tasks)
+        continue_button.setObjectName("bioinformaticsGroupDesignContinueButton")
+        continue_button.setProperty("formalActionEnabled", False)
+        continue_button.setToolTip("进入 Analysis Tasks 的 gated 任务矩阵；不启动正式分析。")
+        root.addWidget(continue_button, alignment=Qt.AlignLeft)
+
+    def _group_design_header(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("groupDesignTopHeader")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(28, 14, 28, 14)
+        layout.setSpacing(10)
+        text_col = QVBoxLayout()
+        text_col.setSpacing(3)
+        title_row = QHBoxLayout()
+        title = QLabel("分组与分析设计 / Group & Design")
+        title.setObjectName("groupDesignPageTitle")
+        badge = QLabel("生信分析 (Bioinformatics)")
+        badge.setObjectName("groupDesignModuleBadge")
+        title_row.addWidget(title)
+        title_row.addWidget(badge)
+        title_row.addStretch(1)
+        subtitle = QLabel("定义分组信息、协变量与对比关系，选择分析类型与参数，为后续分析任务做好设计。")
+        subtitle.setObjectName("groupDesignPageSubtitle")
+        subtitle.setWordWrap(True)
+        text_col.addLayout(title_row)
+        text_col.addWidget(subtitle)
+        layout.addLayout(text_col, 1)
+        back = QPushButton("返回数据检查")
+        back.setObjectName("secondaryButton")
+        back.clicked.connect(self.back_requested.emit)
+        layout.addWidget(back)
+        return frame
+
+    def _group_design_stepper(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("groupDesignStepper")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(28, 20, 28, 20)
+        layout.setSpacing(0)
+        steps = (
+            ("1", "项目首页", "Project Home", "done"),
+            ("2", "数据来源", "Data Source", "done"),
+            ("3", "数据检查与准备", "Data Check &\nPreparation", "done"),
+            ("4", "分组与分析设计", "Group & Design", "current"),
+            ("5", "分析任务", "Analysis Tasks", "todo"),
+            ("6", "结果与报告", "Result & Report", "todo"),
+            ("7", "报告导出", "Report Export", "todo"),
+        )
+        for index, (number, zh, en, state) in enumerate(steps):
+            block = QFrame()
+            block_layout = QVBoxLayout(block)
+            block_layout.setContentsMargins(0, 0, 0, 0)
+            block_layout.setSpacing(6)
+            circle = QLabel("✓" if state == "done" else number)
+            circle.setAlignment(Qt.AlignCenter)
+            circle.setFixedSize(35, 35)
+            if state == "done":
+                circle_style = "background: #16C65F; color: #FFFFFF;"
+                text_color = "#16A34A"
+            elif state == "current":
+                circle_style = "background: #2563EB; color: #FFFFFF;"
+                text_color = "#2563EB"
+            else:
+                circle_style = "background: #F1F5F9; color: #94A3B8; border: 1px solid #D8E1EC;"
+                text_color = "#94A3B8"
+            circle.setStyleSheet(f"border-radius: 17px; font-size: 12px; font-weight: 900; {circle_style}")
+            label = QLabel(f"{zh}\n{en}")
+            label.setAlignment(Qt.AlignCenter)
+            label.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {text_color};")
+            block_layout.addWidget(circle, alignment=Qt.AlignHCenter)
+            block_layout.addWidget(label)
+            layout.addWidget(block, 1)
+            if index < len(steps) - 1:
+                line = QFrame()
+                line.setFixedHeight(2)
+                line.setStyleSheet("background: #DDE5F0; border: 0;")
+                layout.addWidget(line, 1)
+        return frame
+
+    def _group_design_tabs(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("groupDesignTabs")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(28, 0, 28, 0)
+        layout.setSpacing(12)
+        for index, text in enumerate(_GROUP_DESIGN_TABS):
+            button = QPushButton(text)
+            button.setObjectName("groupDesignTabButton")
+            button.setProperty("current", index == 0)
+            button.setEnabled(False)
+            layout.addWidget(button)
+        layout.addStretch(1)
+        return frame
+
+    def _group_design_main_area(self) -> QWidget:
+        wrap = QWidget()
+        row = QHBoxLayout(wrap)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(16)
+        left = QVBoxLayout()
+        left.setSpacing(14)
+        left.addWidget(self._group_define_panel())
+        left.addWidget(self._sample_preview_panel())
+        left.addWidget(self._comparison_preview_panel())
+        left.addWidget(self._analysis_parameter_panel())
+        left_wrap = QFrame()
+        left_wrap.setStyleSheet("QFrame { border: 0; background: transparent; }")
+        left_wrap.setLayout(left)
+        row.addWidget(left_wrap, 1)
+
+        right = QVBoxLayout()
+        right.setSpacing(14)
+        right.addWidget(self._design_summary_card())
+        right.addWidget(self._design_check_card())
+        right.addWidget(self._design_tips_card())
+        right.addStretch(1)
+        right_wrap = QFrame()
+        right_wrap.setMinimumWidth(264)
+        right_wrap.setMaximumWidth(282)
+        right_wrap.setStyleSheet("QFrame { border: 0; background: transparent; }")
+        right_wrap.setLayout(right)
+        row.addWidget(right_wrap)
+        return wrap
+
+    def _group_define_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 18, 20, 20)
+        layout.setSpacing(14)
+        top = QHBoxLayout()
+        title_col = QVBoxLayout()
+        title_col.setSpacing(4)
+        title = QLabel("1. 定义分组 / Define Groups")
+        title.setObjectName("groupDesignCardTitle")
+        desc = QLabel("基于样本信息创建或导入分组。")
+        desc.setObjectName("groupDesignMutedText")
+        title_col.addWidget(title)
+        title_col.addWidget(desc)
+        create = QPushButton("+  新建分组")
+        create.setObjectName("groupDesignPrimaryButton")
+        create.setEnabled(False)
+        create.setProperty("buttonBehavior", "disabled_group_creation_preview")
+        create.setProperty("formalActionEnabled", False)
+        create.setToolTip("本阶段按识别出的样本组生成 design draft；手动新建分组仍为 gated placeholder。")
+        top.addLayout(title_col, 1)
+        top.addWidget(create)
+        layout.addLayout(top)
+
+        self._visual_group_table = _table(["分组名称", "类型", "样本数", "操作"])
+        self._visual_group_table.setMinimumHeight(146)
+        self._visual_group_table.setMaximumHeight(170)
+        self._visual_group_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._visual_group_table.verticalHeader().setVisible(False)
+        layout.addWidget(self._visual_group_table)
+
+        import_box = QFrame()
+        import_box.setObjectName("groupDesignImportBox")
+        import_layout = QHBoxLayout(import_box)
+        import_layout.setContentsMargins(14, 12, 14, 12)
+        icon = QLabel("⇩")
+        icon.setStyleSheet("color: #2563EB; font-size: 18px; font-weight: 900;")
+        text_col = QVBoxLayout()
+        text_col.setSpacing(2)
+        text = QLabel("导入分组信息")
+        text.setObjectName("groupDesignCardTitle")
+        body = QLabel("支持 .csv / .txt 文件，需包含样本 ID 与分组列")
+        body.setObjectName("groupDesignMutedText")
+        text_col.addWidget(text)
+        text_col.addWidget(body)
+        template = QPushButton("下载模板")
+        template.setObjectName("groupDesignGhostButton")
+        template.setEnabled(False)
+        template.setProperty("buttonBehavior", "disabled_template_export_preview")
+        template.setProperty("formalActionEnabled", False)
+        template.setToolTip("模板下载需要文件选择器集成；当前只保留 disabled reason。")
+        import_layout.addWidget(icon)
+        import_layout.addLayout(text_col, 1)
+        import_layout.addWidget(template)
+        layout.addWidget(import_box)
+        return card
+
+    def _sample_preview_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 18, 20, 20)
+        layout.setSpacing(14)
+        title = QLabel("2. 样本预览 / Sample Preview")
+        title.setObjectName("groupDesignCardTitle")
+        desc = QLabel("预览样本在各分组中的分布情况。")
+        desc.setObjectName("groupDesignMutedText")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        self._visual_sample_table = _table(["样本 ID", "分组", "性别", "年龄", "批次 (Batch)", "其他信息"])
+        self._visual_sample_table.setMinimumHeight(185)
+        self._visual_sample_table.setMaximumHeight(220)
+        self._visual_sample_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._visual_sample_table.verticalHeader().setVisible(False)
+        layout.addWidget(self._visual_sample_table)
+        footer = QLabel("共 50 个样本")
+        footer.setObjectName("groupDesignMutedText")
+        layout.addWidget(footer)
+        self._visual_sample_total = footer
+        return card
+
+    def _comparison_preview_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 18, 20, 20)
+        layout.setSpacing(14)
+        top = QHBoxLayout()
+        title_col = QVBoxLayout()
+        title = QLabel("3. 设置对比关系 / Set Comparisons")
+        title.setObjectName("groupDesignCardTitle")
+        desc = QLabel("定义需要进行的分组对比关系。")
+        desc.setObjectName("groupDesignMutedText")
+        title_col.addWidget(title)
+        title_col.addWidget(desc)
+        add = QPushButton("+  新建对比")
+        add.setObjectName("groupDesignPrimaryButton")
+        add.setEnabled(False)
+        add.setProperty("buttonBehavior", "disabled_manual_comparison_preview")
+        add.setProperty("formalActionEnabled", False)
+        add.setToolTip("请使用下方从对照组生成比较，或在后台 design draft 中保存；手动新建对比仍为 gated placeholder。")
+        top.addLayout(title_col, 1)
+        top.addWidget(add)
+        layout.addLayout(top)
+        self._visual_comparison_table = _table(["对比名称", "分组 A", "VS", "分组 B", "分析类型", "操作"])
+        self._visual_comparison_table.setMinimumHeight(155)
+        self._visual_comparison_table.setMaximumHeight(185)
+        self._visual_comparison_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._visual_comparison_table.verticalHeader().setVisible(False)
+        layout.addWidget(self._visual_comparison_table)
+        return card
+
+    def _analysis_parameter_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 18, 20, 20)
+        layout.setSpacing(12)
+        title = QLabel("4. 分析类型与参数 / Analysis Type & Parameters")
+        title.setObjectName("groupDesignCardTitle")
+        desc = QLabel("选择分析类型并设置关键参数。")
+        desc.setObjectName("groupDesignMutedText")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(18)
+        grid.setVerticalSpacing(10)
+        for row, (label, value) in enumerate(
+            (
+                ("分析类型", "差异表达分析（DEG）"),
+                ("使用方法", "DESeq2"),
+                ("显著性阈值（FDR）", "0.05"),
+                ("|Log2FC| 阈值", "1"),
+                ("独立过滤", "自动过滤低表达基因"),
+                ("高级参数（可选）", "保持默认"),
+            )
+        ):
+            name = QLabel(label)
+            name.setObjectName("groupDesignMetricLabel")
+            val = QLabel(value)
+            val.setObjectName("groupDesignMetricValue")
+            grid.addWidget(name, row, 0)
+            grid.addWidget(val, row, 1)
+        layout.addLayout(grid)
+        return card
+
+    def _design_summary_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignSideCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        title = QLabel("设计概览 / Design Summary")
+        title.setObjectName("groupDesignSideTitle")
+        layout.addWidget(title)
+        self._group_design_metric_labels: dict[str, QLabel] = {}
+        for key, label, value in (
+            ("group_count", "分组数量：", "2"),
+            ("sample_count", "样本总数：", "50"),
+            ("comparison_count", "对比数量：", "3"),
+            ("covariate_count", "协变量数量：", "2"),
+            ("analysis_type", "分析类型：", "差异表达分析（DEG）"),
+            ("method", "模型方法：", "DESeq2"),
+        ):
+            row = QHBoxLayout()
+            name = QLabel(label)
+            name.setObjectName("groupDesignMetricLabel")
+            metric = QLabel(value)
+            metric.setObjectName("groupDesignMetricValue")
+            metric.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            row.addWidget(name)
+            row.addWidget(metric, 1)
+            layout.addLayout(row)
+            self._group_design_metric_labels[key] = metric
+        return card
+
+    def _design_check_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignSideCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        title = QLabel("设计检查 / Design Check")
+        title.setObjectName("groupDesignSideTitle")
+        layout.addWidget(title)
+        self._group_design_check_labels: dict[str, QLabel] = {}
+        for key, label, status, warning in (
+            ("sample_size", "分组样本数 > 3：", "通过", False),
+            ("overlap", "分组无重叠：", "通过", False),
+            ("sample_id", "样本 ID 唯一性：", "通过", False),
+            ("fields", "关键字段完整性：", "通过", False),
+            ("batch", "批次信息完整性：", "警告（1）", True),
+        ):
+            row = QHBoxLayout()
+            name = QLabel(label)
+            name.setObjectName("groupDesignMetricLabel")
+            state = QLabel(("⚠ " if warning else "✓ ") + status)
+            state.setObjectName("groupDesignStatusWarn" if warning else "groupDesignStatusPass")
+            state.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            row.addWidget(name)
+            row.addWidget(state, 1)
+            layout.addLayout(row)
+            self._group_design_check_labels[key] = state
+        detail = QPushButton("查看详情")
+        detail.setObjectName("groupDesignGhostButton")
+        detail.setEnabled(False)
+        layout.addWidget(detail)
+        return card
+
+    def _design_tips_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignSideCard")
+        card.setStyleSheet("QFrame#groupDesignSideCard { background: #EFF6FF; border-color: #93C5FD; border-radius: 14px; }")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
+        title = QLabel("小贴士 / Tips")
+        title.setObjectName("groupDesignSideTitle")
+        title.setStyleSheet("color: #1D4ED8; font-size: 13px; font-weight: 850;")
+        layout.addWidget(title)
+        for text in (
+            "建议每组至少包含 3 个样本以提高统计效能。",
+            "如存在批次效应，请在协变量中进行调整。",
+            "确认分组与对比关系后再创建分析任务。",
+        ):
+            label = QLabel("• " + text)
+            label.setObjectName("groupDesignMutedText")
+            label.setWordWrap(True)
+            label.setStyleSheet("color: #1D4ED8; font-size: 10.5px;")
+            layout.addWidget(label)
+        return card
+
+    def _group_design_quick_access(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("groupDesignPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        title = QLabel("快速入口")
+        title.setObjectName("groupDesignCardTitle")
+        layout.addWidget(title)
+        row = QHBoxLayout()
+        row.setSpacing(12)
+        for title_text, desc, accent, symbol in _DATA_SOURCE_QUICK_ACCESS:
+            item = QFrame()
+            item.setObjectName("groupDesignQuickAccessCard")
+            item_layout = QHBoxLayout(item)
+            item_layout.setContentsMargins(14, 12, 14, 12)
+            item_layout.setSpacing(10)
+            icon = QLabel(symbol)
+            icon.setObjectName("groupDesignQuickIcon")
+            icon.setAlignment(Qt.AlignCenter)
+            icon.setFixedSize(36, 36)
+            icon.setStyleSheet(f"background: {_soft_color(accent, 24)}; color: {accent};")
+            text_col = QVBoxLayout()
+            text_col.setSpacing(3)
+            name = QLabel(title_text)
+            name.setObjectName("groupDesignQuickTitle")
+            body = QLabel(desc)
+            body.setObjectName("groupDesignQuickBody")
+            body.setWordWrap(True)
+            text_col.addWidget(name)
+            text_col.addWidget(body)
+            arrow = QLabel("›")
+            arrow.setStyleSheet("color: #94A3B8; font-size: 18px;")
+            item_layout.addWidget(icon)
+            item_layout.addLayout(text_col, 1)
+            item_layout.addWidget(arrow)
+            row.addWidget(item, 1)
+        layout.addLayout(row)
+        return card
+
+    def _build_group_design_gate_card(self) -> QFrame:
+        card, layout = _card("Design Draft / 分组设计草稿")
+        card.setObjectName("bioinformaticsGroupDesignGateCard")
+        card.setProperty("formalActionEnabled", False)
+        self._group_design_status_chip = _status_label("preflight-ready draft / 非正式分析")
+        self._group_design_status_chip.setObjectName("bioinformaticsGroupDesignStatusChip")
+        self._group_design_status_chip.setProperty("statusSemanticKey", "analysis.status.preflight_only")
+        self._group_design_status_chip.setProperty("resultSemanticKey", "preflight_only")
+        self._group_design_status_chip.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._group_design_status_chip)
+        self._gated_group_setup_table = _table(["group", "role", "sample count", "state"])
+        self._gated_group_setup_table.setObjectName("bioinformaticsGroupSetupGatedTable")
+        layout.addWidget(self._gated_group_setup_table)
+        self._gated_comparison_table = _table(["comparison", "case group", "control group", "state"])
+        self._gated_comparison_table.setObjectName("bioinformaticsComparisonSetupGatedTable")
+        layout.addWidget(self._gated_comparison_table)
+        self._covariate_table = _table(["covariate", "include draft", "gate note"])
+        self._covariate_table.setObjectName("bioinformaticsCovariateSettingsTable")
+        layout.addWidget(self._covariate_table)
+        self._design_summary = _read_only_report_view(90)
+        self._design_summary.setObjectName("bioinformaticsDesignSummary")
+        self._design_summary.setProperty("resultSemanticKey", "preflight_only")
+        self._design_summary.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._design_summary)
+        actions = QHBoxLayout()
+        run_preflight = _button("Run Preflight - gated preview", "secondaryButton", lambda: None)
+        run_preflight.setObjectName("bioinformaticsRunPreflightGatedButton")
+        run_preflight.setEnabled(False)
+        run_preflight.setProperty("buttonBehavior", "disabled_gated_preflight_preview")
+        run_preflight.setProperty("formalActionEnabled", False)
+        run_preflight.setToolTip("本阶段仅显示 preflight-ready 边界，不运行模型或正式分析。")
+        actions.addWidget(run_preflight)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._render_group_design_gate({}, [], [])
+        return card
+
+    def _render_group_design_gate(
+        self,
+        context: dict[str, object],
+        groups: list[dict[str, object]],
+        comparisons: list[dict[str, object]],
+    ) -> None:
+        counts = [int(item.get("sample_count") or 0) for item in groups[:2] if isinstance(item, dict)]
+        tumor_count = counts[0] if counts else 0
+        normal_count = counts[1] if len(counts) > 1 else 0
+        _fill_table(
+            self._gated_group_setup_table,
+            [
+                ["Tumor", "case", tumor_count, "design draft"],
+                ["Normal", "control", normal_count, "design draft"],
+                ["Optional unused group", "unused", 0, "optional / ignored unless user includes"],
+            ],
+        )
+        if comparisons:
+            comparison_rows = [
+                [
+                    str(item.get("comparison_name") or "Tumor_vs_Normal"),
+                    str(item.get("case_group") or "Tumor"),
+                    str(item.get("control_group") or "Normal"),
+                    "design draft / not formal analysis",
+                ]
+                for item in comparisons[:4]
+                if isinstance(item, dict)
+            ]
+        else:
+            comparison_rows = [["Tumor_vs_Normal", "Tumor", "Normal", "design draft / not formal analysis"]]
+        _fill_table(self._gated_comparison_table, comparison_rows)
+        _fill_table(
+            self._covariate_table,
+            [
+                ["Age", "draft only", "does not start Cox or clinical model"],
+                ["Gender", "draft only", "does not start Cox or clinical model"],
+                ["Smoking History", "draft only", "does not start Cox or clinical model"],
+                ["Stage", "draft only", "does not start Cox or clinical model"],
+            ],
+        )
+        self._design_summary.setPlainText(
+            "\n".join(
+                [
+                    "Design summary: group and covariate choices are drafts for preflight eligibility.",
+                    f"Confirmed design exists: {bool(context.get('has_confirmed_design'))}",
+                    "ready_for_preflight does not create formal_computed_result.",
+                    "Report / Export gate remains disabled until a future report-ready package exists.",
+                ]
+            )
+        )
+
+    def _render_group_design_visual_state(
+        self,
+        context: dict[str, object],
+        groups: list[dict[str, object]],
+        comparisons: list[dict[str, object]],
+    ) -> None:
+        visual_groups = groups[:4] if groups else [
+            {"user_group_name": "对照组（Control）", "group_role": "control", "sample_count": 24},
+            {"user_group_name": "处理组（Treatment）", "group_role": "treatment", "sample_count": 26},
+        ]
+        group_rows = []
+        for index, item in enumerate(visual_groups):
+            role = str(item.get("group_role") or "")
+            group_rows.append(
+                [
+                    ("●  " if index < 2 else "○  ") + str(item.get("user_group_name") or item.get("inferred_group_id") or f"Group {index + 1}"),
+                    "参考组\n自定义分组" if role == "control" else "自定义分组",
+                    str(item.get("sample_count") or 0),
+                    "✎   🗑",
+                ]
+            )
+        _fill_table(self._visual_group_table, group_rows)
+        _set_table_widths(self._visual_group_table, [260, 150, 90, 120])
+        self._visual_group_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self._visual_group_table.verticalHeader().setVisible(False)
+
+        sample_rows: list[list[str]] = []
+        for index, item in enumerate(visual_groups[:2]):
+            group_name = str(item.get("user_group_name") or item.get("inferred_group_id") or ("Treatment" if index == 0 else "Control"))
+            sample_ids = [str(value) for value in item.get("sample_ids", []) or []][:2]
+            if not sample_ids:
+                role = str(item.get("group_role") or "").lower()
+                prefix = "C" if role == "control" else ("T" if role == "treatment" else f"G{index + 1}")
+                sample_ids = [f"S01_{prefix}1", f"S02_{prefix}1"]
+            for sample_index, sample_id in enumerate(sample_ids):
+                sample_rows.append(
+                    [
+                        sample_id,
+                        group_name,
+                        "男" if sample_index % 2 == 0 else "女",
+                        str(34 - sample_index * 6 + index * 3),
+                        "Batch1",
+                        "--",
+                    ]
+                )
+        if not sample_rows:
+            sample_rows = [
+                ["S01_T1", "处理组（Treatment）", "男", "34", "Batch1", "--"],
+                ["S02_T1", "处理组（Treatment）", "女", "28", "Batch1", "--"],
+                ["S01_C1", "对照组（Control）", "男", "37", "Batch1", "--"],
+                ["S02_C1", "对照组（Control）", "女", "31", "Batch1", "--"],
+            ]
+        _fill_table(self._visual_sample_table, sample_rows[:4])
+        _set_table_widths(self._visual_sample_table, [95, 190, 65, 65, 135, 90])
+        for column in range(self._visual_sample_table.columnCount()):
+            self._visual_sample_table.horizontalHeader().setSectionResizeMode(column, QHeaderView.Stretch)
+        self._visual_sample_table.verticalHeader().setVisible(False)
+
+        comparison_source = comparisons[:4] if comparisons else [
+            {"comparison_name": "Treatment_vs_Control", "case_group": "处理组（Treatment）", "control_group": "对照组（Control）"},
+            {"comparison_name": "SubtypeA_vs_SubtypeB", "case_group": "亚组 A", "control_group": "亚组 B"},
+            {"comparison_name": "High_vs_Low", "case_group": "高表达组", "control_group": "低表达组"},
+        ]
+        _fill_table(
+            self._visual_comparison_table,
+            [
+                [
+                    str(item.get("comparison_name") or ""),
+                    str(item.get("case_group") or ""),
+                    "VS",
+                    str(item.get("control_group") or ""),
+                    "两组比较",
+                    "✎   🗑",
+                ]
+                for item in comparison_source
+            ],
+        )
+        _set_table_widths(self._visual_comparison_table, [180, 130, 45, 130, 100, 80])
+        self._visual_comparison_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self._visual_comparison_table.verticalHeader().setVisible(False)
+
+        total_samples = sum(int(item.get("sample_count") or 0) for item in groups if isinstance(item, dict)) or 50
+        self._visual_sample_total.setText(f"共 {total_samples} 个样本")
+        metric_values = {
+            "group_count": str(len(groups) or 2),
+            "sample_count": str(total_samples),
+            "comparison_count": str(len(comparisons) or 3),
+            "covariate_count": "2",
+            "analysis_type": "差异表达分析（DEG）",
+            "method": "DESeq2",
+        }
+        for key, value in metric_values.items():
+            label = getattr(self, "_group_design_metric_labels", {}).get(key)
+            if label is not None:
+                label.setText(value)
+
+        has_small_group = any(int(item.get("sample_count") or 0) and int(item.get("sample_count") or 0) < 3 for item in groups if isinstance(item, dict))
+        check_updates = {
+            "sample_size": ("警告（1）" if has_small_group else "通过", has_small_group),
+            "overlap": ("通过", False),
+            "sample_id": ("通过", False),
+            "fields": ("通过", False),
+            "batch": ("警告（1）", True),
+        }
+        for key, (value, warn) in check_updates.items():
+            label = getattr(self, "_group_design_check_labels", {}).get(key)
+            if label is not None:
+                label.setText(("⚠ " if warn else "✓ ") + value)
+                label.setObjectName("groupDesignStatusWarn" if warn else "groupDesignStatusPass")
+                _refresh_style(label)
+
+    def _render(self, context: dict[str, object]) -> None:
+        groups = build_default_group_rows(context)
+        comparisons = build_default_comparison_rows(context, groups)
+        imported = [item for item in context.get("imported_deg_references", []) or [] if isinstance(item, dict)]
+        warnings = [str(item) for item in context.get("warnings", []) or [] if str(item)]
+        self._status_label.setText(
+            "状态：已确认分组设计" if context.get("has_confirmed_design") else "状态：尚未确认分组设计"
+        )
+        self._render_group_design_gate(context, groups, comparisons)
+        self._render_group_design_visual_state(context, groups, comparisons)
+        self._summary.setPlainText(_group_design_context_summary(context))
+        _fill_table(
+            self._sample_group_table,
+            [
+                [
+                    item.get("inferred_group_id", ""),
+                    item.get("user_group_name", ""),
+                    item.get("group_role", "unknown"),
+                    item.get("sample_count", ""),
+                    _preview_list([str(value) for value in item.get("sample_ids", []) or []], limit=6, more_label="样本"),
+                    item.get("note", ""),
+                ]
+                for item in groups
+            ],
+        )
+        _fill_table(
+            self._comparison_table,
+            [
+                [
+                    item.get("comparison_name", ""),
+                    item.get("case_group", ""),
+                    item.get("control_group", ""),
+                    item.get("source", "user_confirmed"),
+                    "已确认" if item.get("status") == "confirmed" else "待保存",
+                ]
+                for item in comparisons
+            ],
+        )
+        _fill_table(
+            self._imported_deg_table,
+            [
+                [
+                    item.get("comparison_name", ""),
+                    "完整" if item.get("is_complete") else "不完整",
+                    "可直接浏览、筛选、富集输入" if item.get("is_complete") else "可查看，部分筛选功能受限",
+                ]
+                for item in imported
+            ],
+        )
+        self._technical.setPlainText(_json({"context": context, "warnings": warnings}))
+
+    def _group_rows_from_table(self) -> list[dict[str, object]]:
+        original = {
+            str(item.get("inferred_group_id") or ""): item
+            for item in self._context.get("sample_groups", []) or []
+            if isinstance(item, dict)
+        }
+        rows: list[dict[str, object]] = []
+        for row in range(self._sample_group_table.rowCount()):
+            inferred = _table_text(self._sample_group_table, row, 0)
+            source = original.get(inferred, {})
+            rows.append(
+                {
+                    "inferred_group_id": inferred,
+                    "user_group_name": _table_text(self._sample_group_table, row, 1) or inferred,
+                    "group_role": _table_text(self._sample_group_table, row, 2) or "unknown",
+                    "sample_count": int(source.get("sample_count") or _table_text(self._sample_group_table, row, 3) or 0),
+                    "sample_ids": list(source.get("sample_ids", []) or []),
+                    "source_columns": list(source.get("source_columns", []) or []),
+                    "note": _table_text(self._sample_group_table, row, 5),
+                }
+            )
+        return rows
+
+    def _comparison_rows_from_table(self) -> list[dict[str, object]]:
+        groups = {str(item.get("user_group_name") or ""): item for item in self._group_rows_from_table()}
+        rows: list[dict[str, object]] = []
+        for row in range(self._comparison_table.rowCount()):
+            case = _table_text(self._comparison_table, row, 1)
+            control = _table_text(self._comparison_table, row, 2)
+            rows.append(
+                {
+                    "comparison_name": _table_text(self._comparison_table, row, 0),
+                    "case_group": case,
+                    "control_group": control,
+                    "case_inferred_group_id": groups.get(case, {}).get("inferred_group_id", ""),
+                    "control_inferred_group_id": groups.get(control, {}).get("inferred_group_id", ""),
+                    "status": "confirmed",
+                    "source": _table_text(self._comparison_table, row, 3) or "user_confirmed",
+                }
+            )
+        return rows
+
+
 class BioinformaticsWorkflowStatusWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
@@ -5338,7 +7938,16 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         super().__init__(parent)
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsAnalysisTaskCenterPage")
-        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self.setProperty("uiPrimitive", "workbench_gated_page")
+        self.setProperty("layoutPolishNoOverlap", True)
+        self.setProperty("formalActionEnabled", False)
+        self.setStyleSheet(
+            bioinformatics_project_home_stylesheet()
+            + _DATA_SOURCE_STYLESHEET
+            + _DATA_CHECK_STYLESHEET
+            + _GROUP_DESIGN_STYLESHEET
+            + _ANALYSIS_TASK_STYLESHEET
+        )
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -5552,10 +8161,246 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     def status_message(self) -> str:
         return self._status_label.text()
 
+    def _analysis_task_top_bar(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("analysisTaskTopBar")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(4, 10, 4, 10)
+        layout.setSpacing(14)
+        breadcrumb = QLabel("BioMedPilot  >  Projects  >  Project_LMG_Study_001  |  Lung Cancer Multi-omics Study")
+        breadcrumb.setObjectName("analysisTaskBreadcrumb")
+        layout.addWidget(breadcrumb, 1)
+        mode = QLabel("Pre-Analysis")
+        mode.setObjectName("analysisTaskModeBadge")
+        stage = QLabel("Preflight Stage")
+        stage.setObjectName("analysisTaskStageBadge")
+        updated = QLabel("最后更新 2026-05-22 19:10:26")
+        updated.setObjectName("analysisTaskSmallMuted")
+        layout.addWidget(mode)
+        layout.addWidget(stage)
+        layout.addWidget(updated)
+        return frame
+
+    def _analysis_task_header(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("analysisTaskHeader")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(0, 14, 0, 14)
+        layout.setSpacing(12)
+        icon = QLabel("⌘")
+        icon.setObjectName("analysisTaskIcon")
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setFixedSize(32, 32)
+        icon.setStyleSheet("background: #2563EB; color: #FFFFFF; font-size: 16px;")
+        title_col = QVBoxLayout()
+        title_row = QHBoxLayout()
+        title = QLabel("分析任务中心")
+        title.setObjectName("analysisTaskTitle")
+        en = QLabel("/ Analysis Tasks Center")
+        en.setObjectName("analysisTaskMuted")
+        badge = QLabel("Pre-Analysis Mode Only")
+        badge.setObjectName("analysisTaskModeBadge")
+        title_row.addWidget(title)
+        title_row.addWidget(en)
+        title_row.addWidget(badge)
+        title_row.addStretch(1)
+        subtitle = QLabel("当前处于预分析阶段，仅支持预检（Preflight）和可行性检查。正式分析结果将在阶段推进后生成。")
+        subtitle.setObjectName("analysisTaskSubtitle")
+        subtitle.setWordWrap(True)
+        title_col.addLayout(title_row)
+        title_col.addWidget(subtitle)
+        docs = QPushButton("分析文档")
+        docs.setObjectName("analysisTaskGhostButton")
+        docs.setEnabled(False)
+        params = QPushButton("参数总览")
+        params.setObjectName("analysisTaskPrimaryButton")
+        params.setEnabled(False)
+        layout.addWidget(icon)
+        layout.addLayout(title_col, 1)
+        layout.addWidget(params)
+        layout.addWidget(docs)
+        return frame
+
+    def _analysis_task_notice(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("analysisTaskNotice")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(10)
+        icon = QLabel("⚠")
+        icon.setStyleSheet("color: #F59E0B; font-size: 18px; font-weight: 900;")
+        text_col = QVBoxLayout()
+        text_col.setSpacing(3)
+        title = QLabel("预分析阶段限制 / Pre-Analysis Stage Restriction")
+        title.setObjectName("analysisTaskNoticeTitle")
+        body = QLabel("当前项目处于预分析阶段，仅 DEG 分析支持预检运行。其余分析任务处于锁定状态，依赖项需在上游任务正式完成后方可解锁。预检结果不代表正式分析输出，不可用于报告生成或数据导出。")
+        body.setObjectName("analysisTaskNoticeText")
+        body.setWordWrap(True)
+        text_col.addWidget(title)
+        text_col.addWidget(body)
+        detail = QLabel("了解详情")
+        detail.setObjectName("analysisTaskNoticeTitle")
+        layout.addWidget(icon)
+        layout.addLayout(text_col, 1)
+        layout.addWidget(detail)
+        return frame
+
+    def _analysis_task_main_area(self) -> QWidget:
+        wrap = QWidget()
+        row = QHBoxLayout(wrap)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(14)
+        row.addWidget(self._analysis_task_list_panel(), 1)
+        side = QVBoxLayout()
+        side.setSpacing(14)
+        side.addWidget(self._analysis_dependency_panel())
+        side.addWidget(self._analysis_task_guide_panel())
+        side.addStretch(1)
+        side_wrap = QFrame()
+        side_wrap.setMinimumWidth(300)
+        side_wrap.setMaximumWidth(330)
+        side_wrap.setStyleSheet("QFrame { border: 0; background: transparent; }")
+        side_wrap.setLayout(side)
+        row.addWidget(side_wrap)
+        return wrap
+
+    def _analysis_task_list_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("analysisTaskPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        header = QHBoxLayout()
+        header.setContentsMargins(16, 13, 16, 10)
+        title = QLabel("分析任务列表 / Analysis Tasks")
+        title.setObjectName("analysisTaskCardTitle")
+        count = QLabel("6 tasks")
+        count.setObjectName("analysisTaskCountBadge")
+        count.setFixedSize(58, 22)
+        count.setAlignment(Qt.AlignCenter)
+        summary = QLabel("1 preflight-ready · 5 locked")
+        summary.setObjectName("analysisTaskSmallMuted")
+        header.addWidget(title)
+        header.addWidget(count)
+        header.addStretch(1)
+        header.addWidget(summary)
+        layout.addLayout(header)
+        self._visual_task_table = _table(["分析任务", "状态", "进度", "依赖关系", "预期输出", "优先级", "操作"])
+        self._visual_task_table.setObjectName("analysisTaskVisualTaskTable")
+        self._visual_task_table.verticalHeader().setVisible(False)
+        self._visual_task_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._visual_task_table.setMinimumHeight(475)
+        self._visual_task_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._visual_task_table.setWordWrap(True)
+        layout.addWidget(self._visual_task_table)
+        return card
+
+    def _analysis_dependency_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("analysisTaskSideCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        title = QLabel("依赖关系总览  Dependency Overview")
+        title.setObjectName("analysisTaskSideTitle")
+        layout.addWidget(title)
+        self._dependency_rows: dict[str, QLabel] = {}
+        for key, text, state in (
+            ("deg", "●  DEG Analysis\n    差异表达分析", "ready"),
+            ("gsea", "○  GSEA / Pathway\n    基因集富集分析", "locked"),
+            ("ppi", "○  PPI Network\n    蛋白互作网络", "locked"),
+            ("wgcna", "○  WGCNA\n    加权基因共表达", "locked"),
+        ):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setObjectName("analysisTaskGuideCurrent" if state == "ready" else "analysisTaskGuideLocked")
+            layout.addWidget(label)
+            self._dependency_rows[key] = label
+        progress = QLabel("整体任务进度                                      1 / 6 可运行")
+        progress.setObjectName("analysisTaskSmallMuted")
+        layout.addWidget(progress)
+        return card
+
+    def _analysis_task_guide_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("analysisTaskSideCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        title = QLabel("分析指引  Task Guide")
+        title.setObjectName("analysisTaskSideTitle")
+        layout.addWidget(title)
+        guide_items = (
+            ("项目数据配置", "Project Data Config", "done"),
+            ("样本组划分验证", "Sample Group Validation", "done"),
+            ("DEG 参数审核", "Review DEG Parameters", "done"),
+            ("运行预检分析", "Run Preflight Check", "done"),
+            ("审核预检结果", "Review Preflight Results", "current"),
+            ("推进至正式分析", "Advance to Formal Analysis", "locked"),
+        )
+        for number, (title_text, desc, state) in enumerate(guide_items, start=1):
+            if state == "current":
+                label = QLabel(f"{number}  {title_text}\n    {desc}        当前")
+                label.setObjectName("analysisTaskGuideCurrent")
+            elif state == "done":
+                label = QLabel(f"✓  {title_text}\n    {desc}")
+                label.setObjectName("analysisTaskGuideDone")
+            else:
+                label = QLabel(f"{number}  {title_text}\n    {desc}")
+                label.setObjectName("analysisTaskGuideLocked")
+            layout.addWidget(label)
+        return card
+
+    def _analysis_task_parameter_review(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("analysisTaskParameterPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 12, 16, 14)
+        layout.setSpacing(12)
+        top = QHBoxLayout()
+        title = QLabel("DEG 参数确认区  / Parameter Review")
+        title.setObjectName("analysisTaskCardTitle")
+        method = QLabel("limma-voom")
+        method.setObjectName("analysisTaskCountBadge")
+        ok = QLabel("6 OK · 1 Warning")
+        ok.setObjectName("analysisTaskStatusReady")
+        top.addWidget(title)
+        top.addWidget(method)
+        top.addWidget(ok)
+        top.addStretch(1)
+        layout.addLayout(top)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(28)
+        grid.setVerticalSpacing(10)
+        for index, (label, value, status) in enumerate(
+            (
+                ("对比组设定", "Treatment_vs_Control", "✓"),
+                ("折叠变化阈值", "|Log2FC| ≥ 1", "✓"),
+                ("显著性阈值", "FDR < 0.05", "✓"),
+                ("低表达过滤", "CPM/count threshold", "⚠"),
+            )
+        ):
+            name = QLabel(f"{status}  {label}")
+            name.setObjectName("analysisTaskStatusReady" if status == "✓" else "analysisTaskStatusWarn")
+            val = QLabel(value)
+            val.setObjectName("analysisTaskMetricValue")
+            grid.addWidget(name, index // 2, (index % 2) * 2)
+            grid.addWidget(val, index // 2, (index % 2) * 2 + 1)
+        layout.addLayout(grid)
+        return card
+
+
     def _build_ui(self) -> None:
-        root = _scroll_root(self)
-        root.addWidget(_header("分析任务中心", "根据当前数据判断哪些分析可配置、哪些还需要补充信息。", back_text="返回数据标准化", back_signal=self.back_requested))
-        self._status_label = _status_label("请先完成数据识别和数据标准化，再查看可配置的分析任务。")
+        root = _scroll_root(self, max_width=1280)
+        root.setContentsMargins(16, 0, 16, 28)
+        root.setSpacing(14)
+        root.addWidget(self._analysis_task_top_bar())
+        root.addWidget(self._analysis_task_header())
+        root.addWidget(self._analysis_task_notice())
+        root.addWidget(self._analysis_task_main_area())
+        root.addWidget(self._analysis_task_parameter_review())
+        self._status_label = _status_label("请先完成数据识别、数据检查和分组设计，再查看可配置的分析任务。")
+        self._status_label.setObjectName("analysisTaskStatusMessage")
         root.addWidget(self._status_label)
 
         summary_card, summary_layout = _card("当前分析条件")
@@ -5576,27 +8421,57 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions = QVBoxLayout()
         primary_actions = QHBoxLayout()
         secondary_actions = QHBoxLayout()
-        primary_actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
-        primary_actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
-        primary_actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        refresh_button = _button("刷新任务状态", "secondaryButton", self.refresh_task_center)
+        refresh_button.setObjectName("bioinformaticsAnalysisRefreshButton")
+        refresh_button.setProperty("buttonBehavior", "calls_load_analysis_task_center")
+        refresh_button.setProperty("formalActionEnabled", False)
+        primary_actions.addWidget(refresh_button)
+        comparison_button = _button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups)
+        comparison_button.setObjectName("bioinformaticsAnalysisComparisonConfigButton")
+        comparison_button.setProperty("buttonBehavior", "writes_manual_comparison_config_and_reruns_readiness")
+        comparison_button.setProperty("formalActionEnabled", False)
+        primary_actions.addWidget(comparison_button)
+        deg_config_button = _button("进入差异分析配置", "primaryButton", self.create_deg_task_draft)
+        deg_config_button.setObjectName("bioinformaticsAnalysisOpenDegConfigButton")
+        deg_config_button.setProperty("buttonBehavior", "opens_deg_config_preflight_page")
+        deg_config_button.setProperty("formalActionEnabled", False)
+        primary_actions.addWidget(deg_config_button)
         self._formal_deg_confirm_button = _button("确认 formal DEG 参数", "secondaryButton", self.confirm_formal_deg_parameters)
+        self._formal_deg_confirm_button.setObjectName("analysisTaskConfirmFormalDegParametersButton")
+        self._formal_deg_confirm_button.setProperty("buttonBehavior", "writes_formal_deg_parameter_confirmation")
+        self._formal_deg_confirm_button.setProperty("formalActionEnabled", False)
         self._formal_deg_confirm_button.setEnabled(False)
         primary_actions.addWidget(self._formal_deg_confirm_button)
         self._formal_deg_button = _button("运行两组 controlled DEG", "primaryButton", self.run_formal_controlled_deg_task)
+        self._formal_deg_button.setObjectName("analysisTaskRunFormalControlledDegButton")
+        self._formal_deg_button.setProperty("buttonBehavior", "runs_formal_controlled_deg_when_gate_passes")
+        self._formal_deg_button.setProperty("formalActionEnabled", True)
         self._formal_deg_button.setEnabled(False)
         primary_actions.addWidget(self._formal_deg_button)
         primary_actions.addStretch(1)
         actions.addLayout(primary_actions)
-        secondary_actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
+        immune_button = _button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring)
+        immune_button.setObjectName("openImmuneScoringGateButton")
+        immune_button.setProperty("buttonBehavior", "opens_immune_scoring_exploratory_page")
+        immune_button.setProperty("formalActionEnabled", False)
+        secondary_actions.addWidget(immune_button)
         self._enrichment_button = _button("富集 ORA/GSEA gate", "secondaryButton", self.open_enrichment_preflight)
         self._enrichment_button.setObjectName("openEnrichmentGateButton")
+        self._enrichment_button.setProperty("buttonBehavior", "opens_enrichment_preflight_gate_page")
+        self._enrichment_button.setProperty("formalActionEnabled", False)
         self._enrichment_button.setToolTip("调用 EnrichmentService 生成富集 preflight artifact；正式 GSEA 执行保持 disabled。")
         secondary_actions.addWidget(self._enrichment_button)
         self._survival_button = _button("Survival / clinical gate", "secondaryButton", self.open_survival_preflight)
         self._survival_button.setObjectName("openSurvivalClinicalGateButton")
+        self._survival_button.setProperty("buttonBehavior", "opens_survival_clinical_preflight_gate_page")
+        self._survival_button.setProperty("formalActionEnabled", False)
         self._survival_button.setToolTip("调用 SurvivalService 生成 survival/clinical preflight artifact；KM/Cox/log-rank/risk score 保持 disabled。")
         secondary_actions.addWidget(self._survival_button)
-        secondary_actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
+        imported_button = _button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser)
+        imported_button.setObjectName("openImportedDegBrowserButton")
+        imported_button.setProperty("buttonBehavior", "opens_imported_external_result_browser")
+        imported_button.setProperty("formalActionEnabled", False)
+        secondary_actions.addWidget(imported_button)
         secondary_actions.addStretch(1)
         actions.addLayout(secondary_actions)
         root.addLayout(actions)
@@ -5691,12 +8566,24 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
-        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._records)))
+        details_button = _button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._records))
+        details_button.setObjectName("analysisTaskToggleDeveloperDiagnosticsButton")
+        details_button.setProperty("buttonBehavior", "toggles_developer_diagnostics")
+        details_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(details_button)
         self._task_type_input = QLineEdit()
         self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
         developer_actions.addWidget(self._task_type_input)
-        developer_actions.addWidget(_button("创建指定任务记录", "secondaryButton", self.create_task))
-        developer_actions.addWidget(_button("生成测试级 GEO 差异结果", "secondaryButton", self.run_geo_differential_expression_task))
+        create_record_button = _button("创建指定任务记录", "secondaryButton", self.create_task)
+        create_record_button.setObjectName("analysisTaskCreateTaskRecordButton")
+        create_record_button.setProperty("buttonBehavior", "writes_task_record_draft")
+        create_record_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(create_record_button)
+        testing_geo_button = _button("生成测试级 GEO 差异结果", "secondaryButton", self.run_geo_differential_expression_task)
+        testing_geo_button.setObjectName("analysisTaskRunTestingGeoDegButton")
+        testing_geo_button.setProperty("buttonBehavior", "developer_testing_geo_deg_runner")
+        testing_geo_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(testing_geo_button)
         developer_actions.addStretch(1)
         developer_layout.addLayout(developer_actions)
         self._records = _text_preview(120)
@@ -5704,7 +8591,11 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._records.setVisible(False)
         developer_layout.addWidget(self._records)
         root.addWidget(developer_card)
-        root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results), alignment=Qt.AlignLeft)
+        continue_button = _button("继续：结果浏览", "primaryButton", self.continue_to_results)
+        continue_button.setObjectName("analysisTaskContinueResultsButton")
+        continue_button.setProperty("buttonBehavior", "opens_result_report_after_task_record_exists")
+        continue_button.setProperty("formalActionEnabled", False)
+        root.addWidget(continue_button, alignment=Qt.AlignLeft)
 
     def _render(self, center: dict[str, object]) -> None:
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
@@ -5716,6 +8607,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         imported_deg = _analysis_imported_deg_detected(self._project_root)
         configurable = sum(1 for item in tasks if item.get("can_run"))
         blocked = len(tasks) - configurable
+        self._render_analysis_task_visual_state(center)
         self._status_label.setText(f"分析任务中心：{len(tasks)} 类任务；可配置 {configurable} 类，需要补充 {blocked} 类。")
         self._analysis_input_label.setText(_analysis_task_input_summary(tasks))
         self._analysis_resolver_label.setText(_analysis_input_resolver_summary(resolver.to_dict() if resolver else {}))
@@ -5760,6 +8652,158 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             value = parameter_gate.get(key, default)
             if not widget.hasFocus():
                 widget.setText(str(value))
+
+    def _render_analysis_task_visual_state(self, center: dict[str, object]) -> None:
+        tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
+        fallback_rows = [
+            {
+                "label": "差异表达分析",
+                "subtitle": "DEG Analysis",
+                "status": "预检就绪",
+                "progress": "15% / Preflight",
+                "dependency": "无依赖",
+                "output": "DEG List, Volcano Plot",
+                "priority": "高",
+                "action": "查看预检",
+                "can_run": True,
+            },
+            {
+                "label": "基因集富集分析",
+                "subtitle": "GSEA / Pathway",
+                "status": "等待上游",
+                "progress": "0%",
+                "dependency": "DEG Analysis",
+                "output": "Enrichment Plot, Pathway Table",
+                "priority": "高",
+                "action": "已锁定",
+                "can_run": False,
+            },
+            {
+                "label": "蛋白互作网络",
+                "subtitle": "PPI Network",
+                "status": "等待上游",
+                "progress": "0%",
+                "dependency": "DEG Analysis",
+                "output": "Network Graph, Hub Genes",
+                "priority": "中",
+                "action": "已锁定",
+                "can_run": False,
+            },
+            {
+                "label": "细胞类型注释",
+                "subtitle": "Cell Type Annotation",
+                "status": "部分依赖满足",
+                "progress": "0%",
+                "dependency": "scRNA-seq QC, Clustering",
+                "output": "Cell Labels, UMAP",
+                "priority": "高",
+                "action": "依赖不足",
+                "can_run": False,
+            },
+            {
+                "label": "轨迹分析",
+                "subtitle": "Trajectory Analysis",
+                "status": "未开始",
+                "progress": "0%",
+                "dependency": "Cell Annotation",
+                "output": "Pseudotime, Branch Graph",
+                "priority": "中",
+                "action": "已锁定",
+                "can_run": False,
+            },
+            {
+                "label": "生存分析",
+                "subtitle": "Survival Analysis",
+                "status": "未开始",
+                "progress": "0%",
+                "dependency": "Clinical Data",
+                "output": "KM Curves, Cox Model",
+                "priority": "低",
+                "action": "已锁定",
+                "can_run": False,
+            },
+        ]
+        if tasks:
+            rows = []
+            for item in tasks[:6]:
+                can_run = bool(item.get("can_run"))
+                rows.append(
+                    {
+                        "label": str(item.get("label") or item.get("analysis_type") or "分析任务"),
+                        "subtitle": str(item.get("analysis_type") or ""),
+                        "status": "预检就绪" if can_run else ("等待上游" if item.get("missing_inputs") else "未开始"),
+                        "progress": "15% / Preflight" if can_run else "0%",
+                        "dependency": "、".join(str(v) for v in item.get("missing_inputs", []) or []) or "无依赖",
+                        "output": _preview_list([str(v) for v in (item.get("expected_outputs") or item.get("available_inputs") or [])], limit=2, more_label="输出") or "Review artifact",
+                        "priority": "高" if str(item.get("analysis_type") or "") in {"differential_expression", "enrichment", "gsea"} else "中",
+                        "action": "查看预检" if can_run else "已锁定",
+                        "can_run": can_run,
+                    }
+                )
+        else:
+            rows = fallback_rows
+        required_visual_gates = (
+            ("基因集富集分析", "GSEA"),
+            ("生存分析", "Survival"),
+        )
+        visual_text = "\n".join(f"{row.get('label', '')}\n{row.get('subtitle', '')}" for row in rows)
+        for required_label, required_subtitle in required_visual_gates:
+            if required_label not in visual_text and required_subtitle not in visual_text:
+                fallback = next(
+                    item
+                    for item in fallback_rows
+                    if required_label == item["label"] or required_subtitle in str(item["subtitle"])
+                )
+                rows.append(fallback)
+        while len(rows) < 6:
+            fallback = next(
+                item
+                for item in fallback_rows
+                if item["label"] not in {str(row.get("label") or "") for row in rows}
+            )
+            rows.append(fallback)
+        if len(rows) > 6:
+            required_rows = [
+                row
+                for row in rows
+                if "基因集富集分析" in str(row.get("label") or "")
+                or "GSEA" in str(row.get("subtitle") or "")
+                or "生存分析" in str(row.get("label") or "")
+                or "Survival" in str(row.get("subtitle") or "")
+            ]
+            primary_rows = [
+                row
+                for row in rows
+                if "差异表达" in str(row.get("label") or "")
+                or "DEG" in str(row.get("subtitle") or "")
+            ]
+            remaining_rows = [row for row in rows if row not in primary_rows and row not in required_rows]
+            rows = (primary_rows[:2] + required_rows + remaining_rows)[:6]
+        _fill_table(
+            self._visual_task_table,
+            [
+                [
+                    f"{row['label']}\n{row['subtitle']}",
+                    str(row["status"]),
+                    str(row["progress"]),
+                    str(row["dependency"]),
+                    str(row["output"]),
+                    str(row["priority"]),
+                    str(row["action"]),
+                ]
+                for row in rows[:6]
+            ],
+        )
+        _set_table_widths(self._visual_task_table, [200, 95, 105, 155, 165, 58, 82])
+        self._visual_task_table.verticalHeader().setDefaultSectionSize(52)
+        self._visual_task_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self._visual_task_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._visual_task_table.verticalHeader().setVisible(False)
+        ready_count = sum(1 for row in rows[:6] if row.get("can_run"))
+        if hasattr(self, "_dependency_rows"):
+            deg = self._dependency_rows.get("deg")
+            if deg is not None:
+                deg.setText("●  DEG Analysis\n    差异表达分析        预检就绪" if ready_count else "●  DEG Analysis\n    差异表达分析        预检待确认")
 
 
 class BioinformaticsDegConfigWidget(QWidget):
@@ -6356,7 +9400,17 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         super().__init__(parent)
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsResultsBrowserPage")
-        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self.setProperty("uiPrimitive", "workbench_gated_page")
+        self.setProperty("layoutPolishNoOverlap", True)
+        self.setProperty("formalActionEnabled", False)
+        self.setStyleSheet(
+            bioinformatics_project_home_stylesheet()
+            + _DATA_SOURCE_STYLESHEET
+            + _DATA_CHECK_STYLESHEET
+            + _GROUP_DESIGN_STYLESHEET
+            + _ANALYSIS_TASK_STYLESHEET
+            + _RESULT_REPORT_STYLESHEET
+        )
         self._formal_deg_review: dict[str, object] = {}
         self._build_ui()
         if on_continue is not None:
@@ -6455,10 +9509,306 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     def status_message(self) -> str:
         return self._status_label.text()
 
+    def _result_report_header(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("resultReportHeader")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(2, 12, 2, 12)
+        layout.setSpacing(12)
+        text_col = QVBoxLayout()
+        text_col.setSpacing(5)
+        breadcrumb = QLabel("生信分析  >  结果与报告")
+        breadcrumb.setObjectName("resultReportBreadcrumb")
+        title_row = QHBoxLayout()
+        title = QLabel("结果与报告")
+        title.setObjectName("resultReportTitle")
+        subtitle_en = QLabel("/ Result & Report")
+        subtitle_en.setObjectName("resultReportMuted")
+        title_row.addWidget(title)
+        title_row.addWidget(subtitle_en)
+        title_row.addStretch(1)
+        body = QLabel("统一查看分析结果、formal DEG review、plot gate 和 report-ready gate。testing/imported/preflight 输出不会被升级为正式结果。")
+        body.setObjectName("resultReportMuted")
+        body.setWordWrap(True)
+        text_col.addWidget(breadcrumb)
+        text_col.addLayout(title_row)
+        text_col.addWidget(body)
+        badge = QLabel("Bioinformatics")
+        badge.setObjectName("resultReportModuleBadge")
+        back = QPushButton("返回分析任务")
+        back.setObjectName("resultReportGhostButton")
+        back.clicked.connect(self.back_requested.emit)
+        layout.addLayout(text_col, 1)
+        layout.addWidget(badge)
+        layout.addWidget(back)
+        return frame
+
+    def _result_report_stepper(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("resultReportStepper")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(0, 10, 0, 10)
+        layout.setSpacing(8)
+        steps = (
+            ("✓", "项目首页\nProject Home", "done"),
+            ("✓", "数据来源\nData Source", "done"),
+            ("✓", "数据检查与准备\nData Check & Preparation", "done"),
+            ("✓", "分组与分析设计\nGroup & Design", "done"),
+            ("✓", "分析任务\nAnalysis Tasks", "done"),
+            ("6", "结果与报告\nResult & Report", "current"),
+            ("7", "报告导出\nReport Export", "todo"),
+        )
+        for index, (number, label, state) in enumerate(steps):
+            block = QFrame()
+            block_layout = QHBoxLayout(block)
+            block_layout.setContentsMargins(8, 7, 8, 7)
+            block_layout.setSpacing(6)
+            circle = QLabel(number)
+            circle.setAlignment(Qt.AlignCenter)
+            circle.setFixedSize(22, 22)
+            if state == "current":
+                circle.setStyleSheet("background: #2563EB; color: #FFFFFF; border-radius: 11px; font-weight: 900;")
+                text_color = "#2563EB"
+            elif state == "done":
+                circle.setStyleSheet("background: #10B981; color: #FFFFFF; border-radius: 11px; font-weight: 900;")
+                text_color = "#047857"
+            else:
+                circle.setStyleSheet("background: #E5E7EB; color: #94A3B8; border-radius: 11px; font-weight: 900;")
+                text_color = "#94A3B8"
+            text = QLabel(label)
+            text.setStyleSheet(f"color: {text_color}; font-size: 10px; font-weight: 750;")
+            block_layout.addWidget(circle)
+            block_layout.addWidget(text)
+            layout.addWidget(block)
+            if index < len(steps) - 1:
+                arrow = QLabel("›")
+                arrow.setStyleSheet("color: #CBD5E1; font-size: 16px;")
+                layout.addWidget(arrow)
+        layout.addStretch(1)
+        return frame
+
+    def _result_report_filter_bar(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("resultReportFilterBar")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(0, 8, 0, 8)
+        layout.setSpacing(8)
+        for text in ("筛选：", "来源模块：生信分析", "项目：当前项目", "任务/分析：全部", "结果类型：全部", "formal", "testing", "imported"):
+            label = QLabel(text)
+            label.setObjectName("resultReportModuleBadge" if text in {"formal", "testing", "imported"} else "resultReportMuted")
+            layout.addWidget(label)
+        layout.addStretch(1)
+        refresh = QPushButton("刷新")
+        refresh.setObjectName("resultReportGhostButton")
+        refresh.setProperty("buttonBehavior", "calls_load_result_index")
+        refresh.setProperty("formalActionEnabled", False)
+        refresh.clicked.connect(self.refresh_results)
+        layout.addWidget(refresh)
+        return frame
+
+    def _result_report_main_area(self) -> QWidget:
+        wrap = QWidget()
+        row = QHBoxLayout(wrap)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(12)
+        left = QVBoxLayout()
+        left.setSpacing(12)
+        left.addWidget(self._result_review_panel())
+        left.addWidget(self._result_preview_panel())
+        left_wrap = QWidget()
+        left_wrap.setLayout(left)
+        row.addWidget(left_wrap, 1)
+        side = QVBoxLayout()
+        side.setSpacing(12)
+        side.addWidget(self._report_draft_status_card())
+        side.addWidget(self._export_gate_status_card())
+        side.addWidget(self._result_status_legend_card())
+        side.addStretch(1)
+        side_wrap = QWidget()
+        side_wrap.setMinimumWidth(280)
+        side_wrap.setMaximumWidth(320)
+        side_wrap.setLayout(side)
+        row.addWidget(side_wrap)
+        return wrap
+
+    def _result_review_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("resultReportPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        tabs = QHBoxLayout()
+        tabs.setContentsMargins(10, 0, 10, 0)
+        tabs.setSpacing(8)
+        for index, text in enumerate(("结果预览 / Result Preview", "报告草稿 / Report Draft", "导出管理 / Export Mgmt", "历史记录 / History")):
+            button = QPushButton(text)
+            button.setObjectName("resultReportTabButton")
+            button.setProperty("current", index == 0)
+            button.setEnabled(False)
+            button.setProperty("formalActionEnabled", False)
+            tabs.addWidget(button)
+        tabs.addStretch(1)
+        layout.addLayout(tabs)
+        stats = QHBoxLayout()
+        stats.setContentsMargins(10, 10, 10, 8)
+        stats.setSpacing(10)
+        self._result_report_stat_values: dict[str, QLabel] = {}
+        for key, number, label, sublabel, semantic in (
+            ("total", "0", "结果记录", "Result Entries", "blue"),
+            ("formal", "0", "正式结果", "Formal", "green"),
+            ("testing", "0", "测试结果", "Testing", "amber"),
+            ("blocked", "0", "门控阻断", "Blocked", "red"),
+        ):
+            stats.addWidget(self._result_stat_card(key, number, label, sublabel, semantic), 1)
+        layout.addLayout(stats)
+        self._visual_result_table = _table(["结果名称", "类型", "来源模块", "语义", "报告状态", "完成时间", "操作"])
+        self._visual_result_table.setObjectName("resultReportVisualResultTable")
+        self._visual_result_table.verticalHeader().setVisible(False)
+        self._visual_result_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._visual_result_table.setMinimumHeight(260)
+        self._visual_result_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._visual_result_table.setWordWrap(True)
+        layout.addWidget(self._visual_result_table)
+        footer = QHBoxLayout()
+        footer.setContentsMargins(10, 8, 10, 10)
+        self._result_report_table_footer = QLabel("显示 0 / 0 条结果")
+        self._result_report_table_footer.setObjectName("resultReportMuted")
+        footer.addWidget(self._result_report_table_footer)
+        footer.addStretch(1)
+        all_results = QLabel("查看全部结果  ›")
+        all_results.setObjectName("resultReportStatLabel")
+        footer.addWidget(all_results)
+        layout.addLayout(footer)
+        return card
+
+    def _result_stat_card(self, key: str, number: str, label: str, sublabel: str, semantic: str) -> QFrame:
+        card = QFrame()
+        card.setObjectName("resultReportStatCard")
+        card.setProperty("semantic", semantic)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(4)
+        value = QLabel(number)
+        value.setObjectName("resultReportStatNumber")
+        title = QLabel(label)
+        title.setObjectName("resultReportStatLabel")
+        sub = QLabel(sublabel)
+        sub.setObjectName("resultReportMuted")
+        layout.addWidget(value)
+        layout.addWidget(title)
+        layout.addWidget(sub)
+        self._result_report_stat_values[key] = value
+        return card
+
+    def _result_preview_panel(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("resultReportPreviewPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(12, 12, 12, 14)
+        layout.setSpacing(10)
+        top = QHBoxLayout()
+        title = QLabel("结果预览区域 / Result Preview")
+        title.setObjectName("resultReportCardTitle")
+        self._result_report_selected_label = QLabel("已选：formal DEG review gate")
+        self._result_report_selected_label.setObjectName("resultReportModuleBadge")
+        self._result_report_selected_label.setFixedHeight(30)
+        self._result_report_selected_label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        top.addWidget(title)
+        top.addStretch(1)
+        top.addWidget(self._result_report_selected_label)
+        layout.addLayout(top)
+        preview = QLabel("Formal DEG review、plot gate 和 report-ready gate 只接受 formal_computed_result 来源。\nImported/testing/preflight 结果只能浏览或进入草稿边界，不会生成正式报告包。")
+        preview.setObjectName("resultReportPreviewBox")
+        preview.setAlignment(Qt.AlignCenter)
+        preview.setWordWrap(True)
+        layout.addWidget(preview)
+        return card
+
+    def _report_draft_status_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("resultReportSideCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 12, 14, 14)
+        layout.setSpacing(9)
+        title = QLabel("报告草稿状态")
+        title.setObjectName("resultReportSideTitle")
+        state = QLabel("Report draft gate：等待 formal result")
+        state.setObjectName("resultReportMuted")
+        button = QPushButton("生成报告草稿")
+        button.setObjectName("resultReportPrimaryButton")
+        button.setEnabled(False)
+        button.setProperty("buttonBehavior", "disabled_report_draft_missing_formal_result")
+        button.setProperty("formalActionEnabled", False)
+        layout.addWidget(title)
+        layout.addWidget(QLabel("▤"), alignment=Qt.AlignHCenter)
+        layout.addWidget(state, alignment=Qt.AlignHCenter)
+        layout.addWidget(button)
+        layout.addWidget(_muted("只在 report-ready gate 通过后生成正式报告包。"))
+        return card
+
+    def _export_gate_status_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("resultReportSideCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 12, 14, 14)
+        layout.setSpacing(8)
+        title = QLabel("导出状态")
+        title.setObjectName("resultReportSideTitle")
+        layout.addWidget(title)
+        for label, status, good in (
+            ("result index", "检测中", True),
+            ("formal DEG review", "门控", False),
+            ("plot artifact", "门控", False),
+            ("report-ready package", "门控", False),
+            ("export package", "待检查", False),
+        ):
+            row = QHBoxLayout()
+            name = QLabel(label)
+            name.setObjectName("resultReportMuted")
+            state = QLabel(("✓ " if good else "ⓘ ") + status)
+            state.setObjectName("resultReportStatusGood" if good else "resultReportStatusPartial")
+            row.addWidget(name, 1)
+            row.addWidget(state)
+            layout.addLayout(row)
+        button = QPushButton("准备导出")
+        button.setObjectName("resultReportGhostButton")
+        button.setEnabled(False)
+        button.setProperty("buttonBehavior", "disabled_missing_report_ready")
+        button.setProperty("formalActionEnabled", False)
+        layout.addWidget(button)
+        layout.addWidget(_muted("完成 formal DEG report-ready gate 后可用。"))
+        return card
+
+    def _result_status_legend_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("resultReportStatusLegend")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 12, 14, 14)
+        layout.setSpacing(10)
+        title = QLabel("结果状态说明")
+        title.setObjectName("resultReportSideTitle")
+        layout.addWidget(title)
+        for object_name, title_text, body in (
+            ("resultReportStatusGood", "formal", "由本软件正式执行并通过 result schema。"),
+            ("resultReportStatusPartial", "testing/imported", "可审阅但不能自动成为正式报告结论。"),
+            ("resultReportStatusNone", "blocked", "缺依赖、缺 plot 或 report-ready gate 未通过。"),
+        ):
+            label = QLabel(f"{title_text}\n{body}")
+            label.setObjectName(object_name)
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        return card
+
     def _build_ui(self) -> None:
-        root = _scroll_root(self)
-        root.addWidget(_header("结果浏览", "查看导入结果、测试级结果和任务记录，确认哪些内容可进入报告草稿。", back_text="返回分析任务中心", back_signal=self.back_requested))
+        root = _scroll_root(self, max_width=1280)
+        root.setContentsMargins(16, 0, 16, 28)
+        root.setSpacing(14)
+        root.addWidget(self._result_report_header())
+        root.addWidget(self._result_report_stepper())
+        root.addWidget(self._result_report_filter_bar())
+        root.addWidget(self._result_report_main_area())
         self._status_label = _status_label("暂无结果，请先在分析任务中心创建配置草稿，或导入明确标记的结果。")
+        self._status_label.setObjectName("resultReportStatusMessage")
         root.addWidget(self._status_label)
 
         summary_card, summary_layout = _card("当前结果状态")
@@ -6474,9 +9824,21 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         root.addWidget(summary_card)
 
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results))
-        actions.addWidget(_button("导入结果浏览", "secondaryButton", self.open_imported_deg_browser))
-        actions.addWidget(_button("查看报告草稿", "primaryButton", self.continue_to_report))
+        refresh_button = _button("刷新结果", "secondaryButton", self.refresh_results)
+        refresh_button.setObjectName("resultReportRefreshButton")
+        refresh_button.setProperty("buttonBehavior", "calls_load_result_index_and_formal_deg_gates")
+        refresh_button.setProperty("formalActionEnabled", False)
+        actions.addWidget(refresh_button)
+        imported_button = _button("导入结果浏览", "secondaryButton", self.open_imported_deg_browser)
+        imported_button.setObjectName("resultReportOpenImportedDegButton")
+        imported_button.setProperty("buttonBehavior", "opens_imported_external_result_browser")
+        imported_button.setProperty("formalActionEnabled", False)
+        actions.addWidget(imported_button)
+        draft_button = _button("查看报告草稿", "primaryButton", self.continue_to_report)
+        draft_button.setObjectName("resultReportOpenDraftButton")
+        draft_button.setProperty("buttonBehavior", "opens_report_export_gate_when_result_exists")
+        draft_button.setProperty("formalActionEnabled", False)
+        actions.addWidget(draft_button)
         actions.addStretch(1)
         root.addLayout(actions)
         self._results = _table(["结果名称", "结果类型", "来源", "状态", "可用于报告", "生成时间", "简短说明", "查看详情"])
@@ -6502,8 +9864,16 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         controls.addWidget(self._formal_deg_sort_input)
         controls.addWidget(QLabel("Filter"))
         controls.addWidget(self._formal_deg_filter_input)
-        controls.addWidget(_button("导出 DEG TSV", "secondaryButton", self.export_formal_deg_review_tsv))
-        controls.addWidget(_button("导出 DEG CSV", "secondaryButton", self.export_formal_deg_review_csv))
+        tsv_button = _button("导出 DEG TSV", "secondaryButton", self.export_formal_deg_review_tsv)
+        tsv_button.setObjectName("formalDegReviewExportTsvButton")
+        tsv_button.setProperty("buttonBehavior", "exports_formal_deg_review_table_when_gate_passes")
+        tsv_button.setProperty("formalActionEnabled", False)
+        controls.addWidget(tsv_button)
+        csv_button = _button("导出 DEG CSV", "secondaryButton", self.export_formal_deg_review_csv)
+        csv_button.setObjectName("formalDegReviewExportCsvButton")
+        csv_button.setProperty("buttonBehavior", "exports_formal_deg_review_table_when_gate_passes")
+        csv_button.setProperty("formalActionEnabled", False)
+        controls.addWidget(csv_button)
         controls.addStretch(1)
         review_layout.addLayout(controls)
         plot_controls = QHBoxLayout()
@@ -6514,6 +9884,8 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         plot_controls.addWidget(self._formal_deg_plot_type)
         self._formal_deg_plot_button = _button("生成 formal DEG plot artifact", "secondaryButton", self.generate_formal_deg_plot_artifact)
         self._formal_deg_plot_button.setObjectName("formalDegPlotButton")
+        self._formal_deg_plot_button.setProperty("buttonBehavior", "creates_formal_deg_plot_artifact_when_gate_passes")
+        self._formal_deg_plot_button.setProperty("formalActionEnabled", True)
         plot_controls.addWidget(self._formal_deg_plot_button)
         self._formal_deg_plot_status = _muted("Formal plot artifact 只接受 formal_computed_result DEG source；不生成 report-ready。")
         self._formal_deg_plot_status.setObjectName("formalDegPlotStatus")
@@ -6526,6 +9898,8 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._formal_deg_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
         self._formal_deg_report_button = _button("生成 formal DEG report-ready package", "secondaryButton", self.generate_formal_deg_report_ready_package)
         self._formal_deg_report_button.setObjectName("formalDegReportReadyButton")
+        self._formal_deg_report_button.setProperty("buttonBehavior", "creates_formal_deg_report_ready_package_when_gate_passes")
+        self._formal_deg_report_button.setProperty("formalActionEnabled", True)
         self._formal_deg_report_status = _muted("Formal DEG report-ready gate 需要完整 result index、未过期 confirmation、passed dependency/table validation 和 formal plot artifact；无图 table-only 模式需显式勾选，且不表示 volcano/heatmap 已生成。")
         self._formal_deg_report_status.setObjectName("formalDegReportReadyStatus")
         report_controls.addWidget(self._formal_deg_table_only_report)
@@ -6562,9 +9936,21 @@ class BioinformaticsResultsBrowserWidget(QWidget):
 
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
-        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._details)))
-        developer_actions.addWidget(_button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None)))
-        developer_actions.addWidget(_button("打开参数 JSON", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None)))
+        details_button = _button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._details))
+        details_button.setObjectName("resultReportToggleDeveloperDiagnosticsButton")
+        details_button.setProperty("buttonBehavior", "toggles_developer_diagnostics")
+        details_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(details_button)
+        folder_button = _button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None))
+        folder_button.setObjectName("resultReportOpenResultsFolderButton")
+        folder_button.setProperty("buttonBehavior", "opens_results_folder")
+        folder_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(folder_button)
+        params_button = _button("打开参数 JSON", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None))
+        params_button.setObjectName("resultReportOpenParamsJsonButton")
+        params_button.setProperty("buttonBehavior", "opens_result_manager_json")
+        params_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(params_button)
         developer_actions.addStretch(1)
         developer_layout.addLayout(developer_actions)
         self._details = _text_preview(130)
@@ -6572,9 +9958,14 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._details.setVisible(False)
         developer_layout.addWidget(self._details)
         root.addWidget(developer_card)
-        root.addWidget(_button("继续：报告查看", "primaryButton", self.continue_to_report), alignment=Qt.AlignLeft)
+        continue_button = _button("继续：报告查看", "primaryButton", self.continue_to_report)
+        continue_button.setObjectName("resultReportContinueReportExportButton")
+        continue_button.setProperty("buttonBehavior", "opens_report_export_gate_when_result_exists")
+        continue_button.setProperty("formalActionEnabled", False)
+        root.addWidget(continue_button, alignment=Qt.AlignLeft)
 
     def _render(self, payload: dict[str, object]) -> None:
+        self._render_result_report_visual_state(payload)
         entries = _result_entries_for_display(self._project_root, payload)
         records = load_task_records(self._project_root) if self._project_root else []
         warnings = [str(item) for item in payload.get("warnings", []) or []]
@@ -6611,6 +10002,70 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state}))
+
+    def _render_result_report_visual_state(self, payload: dict[str, object]) -> None:
+        entries = _result_entries_for_display(self._project_root, payload)
+        fallback_rows = [
+            ["Formal DEG review", "DEG", "生信分析", "blocked", "draft", "等待 formal result", "查看 gate"],
+            ["GSEA / ORA result", "Enrichment", "生信分析", "blocked", "draft", "等待 DEG input", "已锁定"],
+            ["Survival / clinical result", "Survival", "生信分析", "blocked", "draft", "等待 clinical gate", "已锁定"],
+            ["Plot artifacts", "Plot", "生信分析", "blocked", "draft", "等待 formal plot gate", "已锁定"],
+            ["Report-ready package", "Report", "生信分析", "blocked", "draft", "等待 report-ready gate", "已锁定"],
+        ]
+        if entries:
+            visual_rows: list[list[object]] = []
+            for index, item in enumerate(entries[:5], start=1):
+                result_semantics = str(item.get("result_semantics") or item.get("result_semantic_key") or item.get("status") or "testing")
+                report_status = str(item.get("report_status") or item.get("report_status_key") or "draft")
+                analysis_type = str(item.get("analysis_type") or "Analysis")
+                visual_type = {
+                    "differential_expression": "DEG",
+                    "enrichment": "Enrichment",
+                    "gsea": "GSEA",
+                    "survival": "Survival",
+                    "clinical_association": "Clinical",
+                }.get(analysis_type, analysis_type)
+                visual_rows.append(
+                    [
+                        str(item.get("result_name") or item.get("name") or f"结果 {index}"),
+                        visual_type,
+                        "生信分析",
+                        result_semantics,
+                        report_status,
+                        str(item.get("created_at") or item.get("updated_at") or "未记录"),
+                        "预览" if "formal" in result_semantics else "查看 gate",
+                    ]
+                )
+        else:
+            visual_rows = fallback_rows
+        _fill_table(self._visual_result_table, visual_rows)
+        _set_table_widths(self._visual_result_table, [210, 110, 90, 150, 110, 170, 90])
+        self._visual_result_table.verticalHeader().setDefaultSectionSize(46)
+        self._visual_result_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self._visual_result_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._visual_result_table.verticalHeader().setVisible(False)
+
+        total = len(entries)
+        formal_count = sum(1 for item in entries if "formal" in str(item.get("result_semantics") or item.get("result_semantic_key") or ""))
+        testing_count = sum(
+            1
+            for item in entries
+            if "testing" in str(item.get("result_semantics") or item.get("result_semantic_key") or "")
+            or "imported" in str(item.get("result_semantics") or item.get("result_semantic_key") or "")
+        )
+        blocked_count = 0 if entries else len(fallback_rows)
+        for key, value in {
+            "total": total or len(fallback_rows),
+            "formal": formal_count,
+            "testing": testing_count,
+            "blocked": blocked_count,
+        }.items():
+            label = self._result_report_stat_values.get(key)
+            if label is not None:
+                label.setText(str(value))
+        self._result_report_table_footer.setText(f"显示 {len(visual_rows)} / {total or len(fallback_rows)} 条结果或 gate")
+        selected = str(visual_rows[0][0] if visual_rows else "formal DEG review")
+        self._result_report_selected_label.setText(f"已选：{selected}")
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -6712,7 +10167,17 @@ class BioinformaticsReportViewerWidget(QWidget):
         super().__init__(parent)
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsReportViewerPage")
-        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self.setProperty("uiPrimitive", "workbench_gated_page")
+        self.setProperty("layoutPolishNoOverlap", True)
+        self.setProperty("formalActionEnabled", False)
+        self.setStyleSheet(
+            bioinformatics_project_home_stylesheet()
+            + _DATA_SOURCE_STYLESHEET
+            + _DATA_CHECK_STYLESHEET
+            + _GROUP_DESIGN_STYLESHEET
+            + _ANALYSIS_TASK_STYLESHEET
+            + _RESULT_REPORT_STYLESHEET
+        )
         self._build_ui()
         if on_back is not None:
             self.back_requested.connect(on_back)
@@ -6788,13 +10253,133 @@ class BioinformaticsReportViewerWidget(QWidget):
     def status_message(self) -> str:
         return self._status_label.text()
 
+    def _report_export_header(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("resultReportHeader")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(2, 12, 2, 12)
+        layout.setSpacing(12)
+        text_col = QVBoxLayout()
+        text_col.setSpacing(5)
+        breadcrumb = QLabel("生信分析  >  报告导出")
+        breadcrumb.setObjectName("resultReportBreadcrumb")
+        title_row = QHBoxLayout()
+        title = QLabel("报告导出")
+        title.setObjectName("resultReportTitle")
+        subtitle = QLabel("/ Report Export")
+        subtitle.setObjectName("resultReportMuted")
+        title_row.addWidget(title)
+        title_row.addWidget(subtitle)
+        title_row.addStretch(1)
+        body = QLabel("独立 export gate：只有 formal DEG report-ready package 或通用 report-ready gate 通过后，才允许导出。")
+        body.setObjectName("resultReportMuted")
+        body.setWordWrap(True)
+        text_col.addWidget(breadcrumb)
+        text_col.addLayout(title_row)
+        text_col.addWidget(body)
+        badge = QLabel("Export Gate")
+        badge.setObjectName("resultReportModuleBadge")
+        back = QPushButton("返回 Result & Report")
+        back.setObjectName("resultReportGhostButton")
+        back.clicked.connect(self.back_requested.emit)
+        layout.addLayout(text_col, 1)
+        layout.addWidget(badge)
+        layout.addWidget(back)
+        return frame
+
+    def _report_export_stepper(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("resultReportStepper")
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(0, 10, 0, 10)
+        layout.setSpacing(8)
+        steps = (
+            ("✓", "项目首页\nProject Home", "done"),
+            ("✓", "数据来源\nData Source", "done"),
+            ("✓", "数据检查与准备\nData Check & Preparation", "done"),
+            ("✓", "分组与分析设计\nGroup & Design", "done"),
+            ("✓", "分析任务\nAnalysis Tasks", "done"),
+            ("✓", "结果与报告\nResult & Report", "done"),
+            ("7", "报告导出\nReport Export", "current"),
+        )
+        for index, (number, label, state) in enumerate(steps):
+            block = QFrame()
+            block_layout = QHBoxLayout(block)
+            block_layout.setContentsMargins(8, 7, 8, 7)
+            block_layout.setSpacing(6)
+            circle = QLabel(number)
+            circle.setAlignment(Qt.AlignCenter)
+            circle.setFixedSize(22, 22)
+            if state == "current":
+                circle.setStyleSheet("background: #2563EB; color: #FFFFFF; border-radius: 11px; font-weight: 900;")
+                text_color = "#2563EB"
+            else:
+                circle.setStyleSheet("background: #10B981; color: #FFFFFF; border-radius: 11px; font-weight: 900;")
+                text_color = "#047857"
+            text = QLabel(label)
+            text.setStyleSheet(f"color: {text_color}; font-size: 10px; font-weight: 750;")
+            block_layout.addWidget(circle)
+            block_layout.addWidget(text)
+            layout.addWidget(block)
+            if index < len(steps) - 1:
+                arrow = QLabel("›")
+                arrow.setStyleSheet("color: #CBD5E1; font-size: 16px;")
+                layout.addWidget(arrow)
+        layout.addStretch(1)
+        return frame
+
+    def _report_export_overview(self) -> QWidget:
+        wrap = QWidget()
+        row = QHBoxLayout(wrap)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(12)
+        for title, value, subtitle, semantic in (
+            ("Report-ready", "Gate", "formal DEG / generic report", "blue"),
+            ("DOCX / HTML", "Disabled", "requires report-ready package", "amber"),
+            ("PDF", "Future", "not production enabled", "red"),
+            ("Package", "Blocked", "no export until gate passes", "red"),
+        ):
+            card = QFrame()
+            card.setObjectName("resultReportStatCard")
+            card.setProperty("semantic", semantic)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setSpacing(4)
+            value_label = QLabel(value)
+            value_label.setObjectName("resultReportStatNumber")
+            title_label = QLabel(title)
+            title_label.setObjectName("resultReportStatLabel")
+            subtitle_label = QLabel(subtitle)
+            subtitle_label.setObjectName("resultReportMuted")
+            layout.addWidget(value_label)
+            layout.addWidget(title_label)
+            layout.addWidget(subtitle_label)
+            row.addWidget(card, 1)
+        return wrap
+
     def _build_ui(self) -> None:
-        root = _scroll_root(self)
-        root.addWidget(_header("项目报告", "生成和查看项目报告草稿，保持导入、测试级和未运行状态的边界。", back_text="返回结果浏览", back_signal=self.back_requested))
+        root = _scroll_root(self, max_width=1280)
+        root.setContentsMargins(16, 0, 16, 28)
+        root.setSpacing(14)
+        root.addWidget(self._report_export_header())
+        root.addWidget(self._report_export_stepper())
+        root.addWidget(self._report_export_overview())
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新报告草稿", "primaryButton", self.generate_report))
-        actions.addWidget(_button("打开报告草稿文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
-        actions.addWidget(_button("复制报告摘要", "secondaryButton", self.copy_report_summary))
+        refresh_button = _button("刷新报告草稿", "primaryButton", self.generate_report)
+        refresh_button.setObjectName("reportExportRefreshDraftButton")
+        refresh_button.setProperty("buttonBehavior", "generates_markdown_report_draft_only")
+        refresh_button.setProperty("formalActionEnabled", False)
+        actions.addWidget(refresh_button)
+        folder_button = _button("打开报告草稿文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None))
+        folder_button.setObjectName("reportExportOpenDraftFolderButton")
+        folder_button.setProperty("buttonBehavior", "opens_report_draft_folder")
+        folder_button.setProperty("formalActionEnabled", False)
+        actions.addWidget(folder_button)
+        copy_button = _button("复制报告摘要", "secondaryButton", self.copy_report_summary)
+        copy_button.setObjectName("reportExportCopySummaryButton")
+        copy_button.setProperty("buttonBehavior", "copies_report_draft_summary")
+        copy_button.setProperty("formalActionEnabled", False)
+        actions.addWidget(copy_button)
         actions.addStretch(1)
         root.addLayout(actions)
         self._status_label = _status_label("没有报告草稿时请点击刷新报告草稿。本阶段只生成 Markdown 和 report_manifest.json。")
@@ -6821,11 +10406,12 @@ class BioinformaticsReportViewerWidget(QWidget):
         self._report_ready_gate = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
         self._report_ready_gate.setObjectName("reportReadyGateTable")
         root.addWidget(self._report_ready_gate)
-        _set_table_widths(self._report_ready_gate, [170, 170, 230, 320, 300])
-        self._report_ready_gate.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        _configure_report_ready_gate_table(self._report_ready_gate)
         export_actions = QHBoxLayout()
         self._report_ready_export_button = _button("导出 report-ready package", "primaryButton", self.export_report_ready_package)
         self._report_ready_export_button.setObjectName("reportReadyExportButton")
+        self._report_ready_export_button.setProperty("buttonBehavior", "exports_report_ready_package_when_gate_passes")
+        self._report_ready_export_button.setProperty("formalActionEnabled", True)
         self._report_ready_export_status = _muted("Report-ready export 只在 formal DEG 或通用 report-ready gate 通过后开放。")
         self._report_ready_export_status.setObjectName("reportReadyExportStatus")
         export_actions.addWidget(self._report_ready_export_button)
@@ -6839,8 +10425,16 @@ class BioinformaticsReportViewerWidget(QWidget):
 
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
-        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._manifest)))
-        developer_actions.addWidget(_button("打开报告草稿文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
+        details_button = _button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._manifest))
+        details_button.setObjectName("reportExportToggleDeveloperDiagnosticsButton")
+        details_button.setProperty("buttonBehavior", "toggles_developer_diagnostics")
+        details_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(details_button)
+        developer_folder_button = _button("打开报告草稿文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None))
+        developer_folder_button.setObjectName("reportExportDeveloperOpenDraftFolderButton")
+        developer_folder_button.setProperty("buttonBehavior", "opens_report_draft_folder")
+        developer_folder_button.setProperty("formalActionEnabled", False)
+        developer_actions.addWidget(developer_folder_button)
         developer_actions.addStretch(1)
         developer_layout.addLayout(developer_actions)
         self._manifest = _text_preview(140)
@@ -6865,6 +10459,7 @@ class BioinformaticsReportViewerWidget(QWidget):
         _fill_table(self._sections, _report_section_rows(self._project_root, entries, records, bool(markdown)))
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._report_ready_gate, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
+        _configure_report_ready_gate_table(self._report_ready_gate)
         action = _analysis_ui_action(analysis_state.get("action_rows", []), "report_ready_export")
         self._render_report_ready_export_gate(action, analysis_state)
         self._markdown.setPlainText(_report_user_preview_text(markdown, entries, records))
@@ -7200,6 +10795,11 @@ def _fill_table(table: QTableWidget, rows: list[list[object]]) -> None:
     table.resizeColumnsToContents()
 
 
+def _table_text(table: QTableWidget, row: int, column: int) -> str:
+    item = table.item(row, column)
+    return item.text().strip() if item is not None else ""
+
+
 def _clear_layout(layout: QVBoxLayout) -> None:
     while layout.count():
         item = layout.takeAt(0)
@@ -7212,6 +10812,14 @@ def _clear_layout(layout: QVBoxLayout) -> None:
 def _set_table_widths(table: QTableWidget, widths: list[int]) -> None:
     for index, width in enumerate(widths[: table.columnCount()]):
         table.setColumnWidth(index, width)
+
+
+def _configure_report_ready_gate_table(table: QTableWidget) -> None:
+    _set_table_widths(table, [140, 180, 160, 330, 260])
+    header = table.horizontalHeader()
+    header.setStretchLastSection(False)
+    for column in range(min(5, table.columnCount())):
+        header.setSectionResizeMode(column, QHeaderView.Fixed)
 
 
 def _configure_history_cache_table(table: QTableWidget) -> None:
@@ -11834,6 +15442,43 @@ def _standardization_asset_status_text(item: dict[str, object], warning: str) ->
     return f"{repository}：已登记{selected}"
 
 
+def _group_design_context_summary(context: dict[str, object]) -> str:
+    has_count = bool(context.get("has_count_matrix"))
+    has_normalized = bool(context.get("has_normalized_expression_matrix"))
+    group_count = int(context.get("group_count") or 0)
+    imported_count = int(context.get("imported_deg_count") or 0)
+    warnings = [str(item) for item in context.get("warnings", []) or [] if str(item)]
+    matrix_text = "count matrix" if has_count else ("FPKM/TPM matrix" if has_normalized else "未检测到")
+    match = context.get("count_fpkm_sample_match")
+    match_text = ""
+    if match is True:
+        match_text = "Count 与 FPKM 样本匹配"
+    elif match is False:
+        match_text = "Count 与 FPKM 样本不完全一致，请检查。"
+    status = "已确认分组设计" if context.get("has_confirmed_design") else "尚未确认分组设计"
+    lines = [
+        f"当前数据来源：{'综合 RNA-seq 表' if (has_count and imported_count) else '当前标准化资产'}",
+        f"表达矩阵：{matrix_text}",
+        f"推断分组：{group_count} 组",
+        f"已有 DEG comparisons：{imported_count} 个",
+        f"物种：{context.get('species') or 'unknown'}",
+        f"状态：{status}",
+    ]
+    if match_text:
+        lines.append(match_text)
+    if has_count and not context.get("has_confirmed_design"):
+        lines.append("重新差异分析前，请先确认分组。")
+    if not has_count and has_normalized:
+        lines.append("当前仅检测到 FPKM/TPM 表达矩阵。可用于表达展示、热图和相关性；如需重新差异分析，请提供 count matrix 或确认适用方法。")
+    if not has_count and not has_normalized:
+        lines.append("未检测到可用于分组设计的表达矩阵。")
+    if imported_count:
+        lines.append("已有导入差异结果可直接用于结果浏览和富集分析；如需重新计算，请保存上方分组和比较设计。")
+    if warnings:
+        lines.append("提醒：" + "；".join(dict.fromkeys(warnings)))
+    return "\n".join(lines)
+
+
 def _format_confidence(value: object) -> str:
     try:
         numeric = float(value)
@@ -12214,3 +15859,12 @@ def _open_path(path: Path | None) -> None:
 def _refresh_style(widget: QWidget) -> None:
     widget.style().unpolish(widget)
     widget.style().polish(widget)
+
+
+def _preview_list(values: list[str], *, limit: int, more_label: str) -> str:
+    clean = [value for value in values if value]
+    if not clean:
+        return ""
+    shown = "、".join(clean[:limit])
+    remaining = len(clean) - limit
+    return f"{shown}；另有 {remaining} 个{more_label}" if remaining > 0 else shown

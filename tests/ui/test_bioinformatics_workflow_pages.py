@@ -14,7 +14,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTableWidgetItem, QTextEdit
 
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
@@ -23,6 +23,7 @@ try:
     from app.bioinformatics.results.models import ResultIndexEntry
     from app.bioinformatics.results.project_results import write_result_index
     from app.bioinformatics.results.registry import register_result
+    from app.bioinformatics.standardized_asset_selection import save_standardized_asset_selection
     import app.bioinformatics.project_recognition as project_recognition
     import app.bioinformatics.workflow_pages as workflow_pages
     from app.bioinformatics.workflow_pages import (
@@ -31,6 +32,7 @@ try:
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsDegConfigWidget,
+        BioinformaticsGroupComparisonDesignWidget,
         GseaGeneSetResourceManagerDialog,
         BioinformaticsImportedDegBrowserWidget,
         BioinformaticsRecognitionWidget,
@@ -2624,6 +2626,112 @@ def test_readiness_page_uses_compact_status_and_warning_chips(qt_app, project_su
     assert readiness._details.isHidden()
 
 
+def test_data_check_gated_shell_runs_readiness_and_writes_artifact(qt_app, project_summary) -> None:
+    raw_file = project_summary.project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    raw_file.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression_matrix.tsv",
+        strategy="reference",
+        selected_paths=[raw_file],
+    )
+    recognition = BioinformaticsRecognitionWidget()
+    recognition.refresh_project(project_summary)
+    checkbox = recognition.findChild(QCheckBox)
+    assert checkbox is not None
+    checkbox.setChecked(True)
+    assert recognition.run_recognition() is not None
+
+    readiness = BioinformaticsReadinessDashboardWidget()
+    readiness.refresh_project(project_summary)
+    run_button = readiness.findChild(QPushButton, "bioinformaticsRunDataCheckButton")
+    assert run_button is not None
+    assert run_button.isEnabled()
+    run_button.click()
+
+    assert readiness.findChild(QFrame, "dataCheckTopHeader") is not None
+    assert readiness.findChild(QFrame, "dataCheckStepper") is not None
+    assert len(readiness.findChildren(QFrame, "dataCheckSummaryCard")) == 5
+    gate = readiness.findChild(QFrame, "bioinformaticsDataCheckGateCard")
+    assert gate is not None
+    assert gate.property("formalActionEnabled") is False
+    gate_chip = readiness.findChild(QLabel, "bioinformaticsDataCheckStatusChip")
+    assert gate_chip.property("statusSemanticKey") in {"analysis.status.preflight_only", "feature.status.blocked"}
+    gate_table = readiness.findChild(QTableWidget, "bioinformaticsDataCheckReadinessTable")
+    assert gate_table.rowCount() >= 4
+    gate_summary = readiness.findChild(QTextEdit, "bioinformaticsDataCheckReadinessSummary")
+    assert "No fake matrix" in gate_summary.toPlainText()
+    save_button = readiness.findChild(QPushButton, "bioinformaticsDataCheckSaveReportDisabledButton")
+    assert save_button is not None
+    assert not save_button.isEnabled()
+    assert save_button.property("buttonBehavior") == "disabled_file_picker_required"
+    readiness_path = readiness._last_artifacts.get("readiness_path")
+    assert readiness_path is not None
+    assert Path(str(readiness_path)).exists()
+
+
+def test_group_design_gated_shell_saves_design_draft(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "gene_id,A1_count,A2_count,B1_count,B2_count,A1_fpkm,A2_fpkm,B1_fpkm,B2_fpkm,PFFvsPBS_log2FoldChange,PFFvsPBS_pvalue,PFFvsPBS_padj,gene_name,gene_biotype,gene_description\n"
+        "ENSMUSG00000026193,10,12,30,32,1.1,1.2,3.0,3.2,1.5,0.01,0.04,Sox17,protein_coding,SRY-box transcription factor 17\n"
+        "ENSMUSG00000064351,20,18,6,5,2.1,2.2,0.6,0.5,-1.7,0.02,0.03,mt-Nd1,protein_coding,mitochondrially encoded NADH\n",
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+    save_standardized_asset_selection(project_summary.project_root, {"count_matrix": "count_matrix_001"})
+
+    widget = BioinformaticsGroupComparisonDesignWidget()
+    widget.refresh_project(project_summary)
+    gate_card = widget.findChild(QFrame, "bioinformaticsGroupDesignGateCard")
+    header = widget.findChild(QFrame, "groupDesignTopHeader")
+    stepper = widget.findChild(QFrame, "groupDesignStepper")
+    summary = widget.findChild(QTextEdit, "groupDesignSummary")
+    groups = widget.findChild(QTableWidget, "groupDesignSampleGroupsTable")
+    comparisons = widget.findChild(QTableWidget, "groupDesignComparisonsTable")
+    covariates = widget.findChild(QTableWidget, "bioinformaticsCovariateSettingsTable")
+    preflight = widget.findChild(QPushButton, "bioinformaticsRunPreflightGatedButton")
+    save_button = widget.findChild(QPushButton, "bioinformaticsGroupDesignSaveButton")
+
+    assert header is not None
+    assert stepper is not None
+    assert gate_card is not None
+    assert gate_card.property("formalActionEnabled") is False
+    assert summary is not None
+    assert "推断分组：2 组" in summary.toPlainText()
+    assert "Count 与 FPKM 样本匹配" in summary.toPlainText()
+    assert groups is not None
+    assert comparisons is not None
+    assert covariates is not None
+    assert preflight is not None
+    assert not preflight.isEnabled()
+    assert preflight.property("buttonBehavior") == "disabled_gated_preflight_preview"
+    assert preflight.property("formalActionEnabled") is False
+    assert save_button is not None
+    assert save_button.property("formalActionEnabled") is False
+
+    groups.setItem(0, 1, QTableWidgetItem("PBS"))
+    groups.setItem(0, 2, QTableWidgetItem("control"))
+    groups.setItem(1, 1, QTableWidgetItem("PFF"))
+    groups.setItem(1, 2, QTableWidgetItem("treatment"))
+    widget.add_comparison_row("PFF_vs_PBS", "PFF", "PBS")
+    payload = widget.save_design()
+
+    assert payload is not None
+    assert "已保存分组与比较设计" in widget.status_message()
+    design_path = project_summary.project_root / "manifests" / "group_comparison_design.json"
+    assert design_path.exists()
+    design = json.loads(design_path.read_text(encoding="utf-8"))
+    assert design["comparisons"][0]["status"] == "confirmed"
+    assert design["imported_deg_references"][0]["comparison_name"] == "PFFvsPBS"
+    assert not (project_summary.project_root / "results" / "tables").exists()
+    widget.close()
+
+
 def test_readiness_missing_info_entry_and_templates(qt_app, project_summary) -> None:
     raw_file = project_summary.project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
@@ -2947,6 +3055,19 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     widget = BioinformaticsAnalysisTaskCenterWidget()
     widget.refresh_project(project_summary)
 
+    assert widget.property("uiPrimitive") == "workbench_gated_page"
+    assert widget.property("formalActionEnabled") is False
+    assert widget.findChild(QFrame, "analysisTaskTopBar") is not None
+    assert widget.findChild(QFrame, "analysisTaskHeader") is not None
+    assert widget.findChild(QFrame, "analysisTaskNotice") is not None
+    visual_task_table = widget.findChild(QTableWidget, "analysisTaskVisualTaskTable")
+    assert visual_task_table is not None
+    visual_text = _table_text(visual_task_table)
+    assert "差异表达分析" in visual_text
+    assert "基因集富集分析" in visual_text or "GSEA" in visual_text
+    assert "生存分析" in visual_text or "Survival" in visual_text
+    assert widget.findChild(QFrame, "analysisTaskParameterPanel") is not None
+
     buttons = {button.text() for button in widget.findChildren(QPushButton)}
     assert {
         "刷新任务状态",
@@ -3044,6 +3165,25 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "KM/Cox/log-rank/HR" in survival_text
     assert "disabled" in survival_text
 
+    expected_button_behaviors = {
+        "bioinformaticsAnalysisRefreshButton": "calls_load_analysis_task_center",
+        "bioinformaticsAnalysisComparisonConfigButton": "writes_manual_comparison_config_and_reruns_readiness",
+        "bioinformaticsAnalysisOpenDegConfigButton": "opens_deg_config_preflight_page",
+        "analysisTaskConfirmFormalDegParametersButton": "writes_formal_deg_parameter_confirmation",
+        "openEnrichmentGateButton": "opens_enrichment_preflight_gate_page",
+        "openSurvivalClinicalGateButton": "opens_survival_clinical_preflight_gate_page",
+        "openImportedDegBrowserButton": "opens_imported_external_result_browser",
+        "analysisTaskRunTestingGeoDegButton": "developer_testing_geo_deg_runner",
+        "analysisTaskContinueResultsButton": "opens_result_report_after_task_record_exists",
+    }
+    for object_name, behavior in expected_button_behaviors.items():
+        button = widget.findChild(QPushButton, object_name)
+        assert button is not None, object_name
+        assert button.property("buttonBehavior") == behavior
+    assert widget.findChild(QPushButton, "analysisTaskConfirmFormalDegParametersButton").property("formalActionEnabled") is False
+    assert widget.findChild(QPushButton, "analysisTaskRunFormalControlledDegButton").property("formalActionEnabled") is True
+    assert not widget.findChild(QPushButton, "analysisTaskRunFormalControlledDegButton").isEnabled()
+
 
 def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, project_summary, tmp_path: Path) -> None:
     imported_deg = tmp_path / "diffexpr-results.csv"
@@ -3082,9 +3222,9 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     widget = BioinformaticsWorkspaceWidget()
     widget.show_analysis_tasks(project_summary)
 
-    enrichment_route = widget._analysis_task_page.open_enrichment_preflight()
-    assert enrichment_route is not None
-    assert enrichment_route["next_page"] == "enrichment_preflight"
+    enrichment_button = widget._analysis_task_page.findChild(QPushButton, "openEnrichmentGateButton")
+    assert enrichment_button is not None
+    enrichment_button.click()
     assert widget.current_page_object_name() == "bioinformaticsEnrichmentPage"
     assert project_summary.project_root.name in widget._enrichment_page.findChild(QLabel, "enrichmentProjectLabel").text()
     enrichment_disabled = widget._enrichment_page.findChild(QPushButton, "enrichmentNextDisabledButton")
@@ -3126,9 +3266,9 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert "预检已生成" in widget._enrichment_page.findChild(QLabel, "enrichmentRunStatus").text()
 
     widget.show_analysis_tasks(project_summary)
-    survival_route = widget._analysis_task_page.open_survival_preflight()
-    assert survival_route is not None
-    assert survival_route["next_page"] == "survival_preflight"
+    survival_button = widget._analysis_task_page.findChild(QPushButton, "openSurvivalClinicalGateButton")
+    assert survival_button is not None
+    survival_button.click()
     assert widget.current_page_object_name() == "bioinformaticsSurvivalPage"
     assert project_summary.project_root.name in widget._survival_page.findChild(QLabel, "survivalProjectLabel").text()
     survival_disabled = widget._survival_page.findChild(QPushButton, "survivalReportExportDisabledButton")
@@ -4176,6 +4316,21 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     widget = BioinformaticsResultsBrowserWidget()
     widget.refresh_project(project_summary)
 
+    assert widget.property("uiPrimitive") == "workbench_gated_page"
+    assert widget.property("formalActionEnabled") is False
+    assert widget.findChild(QFrame, "resultReportHeader") is not None
+    assert widget.findChild(QFrame, "resultReportStepper") is not None
+    assert widget.findChild(QFrame, "resultReportFilterBar") is not None
+    visual_table = widget.findChild(QTableWidget, "resultReportVisualResultTable")
+    assert visual_table is not None
+    visual_text = _table_text(visual_table)
+    assert "Imported DEG table" in visual_text
+    assert "Testing DEG preview" in visual_text
+    assert "imported result" in visual_text
+    assert "testing-level" in visual_text
+    assert widget.findChild(QFrame, "resultReportSideCard") is not None
+    assert widget.findChild(QFrame, "resultReportStatusLegend") is not None
+
     assert "结果浏览" in widget.status_message()
     assert "导入结果浏览" in {button.text() for button in widget.findChildren(QPushButton)}
     assert "导入结果" in widget.findChild(QLabel, "resultsSourceSummary").text()
@@ -4223,6 +4378,26 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     guard = widget.findChild(QLabel, "formalDegReviewGuard")
     assert guard is not None
     assert "not a clinical conclusion" in guard.text()
+
+    expected_button_behaviors = {
+        "resultReportRefreshButton": "calls_load_result_index_and_formal_deg_gates",
+        "resultReportOpenImportedDegButton": "opens_imported_external_result_browser",
+        "resultReportOpenDraftButton": "opens_report_export_gate_when_result_exists",
+        "formalDegReviewExportTsvButton": "exports_formal_deg_review_table_when_gate_passes",
+        "formalDegReviewExportCsvButton": "exports_formal_deg_review_table_when_gate_passes",
+        "formalDegPlotButton": "creates_formal_deg_plot_artifact_when_gate_passes",
+        "formalDegReportReadyButton": "creates_formal_deg_report_ready_package_when_gate_passes",
+        "resultReportToggleDeveloperDiagnosticsButton": "toggles_developer_diagnostics",
+        "resultReportContinueReportExportButton": "opens_report_export_gate_when_result_exists",
+    }
+    for object_name, behavior in expected_button_behaviors.items():
+        button = widget.findChild(QPushButton, object_name)
+        assert button is not None, object_name
+        assert button.property("buttonBehavior") == behavior
+    assert widget.findChild(QPushButton, "formalDegPlotButton").property("formalActionEnabled") is True
+    assert widget.findChild(QPushButton, "formalDegReportReadyButton").property("formalActionEnabled") is True
+    assert not widget.findChild(QPushButton, "formalDegPlotButton").isEnabled()
+    assert not widget.findChild(QPushButton, "formalDegReportReadyButton").isEnabled()
 
 
 def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, project_summary) -> None:
@@ -4467,6 +4642,23 @@ def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_
     widget.refresh_project(project_summary)
     generated = widget.generate_report()
 
+    assert widget.property("uiPrimitive") == "workbench_gated_page"
+    assert widget.property("layoutPolishNoOverlap") is True
+    assert widget.property("formalActionEnabled") is False
+    assert widget.findChild(QFrame, "resultReportHeader") is not None
+    assert widget.findChild(QFrame, "resultReportStepper") is not None
+    assert len(widget.findChildren(QFrame, "resultReportStatCard")) == 4
+    refresh_button = widget.findChild(QPushButton, "reportExportRefreshDraftButton")
+    assert refresh_button is not None
+    assert refresh_button.property("buttonBehavior") == "generates_markdown_report_draft_only"
+    assert refresh_button.property("formalActionEnabled") is False
+    open_folder_button = widget.findChild(QPushButton, "reportExportOpenDraftFolderButton")
+    assert open_folder_button is not None
+    assert open_folder_button.property("buttonBehavior") == "opens_report_draft_folder"
+    copy_button = widget.findChild(QPushButton, "reportExportCopySummaryButton")
+    assert copy_button is not None
+    assert copy_button.property("buttonBehavior") == "copies_report_draft_summary"
+
     assert generated is not None
     assert "报告草稿" in widget.status_message()
     assert "导入结果" in widget.findChild(QLabel, "reportResultSemantics").text()
@@ -4512,6 +4704,8 @@ def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_
     assert "unverified_testing_exploratory_or_imported_results_present" in gate_text
     export_button = widget.findChild(QPushButton, "reportReadyExportButton")
     assert export_button is not None
+    assert export_button.property("buttonBehavior") == "exports_report_ready_package_when_gate_passes"
+    assert export_button.property("formalActionEnabled") is True
     assert not export_button.isEnabled()
     export_status = widget.findChild(QLabel, "reportReadyExportStatus")
     assert export_status is not None
@@ -4602,6 +4796,8 @@ def test_report_viewer_exports_formal_deg_package_only_after_gate_pass(qt_app, p
 
     export_button = widget.findChild(QPushButton, "reportReadyExportButton")
     assert export_button is not None
+    assert export_button.property("buttonBehavior") == "exports_report_ready_package_when_gate_passes"
+    assert export_button.property("formalActionEnabled") is True
     assert export_button.isEnabled()
     assert export_button.text() == "Export formal DEG report-ready package"
     export_status = widget.findChild(QLabel, "reportReadyExportStatus")
@@ -4690,7 +4886,7 @@ def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> Non
     assert widget.current_page_object_name() == "bioinformaticsReportViewerPage"
 
 
-def test_standardization_continue_opens_analysis_task_center(qt_app, project_summary) -> None:
+def test_standardization_continue_opens_group_design_before_analysis_tasks(qt_app, project_summary) -> None:
     widget = BioinformaticsWorkspaceWidget()
     source = project_summary.project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     source.parent.mkdir(parents=True, exist_ok=True)
@@ -4709,4 +4905,6 @@ def test_standardization_continue_opens_analysis_task_center(qt_app, project_sum
     widget.show_standardization(project_summary)
     widget._standardized_assets_page.continue_to_workflow()
 
+    assert widget.current_page_object_name() == "bioinformaticsGroupComparisonDesignPage"
+    widget._group_design_page.continue_to_tasks()
     assert widget.current_page_object_name() == "bioinformaticsAnalysisTaskCenterPage"
