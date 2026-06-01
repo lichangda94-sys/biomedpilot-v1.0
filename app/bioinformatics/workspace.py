@@ -26,6 +26,8 @@ try:
 
     from PySide6.QtWidgets import QFrame, QLabel, QStackedWidget, QVBoxLayout, QWidget
 
+    from app.bioinformatics.pages.enrichment_page import EnrichmentPage
+    from app.bioinformatics.pages.survival_page import SurvivalPage
     from app.bioinformatics.project_home import BioinformaticsProjectHomeWidget
     from app.bioinformatics.project_workspace import BioinformaticsProjectSummary
     from app.bioinformatics.workflow_pages import (
@@ -98,11 +100,19 @@ if QWidget is not None:
                 on_configure_deg=self.show_deg_config,
                 on_view_imported_deg=self.show_imported_deg_browser,
                 on_configure_immune_scoring=self.show_immune_scoring,
+                on_configure_enrichment=self.show_enrichment,
+                on_configure_survival=self.show_survival,
             )
             self._deg_config_page = BioinformaticsDegConfigWidget(
                 on_back=self.show_analysis_tasks,
             )
             self._immune_scoring_page = BioinformaticsImmuneInfiltrationWidget(
+                on_back=self.show_analysis_tasks,
+            )
+            self._enrichment_page = EnrichmentPage(
+                on_back=self.show_analysis_tasks,
+            )
+            self._survival_page = SurvivalPage(
                 on_back=self.show_analysis_tasks,
             )
             self._imported_deg_page = BioinformaticsImportedDegBrowserWidget(
@@ -132,6 +142,8 @@ if QWidget is not None:
                 self._analysis_task_page,
                 self._deg_config_page,
                 self._immune_scoring_page,
+                self._enrichment_page,
+                self._survival_page,
                 self._imported_deg_page,
                 self._results_browser_page,
                 self._report_viewer_page,
@@ -195,6 +207,16 @@ if QWidget is not None:
             self._set_current_project(summary)
             self._immune_scoring_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._immune_scoring_page)
+
+        def show_enrichment(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._enrichment_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._enrichment_page)
+
+        def show_survival(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._survival_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._survival_page)
 
         def show_results_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)

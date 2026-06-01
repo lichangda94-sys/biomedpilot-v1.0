@@ -2948,7 +2948,16 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     widget.refresh_project(project_summary)
 
     buttons = {button.text() for button in widget.findChildren(QPushButton)}
-    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "确认 formal DEG 参数", "查看已导入差异分析结果", "继续：结果浏览"}.issubset(buttons)
+    assert {
+        "刷新任务状态",
+        "确认分组与比较设计",
+        "进入差异分析配置",
+        "确认 formal DEG 参数",
+        "富集 ORA/GSEA gate",
+        "Survival / clinical gate",
+        "查看已导入差异分析结果",
+        "继续：结果浏览",
+    }.issubset(buttons)
     assert widget.findChild(QLabel, "analysisTaskInputSummary") is not None
     assert "核心输入" in widget.findChild(QLabel, "analysisTaskInputSummary").text()
     assert "下一步建议" in widget.findChild(QLabel, "analysisTaskNextStep").text()
@@ -3062,6 +3071,101 @@ def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, 
     assert "已有导入结果" in table_text
     assert "导入表格中的已有差异分析结果，不是本软件重新计算" in table_text
     assert "真实 DEG" not in table_text
+
+
+def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, project_summary, tmp_path: Path) -> None:
+    from app.bioinformatics.services.enrichment_service import EnrichmentService
+    from app.bioinformatics.services.survival_service import SurvivalService
+    from app.shared.data_center.service import DataCenter
+    from app.shared.task_center.service import TaskCenter
+
+    widget = BioinformaticsWorkspaceWidget()
+    widget.show_analysis_tasks(project_summary)
+
+    enrichment_route = widget._analysis_task_page.open_enrichment_preflight()
+    assert enrichment_route is not None
+    assert enrichment_route["next_page"] == "enrichment_preflight"
+    assert widget.current_page_object_name() == "bioinformaticsEnrichmentPage"
+    assert project_summary.project_root.name in widget._enrichment_page.findChild(QLabel, "enrichmentProjectLabel").text()
+    enrichment_disabled = widget._enrichment_page.findChild(QPushButton, "enrichmentNextDisabledButton")
+    assert enrichment_disabled is not None
+    assert not enrichment_disabled.isEnabled()
+    assert "disabled" in enrichment_disabled.toolTip()
+
+    enrichment_source = tmp_path / "geo_differential_expression_preflight.json"
+    enrichment_source.write_text(
+        json.dumps(
+            {
+                "project_id": "bio-test",
+                "formal_deg_executed": False,
+                "network_used": False,
+                "preflight_items": [
+                    {
+                        "accession": "GSE1001",
+                        "deg_result_files": ["deg.csv"],
+                        "upregulated_gene_count": 12,
+                        "downregulated_gene_count": 8,
+                        "status": "ready_for_deg_runner",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    widget._enrichment_page._service = EnrichmentService(
+        task_center=TaskCenter(tmp_path / "enrichment_tasks.json"),
+        data_center=DataCenter(tmp_path / "enrichment_assets.json"),
+        storage_root=tmp_path,
+    )
+    enrichment_result = widget._enrichment_page.run_preflight_from_path(enrichment_source)
+    assert enrichment_result.success
+    assert Path(enrichment_result.output_path).is_file()
+    enrichment_payload = json.loads(Path(enrichment_result.output_path).read_text(encoding="utf-8"))
+    assert enrichment_payload["enrichment_executed"] is False
+    assert enrichment_payload["database_download_executed"] is False
+    assert "预检已生成" in widget._enrichment_page.findChild(QLabel, "enrichmentRunStatus").text()
+
+    widget.show_analysis_tasks(project_summary)
+    survival_route = widget._analysis_task_page.open_survival_preflight()
+    assert survival_route is not None
+    assert survival_route["next_page"] == "survival_preflight"
+    assert widget.current_page_object_name() == "bioinformaticsSurvivalPage"
+    assert project_summary.project_root.name in widget._survival_page.findChild(QLabel, "survivalProjectLabel").text()
+    survival_disabled = widget._survival_page.findChild(QPushButton, "survivalReportExportDisabledButton")
+    assert survival_disabled is not None
+    assert not survival_disabled.isEnabled()
+    assert "KM/Cox/log-rank" in survival_disabled.toolTip()
+
+    survival_source = tmp_path / "geo_cleaning_plan.json"
+    survival_source.write_text(
+        json.dumps(
+            {
+                "project_id": "bio-test",
+                "cleaning_executed": False,
+                "cleaning_items": [
+                    {
+                        "accession": "GSE1001",
+                        "expression_files": ["counts.tsv"],
+                        "metadata_files": ["clinical.tsv"],
+                        "survival_fields": ["os_time_days", "vital_status"],
+                        "status": "ready_for_cleaning",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    widget._survival_page._service = SurvivalService(
+        task_center=TaskCenter(tmp_path / "survival_tasks.json"),
+        data_center=DataCenter(tmp_path / "survival_assets.json"),
+        storage_root=tmp_path,
+    )
+    survival_result = widget._survival_page.run_preflight_from_path(survival_source)
+    assert survival_result.success
+    assert Path(survival_result.output_path).is_file()
+    survival_payload = json.loads(Path(survival_result.output_path).read_text(encoding="utf-8"))
+    assert survival_payload["survival_analysis_executed"] is False
+    assert "预检已生成" in widget._survival_page.findChild(QLabel, "survivalRunStatus").text()
 
 
 def test_imported_deg_browser_user_page_and_report_candidate(qt_app, project_summary, tmp_path: Path) -> None:
@@ -4379,6 +4483,12 @@ def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> Non
     assert widget.current_page_object_name() == "bioinformaticsAnalysisTaskCenterPage"
     widget.show_deg_config(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsDegConfigPage"
+    widget.show_analysis_tasks(project_summary)
+    assert widget._analysis_task_page.open_enrichment_preflight() is not None
+    assert widget.current_page_object_name() == "bioinformaticsEnrichmentPage"
+    widget.show_analysis_tasks(project_summary)
+    assert widget._analysis_task_page.open_survival_preflight() is not None
+    assert widget.current_page_object_name() == "bioinformaticsSurvivalPage"
     widget.show_imported_deg_browser(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsImportedDegBrowserPage"
     widget.show_results_browser(project_summary)

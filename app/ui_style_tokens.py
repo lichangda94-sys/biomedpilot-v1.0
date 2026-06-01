@@ -907,6 +907,8 @@ def bioinformatics_project_home_stylesheet() -> str:
     QWidget#bioinformaticsStandardizedAssetsPage,
     QWidget#bioinformaticsWorkflowStatusPage,
     QWidget#bioinformaticsAnalysisTaskCenterPage,
+    QWidget#bioinformaticsEnrichmentPage,
+    QWidget#bioinformaticsSurvivalPage,
     QWidget#bioinformaticsResultsBrowserPage,
     QWidget#bioinformaticsReportViewerPage,
     QWidget#bioinformaticsSettingsLocalAIPage,

@@ -5319,6 +5319,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     deg_config_requested = Signal(object)
     imported_deg_requested = Signal(object)
     immune_scoring_requested = Signal(object)
+    enrichment_requested = Signal(object)
+    survival_requested = Signal(object)
 
     def __init__(
         self,
@@ -5328,6 +5330,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         on_configure_deg: Callable[[Path], None] | None = None,
         on_view_imported_deg: Callable[[Path], None] | None = None,
         on_configure_immune_scoring: Callable[[Path], None] | None = None,
+        on_configure_enrichment: Callable[[Path], None] | None = None,
+        on_configure_survival: Callable[[Path], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -5345,6 +5349,10 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self.imported_deg_requested.connect(on_view_imported_deg)
         if on_configure_immune_scoring is not None:
             self.immune_scoring_requested.connect(on_configure_immune_scoring)
+        if on_configure_enrichment is not None:
+            self.enrichment_requested.connect(on_configure_enrichment)
+        if on_configure_survival is not None:
+            self.survival_requested.connect(on_configure_survival)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -5395,6 +5403,22 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self.immune_scoring_requested.emit(self._project_root)
         self._status_label.setText("已打开免疫浸润 / TME评分页；该入口只生成探索性 bulk signature score。")
         return {"next_page": "immune_tme_scoring", "project_root": str(self._project_root)}
+
+    def open_enrichment_preflight(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.enrichment_requested.emit(self._project_root)
+        self._status_label.setText("已打开富集分析 gate 页；该入口调用 EnrichmentService 生成 ORA/GSEA 前置检查 artifact，不自动下载数据库或运行正式 GSEA。")
+        return {"next_page": "enrichment_preflight", "project_root": str(self._project_root)}
+
+    def open_survival_preflight(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.survival_requested.emit(self._project_root)
+        self._status_label.setText("已打开 Survival / clinical gate 页；该入口调用 SurvivalService 生成 preflight artifact，KM/Cox/log-rank/risk score 仍按 disabled reason 阻断。")
+        return {"next_page": "survival_preflight", "project_root": str(self._project_root)}
 
     def run_formal_controlled_deg_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -5548,19 +5572,32 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         summary_layout.addWidget(self._analysis_next_step_label)
         root.addWidget(summary_card)
 
-        actions = QHBoxLayout()
-        actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
-        actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
-        actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        actions = QVBoxLayout()
+        primary_actions = QHBoxLayout()
+        secondary_actions = QHBoxLayout()
+        primary_actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
+        primary_actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
+        primary_actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
         self._formal_deg_confirm_button = _button("确认 formal DEG 参数", "secondaryButton", self.confirm_formal_deg_parameters)
         self._formal_deg_confirm_button.setEnabled(False)
-        actions.addWidget(self._formal_deg_confirm_button)
+        primary_actions.addWidget(self._formal_deg_confirm_button)
         self._formal_deg_button = _button("运行两组 controlled DEG", "primaryButton", self.run_formal_controlled_deg_task)
         self._formal_deg_button.setEnabled(False)
-        actions.addWidget(self._formal_deg_button)
-        actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
-        actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
-        actions.addStretch(1)
+        primary_actions.addWidget(self._formal_deg_button)
+        primary_actions.addStretch(1)
+        actions.addLayout(primary_actions)
+        secondary_actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
+        self._enrichment_button = _button("富集 ORA/GSEA gate", "secondaryButton", self.open_enrichment_preflight)
+        self._enrichment_button.setObjectName("openEnrichmentGateButton")
+        self._enrichment_button.setToolTip("调用 EnrichmentService 生成富集 preflight artifact；正式 GSEA 执行保持 disabled。")
+        secondary_actions.addWidget(self._enrichment_button)
+        self._survival_button = _button("Survival / clinical gate", "secondaryButton", self.open_survival_preflight)
+        self._survival_button.setObjectName("openSurvivalClinicalGateButton")
+        self._survival_button.setToolTip("调用 SurvivalService 生成 survival/clinical preflight artifact；KM/Cox/log-rank/risk score 保持 disabled。")
+        secondary_actions.addWidget(self._survival_button)
+        secondary_actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
+        secondary_actions.addStretch(1)
+        actions.addLayout(secondary_actions)
         root.addLayout(actions)
 
         self._tasks = _table(["分析任务", "当前状态", "需要输入", "当前缺少", "下一步"])
