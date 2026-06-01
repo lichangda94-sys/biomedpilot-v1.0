@@ -14,7 +14,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTableWidgetItem, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTableWidgetItem, QTextEdit
 
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
@@ -43,9 +43,12 @@ try:
         BioinformaticsStandardizedAssetsWidget,
         BioinformaticsWorkflowStatusWidget,
     )
+    from app.bioinformatics.pages.enrichment_page import EnrichmentPage
+    from app.bioinformatics.pages.survival_page import SurvivalPage
     from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
+    QLineEdit = None  # type: ignore[assignment]
     QScrollArea = None  # type: ignore[assignment]
     QFrame = None  # type: ignore[assignment]
     QPlainTextEdit = None  # type: ignore[assignment]
@@ -98,6 +101,8 @@ def test_bio_c1_pages_expose_auditable_button_connection_metadata(qt_app, projec
         BioinformaticsAnalysisTaskCenterWidget(),
         BioinformaticsResultsBrowserWidget(),
         BioinformaticsReportViewerWidget(),
+        EnrichmentPage(),
+        SurvivalPage(),
     ]
 
     for page in pages:
@@ -3281,6 +3286,8 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     enrichment_disabled = widget._enrichment_page.findChild(QPushButton, "enrichmentNextDisabledButton")
     assert enrichment_disabled is not None
     assert not enrichment_disabled.isEnabled()
+    assert enrichment_disabled.property("buttonBehavior") == "disabled_correlation_and_formal_gsea_not_connected"
+    assert enrichment_disabled.property("disabledReason") == "formal_ora_gsea_execution_and_correlation_gate_not_enabled"
     assert "disabled" in enrichment_disabled.toolTip()
 
     enrichment_source = tmp_path / "geo_differential_expression_preflight.json"
@@ -3308,12 +3315,25 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
         data_center=DataCenter(tmp_path / "enrichment_assets.json"),
         storage_root=tmp_path,
     )
-    enrichment_result = widget._enrichment_page.run_preflight_from_path(enrichment_source)
-    assert enrichment_result.success
-    assert Path(enrichment_result.output_path).is_file()
-    enrichment_payload = json.loads(Path(enrichment_result.output_path).read_text(encoding="utf-8"))
+    enrichment_path_input = widget._enrichment_page.findChild(QLineEdit, "enrichmentPreflightPathInput")
+    enrichment_run_button = widget._enrichment_page.findChild(QPushButton, "runEnrichmentPreflightButton")
+    assert enrichment_path_input is not None
+    assert enrichment_run_button is not None
+    assert enrichment_run_button.property("buttonBehavior") == "calls_enrichment_service_create_preflight_artifact"
+    enrichment_path_input.setText(str(enrichment_source))
+    enrichment_run_button.click()
+
+    enrichment_outputs = sorted((tmp_path / "projects" / project_summary.project_root.name / "bioinformatics" / "enrichment").glob("geo_enrichment_preflight_*.json"))
+    assert len(enrichment_outputs) == 1
+    enrichment_payload = json.loads(enrichment_outputs[0].read_text(encoding="utf-8"))
     assert enrichment_payload["enrichment_executed"] is False
     assert enrichment_payload["database_download_executed"] is False
+    enrichment_tasks = json.loads((tmp_path / "enrichment_tasks.json").read_text(encoding="utf-8"))
+    enrichment_assets = json.loads((tmp_path / "enrichment_assets.json").read_text(encoding="utf-8"))
+    assert enrichment_tasks["tasks"][0]["title"] == "Enrichment Preflight"
+    assert enrichment_tasks["tasks"][0]["status"] == "completed"
+    assert enrichment_assets["data_assets"][0]["data_type"] == "geo_enrichment_preflight"
+    assert enrichment_assets["data_assets"][0]["output_path"] == str(enrichment_outputs[0])
     assert "预检已生成" in widget._enrichment_page.findChild(QLabel, "enrichmentRunStatus").text()
 
     widget.show_analysis_tasks(project_summary)
@@ -3325,6 +3345,8 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     survival_disabled = widget._survival_page.findChild(QPushButton, "survivalReportExportDisabledButton")
     assert survival_disabled is not None
     assert not survival_disabled.isEnabled()
+    assert survival_disabled.property("buttonBehavior") == "disabled_survival_clinical_report_ready_not_connected"
+    assert survival_disabled.property("disabledReason") == "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled"
     assert "KM/Cox/log-rank" in survival_disabled.toolTip()
 
     survival_source = tmp_path / "geo_cleaning_plan.json"
@@ -3351,11 +3373,24 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
         data_center=DataCenter(tmp_path / "survival_assets.json"),
         storage_root=tmp_path,
     )
-    survival_result = widget._survival_page.run_preflight_from_path(survival_source)
-    assert survival_result.success
-    assert Path(survival_result.output_path).is_file()
-    survival_payload = json.loads(Path(survival_result.output_path).read_text(encoding="utf-8"))
+    survival_path_input = widget._survival_page.findChild(QLineEdit, "survivalPreflightPathInput")
+    survival_run_button = widget._survival_page.findChild(QPushButton, "runSurvivalPreflightButton")
+    assert survival_path_input is not None
+    assert survival_run_button is not None
+    assert survival_run_button.property("buttonBehavior") == "calls_survival_service_create_preflight_artifact"
+    survival_path_input.setText(str(survival_source))
+    survival_run_button.click()
+
+    survival_outputs = sorted((tmp_path / "projects" / project_summary.project_root.name / "bioinformatics" / "survival").glob("geo_survival_preflight_*.json"))
+    assert len(survival_outputs) == 1
+    survival_payload = json.loads(survival_outputs[0].read_text(encoding="utf-8"))
     assert survival_payload["survival_analysis_executed"] is False
+    survival_tasks = json.loads((tmp_path / "survival_tasks.json").read_text(encoding="utf-8"))
+    survival_assets = json.loads((tmp_path / "survival_assets.json").read_text(encoding="utf-8"))
+    assert survival_tasks["tasks"][0]["title"] == "Survival Preflight"
+    assert survival_tasks["tasks"][0]["status"] == "completed"
+    assert survival_assets["data_assets"][0]["data_type"] == "geo_survival_preflight"
+    assert survival_assets["data_assets"][0]["output_path"] == str(survival_outputs[0])
     assert "预检已生成" in widget._survival_page.findChild(QLabel, "survivalRunStatus").text()
 
 
