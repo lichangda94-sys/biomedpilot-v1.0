@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "created_at": "2026-06-02T14:19:06.557047+00:00",
+  "created_at": "2026-06-02T14:25:55.677613+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "13128f797492631045373d8a21437d47d658eda3",
+  "head": "f650bfde88b33af780c547bb1b98f41341d05232",
   "summary": {
     "batch_count": 24,
     "row_count": 477,
@@ -10,8 +10,8 @@
     "disabled": 103,
     "broken": 0,
     "freshness": {
-      "current-head-proof": 4,
-      "prior-proof-docs-only-head-drift": 20
+      "current-head-proof": 1,
+      "prior-proof-docs-only-head-drift": 23
     }
   },
   "modules": {
@@ -21,8 +21,7 @@
       "connected": 158,
       "disabled": 61,
       "broken": 0,
-      "current-head-proof": 1,
-      "prior-proof-docs-only-head-drift": 11
+      "prior-proof-docs-only-head-drift": 12
     },
     "Centers": {
       "batches": 1,
@@ -30,7 +29,7 @@
       "connected": 23,
       "disabled": 5,
       "broken": 0,
-      "prior-proof-docs-only-head-drift": 1
+      "current-head-proof": 1
     },
     "LabTools": {
       "batches": 4,
@@ -38,8 +37,7 @@
       "connected": 144,
       "disabled": 15,
       "broken": 0,
-      "current-head-proof": 3,
-      "prior-proof-docs-only-head-drift": 1
+      "prior-proof-docs-only-head-drift": 4
     },
     "Meta Analysis": {
       "batches": 7,
@@ -55,7 +53,7 @@
       "connected": 23,
       "disabled": 5,
       "broken": 0,
-      "prior-proof-docs-only-head-drift": 1
+      "current-head-proof": 1
     }
   },
   "batches": [
@@ -63,7 +61,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH1.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "13128f797492631045373d8a21437d47d658eda3",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 27,
       "connected": 22,
       "disabled": 5,
@@ -262,7 +260,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH2.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "13128f797492631045373d8a21437d47d658eda3",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 21,
       "connected": 18,
       "disabled": 3,
@@ -303,7 +301,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH4_PROTEIN_WB.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "13128f797492631045373d8a21437d47d658eda3",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 83,
       "connected": 82,
       "disabled": 1,
@@ -322,7 +320,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH5_SECONDARY_REMAINDER.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "13128f797492631045373d8a21437d47d658eda3",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 11,
       "connected": 6,
       "disabled": 5,
@@ -462,8 +460,8 @@
     {
       "file": "docs/project-control/UI_ROUTE_CONTRACT_PHASE1_BATCH0.json",
       "branch": "integration/release-bio-c1-ui-shell",
-      "evidence_head": "3ee1ee212b878714745fb77f640ff1bcc5dcfb26",
-      "freshness": "prior-proof-docs-only-head-drift",
+      "evidence_head": "f650bfde88b33af780c547bb1b98f41341d05232",
+      "freshness": "current-head-proof",
       "row_count": 28,
       "connected": 23,
       "disabled": 5,

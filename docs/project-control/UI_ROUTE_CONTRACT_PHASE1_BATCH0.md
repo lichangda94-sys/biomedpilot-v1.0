@@ -1,8 +1,8 @@
 # UI Route Contract Phase 1 Batch 0 Report
 
-- created_at: `2026-06-02T12:53:15.375521+00:00`
+- created_at: `2026-06-02T14:25:47.644080+00:00`
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `3ee1ee212b878714745fb77f640ff1bcc5dcfb26`
+- head: `f650bfde88b33af780c547bb1b98f41341d05232`
 - scope: Shell freeze route and live-click audit for Welcome, Home, Sidebar, and Centers.
 
 ## Summary

@@ -1,18 +1,18 @@
 {
   "schema_version": "biomedpilot.phase1.preview_startup.v1",
-  "created_at": "2026-06-02T13:39:54+00:00",
+  "created_at": "2026-06-02T14:24:33+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "121e8101f8df6ad883c16d35a9373e3026233a2c",
+  "head": "f650bfde88b33af780c547bb1b98f41341d05232",
   "packaged_app_gate": {
     "app_path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/dist/BioMedPilot Integration Preview.app",
     "exists": true,
-    "packaged_git_head": "121e810",
+    "packaged_git_head": "f650bfd",
     "cf_bundle_executable": "BioMedPilotIntegrationPreview",
     "launcher_arch": "/Users/changdali/Developer/biomedpilot v1.0/Integration/dist/BioMedPilot Integration Preview.app/Contents/MacOS/BioMedPilotIntegrationPreview: Mach-O 64-bit executable arm64",
     "codesign": "valid_on_disk",
     "direct_launcher_smoke": "passed",
     "launchservices_gui_startup_check": "passed",
-    "gui_startup_payload_path": "/tmp/biomedpilot_phase1_shell_121e810_gui_startup.json",
+    "gui_startup_payload_path": "/tmp/biomedpilot_phase1_shell_f650bfd_gui_startup.json",
     "gui_startup_status": "passed",
     "gui_window_visible": true,
     "gui_window_size": {

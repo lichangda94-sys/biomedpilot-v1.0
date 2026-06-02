@@ -8,9 +8,11 @@
 
 - `python3 scripts/package_app.py --app-name "BioMedPilot Integration Preview" --smoke-test`: passed.
 - `codesign --verify --deep --strict --verbose=2 "dist/BioMedPilot Integration Preview.app"`: passed.
-- `open -W -n "dist/BioMedPilot Integration Preview.app" --args --gui-startup-check --gui-startup-check-output /tmp/biomedpilot_phase1_shell_538ef11_gui_startup.json`: passed.
-- GUI startup JSON: `status=passed`, `window_visible=true`, `window_active=true`, `window_title=BioMedPilot / 医研智析`.
-- Rebuilt package git head: `538ef11`.
+- `open -W -n "dist/BioMedPilot Integration Preview.app" --args --gui-startup-check --gui-startup-check-output /tmp/biomedpilot_phase1_shell_f650bfd_gui_startup.json`: passed.
+- GUI startup JSON: `status=passed`, `window_visible=true`, `window_active=true`, `window_title=BioMedPilot / 医研智析`, `window_size={'width': 1120, 'height': 720}`.
+- Rebuilt package git head: `f650bfd`.
+- Bundle executable: `BioMedPilotIntegrationPreview`.
+- Launcher architecture: `Mach-O 64-bit executable arm64`.
 
 ## Shell Route Contract
 
@@ -24,6 +26,15 @@
 
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest -q tests/ui/test_login_page.py tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/ui/test_settings_shell.py tests/ui/test_shell_centers.py tests/ui/test_release_ui_button_contracts.py`: passed.
 - Result: `29 passed`.
+
+## Shell Live-Click Validation
+
+- `QT_QPA_PLATFORM=offscreen python3 scripts/phase1_preview_startup_validation.py`: passed.
+- Click count: `14`.
+- Passed clicks: `14`.
+- Failed clicks: `0`.
+- Disabled visible buttons without reason: `0`.
+- Evidence report: `docs/release_validation/20260602_phase1_preview_startup.md`.
 
 ## Runtime Screenshot Evidence
 
