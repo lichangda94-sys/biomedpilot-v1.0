@@ -1,7 +1,7 @@
 # UI Route Contract: Bio Batch 6 Survival/Clinical
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `606bb2c7881a843d4e41e381116b120248b7877d`
+- head: `4a0577982b6c87645f6d1a0bac0adbd56728f7b0`
 - scope: Bioinformatics survival/clinical input gate, backend dependency detection, KM/log-rank/Cox/risk score disabled gates, and clinical report-ready gate.
 - rows: 9
 - connected: 4
@@ -17,8 +17,8 @@
 | Contract | Object | Status | Behavior | Evidence | Observed |
 | --- | --- | --- | --- | --- | --- |
 | BIO-SURVIVAL-BACK | `survivalBackButton` | connected | `navigates_back_to_analysis_tasks` | signal=back_requested | back_signal=True |
-| BIO-SURVIVAL-CHOOSE-CLEANING-PLAN | `chooseSurvivalCleaningPlanButton` | connected | `selects_cleaning_plan_json` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json | path_input=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json |
-| BIO-SURVIVAL-RUN-PREFLIGHT | `runSurvivalPreflightButton` | connected | `calls_survival_service_create_preflight_artifact` | /var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/projects/bio_batch_6_survival/bioinformatics/survival/geo_survival_preflight_79ecb755d01b.json | survival_analysis_executed=False |
+| BIO-SURVIVAL-CHOOSE-CLEANING-PLAN | `chooseSurvivalCleaningPlanButton` | connected | `selects_cleaning_plan_json` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_7_062u3q/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json | path_input=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_7_062u3q/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json |
+| BIO-SURVIVAL-RUN-PREFLIGHT | `runSurvivalPreflightButton` | connected | `calls_survival_service_create_preflight_artifact` | /var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_7_062u3q/projects/bio_batch_6_survival/bioinformatics/survival/geo_survival_preflight_652cc8b87a09.json | survival_analysis_executed=False |
 | BIO-SURVIVAL-DETECT-BACKEND | `detectSurvivalBackendButton` | connected | `calls_survival_service_detect_backend_dependencies` | status=preflight_only; lifelines: available=False version=-; blockers=lifelines_missing_formal_survival_disabled; warnings=survival_backend_detection_only_no_km_cox_logrank_execution | status=preflight_only |
 | BIO-SURVIVAL-KM-CURVE-GATE | `runKmCurveDisabledButton` | disabled | `disabled_km_curve_executor_not_connected` | km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema | enabled=False; disabledReason=km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema |
 | BIO-SURVIVAL-LOGRANK-GATE | `runLogRankDisabledButton` | disabled | `disabled_logrank_executor_not_connected` | logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate | enabled=False; disabledReason=logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate |

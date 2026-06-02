@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_batch8_visible_buttons.v1",
-  "created_at": "2026-06-02T05:17:35+00:00",
+  "created_at": "2026-06-02T12:59:12+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "b47d29ba66a4395cf0ab7324df9d8cd42adccd41",
+  "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
   "scope": "Bioinformatics C1 mature 7-step visible-button closure: every visible button is live-clicked or verified disabled with reason.",
   "screenshots": [
     {
@@ -36,8 +36,8 @@
   ],
   "summary": {
     "row_count": 94,
-    "connected": 56,
-    "disabled": 38,
+    "connected": 55,
+    "disabled": 39,
     "broken": 0,
     "external_open_calls": 4,
     "failures": []
@@ -398,7 +398,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click wrote project artifact(s)",
-      "artifact_evidence": "manifests/data_source_requests.json; manifests/data_source_requests/dsr-672c2ce42f.json",
+      "artifact_evidence": "manifests/data_source_requests.json; manifests/data_source_requests/dsr-c15a58c4c5.json",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=data_source/data_source/bioinformaticsDataSourcePage; after=data_source/data_source/bioinformaticsDataSourcePage",
@@ -417,7 +417,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click wrote project artifact(s)",
-      "artifact_evidence": "manifests/data_source_requests/dsr-cb1c7d1d24.json",
+      "artifact_evidence": "manifests/data_source_requests/dsr-df5124610d.json",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=data_source/data_source/bioinformaticsDataSourcePage; after=data_source/data_source/bioinformaticsDataSourcePage",
@@ -436,7 +436,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click wrote project artifact(s)",
-      "artifact_evidence": "manifests/data_source_requests/dsr-fbc79db66b.json",
+      "artifact_evidence": "manifests/data_source_requests/dsr-a8abfe4600.json",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=data_source/data_source/bioinformaticsDataSourcePage; after=data_source/data_source/bioinformaticsDataSourcePage",
@@ -455,7 +455,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click wrote project artifact(s)",
-      "artifact_evidence": "manifests/data_source_requests/dsr-862917a8f0.json",
+      "artifact_evidence": "manifests/data_source_requests/dsr-6484cf8090.json",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=data_source/data_source/bioinformaticsDataSourcePage; after=data_source/data_source/bioinformaticsDataSourcePage",
@@ -481,7 +481,7 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_SOURCE-10--查看详情",
+      "contract_id": "BIO-BATCH8-DATA_SOURCE-23--查看详情",
       "page_key": "data_source",
       "route_key": "data_source",
       "current_widget": "bioinformaticsDataSourcePage",
@@ -500,7 +500,7 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_SOURCE-11-secondaryButton-下载所选",
+      "contract_id": "BIO-BATCH8-DATA_SOURCE-24-secondaryButton-下载所选",
       "page_key": "data_source",
       "route_key": "data_source",
       "current_widget": "bioinformaticsDataSourcePage",
@@ -519,7 +519,7 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_SOURCE-12-secondaryButton-删除所选",
+      "contract_id": "BIO-BATCH8-DATA_SOURCE-25-secondaryButton-删除所选",
       "page_key": "data_source",
       "route_key": "data_source",
       "current_widget": "bioinformaticsDataSourcePage",
@@ -538,7 +538,7 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_SOURCE-54-dataSourceQuickAccessButton-最近使用---快速访问最近使用的数据项目",
+      "contract_id": "BIO-BATCH8-DATA_SOURCE-67-dataSourceQuickAccessButton-最近使用---快速访问最近使用的数据项目",
       "page_key": "data_source",
       "route_key": "data_source",
       "current_widget": "bioinformaticsDataSourcePage",
@@ -557,7 +557,7 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_SOURCE-55-dataSourceQuickAccessButton-使用指南---查看数据来源与导入说明",
+      "contract_id": "BIO-BATCH8-DATA_SOURCE-68-dataSourceQuickAccessButton-使用指南---查看数据来源与导入说明",
       "page_key": "data_source",
       "route_key": "data_source",
       "current_widget": "bioinformaticsDataSourcePage",
@@ -576,7 +576,7 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_SOURCE-56-dataSourceQuickAccessButton-常见问题---查看常见问题与解决方案",
+      "contract_id": "BIO-BATCH8-DATA_SOURCE-69-dataSourceQuickAccessButton-常见问题---查看常见问题与解决方案",
       "page_key": "data_source",
       "route_key": "data_source",
       "current_widget": "bioinformaticsDataSourcePage",
@@ -595,7 +595,7 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_SOURCE-57-dataSourceQuickAccessButton-意见反馈---提出建议或报告问题",
+      "contract_id": "BIO-BATCH8-DATA_SOURCE-70-dataSourceQuickAccessButton-意见反馈---提出建议或报告问题",
       "page_key": "data_source",
       "route_key": "data_source",
       "current_widget": "bioinformaticsDataSourcePage",
@@ -652,22 +652,22 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_CHECK_PREPARATION-02-primaryButton-开始识别",
+      "contract_id": "BIO-BATCH8-DATA_CHECK_PREPARATION-02-bioinformaticsRunRecognitionButton-开始识别",
       "page_key": "data_check_preparation",
       "route_key": "recognition",
       "current_widget": "bioinformaticsRecognitionPage",
-      "object_name": "primaryButton",
+      "object_name": "bioinformaticsRunRecognitionButton",
       "label": "开始识别",
-      "enabled": true,
+      "enabled": false,
       "button_behavior": "runs_bio_preflight_or_gated_service",
-      "disabled_reason": "",
+      "disabled_reason": "disabled_until_recognition_input_selected",
       "formal_action_enabled": false,
       "file_write_allowed": false,
-      "runtime_effect": "click updated visible status/diagnostic text",
-      "artifact_evidence": "page text digest changed",
-      "live_click_test": "clicked_and_effect_verified",
-      "status": "connected",
-      "observed": "before=recognition/data_check_preparation/bioinformaticsRecognitionPage; after=recognition/data_check_preparation/bioinformaticsRecognitionPage",
+      "runtime_effect": "disabled with explicit reason",
+      "artifact_evidence": "disabled_until_recognition_input_selected",
+      "live_click_test": "disabled_state_and_reason_verified",
+      "status": "disabled",
+      "observed": "enabled=False; disabledReason=disabled_until_recognition_input_selected",
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
@@ -728,11 +728,11 @@
       "batch": "Batch 8: Bioinformatics visible button closure"
     },
     {
-      "contract_id": "BIO-BATCH8-DATA_CHECK_PREPARATION-08-primaryButton-继续-数据准备与标准化",
+      "contract_id": "BIO-BATCH8-DATA_CHECK_PREPARATION-08-bioinformaticsRecognitionContinueReadinessButton-继续-数据准备与标准化",
       "page_key": "data_check_preparation",
       "route_key": "recognition",
       "current_widget": "bioinformaticsRecognitionPage",
-      "object_name": "primaryButton",
+      "object_name": "bioinformaticsRecognitionContinueReadinessButton",
       "label": "继续：数据准备与标准化",
       "enabled": true,
       "button_behavior": "navigates_to_next_bio_gate_after_validation",
@@ -1120,7 +1120,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click wrote project artifact(s)",
-      "artifact_evidence": "acquisition/handoffs/acq-0713914b.json; acquisition/plans/acq-0713914b.json; acquisition/records/acq-0713914b.json; acquisition/source_manifests/acq-0713914b_source_manifest.json; raw_data/local_import/manual_supplements/comparison_config_manual.tsv",
+      "artifact_evidence": "acquisition/handoffs/acq-5153ceaa.json; acquisition/plans/acq-5153ceaa.json; acquisition/records/acq-5153ceaa.json; acquisition/source_manifests/acq-5153ceaa_source_manifest.json; raw_data/local_import/manual_supplements/comparison_config_manual.tsv",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=analysis_tasks/analysis_tasks/bioinformaticsAnalysisTaskCenterPage; after=analysis_tasks/analysis_tasks/bioinformaticsAnalysisTaskCenterPage",
@@ -1652,7 +1652,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click delegated external file/folder open",
-      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_ookgzbgz/project/bio_batch_8_visible_buttons/results",
+      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/results",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=results_browser/result_report/bioinformaticsResultsBrowserPage; after=results_browser/result_report/bioinformaticsResultsBrowserPage",
@@ -1671,7 +1671,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click delegated external file/folder open",
-      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_ookgzbgz/project/bio_batch_8_visible_buttons/manifests/result_manager.json",
+      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/manifests/result_manager.json",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=results_browser/result_report/bioinformaticsResultsBrowserPage; after=results_browser/result_report/bioinformaticsResultsBrowserPage",
@@ -1747,7 +1747,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click delegated external file/folder open",
-      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_ookgzbgz/project/bio_batch_8_visible_buttons/reports",
+      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/reports",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=report_viewer/report_export/bioinformaticsReportViewerPage; after=report_viewer/report_export/bioinformaticsReportViewerPage",
@@ -1823,7 +1823,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "runtime_effect": "click delegated external file/folder open",
-      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_ookgzbgz/project/bio_batch_8_visible_buttons/reports",
+      "artifact_evidence": "file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/reports",
       "live_click_test": "clicked_and_effect_verified",
       "status": "connected",
       "observed": "before=report_viewer/report_export/bioinformaticsReportViewerPage; after=report_viewer/report_export/bioinformaticsReportViewerPage",

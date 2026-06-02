@@ -240,11 +240,19 @@ def _load_contracts() -> dict[str, dict[str, Any]]:
 def _build_payload(contracts: dict[str, dict[str, Any]]) -> dict[str, Any]:
     visible_rows = contracts["batch8_visible_buttons"]["rows"]
     page_button_summary = _summarize_visible_buttons(visible_rows)
+    current_head = _git("rev-parse", "HEAD")
+    input_freshness = {
+        key: {
+            "head": str(contracts[key].get("head", "")),
+            "matches_current_head": str(contracts[key].get("head", "")) == current_head,
+        }
+        for key in INPUTS
+    }
     return {
         "schema_version": "ui_route_contract_bio_c1_closure_matrix.v1",
         "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "branch": _git("branch", "--show-current"),
-        "head": _git("rev-parse", "HEAD"),
+        "head": current_head,
         "scope": (
             "Bioinformatics C1 mature UIShell 7-step page route contract closure: "
             "UI page -> backend capability -> branch/source -> live-click or disabled-reason evidence."
@@ -254,6 +262,7 @@ def _build_payload(contracts: dict[str, dict[str, Any]]) -> dict[str, Any]:
                 "path": str(path.relative_to(REPO_ROOT)),
                 "schema_version": contracts[key].get("schema_version", ""),
                 "head": contracts[key].get("head", ""),
+                "matches_current_head": input_freshness[key]["matches_current_head"],
                 "summary": contracts[key].get("summary", {}),
             }
             for key, path in INPUTS.items()
@@ -266,6 +275,9 @@ def _build_payload(contracts: dict[str, dict[str, Any]]) -> dict[str, Any]:
             "disabled_rows_with_reason": _disabled_with_reason_count(contracts),
             "broken": 0,
             "failures": [],
+            "stale_input_batches": [
+                key for key, info in input_freshness.items() if not info["matches_current_head"]
+            ],
         },
         "page_baselines": [
             {
@@ -359,24 +371,39 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         f"- connected_rows_from_inputs: `{payload['summary']['connected_rows']}`",
         f"- disabled_rows_with_reason: `{payload['summary']['disabled_rows_with_reason']}`",
         f"- broken_rows_from_inputs: `{payload['summary']['broken']}`",
+        f"- stale_input_batches: `{', '.join(payload['summary']['stale_input_batches']) or 'none'}`",
         "",
         "## Inputs",
         "",
-        "| Batch | Report | Head | Rows | Connected | Disabled | Broken |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| Batch | Report | Head | Current HEAD? | Rows | Connected | Disabled | Broken |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for key, info in payload["inputs"].items():
         summary = info["summary"]
         lines.append(
-            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` |".format(
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` |".format(
                 key,
                 info["path"],
                 str(info["head"])[:12],
+                "yes" if info.get("matches_current_head") else "no",
                 summary.get("row_count", 0),
                 summary.get("connected", 0),
                 summary.get("disabled", 0),
                 summary.get("broken", 0),
             )
+        )
+    if payload["summary"]["stale_input_batches"]:
+        lines.extend(
+            [
+                "",
+                "## Input Freshness Notes",
+                "",
+                (
+                    "The batches listed as stale retain earlier passing evidence and were not refreshed "
+                    "against the current HEAD in this closure run. Treat them as prior evidence until "
+                    "their own batch contracts are regenerated."
+                ),
+            ]
         )
 
     lines.extend(

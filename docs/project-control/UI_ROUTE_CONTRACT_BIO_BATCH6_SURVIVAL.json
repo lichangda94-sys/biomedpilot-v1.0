@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_batch6_survival.v1",
-  "created_at": "2026-06-02T11:21:32.481628+00:00",
+  "created_at": "2026-06-02T12:59:57.218818+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "606bb2c7881a843d4e41e381116b120248b7877d",
+  "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
   "scope": "Bioinformatics survival/clinical input gate, backend dependency detection, KM/log-rank/Cox/risk score disabled gates, and clinical report-ready gate.",
   "summary": {
     "row_count": 9,
@@ -45,10 +45,10 @@
       "button_behavior": "selects_cleaning_plan_json",
       "formal_action_enabled": false,
       "runtime_effect": "opens file picker and writes selected cleaning plan path into input",
-      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_7_062u3q/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
       "live_click_test": "clicked",
       "status": "connected",
-      "observed": "path_input=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
+      "observed": "path_input=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_7_062u3q/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
       "disabled_reason": "",
       "batch": "Batch 6: Bioinformatics Survival/Clinical Gate"
     },
@@ -62,7 +62,7 @@
       "button_behavior": "calls_survival_service_create_preflight_artifact",
       "formal_action_enabled": false,
       "runtime_effect": "calls SurvivalService.create_preflight and writes geo_survival_preflight artifact",
-      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/projects/bio_batch_6_survival/bioinformatics/survival/geo_survival_preflight_79ecb755d01b.json",
+      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_7_062u3q/projects/bio_batch_6_survival/bioinformatics/survival/geo_survival_preflight_652cc8b87a09.json",
       "live_click_test": "clicked",
       "status": "connected",
       "observed": "survival_analysis_executed=False",

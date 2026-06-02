@@ -1,14 +1,15 @@
 {
   "schema_version": "ui_route_contract_bio_c1_closure_matrix.v1",
-  "created_at": "2026-06-02T11:27:37+00:00",
+  "created_at": "2026-06-02T13:10:36+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "731b11547ae83cc3ef0fdde904a8f7f0e545591b",
+  "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
   "scope": "Bioinformatics C1 mature UIShell 7-step page route contract closure: UI page -> backend capability -> branch/source -> live-click or disabled-reason evidence.",
   "inputs": {
     "batch4_formal_deg": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json",
       "schema_version": "ui_route_contract_bio_batch4_formal_deg.v1",
-      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 8,
         "connected": 8,
@@ -20,7 +21,8 @@
     "batch5_enrichment": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json",
       "schema_version": "ui_route_contract_bio_batch5_enrichment.v1",
-      "head": "731b11547ae83cc3ef0fdde904a8f7f0e545591b",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 9,
         "connected": 4,
@@ -32,7 +34,8 @@
     "batch6_survival": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json",
       "schema_version": "ui_route_contract_bio_batch6_survival.v1",
-      "head": "606bb2c7881a843d4e41e381116b120248b7877d",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 9,
         "connected": 4,
@@ -44,7 +47,8 @@
     "batch7_report_export": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json",
       "schema_version": "ui_route_contract_bio_batch7_report_export.v1",
-      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 13,
         "connected": 13,
@@ -56,11 +60,12 @@
     "batch8_visible_buttons": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json",
       "schema_version": "ui_route_contract_bio_batch8_visible_buttons.v1",
-      "head": "b47d29ba66a4395cf0ab7324df9d8cd42adccd41",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 94,
-        "connected": 56,
-        "disabled": 38,
+        "connected": 55,
+        "disabled": 39,
         "broken": 0,
         "external_open_calls": 4,
         "failures": []
@@ -69,7 +74,8 @@
     "batch9_data_prep_adapters": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json",
       "schema_version": "ui_route_contract_bio_batch9_data_prep_adapters.v1",
-      "head": "546e66394ef2f2fb745b804eb5cb66967be419a0",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 9,
         "connected": 9,
@@ -81,6 +87,7 @@
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json",
       "schema_version": "ui_route_contract_bio_batch10_geo_online_retrieval.v1",
       "head": "dc55902228f578a86799cea28b81ebd8eeaa03a3",
+      "matches_current_head": false,
       "summary": {
         "row_count": 18,
         "connected": 18,
@@ -93,7 +100,8 @@
     "batch11_tcga_gtex_adapters": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json",
       "schema_version": "ui_route_contract_bio_batch11_tcga_gtex_adapters.v1",
-      "head": "c2f144f9f7b786693b4e9e19f2732d0f28bdfe30",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 10,
         "connected": 6,
@@ -105,7 +113,8 @@
     "batch12_tcga_gtex_light_validation": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json",
       "schema_version": "ui_route_contract_bio_batch12_tcga_gtex_light_validation.v1",
-      "head": "648ecbd9691d43d9114eb2056f358f5fc831bbb4",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 10,
         "connected": 10,
@@ -117,7 +126,8 @@
     "batch13_tcga_gtex_data_check": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH13_TCGA_GTEX_DATA_CHECK.json",
       "schema_version": "ui_route_contract_bio_batch13_tcga_gtex_data_check.v1",
-      "head": "66e528d05d913d148eb6461014b3ea03a8735b60",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 5,
         "connected": 5,
@@ -129,7 +139,8 @@
     "batch14_formal_ora": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json",
       "schema_version": "ui_route_contract_bio_batch14_formal_ora.v1",
-      "head": "731b11547ae83cc3ef0fdde904a8f7f0e545591b",
+      "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
+      "matches_current_head": true,
       "summary": {
         "row_count": 7,
         "connected": 4,
@@ -143,10 +154,13 @@
     "ui_page_count": 7,
     "capability_row_count": 7,
     "input_row_count": 192,
-    "connected_rows": 137,
-    "disabled_rows_with_reason": 55,
+    "connected_rows": 136,
+    "disabled_rows_with_reason": 56,
     "broken": 0,
     "failures": [],
+    "stale_input_batches": [
+      "batch10_geo_online_retrieval"
+    ],
     "closure_status": "passed_with_documented_gaps"
   },
   "page_baselines": [
@@ -196,9 +210,9 @@
         "74c19ad"
       ],
       "visible_button_summary": {
-        "connected": 6,
+        "connected": 5,
         "total": 7,
-        "disabled": 1
+        "disabled": 2
       }
     },
     {
@@ -635,6 +649,16 @@
     },
     {
       "batch": "batch11_tcga_gtex_adapters",
+      "page": "03a_tcga_light_download",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/03a_tcga_light_download.png"
+    },
+    {
+      "batch": "batch11_tcga_gtex_adapters",
+      "page": "03b_tcga_expression_build",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/03b_tcga_expression_build.png"
+    },
+    {
+      "batch": "batch11_tcga_gtex_adapters",
       "page": "04_gtex_adapter_ready",
       "path": "docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/04_gtex_adapter_ready.png"
     },
@@ -647,6 +671,16 @@
       "batch": "batch11_tcga_gtex_adapters",
       "page": "06_gtex_download_plan",
       "path": "docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06_gtex_download_plan.png"
+    },
+    {
+      "batch": "batch11_tcga_gtex_adapters",
+      "page": "06a_gtex_light_download",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06a_gtex_light_download.png"
+    },
+    {
+      "batch": "batch11_tcga_gtex_adapters",
+      "page": "06b_gtex_expression_build",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06b_gtex_expression_build.png"
     },
     {
       "batch": "batch12_tcga_gtex_light_validation",

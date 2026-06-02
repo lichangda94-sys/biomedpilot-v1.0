@@ -1,30 +1,35 @@
 # Bioinformatics C1 Closure Matrix
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `731b11547ae83cc3ef0fdde904a8f7f0e545591b`
+- head: `4a0577982b6c87645f6d1a0bac0adbd56728f7b0`
 - closure_status: `passed_with_documented_gaps`
 - ui_page_count: `7`
 - capability_row_count: `7`
 - input_row_count: `192`
-- connected_rows_from_inputs: `137`
-- disabled_rows_with_reason: `55`
+- connected_rows_from_inputs: `136`
+- disabled_rows_with_reason: `56`
 - broken_rows_from_inputs: `0`
+- stale_input_batches: `batch10_geo_online_retrieval`
 
 ## Inputs
 
-| Batch | Report | Head | Rows | Connected | Disabled | Broken |
-| --- | --- | --- | --- | --- | --- | --- |
-| `batch4_formal_deg` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json` | `8b20ac157f3c` | `8` | `8` | `0` | `0` |
-| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `731b11547ae8` | `9` | `4` | `5` | `0` |
-| `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `606bb2c7881a` | `9` | `4` | `5` | `0` |
-| `batch7_report_export` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json` | `8b20ac157f3c` | `13` | `13` | `0` | `0` |
-| `batch8_visible_buttons` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json` | `b47d29ba66a4` | `94` | `56` | `38` | `0` |
-| `batch9_data_prep_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json` | `546e66394ef2` | `9` | `9` | `0` | `0` |
-| `batch10_geo_online_retrieval` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json` | `dc55902228f5` | `18` | `18` | `0` | `0` |
-| `batch11_tcga_gtex_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json` | `c2f144f9f7b7` | `10` | `6` | `4` | `0` |
-| `batch12_tcga_gtex_light_validation` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json` | `648ecbd9691d` | `10` | `10` | `0` | `0` |
-| `batch13_tcga_gtex_data_check` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH13_TCGA_GTEX_DATA_CHECK.json` | `66e528d05d91` | `5` | `5` | `0` | `0` |
-| `batch14_formal_ora` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json` | `731b11547ae8` | `7` | `4` | `3` | `0` |
+| Batch | Report | Head | Current HEAD? | Rows | Connected | Disabled | Broken |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `batch4_formal_deg` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json` | `4a0577982b6c` | `yes` | `8` | `8` | `0` | `0` |
+| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `4a0577982b6c` | `yes` | `9` | `4` | `5` | `0` |
+| `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `4a0577982b6c` | `yes` | `9` | `4` | `5` | `0` |
+| `batch7_report_export` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json` | `4a0577982b6c` | `yes` | `13` | `13` | `0` | `0` |
+| `batch8_visible_buttons` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json` | `4a0577982b6c` | `yes` | `94` | `55` | `39` | `0` |
+| `batch9_data_prep_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json` | `4a0577982b6c` | `yes` | `9` | `9` | `0` | `0` |
+| `batch10_geo_online_retrieval` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json` | `dc55902228f5` | `no` | `18` | `18` | `0` | `0` |
+| `batch11_tcga_gtex_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json` | `4a0577982b6c` | `yes` | `10` | `6` | `4` | `0` |
+| `batch12_tcga_gtex_light_validation` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json` | `4a0577982b6c` | `yes` | `10` | `10` | `0` | `0` |
+| `batch13_tcga_gtex_data_check` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH13_TCGA_GTEX_DATA_CHECK.json` | `4a0577982b6c` | `yes` | `5` | `5` | `0` | `0` |
+| `batch14_formal_ora` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json` | `4a0577982b6c` | `yes` | `7` | `4` | `3` | `0` |
+
+## Input Freshness Notes
+
+The batches listed as stale retain earlier passing evidence and were not refreshed against the current HEAD in this closure run. Treat them as prior evidence until their own batch contracts are regenerated.
 
 ## Page Baseline Matrix
 
@@ -32,7 +37,7 @@
 | --- | --- | --- | --- | --- |
 | Project Home | UIShell 7-step Bio high-fidelity gated shell | `codex/integration-labtools-ui-c2-carryover` | `08e9bd1, 900ba60, 2063ce8, 74c19ad` | connected=9, disabled=4, total=13 |
 | Data Source | UIShell 7-step Bio high-fidelity gated shell | `codex/integration-labtools-ui-c2-carryover` | `08e9bd1, 900ba60, 2063ce8, 74c19ad` | connected=7, disabled=10, total=17 |
-| Data Check & Preparation | UIShell 7-step Bio high-fidelity gated shell | `codex/integration-labtools-ui-c2-carryover` | `08e9bd1, 62739aa, 2063ce8, 74c19ad` | connected=6, disabled=1, total=7 |
+| Data Check & Preparation | UIShell 7-step Bio high-fidelity gated shell | `codex/integration-labtools-ui-c2-carryover` | `08e9bd1, 62739aa, 2063ce8, 74c19ad` | connected=5, disabled=2, total=7 |
 | Group & Design | UIShell 7-step Bio high-fidelity gated shell | `codex/integration-labtools-ui-c2-carryover` | `08e9bd1, 62739aa, 2063ce8, 74c19ad` | connected=6, disabled=10, total=16 |
 | Analysis Tasks | UIShell 7-step Bio high-fidelity gated shell | `codex/integration-labtools-ui-c2-carryover` | `08e9bd1, 4061d72, 2063ce8, 74c19ad` | connected=11, disabled=4, total=15 |
 | Result & Report | UIShell 7-step Bio high-fidelity gated shell | `codex/integration-labtools-ui-c2-carryover` | `08e9bd1, 2d5a560, 2063ce8, 74c19ad` | connected=11, disabled=8, total=19 |
@@ -91,9 +96,13 @@
 - `batch11_tcga_gtex_adapters` / `01_tcga_adapter_ready`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/01_tcga_adapter_ready.png`
 - `batch11_tcga_gtex_adapters` / `02_tcga_metadata_preview`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/02_tcga_metadata_preview.png`
 - `batch11_tcga_gtex_adapters` / `03_tcga_download_plan`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/03_tcga_download_plan.png`
+- `batch11_tcga_gtex_adapters` / `03a_tcga_light_download`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/03a_tcga_light_download.png`
+- `batch11_tcga_gtex_adapters` / `03b_tcga_expression_build`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/03b_tcga_expression_build.png`
 - `batch11_tcga_gtex_adapters` / `04_gtex_adapter_ready`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/04_gtex_adapter_ready.png`
 - `batch11_tcga_gtex_adapters` / `05_gtex_metadata_preview`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/05_gtex_metadata_preview.png`
 - `batch11_tcga_gtex_adapters` / `06_gtex_download_plan`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06_gtex_download_plan.png`
+- `batch11_tcga_gtex_adapters` / `06a_gtex_light_download`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06a_gtex_light_download.png`
+- `batch11_tcga_gtex_adapters` / `06b_gtex_expression_build`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06b_gtex_expression_build.png`
 - `batch12_tcga_gtex_light_validation` / `01_tcga_adapter_ready`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/01_tcga_adapter_ready.png`
 - `batch12_tcga_gtex_light_validation` / `02_tcga_metadata_preview`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/02_tcga_metadata_preview.png`
 - `batch12_tcga_gtex_light_validation` / `03_tcga_download_plan`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03_tcga_download_plan.png`

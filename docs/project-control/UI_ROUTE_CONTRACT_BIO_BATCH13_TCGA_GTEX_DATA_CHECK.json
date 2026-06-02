@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_batch13_tcga_gtex_data_check.v1",
-  "created_at": "2026-06-02T10:47:16+00:00",
+  "created_at": "2026-06-02T13:04:10+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "66e528d05d913d148eb6461014b3ea03a8735b60",
+  "head": "4a0577982b6c87645f6d1a0bac0adbd56728f7b0",
   "scope": "Bioinformatics TCGA/GTEx light-validation build outputs into mature Data Check page: pre-recognition selection, recognition report, readiness report, and analysis capability matrix.",
   "gate_policy": {
     "light_validation_mode": "1",
@@ -51,10 +51,10 @@
       "backend_capability": "app.bioinformatics.data_sources.tcga_expression_builder.TCGAExpressionQuantificationBuilder.build_from_record",
       "source_file": "app/bioinformatics/data_sources/tcga_expression_builder/TCGAExpressionQuantificationBuilder.py",
       "runtime_effect": "TCGA expression build registered as reference source for Data Check",
-      "artifact_evidence": "standardized_data/tcga/tcga_thca/tcga_b64_7fb4b6d189/data_prepared/tcga/tcga_expression_build_manifest.json",
+      "artifact_evidence": "standardized_data/tcga/tcga_thca/tcga_b64_546d8eed04/data_prepared/tcga/tcga_expression_build_manifest.json",
       "live_click_test": "route_state_assertion_after_visible_clicks",
       "status": "connected",
-      "observed": "standardized_data/tcga/tcga_thca/tcga_b64_7fb4b6d189/data_prepared/tcga/tcga_expression_build_manifest.json",
+      "observed": "standardized_data/tcga/tcga_thca/tcga_b64_546d8eed04/data_prepared/tcga/tcga_expression_build_manifest.json",
       "disabled_reason": "",
       "batch": "Batch 13: Bioinformatics TCGA/GTEx Data Check recognition/readiness"
     },
@@ -66,10 +66,10 @@
       "backend_capability": "app.bioinformatics.data_sources.gtex_expression_builder.GTExExpressionMatrixBuilder.build_from_record",
       "source_file": "app/bioinformatics/data_sources/gtex_expression_builder/GTExExpressionMatrixBuilder.py",
       "runtime_effect": "GTEx expression build registered as reference source for Data Check",
-      "artifact_evidence": "standardized_data/gtex/gtex_thyroid/gtex-g63-900d42a07d/data_prepared/gtex/gtex_expression_build_manifest.json",
+      "artifact_evidence": "standardized_data/gtex/gtex_thyroid/gtex-g63-be46347e3f/data_prepared/gtex/gtex_expression_build_manifest.json",
       "live_click_test": "route_state_assertion_after_visible_clicks",
       "status": "connected",
-      "observed": "standardized_data/gtex/gtex_thyroid/gtex-g63-900d42a07d/data_prepared/gtex/gtex_expression_build_manifest.json",
+      "observed": "standardized_data/gtex/gtex_thyroid/gtex-g63-be46347e3f/data_prepared/gtex/gtex_expression_build_manifest.json",
       "disabled_reason": "",
       "batch": "Batch 13: Bioinformatics TCGA/GTEx Data Check recognition/readiness"
     },
