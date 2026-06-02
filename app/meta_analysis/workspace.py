@@ -31,7 +31,13 @@ from app.meta_analysis.services.dedup_review_v2_service import DedupReviewV2Serv
 from app.meta_analysis.services.extraction_schema_registry_v1_service import ExtractionSchemaRegistryV1Service
 from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
 from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
-from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
+from app.meta_analysis.services.title_abstract_screening_v2_service import (
+    DECISION_EXCLUDE,
+    DECISION_INCLUDE,
+    DECISION_NEEDS_REVIEW,
+    DECISION_UNCERTAIN,
+    TitleAbstractScreeningV2Service,
+)
 from app.meta_analysis.version import META_INTERNAL_BETA_VERSION, META_SOFTWARE_STATUS
 
 META_ANALYSIS_MAINLINE_CONTRACT_VERSION = META_INTERNAL_BETA_VERSION
@@ -716,6 +722,7 @@ if QWidget is not None:
             self._dedup_review_service_factory: Callable[[], DedupReviewV2Service] = DedupReviewV2Service
             self._title_abstract_screening_service_factory: Callable[[], TitleAbstractScreeningV2Service] = TitleAbstractScreeningV2Service
             self._last_pubmed_candidate_preview_id = ""
+            self._selected_screening_decision_id = "include_draft"
             self._page_keys: list[str] = []
             self._build_ui()
 
@@ -1119,7 +1126,142 @@ if QWidget is not None:
                 )
             return artifact
 
+        def _select_screening_decision_adapter(self, decision_id: str) -> Path | None:
+            self._selected_screening_decision_id = decision_id
+            for button in self.findChildren(QPushButton, "metaScreeningDecisionDraftButton"):
+                is_selected = str(button.property("decisionId") or "") == decision_id
+                button.setProperty("selectedDecision", is_selected)
+                _refresh_dynamic_style(button)
+            if self._current_project_dir is None:
+                return None
+            return self._write_gate_artifact(
+                "ui_runtime/meta_screening_decision_selection_adapter.json",
+                {
+                    "page_key": "screening",
+                    "selected_decision_id": decision_id,
+                    "mapped_decision": self._mapped_screening_decision(decision_id),
+                    "service_called": False,
+                    "artifact_semantic": "reviewer_selection_state",
+                    "formal_action_enabled": False,
+                    "auto_decided": False,
+                },
+            )
+
+        def _save_screening_decision_adapter(self, *, advance: bool = False) -> Path | None:
+            if self._current_project_dir is None:
+                self._set_status("未绑定 Meta 项目；screening decision 保持 gated。")
+                return None
+            service = self._title_abstract_screening_service_factory()
+            queue_result = service.build_queue(self._current_project_dir, project_id=self._current_project_dir.name)
+            record_id = self._next_screening_queue_record_id(service, advance=advance)
+            if not record_id:
+                artifact = self._write_gate_artifact(
+                    "ui_runtime/meta_screening_decision_disabled_reason.json",
+                    {
+                        "page_key": "screening",
+                        "disabled_reason": "screening_queue_empty_or_missing_records",
+                        "queue_output_path": _relative_or_empty(queue_result.output_path, self._current_project_dir),
+                        "formal_action_enabled": False,
+                    },
+                )
+                self._write_gate_artifact(
+                    "ui_runtime/meta_screening_draft_decision_gate.json",
+                    {
+                        "page_key": "screening",
+                        "service_state": "screening_queue_empty_or_missing_records",
+                        "decision_state": "blocked",
+                        "formal_action_enabled": False,
+                        "auto_decided": False,
+                    },
+                )
+                return artifact
+            decision_id = self._selected_screening_decision_id
+            decision = self._mapped_screening_decision(decision_id)
+            exclusion_reason_code = "Wrong population" if decision == DECISION_EXCLUDE else ""
+            exclusion_reason_text = "Reviewer selected exclusion in UIShell screening adapter." if decision == DECISION_EXCLUDE else ""
+            result = service.save_decision(
+                self._current_project_dir,
+                record_id=record_id,
+                decision=decision,
+                actor="uishell_reviewer",
+                exclusion_reason_code=exclusion_reason_code,
+                exclusion_reason_text=exclusion_reason_text,
+                notes=f"UIShell screening adapter saved {decision_id}.",
+            )
+            artifact = self._write_gate_artifact(
+                "ui_runtime/meta_screening_decision_adapter.json",
+                {
+                    "page_key": "screening",
+                    "service": "TitleAbstractScreeningV2Service.save_decision",
+                    "success": result.success,
+                    "record_id": record_id,
+                    "selected_decision_id": decision_id,
+                    "decision": decision,
+                    "decisions_path": _relative_or_empty(result.decisions_path, self._current_project_dir),
+                    "compatible_decisions_path": _relative_or_empty(result.compatible_decisions_path, self._current_project_dir),
+                    "decision_counts": result.decision_counts,
+                    "message": result.message,
+                    "advance_requested": advance,
+                    "auto_decided": False,
+                    "ai_suggestion_only": False,
+                    "formal_action_enabled": False,
+                },
+            )
+            if hasattr(self, "_screening_decision_status"):
+                self._screening_decision_status.setText(
+                    f"Decision saved：success={result.success}; record={record_id}; decision={decision}; auto_decided=false"
+                )
+            self._write_gate_artifact(
+                "ui_runtime/meta_screening_draft_decision_gate.json",
+                {
+                    "page_key": "screening",
+                    "service_state": "called_TitleAbstractScreeningV2Service.save_decision",
+                    "decision_state": decision,
+                    "record_id": record_id,
+                    "decisions_path": _relative_or_empty(result.decisions_path, self._current_project_dir),
+                    "formal_action_enabled": False,
+                    "auto_decided": False,
+                },
+            )
+            return artifact
+
         def _save_screening_draft_artifact(self) -> Path | None:
+            return self._save_screening_decision_adapter(advance=False)
+
+        def _save_screening_next_artifact(self) -> Path | None:
+            return self._save_screening_decision_adapter(advance=True)
+
+        def _mapped_screening_decision(self, decision_id: str) -> str:
+            return {
+                "include_draft": DECISION_INCLUDE,
+                "exclude_draft": DECISION_EXCLUDE,
+                "uncertain": DECISION_UNCERTAIN,
+                "need_full_text": DECISION_NEEDS_REVIEW,
+            }.get(decision_id, DECISION_NEEDS_REVIEW)
+
+        def _next_screening_queue_record_id(self, service: TitleAbstractScreeningV2Service, *, advance: bool = False) -> str:
+            queue = service.load_queue(self._current_project_dir) if self._current_project_dir is not None else {}
+            records = [dict(item) for item in queue.get("queue_records", []) if isinstance(item, dict)]
+            if not records:
+                return ""
+            decisions_payload = _load_json_object(service.decisions_path(self._current_project_dir)) if self._current_project_dir is not None else {}
+            decided_ids = {
+                str(item.get("record_id", ""))
+                for item in decisions_payload.get("screening_records", [])
+                if isinstance(item, dict)
+            }
+            if not advance and decided_ids:
+                for record in records:
+                    record_id = str(record.get("record_id", ""))
+                    if record_id in decided_ids:
+                        return record_id
+            for record in records:
+                record_id = str(record.get("record_id", ""))
+                if record_id and record_id not in decided_ids:
+                    return record_id
+            return str(records[0].get("record_id", ""))
+
+        def _write_screening_queue_draft_artifact(self) -> Path | None:
             service_state = "no_project_bound"
             if self._current_project_dir is not None:
                 try:
@@ -1230,13 +1372,15 @@ if QWidget is not None:
             )
             self._set_button_contract(
                 "metaSaveDraftScreeningDecisionButton",
-                "calls_screening_store_or_writes_draft_gate_artifact",
+                "calls_title_abstract_screening_v2_save_decision",
                 on_click=self._save_screening_draft_artifact,
+                enable=True,
             )
             self._set_button_contract(
                 "metaScreeningSaveNextButton",
-                "calls_screening_store_or_writes_draft_gate_artifact",
-                on_click=self._save_screening_draft_artifact,
+                "calls_title_abstract_screening_v2_save_decision_and_advances_record",
+                on_click=self._save_screening_next_artifact,
+                enable=True,
             )
             self._set_button_contract(
                 "metaSaveExtractionDesignButton",
@@ -1276,6 +1420,13 @@ if QWidget is not None:
             for button in self.findChildren(QPushButton, "metaDatabaseDraftScopeButton"):
                 button.setProperty("buttonBehavior", "sets_database_draft_scope_without_execution")
                 button.setProperty("artifactSemantic", "draft_scope_only")
+            for button in self.findChildren(QPushButton, "metaScreeningDecisionDraftButton"):
+                decision_id = str(button.property("decisionId") or "")
+                button.setProperty("buttonBehavior", "selects_screening_decision_and_writes_selection_artifact")
+                button.setProperty("artifactSemantic", "ui_runtime/meta_screening_decision_selection_adapter.json")
+                button.clicked.connect(
+                    lambda _checked=False, selected_decision_id=decision_id: self._select_screening_decision_adapter(selected_decision_id)
+                )
             for button in self.findChildren(QPushButton):
                 if button.text().startswith("Import - adapter needed"):
                     button.setProperty("buttonBehavior", "disabled_import_adapter_needed")
@@ -3460,6 +3611,11 @@ if QWidget is not None:
             save_next.setProperty("formalActionEnabled", False)
             save_next.setMinimumHeight(32)
             layout.addWidget(save_next)
+            self._screening_decision_status = QLabel("Reviewer decision adapter waits for explicit save; no automatic screening.")
+            self._screening_decision_status.setObjectName("metaScreeningDecisionAdapterStatus")
+            self._screening_decision_status.setWordWrap(True)
+            self._screening_decision_status.setStyleSheet("color: #2563EB; font-size: 10px;")
+            layout.addWidget(self._screening_decision_status)
             layout.addSpacing(20)
 
             log = QFrame()

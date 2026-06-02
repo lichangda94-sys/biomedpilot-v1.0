@@ -13,6 +13,7 @@ try:
 
     from app.meta_analysis.project_workspace import create_meta_analysis_project
     from app.meta_analysis.search.pubmed_search_service import PubMedSearchExecution, PubMedSearchResult
+    from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget, meta_target_ia_pages
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
@@ -231,6 +232,79 @@ def test_meta_dedup_to_screening_buttons_call_services_and_write_artifacts(qt_ap
     assert screening_payload["auto_screening_enabled"] is False
     assert (summary.project_root / screening_payload["output_path"]).exists()
     assert not (summary.project_root / "reports" / "prisma_flow_summary.json").exists()
+
+
+def test_meta_screening_decision_buttons_call_service_and_write_artifacts(qt_app, tmp_path: Path) -> None:
+    summary = create_meta_analysis_project("UIShell Screening Decision Adapter", tmp_path)
+    LiteratureLibraryService().import_records(
+        summary.project_root,
+        project_id=summary.project_root.name,
+        source_type="pubmed_confirmed_candidates",
+        source_name="PubMed",
+        raw_records=[
+            {
+                "record_id": "scr-ui-a",
+                "title": "Serum adiponectin and thyroid cancer risk",
+                "abstract": "Eligible abstract.",
+                "authors": ["Alice Adams"],
+                "journal": "Meta UI Journal",
+                "year": "2024",
+                "pmid": "331",
+            },
+            {
+                "record_id": "scr-ui-b",
+                "title": "Animal adiponectin model",
+                "abstract": "Mouse abstract.",
+                "authors": ["Ben Baker"],
+                "journal": "Meta UI Journal",
+                "year": "2023",
+                "pmid": "332",
+            },
+        ],
+    )
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_target_ia_page("screening")
+
+    include_button = next(
+        button
+        for button in widget.findChildren(QPushButton, "metaScreeningDecisionDraftButton")
+        if button.property("decisionId") == "include_draft"
+    )
+    include_button.click()
+    qt_app.processEvents()
+    selection_gate = summary.project_root / "ui_runtime" / "meta_screening_decision_selection_adapter.json"
+    assert selection_gate.exists()
+    selection_payload = json.loads(selection_gate.read_text(encoding="utf-8"))
+    assert selection_payload["selected_decision_id"] == "include_draft"
+    assert selection_payload["mapped_decision"] == "include"
+
+    _button(widget, "metaSaveDraftScreeningDecisionButton").click()
+    qt_app.processEvents()
+    decision_gate = summary.project_root / "ui_runtime" / "meta_screening_decision_adapter.json"
+    assert decision_gate.exists()
+    decision_payload = json.loads(decision_gate.read_text(encoding="utf-8"))
+    assert decision_payload["service"] == "TitleAbstractScreeningV2Service.save_decision"
+    assert decision_payload["record_id"] == "lit-pubmed-331"
+    assert decision_payload["decision"] == "include"
+    assert decision_payload["auto_decided"] is False
+    assert (summary.project_root / decision_payload["decisions_path"]).exists()
+    assert (summary.project_root / decision_payload["compatible_decisions_path"]).exists()
+
+    exclude_button = next(
+        button
+        for button in widget.findChildren(QPushButton, "metaScreeningDecisionDraftButton")
+        if button.property("decisionId") == "exclude_draft"
+    )
+    exclude_button.click()
+    qt_app.processEvents()
+    _button(widget, "metaScreeningSaveNextButton").click()
+    qt_app.processEvents()
+    updated_payload = json.loads(decision_gate.read_text(encoding="utf-8"))
+    assert updated_payload["record_id"] == "lit-pubmed-332"
+    assert updated_payload["decision"] == "exclude"
+    assert updated_payload["decision_counts"]["include"] == 1
+    assert updated_payload["decision_counts"]["exclude"] == 1
 
 
 def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_actions(qt_app, tmp_path: Path) -> None:
