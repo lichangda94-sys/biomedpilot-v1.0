@@ -55,6 +55,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
     assert info["CFBundleExecutable"] == "BioMedPilotTest"
+    assert info["CFBundleIdentifier"] == "local.biomedpilot.biomedpilottest"
     assert info["CFBundleIconFile"] == "biomedpilot_app_icon.icns"
     assert info["CFBundleName"] == "BioMedPilotTest"
     assert info["NSPrincipalClass"] == "NSApplication"
@@ -79,6 +80,7 @@ def test_package_app_uses_space_free_bundle_executable(tmp_path) -> None:
         info = plistlib.load(handle)
     assert info["CFBundleName"] == "BioMedPilot Integration Preview"
     assert info["CFBundleExecutable"] == "BioMedPilotIntegrationPreview"
+    assert info["CFBundleIdentifier"] == "local.biomedpilot.biomedpilot-integration-preview"
     assert info["CFBundleIconFile"] == "biomedpilot_app_icon.icns"
 
 

@@ -221,7 +221,7 @@ def _write_info_plist(path: Path, *, app_name: str, executable_name: str, git_he
     payload = {
         "CFBundleName": app_name,
         "CFBundleDisplayName": "BioMedPilot / 医研智析",
-        "CFBundleIdentifier": "local.biomedpilot.desktop",
+        "CFBundleIdentifier": _bundle_identifier(app_name),
         "CFBundleVersion": APP_BUNDLE_VERSION,
         "CFBundleShortVersionString": APP_BUNDLE_VERSION,
         "CFBundlePackageType": "APPL",
@@ -236,6 +236,22 @@ def _write_info_plist(path: Path, *, app_name: str, executable_name: str, git_he
     }
     with path.open("wb") as handle:
         plistlib.dump(payload, handle)
+
+
+def _bundle_identifier(app_name: str) -> str:
+    if app_name == DEFAULT_APP_NAME:
+        return "local.biomedpilot.desktop"
+    suffix = []
+    previous_was_separator = False
+    for character in app_name.lower():
+        if character.isalnum():
+            suffix.append(character)
+            previous_was_separator = False
+        elif not previous_was_separator:
+            suffix.append("-")
+            previous_was_separator = True
+    normalized = "".join(suffix).strip("-")
+    return f"local.biomedpilot.{normalized or 'preview'}"
 
 
 def _write_launcher(path: Path, *, app_name: str, python_executable: str) -> str:
