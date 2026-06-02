@@ -7084,6 +7084,27 @@ class BioinformaticsGroupComparisonDesignWidget(QWidget):
     def add_one_vs_control_suggestions(self) -> None:
         groups = self._group_rows_from_table()
         suggestions = build_default_comparison_rows(self._context, groups)
+        blockers = [] if suggestions else ["no_control_group_or_case_group_available_for_one_vs_control_suggestion"]
+        if self._project_root is not None:
+            artifact_dir = self._project_root / "analysis" / "group_design"
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            artifact_path = artifact_dir / "one_vs_control_suggestions_preview.json"
+            artifact_path.write_text(
+                json.dumps(
+                    {
+                        "status": "suggestions_created" if suggestions else "blocked",
+                        "source": "BioinformaticsGroupComparisonDesignWidget.add_one_vs_control_suggestions",
+                        "suggestion_count": len(suggestions),
+                        "suggestions": suggestions,
+                        "blockers": blockers,
+                        "formal_analysis_executed": False,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
         self._comparison_table.setRowCount(0)
         for item in suggestions:
             self.add_comparison_row(
@@ -7093,7 +7114,11 @@ class BioinformaticsGroupComparisonDesignWidget(QWidget):
                 source=str(item.get("source") or "one_vs_control_suggestion"),
                 status="待保存",
             )
-        self._status_label.setText(f"已生成 {len(suggestions)} 个 one-vs-control 比较建议，请检查后保存。")
+        self._status_label.setVisible(True)
+        if suggestions:
+            self._status_label.setText(f"已生成 {len(suggestions)} 个 one-vs-control 比较建议，请检查后保存。")
+        else:
+            self._status_label.setText("未生成 one-vs-control 比较建议：没有可识别的 control/case 分组；已写入 blocker artifact。")
 
     def save_design(self) -> dict[str, object] | None:
         if self._project_root is None:
