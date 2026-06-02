@@ -1,13 +1,13 @@
 # Bioinformatics C1 Closure Matrix
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `66e528d05d913d148eb6461014b3ea03a8735b60`
+- head: `396645e24b7fc3628b44bd7030107f737d4a358f`
 - closure_status: `passed_with_documented_gaps`
 - ui_page_count: `7`
 - capability_row_count: `7`
-- input_row_count: `185`
-- connected_rows_from_inputs: `133`
-- disabled_rows_with_reason: `52`
+- input_row_count: `192`
+- connected_rows_from_inputs: `137`
+- disabled_rows_with_reason: `55`
 - broken_rows_from_inputs: `0`
 
 ## Inputs
@@ -15,7 +15,7 @@
 | Batch | Report | Head | Rows | Connected | Disabled | Broken |
 | --- | --- | --- | --- | --- | --- | --- |
 | `batch4_formal_deg` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json` | `8b20ac157f3c` | `8` | `8` | `0` | `0` |
-| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `8b20ac157f3c` | `9` | `4` | `5` | `0` |
+| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `396645e24b7f` | `9` | `4` | `5` | `0` |
 | `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `8b20ac157f3c` | `9` | `4` | `5` | `0` |
 | `batch7_report_export` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json` | `8b20ac157f3c` | `13` | `13` | `0` | `0` |
 | `batch8_visible_buttons` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json` | `b47d29ba66a4` | `94` | `56` | `38` | `0` |
@@ -24,6 +24,7 @@
 | `batch11_tcga_gtex_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json` | `c2f144f9f7b7` | `10` | `6` | `4` | `0` |
 | `batch12_tcga_gtex_light_validation` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json` | `648ecbd9691d` | `10` | `10` | `0` | `0` |
 | `batch13_tcga_gtex_data_check` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH13_TCGA_GTEX_DATA_CHECK.json` | `66e528d05d91` | `5` | `5` | `0` | `0` |
+| `batch14_formal_ora` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json` | `396645e24b7f` | `7` | `4` | `3` | `0` |
 
 ## Page Baseline Matrix
 
@@ -45,13 +46,13 @@
 | Data Source | GEO / Local / TCGA / GTEx entry points connect to acquisition/retrieval/recognition, not direct analysis | `connected` | create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers; TCGADownloadPlanExecutor; GTExDownloadPlanExecutor; TCGA/GTEx expression builders | `batch8_visible_buttons, batch9_data_prep_adapters, batch10_geo_online_retrieval, batch11_tcga_gtex_adapters, batch12_tcga_gtex_light_validation, batch13_tcga_gtex_data_check` | All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview, download-plan artifacts, light-validation download receipts, expression build manifests, Data Check recognition, and readiness artifacts. | Full-scale TCGA/GTEx non-light downloads remain explicitly approval-gated and are not claimed as C1 production analysis inputs. |
 | Data Check & Preparation | Data recognition, dependency/readiness detection, and preflight artifacts | `connected` | project_recognition; project_readiness; project_standardization | `batch8_visible_buttons, batch9_data_prep_adapters, batch13_tcga_gtex_data_check` | Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests; TCGA/GTEx light-validation build outputs are live-clicked through recognition/readiness. | Full-scale TCGA/GTEx non-light assets remain outside this C1 live-click proof. |
 | Group & Design | Group/comparison/covariate state and blocker handling | `connected` | group_comparison_design build/save adapters | `batch8_visible_buttons, batch9_data_prep_adapters` | Suggestion/save/continue buttons live-clicked and artifact-verified. | Expanded covariate modeling remains gate-scoped unless current design manifest proves the schema. |
-| Analysis Tasks | Formal DEG, ORA/GSEA, survival/clinical task gates | `partial` | formal DEG executor; EnrichmentService preflight/detect; SurvivalService preflight/detect | `batch4_formal_deg, batch5_enrichment, batch6_survival, batch8_visible_buttons` | Formal DEG positive path is connected; enrichment and survival preflight/detect are connected; formal ORA/GSEA and KM/Cox/risk-score remain disabled with reasons. | Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled. |
-| Result & Report | DEG review, plot, report draft, result index, artifact registry | `connected` | result index loader; formal DEG review/export/plot/report-ready adapters | `batch4_formal_deg, batch7_report_export, batch8_visible_buttons` | Formal DEG result review, table export, plot artifact, and report-ready package are live-click verified. | ORA/GSEA and survival preflight artifacts are not promoted into formal result rows. |
+| Analysis Tasks | Formal DEG, ORA/GSEA, survival/clinical task gates | `partial` | formal DEG executor; EnrichmentService preflight/detect/formal ORA; SurvivalService preflight/detect | `batch4_formal_deg, batch5_enrichment, batch6_survival, batch8_visible_buttons, batch14_formal_ora` | Formal DEG positive path is connected; enrichment preflight/R detect and local-GMT formal ORA are connected; survival preflight/detect is connected; formal GSEA and KM/Cox/risk-score remain disabled with reasons. | Formal GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled. |
+| Result & Report | DEG review, plot, report draft, result index, artifact registry | `connected` | result index loader; formal DEG review/export/plot/report-ready adapters; formal ORA result index registration | `batch4_formal_deg, batch7_report_export, batch8_visible_buttons, batch14_formal_ora` | Formal DEG result review, table export, plot artifact, and report-ready package are live-click verified; formal ORA writes JSON/CSV and a result index entry from the mature Enrichment page. | Formal ORA plot/report-ready promotion, GSEA outputs, and survival outputs remain gated until their schemas are connected. |
 | Report Export | Report-ready gate and export only after gate passes | `connected` | report draft manifest and formal DEG report-ready package export | `batch4_formal_deg, batch7_report_export, batch8_visible_buttons` | Formal DEG package export is live-click verified after report-ready gate; report draft stays separate from report-ready promotion. | Non-DEG report-ready exports remain closed until their formal result schemas are connected. |
 
 ## Remaining Gaps
 
-- `Analysis Tasks`: Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled.
+- `Analysis Tasks`: Formal GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled.
 
 ## Screenshot Evidence
 
@@ -109,3 +110,5 @@
 - `batch13_tcga_gtex_data_check` / `03_data_check_recognition_done`: `docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/03_data_check_recognition_done.png`
 - `batch13_tcga_gtex_data_check` / `04_readiness_before_run`: `docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/04_readiness_before_run.png`
 - `batch13_tcga_gtex_data_check` / `05_readiness_after_run`: `docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/05_readiness_after_run.png`
+- `batch14_formal_ora` / `01_formal_ora_inputs_ready`: `docs/ui/runtime_screenshots/20260602_bio_batch14_formal_ora/01_formal_ora_inputs_ready.png`
+- `batch14_formal_ora` / `02_formal_ora_result_review`: `docs/ui/runtime_screenshots/20260602_bio_batch14_formal_ora/02_formal_ora_result_review.png`

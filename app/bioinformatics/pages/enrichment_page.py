@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable
 
 from app.bioinformatics.deg_task_plan import DEG_PREFLIGHT_MANIFEST
-from app.bioinformatics.services.enrichment_service import EnrichmentPreflightResult, EnrichmentService
+from app.bioinformatics.services.enrichment_service import EnrichmentPreflightResult, EnrichmentService, FormalOraResult
 from app.shared.feature_availability import get_feature
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
@@ -22,7 +22,7 @@ def initial_enrichment_state() -> EnrichmentPageState:
     feature = get_feature("bio-enrichment")
     return EnrichmentPageState(
         title="富集分析",
-        description="读取差异表达分析预检并检查富集分析前置条件。本阶段不下载数据库、不运行 GO / KEGG / GSEA。",
+        description="读取差异表达分析预检并检查富集分析前置条件。正式 ORA 支持本地 DEG 表 + GMT gene set；GSEA 仍保持 release gate。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
     )
 
@@ -100,6 +100,21 @@ if QWidget is not None:
             row.addWidget(choose_button)
             root.addLayout(row)
 
+            gene_set_row = QHBoxLayout()
+            self._gene_set_input = QLineEdit()
+            self._gene_set_input.setObjectName("formalOraGeneSetPathInput")
+            self._gene_set_input.setPlaceholderText("选择或粘贴 GMT gene set 文件路径")
+            choose_gene_set_button = QPushButton("选择 GMT 基因集")
+            choose_gene_set_button.setObjectName("chooseFormalOraGeneSetButton")
+            choose_gene_set_button.setProperty("buttonRole", "secondary")
+            choose_gene_set_button.setProperty("buttonBehavior", "selects_local_gmt_gene_set_for_formal_ora")
+            choose_gene_set_button.setProperty("formalActionEnabled", False)
+            choose_gene_set_button.setProperty("downloadAllowed", False)
+            choose_gene_set_button.clicked.connect(self._choose_gene_set_file)
+            gene_set_row.addWidget(self._gene_set_input, 1)
+            gene_set_row.addWidget(choose_gene_set_button)
+            root.addLayout(gene_set_row)
+
             run_button = QPushButton("运行富集分析预检")
             run_button.setObjectName("runEnrichmentPreflightButton")
             run_button.setProperty("buttonRole", "primary_action")
@@ -148,9 +163,30 @@ if QWidget is not None:
             self._backend_detection_text.setPlainText(
                 "状态：尚未检测 R 富集后端。\n"
                 "必需包：ReactomePA、msigdbr；可选 GSEA 包：fgsea、clusterProfiler。\n"
-                "策略：detect-only，不安装、不下载数据库、不运行 ORA/GSEA。"
+                "策略：R backend detect-only，不安装、不下载数据库；本地 GMT ORA 由 Python adapter 执行。"
             )
             root.addWidget(self._backend_detection_text)
+
+            run_ora_button = QPushButton("运行正式 ORA（本地 GMT）")
+            run_ora_button.setObjectName("runFormalOraButton")
+            run_ora_button.setProperty("buttonRole", "primary_action")
+            run_ora_button.setProperty("buttonBehavior", "calls_enrichment_service_run_formal_ora_with_local_gmt")
+            run_ora_button.setProperty("formalActionEnabled", True)
+            run_ora_button.setProperty("engineExecutionAllowed", True)
+            run_ora_button.setProperty("downloadAllowed", False)
+            run_ora_button.setProperty("databaseDownloadAllowed", False)
+            run_ora_button.clicked.connect(self._run_formal_ora)
+            root.addWidget(run_ora_button)
+
+            self._formal_ora_review_text = QPlainTextEdit()
+            self._formal_ora_review_text.setObjectName("formalOraResultReviewText")
+            self._formal_ora_review_text.setReadOnly(True)
+            self._formal_ora_review_text.setMinimumHeight(132)
+            self._formal_ora_review_text.setPlainText(
+                "正式 ORA 结果审阅：等待 DEG preflight 和 GMT gene set。\n"
+                "执行策略：本地 hypergeometric ORA，写入 JSON/CSV artifact；GSEA/report-ready gate 不自动打开。"
+            )
+            root.addWidget(self._formal_ora_review_text)
 
             confirm_button = QPushButton("确认 ORA/GSEA 参数")
             confirm_button.setObjectName("confirmOraGseaParametersDisabledButton")
@@ -208,6 +244,11 @@ if QWidget is not None:
             self._path_input.setText(str(path))
             return self._create_preflight()
 
+        def run_formal_ora_from_paths(self, differential_expression_path: str | Path, gene_set_path: str | Path) -> FormalOraResult:
+            self._path_input.setText(str(differential_expression_path))
+            self._gene_set_input.setText(str(gene_set_path))
+            return self._run_formal_ora()
+
         def selected_preflight_path(self) -> str:
             return self._path_input.text()
 
@@ -215,6 +256,11 @@ if QWidget is not None:
             path, _selected_filter = QFileDialog.getOpenFileName(self, "选择差异表达分析预检", "", "Differential expression preflight (*.json)")
             if path:
                 self._path_input.setText(path)
+
+        def _choose_gene_set_file(self) -> None:
+            path, _selected_filter = QFileDialog.getOpenFileName(self, "选择 GMT 基因集", "", "Gene set matrix transposed (*.gmt)")
+            if path:
+                self._gene_set_input.setText(path)
 
         def _create_preflight(self) -> EnrichmentPreflightResult:
             if not self._path_input.text().strip():
@@ -237,6 +283,46 @@ if QWidget is not None:
                 self._error_label.setText(result.message)
             return result
 
+        def _run_formal_ora(self) -> FormalOraResult:
+            if not self._path_input.text().strip():
+                self._auto_select_project_artifact()
+            result = self._service.run_formal_ora(
+                project_id=self._project_id,
+                differential_expression_path=self._path_input.text(),
+                gene_set_path=self._gene_set_input.text(),
+            )
+            if result.success:
+                top_terms = "\n".join(
+                    f"- {row.get('term')} | overlap={row.get('overlap_count')} | padj={float(row.get('adjusted_p_value', 1.0)):.4g}"
+                    for row in result.top_terms[:5]
+                ) or "- no_terms"
+                self._status_label.setText("富集状态：正式 ORA 已完成")
+                self._error_label.setText("")
+                self._formal_ora_review_text.setPlainText(
+                    f"result_id={result.result_id}\n"
+                    f"significant_genes={result.significant_gene_count}\n"
+                    f"universe_genes={result.universe_gene_count}\n"
+                    f"terms_tested={result.term_count}\n"
+                    f"formal_ora_executed=True\n"
+                    f"formal_gsea_executed=False\n"
+                    f"network_used=False\n"
+                    f"database_download_executed=False\n"
+                    f"json={result.output_path}\n"
+                    f"csv={result.csv_path}\n"
+                    f"result_index={result.result_index_path or 'not_inferred'}\n"
+                    f"top_terms:\n{top_terms}"
+                )
+            else:
+                self._status_label.setText("富集状态：正式 ORA 失败")
+                self._error_label.setText(result.message)
+                self._formal_ora_review_text.setPlainText(
+                    f"formal_ora_executed=False\n"
+                    f"formal_gsea_executed=False\n"
+                    f"message={result.message}\n"
+                    f"details={result.details}"
+                )
+            return result
+
         def _detect_r_backend(self) -> None:
             detection = self._service.detect_r_backend()
             lines = [
@@ -244,6 +330,7 @@ if QWidget is not None:
                 f"rscript={detection.rscript}",
                 "install_action=none_detect_first_only",
                 "database_download=none_detect_first_only",
+                "formal_ora_python_adapter=enabled_with_local_gmt",
                 "formal_ora_gsea_execution=disabled",
                 detection.message,
             ]

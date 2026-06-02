@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_c1_closure_matrix.v1",
-  "created_at": "2026-06-02T10:48:40+00:00",
+  "created_at": "2026-06-02T11:15:38+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "66e528d05d913d148eb6461014b3ea03a8735b60",
+  "head": "396645e24b7fc3628b44bd7030107f737d4a358f",
   "scope": "Bioinformatics C1 mature UIShell 7-step page route contract closure: UI page -> backend capability -> branch/source -> live-click or disabled-reason evidence.",
   "inputs": {
     "batch4_formal_deg": {
@@ -20,7 +20,7 @@
     "batch5_enrichment": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json",
       "schema_version": "ui_route_contract_bio_batch5_enrichment.v1",
-      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "head": "396645e24b7fc3628b44bd7030107f737d4a358f",
       "summary": {
         "row_count": 9,
         "connected": 4,
@@ -125,14 +125,26 @@
         "broken": 0,
         "failures": []
       }
+    },
+    "batch14_formal_ora": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json",
+      "schema_version": "ui_route_contract_bio_batch14_formal_ora.v1",
+      "head": "396645e24b7fc3628b44bd7030107f737d4a358f",
+      "summary": {
+        "row_count": 7,
+        "connected": 4,
+        "disabled": 3,
+        "broken": 0,
+        "failures": []
+      }
     }
   },
   "summary": {
     "ui_page_count": 7,
     "capability_row_count": 7,
-    "input_row_count": 185,
-    "connected_rows": 133,
-    "disabled_rows_with_reason": 52,
+    "input_row_count": 192,
+    "connected_rows": 137,
+    "disabled_rows_with_reason": 55,
     "broken": 0,
     "failures": [],
     "closure_status": "passed_with_documented_gaps"
@@ -354,7 +366,8 @@
         "batch4_formal_deg",
         "batch5_enrichment",
         "batch6_survival",
-        "batch8_visible_buttons"
+        "batch8_visible_buttons",
+        "batch14_formal_ora"
       ],
       "button_contracts": [
         "BIO-FORMAL-DEG-DEPENDENCY-DETECT",
@@ -362,12 +375,16 @@
         "BIO-FORMAL-DEG-CONTROLLED-RUN",
         "BIO-ENRICHMENT-RUN-PREFLIGHT",
         "BIO-ENRICHMENT-DETECT-R-BACKEND",
+        "BIO-FORMAL-ORA-CHOOSE-DEG-PREFLIGHT",
+        "BIO-FORMAL-ORA-CHOOSE-GMT",
+        "BIO-FORMAL-ORA-RUN",
+        "BIO-FORMAL-ORA-REVIEW-AND-REGISTRY",
         "BIO-SURVIVAL-RUN-PREFLIGHT",
         "BIO-SURVIVAL-DETECT-BACKEND"
       ],
-      "backend_capability": "formal DEG executor; EnrichmentService preflight/detect; SurvivalService preflight/detect",
-      "current_strategy": "Formal DEG positive path is connected; enrichment and survival preflight/detect are connected; formal ORA/GSEA and KM/Cox/risk-score remain disabled with reasons.",
-      "remaining_gap": "Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled."
+      "backend_capability": "formal DEG executor; EnrichmentService preflight/detect/formal ORA; SurvivalService preflight/detect",
+      "current_strategy": "Formal DEG positive path is connected; enrichment preflight/R detect and local-GMT formal ORA are connected; survival preflight/detect is connected; formal GSEA and KM/Cox/risk-score remain disabled with reasons.",
+      "remaining_gap": "Formal GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled."
     },
     {
       "ui_page": "Result & Report",
@@ -376,18 +393,20 @@
       "evidence_batches": [
         "batch4_formal_deg",
         "batch7_report_export",
-        "batch8_visible_buttons"
+        "batch8_visible_buttons",
+        "batch14_formal_ora"
       ],
       "button_contracts": [
         "BIO-FORMAL-DEG-RESULT-REVIEW",
         "BIO-FORMAL-DEG-REVIEW-CSV-EXPORT",
         "BIO-FORMAL-DEG-PLOT-ARTIFACT",
         "BIO-FORMAL-DEG-REPORT-READY-PACKAGE",
+        "BIO-FORMAL-ORA-REVIEW-AND-REGISTRY",
         "BIO-RESULT-REPORT-REFRESH-CROSS-GATE"
       ],
-      "backend_capability": "result index loader; formal DEG review/export/plot/report-ready adapters",
-      "current_strategy": "Formal DEG result review, table export, plot artifact, and report-ready package are live-click verified.",
-      "remaining_gap": "ORA/GSEA and survival preflight artifacts are not promoted into formal result rows."
+      "backend_capability": "result index loader; formal DEG review/export/plot/report-ready adapters; formal ORA result index registration",
+      "current_strategy": "Formal DEG result review, table export, plot artifact, and report-ready package are live-click verified; formal ORA writes JSON/CSV and a result index entry from the mature Enrichment page.",
+      "remaining_gap": "Formal ORA plot/report-ready promotion, GSEA outputs, and survival outputs remain gated until their schemas are connected."
     },
     {
       "ui_page": "Report Export",
@@ -417,7 +436,8 @@
         "batch4_formal_deg",
         "batch5_enrichment",
         "batch6_survival",
-        "batch8_visible_buttons"
+        "batch8_visible_buttons",
+        "batch14_formal_ora"
       ],
       "button_contracts": [
         "BIO-FORMAL-DEG-DEPENDENCY-DETECT",
@@ -425,12 +445,16 @@
         "BIO-FORMAL-DEG-CONTROLLED-RUN",
         "BIO-ENRICHMENT-RUN-PREFLIGHT",
         "BIO-ENRICHMENT-DETECT-R-BACKEND",
+        "BIO-FORMAL-ORA-CHOOSE-DEG-PREFLIGHT",
+        "BIO-FORMAL-ORA-CHOOSE-GMT",
+        "BIO-FORMAL-ORA-RUN",
+        "BIO-FORMAL-ORA-REVIEW-AND-REGISTRY",
         "BIO-SURVIVAL-RUN-PREFLIGHT",
         "BIO-SURVIVAL-DETECT-BACKEND"
       ],
-      "backend_capability": "formal DEG executor; EnrichmentService preflight/detect; SurvivalService preflight/detect",
-      "current_strategy": "Formal DEG positive path is connected; enrichment and survival preflight/detect are connected; formal ORA/GSEA and KM/Cox/risk-score remain disabled with reasons.",
-      "remaining_gap": "Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled."
+      "backend_capability": "formal DEG executor; EnrichmentService preflight/detect/formal ORA; SurvivalService preflight/detect",
+      "current_strategy": "Formal DEG positive path is connected; enrichment preflight/R detect and local-GMT formal ORA are connected; survival preflight/detect is connected; formal GSEA and KM/Cox/risk-score remain disabled with reasons.",
+      "remaining_gap": "Formal GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled."
     }
   ],
   "screenshots": [
@@ -703,6 +727,16 @@
       "batch": "batch13_tcga_gtex_data_check",
       "page": "05_readiness_after_run",
       "path": "docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/05_readiness_after_run.png"
+    },
+    {
+      "batch": "batch14_formal_ora",
+      "page": "01_formal_ora_inputs_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch14_formal_ora/01_formal_ora_inputs_ready.png"
+    },
+    {
+      "batch": "batch14_formal_ora",
+      "page": "02_formal_ora_result_review",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch14_formal_ora/02_formal_ora_result_review.png"
     }
   ]
 }

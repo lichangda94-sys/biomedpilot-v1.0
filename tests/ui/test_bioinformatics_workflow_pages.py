@@ -3608,6 +3608,95 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert enrichment_assets["data_assets"][0]["output_path"] == str(enrichment_outputs[0])
     assert "预检已生成" in widget._enrichment_page.findChild(QLabel, "enrichmentRunStatus").text()
 
+    from app.bioinformatics.deg_task_plan import DEG_PREFLIGHT_MANIFEST
+
+    formal_ora_preflight = project_summary.project_root / DEG_PREFLIGHT_MANIFEST
+    formal_ora_preflight.parent.mkdir(parents=True, exist_ok=True)
+    formal_ora_deg = project_summary.project_root / "analysis" / "deg" / "results" / "GSE1001_deg.csv"
+    formal_ora_deg.parent.mkdir(parents=True, exist_ok=True)
+    formal_ora_deg.write_text(
+        "gene,log2FoldChange,padj\n"
+        "TP53,2.5,0.001\n"
+        "EGFR,-2.2,0.004\n"
+        "BRCA1,0.3,0.5\n"
+        "MYC,1.8,0.02\n"
+        "PTEN,-0.4,0.7\n",
+        encoding="utf-8",
+    )
+    formal_ora_preflight.write_text(
+        json.dumps(
+            {
+                "project_id": project_summary.project_root.name,
+                "formal_deg_executed": True,
+                "network_used": False,
+                "preflight_items": [
+                    {
+                        "accession": "GSE1001",
+                        "deg_result_files": ["analysis/deg/results/GSE1001_deg.csv"],
+                        "upregulated_gene_count": 2,
+                        "downregulated_gene_count": 1,
+                        "status": "ready_for_enrichment_runner",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    formal_ora_gmt = tmp_path / "toy_pathways.gmt"
+    formal_ora_gmt.write_text(
+        "DNA_DAMAGE\tlocal test\tTP53\tBRCA1\tPTEN\n"
+        "GROWTH_SIGNALING\tlocal test\tEGFR\tMYC\n"
+        "BACKGROUND_ONLY\tlocal test\tBRCA1\tPTEN\n",
+        encoding="utf-8",
+    )
+    widget._enrichment_page._service = EnrichmentService(
+        task_center=TaskCenter(tmp_path / "formal_ora_tasks.json"),
+        data_center=DataCenter(tmp_path / "formal_ora_assets.json"),
+        storage_root=tmp_path,
+    )
+    formal_ora_preflight_input = widget._enrichment_page.findChild(QLineEdit, "enrichmentPreflightPathInput")
+    formal_ora_gene_set_input = widget._enrichment_page.findChild(QLineEdit, "formalOraGeneSetPathInput")
+    formal_ora_run_button = widget._enrichment_page.findChild(QPushButton, "runFormalOraButton")
+    formal_ora_review = widget._enrichment_page.findChild(QPlainTextEdit, "formalOraResultReviewText")
+    assert formal_ora_preflight_input is not None
+    assert formal_ora_gene_set_input is not None
+    assert formal_ora_run_button is not None
+    assert formal_ora_review is not None
+    assert formal_ora_run_button.isEnabled()
+    assert formal_ora_run_button.property("buttonBehavior") == "calls_enrichment_service_run_formal_ora_with_local_gmt"
+    assert formal_ora_run_button.property("formalActionEnabled") is True
+    assert formal_ora_run_button.property("downloadAllowed") is False
+    assert formal_ora_run_button.property("databaseDownloadAllowed") is False
+    formal_ora_preflight_input.setText(str(formal_ora_preflight))
+    formal_ora_gene_set_input.setText(str(formal_ora_gmt))
+    formal_ora_run_button.click()
+
+    formal_ora_outputs = sorted((project_summary.project_root / "results" / "enrichment").glob("formal-ora-*.json"))
+    formal_ora_tables = sorted((project_summary.project_root / "results" / "enrichment").glob("formal-ora-*.csv"))
+    assert len(formal_ora_outputs) == 1
+    assert len(formal_ora_tables) == 1
+    formal_ora_payload = json.loads(formal_ora_outputs[0].read_text(encoding="utf-8"))
+    assert formal_ora_payload["formal_ora_executed"] is True
+    assert formal_ora_payload["formal_gsea_executed"] is False
+    assert formal_ora_payload["network_used"] is False
+    assert formal_ora_payload["database_download_executed"] is False
+    assert formal_ora_payload["significant_gene_count"] == 3
+    assert formal_ora_payload["term_count"] == 3
+    formal_ora_index = json.loads((project_summary.project_root / "results" / "summaries" / "result_index.json").read_text(encoding="utf-8"))
+    assert formal_ora_index["results"][0]["result_id"] == formal_ora_payload["result_id"]
+    assert formal_ora_index["results"][0]["task_type"] == "ora"
+    assert formal_ora_index["results"][0]["result_semantics"] == "formal_computed_result"
+    formal_ora_tasks = json.loads((tmp_path / "formal_ora_tasks.json").read_text(encoding="utf-8"))
+    formal_ora_assets = json.loads((tmp_path / "formal_ora_assets.json").read_text(encoding="utf-8"))
+    assert formal_ora_tasks["tasks"][0]["title"] == "Formal ORA"
+    assert formal_ora_tasks["tasks"][0]["status"] == "completed"
+    assert formal_ora_assets["data_assets"][0]["data_type"] == "formal_ora_result"
+    assert formal_ora_assets["data_assets"][0]["output_path"] == str(formal_ora_outputs[0])
+    assert "formal_ora_executed=True" in formal_ora_review.toPlainText()
+    assert "formal_gsea_executed=False" in formal_ora_review.toPlainText()
+
     widget.show_analysis_tasks(project_summary)
     survival_button = widget._analysis_task_page.findChild(QPushButton, "openSurvivalClinicalGateButton")
     assert survival_button is not None
