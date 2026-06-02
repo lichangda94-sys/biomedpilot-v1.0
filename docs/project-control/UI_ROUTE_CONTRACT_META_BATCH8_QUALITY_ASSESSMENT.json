@@ -1,0 +1,87 @@
+{
+  "schema_version": "ui_route_contract_meta_batch8_quality_assessment.v1",
+  "created_at": "2026-06-02T12:01:32.939314+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "fb713cf0408db8827c1136b7938638306b999a9a",
+  "scope": "Meta mature UIShell Quality Assessment page: reviewer-controlled quality draft, quality summary, and export artifacts.",
+  "source_matrix": {
+    "ui_baseline": "UIShell high-fidelity Meta target IA Quality Assessment Workspace in app/meta_analysis/workspace.py.",
+    "backend_sources": [
+      "app/meta_analysis/services/quality_service.py",
+      "app/meta_analysis/quality/tool_registry.py"
+    ],
+    "policy": "Quality tools are suggestion/form templates only; final RoB/GRADE judgement, analysis-ready dataset creation, statistics execution, and report-ready advancement remain disabled."
+  },
+  "summary": {
+    "row_count": 3,
+    "connected": 3,
+    "disabled": 0,
+    "broken": 0,
+    "failures": []
+  },
+  "screenshots": [
+    {
+      "name": "quality_assessment",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_meta_batch8_quality_assessment/01_quality_assessment.png",
+      "page_key": "quality_assessment"
+    },
+    {
+      "name": "quality_after_save",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_meta_batch8_quality_assessment/02_quality_after_save.png",
+      "page_key": "quality_assessment"
+    }
+  ],
+  "rows": [
+    {
+      "contract_id": "META-QUALITY-SAVE-DRAFT",
+      "ui_page": "Quality Assessment",
+      "backend_capability": "QualityAssessmentService.create_quality_assessment_draft",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaSaveRiskOfBiasDraftButton",
+      "label": "保存质量评价 Draft",
+      "enabled": true,
+      "button_behavior": "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
+      "disabled_reason": "",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8__o1otcvr/Meta_Batch_8_Quality_Assessment/ui_runtime/meta_risk_of_bias_disabled_reason.json",
+      "live_click_test": "scripts/ui_route_contract_meta_batch8_quality_assessment.py",
+      "status": "connected",
+      "observed": "draft_saved={\"assessment_count\": 1, \"assessment_id\": \"qa-68cb1d48a341\", \"report_ready\": false, \"statistics_run\": false, \"status\": \"draft\", \"tool_name\": \"ROB2\"}",
+      "batch": "Batch 8: Meta Quality Assessment"
+    },
+    {
+      "contract_id": "META-QUALITY-EXPORT-DRAFT-ARTIFACTS",
+      "ui_page": "Quality Assessment",
+      "backend_capability": "QualityAssessmentService.export_quality_assessments_v1_json/export_quality_assessments_v1_csv",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaSaveRiskOfBiasDraftButton",
+      "label": "保存质量评价 Draft",
+      "enabled": true,
+      "button_behavior": "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
+      "disabled_reason": "",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8__o1otcvr/Meta_Batch_8_Quality_Assessment/exports/quality_assessment_v1.csv",
+      "live_click_test": "scripts/ui_route_contract_meta_batch8_quality_assessment.py",
+      "status": "connected",
+      "observed": "quality_json_and_csv_exported",
+      "batch": "Batch 8: Meta Quality Assessment"
+    },
+    {
+      "contract_id": "META-QUALITY-NO-FORMAL-GRADE-GATE",
+      "ui_page": "Quality Assessment",
+      "backend_capability": "quality boundary gate",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaSaveRiskOfBiasDraftButton",
+      "label": "保存质量评价 Draft",
+      "enabled": true,
+      "button_behavior": "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
+      "disabled_reason": "",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8__o1otcvr/Meta_Batch_8_Quality_Assessment/ui_runtime/meta_risk_of_bias_disabled_reason.json",
+      "live_click_test": "scripts/ui_route_contract_meta_batch8_quality_assessment.py",
+      "status": "connected",
+      "observed": "formal_quality_gate_closed={\"assessment_count\": 1, \"assessment_id\": \"qa-68cb1d48a341\", \"report_ready\": false, \"statistics_run\": false, \"status\": \"draft\", \"tool_name\": \"ROB2\"}",
+      "batch": "Batch 8: Meta Quality Assessment"
+    }
+  ]
+}

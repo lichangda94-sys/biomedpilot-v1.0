@@ -334,6 +334,13 @@ def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_a
     qt_app.processEvents()
     rob_gate = summary.project_root / "ui_runtime" / "meta_risk_of_bias_disabled_reason.json"
     assert rob_gate.exists()
+    rob_payload = json.loads(rob_gate.read_text(encoding="utf-8"))
+    assert rob_payload["service"] == "QualityAssessmentService.create_quality_assessment_draft/export_quality_assessments_v1"
+    assert rob_payload["auto_scores_final_quality"] is False
+    assert rob_payload["statistics_run"] is False
+    assert rob_payload["report_ready"] is False
+    assert (summary.project_root / "quality" / "quality_assessment_records_v1.json").exists()
+    assert (summary.project_root / "exports" / "quality_assessment_v1.csv").exists()
 
     widget.show_target_ia_page("result_report")
     report_button = _button(widget, "metaGenerateReportDisabledButton")

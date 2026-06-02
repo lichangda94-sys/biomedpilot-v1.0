@@ -32,6 +32,7 @@ from app.meta_analysis.services.extraction_schema_registry_v1_service import Ext
 from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
 from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
 from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
+from app.meta_analysis.services.quality_service import QualityAssessmentService
 from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
 from app.meta_analysis.services.title_abstract_screening_v2_service import (
     DECISION_EXCLUDE,
@@ -1414,11 +1415,55 @@ if QWidget is not None:
             )
 
         def _write_rob_disabled_reason(self) -> Path | None:
+            if self._current_project_dir is None:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_risk_of_bias_disabled_reason.json",
+                    {
+                        "page_key": "quality_assessment",
+                        "service": "QualityAssessmentService",
+                        "disabled_reason": "Meta 项目目录未绑定，无法保存质量评价 draft。",
+                        "formal_action_enabled": False,
+                    },
+                )
+            service = QualityAssessmentService()
+            suggestions = service.recommend_quality_tools(meta_type=self._selected_active_meta_type_id, study_design="observational cohort study")
+            tool_name = str(suggestions[0]["tool_name"]) if suggestions else "Newcastle-Ottawa Scale"
+            draft = service.create_quality_assessment_draft(
+                self._current_project_dir,
+                study_id="ui-quality-study-1",
+                record_id="ui-quality-record-1",
+                tool_name=tool_name,
+                domains={"selection": "low", "comparability": "some_concerns", "outcome": "unclear"},
+                domain_notes={"comparability": "Reviewer must verify adjusted variables before final judgement."},
+                overall_rating="some_concerns",
+                reviewer_id="uishell_reviewer",
+                notes="UIShell quality assessment draft; not a final risk-of-bias judgement.",
+                meta_type=self._selected_active_meta_type_id,
+                study_design="observational cohort study",
+                actor="uishell_reviewer",
+                project_id=self._current_project_dir.name,
+            )
+            export_json = service.export_quality_assessments_v1_json(self._current_project_dir)
+            export_csv = service.export_quality_assessments_v1_csv(self._current_project_dir)
+            summary = service.quality_summary_for_report(self._current_project_dir)
             return self._write_gate_artifact(
                 "ui_runtime/meta_risk_of_bias_disabled_reason.json",
                 {
                     "page_key": "quality_assessment",
-                    "disabled_reason": "质量评价保存需要 reviewer-confirmed RoB store；当前仅预览 draft domains。",
+                    "service": "QualityAssessmentService.create_quality_assessment_draft/export_quality_assessments_v1",
+                    "assessment_id": draft.assessment_id,
+                    "tool_name": tool_name,
+                    "quality_records_path": _relative_or_empty(draft.output_path, self._current_project_dir),
+                    "summary_path": _relative_or_empty(draft.summary_path, self._current_project_dir),
+                    "export_json_path": _relative_or_empty(export_json, self._current_project_dir),
+                    "export_csv_path": _relative_or_empty(export_csv, self._current_project_dir),
+                    "assessment_count": int(summary.get("assessment_count", 0) or 0),
+                    "status": str(draft.record.get("status", "")),
+                    "auto_scores_final_quality": False,
+                    "analysis_ready_dataset_created": bool(draft.record.get("analysis_ready_dataset_created", False)),
+                    "statistics_run": bool(draft.record.get("statistics_run", False)),
+                    "prisma_advanced": bool(draft.record.get("prisma_advanced", False)),
+                    "report_ready": False,
                     "formal_action_enabled": False,
                 },
             )
@@ -1537,7 +1582,7 @@ if QWidget is not None:
             )
             self._set_button_contract(
                 "metaSaveRiskOfBiasDraftButton",
-                "writes_risk_of_bias_disabled_reason",
+                "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
                 on_click=self._write_rob_disabled_reason,
                 enable=True,
             )
@@ -4302,44 +4347,224 @@ if QWidget is not None:
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("exportGate", "disabled_empty_result")
             frame.setProperty("formalActionEnabled", False)
-            frame.setStyleSheet("QFrame#metaRiskOfBiasRuntimePanel { border: 1px solid #D6E0EA; border-radius: 8px; background: #FFFFFF; }")
+            frame.setStyleSheet(
+                """
+                QFrame#metaRiskOfBiasRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaQualityStepper,
+                QFrame#metaQualityToolCard,
+                QFrame#metaQualityDomainCard,
+                QFrame#metaQualityGateCard,
+                QFrame#metaQualityActionBar {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaRiskOfBiasRuntimeTitle,
+                QLabel#metaQualitySectionTitle {
+                    color: #0F172A;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaQualityMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaQualityStepDone,
+                QLabel#metaQualityStepCurrent,
+                QLabel#metaQualityStepTodo {
+                    color: #94A3B8;
+                    font-size: 10px;
+                    font-weight: 750;
+                }
+                QLabel#metaQualityStepDone,
+                QLabel#metaQualityStepCurrent {
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaQualityToolItem,
+                QLabel#metaQualityGateItem,
+                QLabel#metaRiskOfBiasPreviewScoreNotice {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaQualityToolItem[selected="true"],
+                QLabel#metaQualityGateItem[status="ready"] {
+                    background: #ECFDF5;
+                    border-color: #BBF7D0;
+                    color: #059669;
+                    font-weight: 850;
+                }
+                QLabel#metaQualityGateItem[status="blocked"] {
+                    background: #FEF2F2;
+                    border-color: #FECACA;
+                    color: #DC2626;
+                    font-weight: 850;
+                }
+                QLabel#metaRiskOfBiasPreviewScoreNotice {
+                    background: #FFFBEB;
+                    border-color: #FDE68A;
+                    color: #B45309;
+                }
+                QPushButton#metaSaveRiskOfBiasDraftButton {
+                    background: #2563EB;
+                    border: 1px solid #2563EB;
+                    border-radius: 10px;
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    font-weight: 900;
+                    padding: 10px 14px;
+                }
+                """
+            )
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(14, 12, 14, 12)
+            layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(10)
 
-            title = QLabel("Risk of Bias / 质量评价预览")
+            title = QLabel("Risk of Bias / 质量评价")
             title.setObjectName("metaRiskOfBiasRuntimeTitle")
-            title.setStyleSheet("font-weight: 750;")
             layout.addWidget(title)
 
+            stepper = QFrame()
+            stepper.setObjectName("metaQualityStepper")
+            stepper_layout = QHBoxLayout(stepper)
+            stepper_layout.setContentsMargins(14, 9, 14, 9)
+            stepper_layout.setSpacing(8)
+            steps = (
+                ("✓", "项目首页", "done"),
+                ("✓", "研究问题与\nMeta类型", "done"),
+                ("✓", "检索策略", "done"),
+                ("✓", "文献导入与\n去重", "done"),
+                ("✓", "文献筛选", "done"),
+                ("✓", "全文与数据\n提取", "done"),
+                ("7", "质量评价\nRisk of Bias", "current"),
+                ("8", "统计分析", "todo"),
+                ("9", "结果与报告", "todo"),
+                ("10", "报告导出", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName("metaQualityStepCurrent" if state == "current" else ("metaQualityStepDone" if state == "done" else "metaQualityStepTodo"))
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(70)
+                stepper_layout.addWidget(item, 1)
+            layout.addWidget(stepper)
+
+            body = QFrame()
+            body.setObjectName("metaQualityDomainCard")
+            body_layout = QHBoxLayout(body)
+            body_layout.setContentsMargins(12, 12, 12, 12)
+            body_layout.setSpacing(12)
+
+            tools = QFrame()
+            tools.setObjectName("metaQualityToolCard")
+            tools.setFixedWidth(250)
+            tools_layout = QVBoxLayout(tools)
+            tools_layout.setContentsMargins(14, 12, 14, 12)
+            tools_layout.setSpacing(9)
+            tools_title = QLabel("评价工具 / Tool Recommendation")
+            tools_title.setObjectName("metaQualitySectionTitle")
+            tools_layout.addWidget(tools_title)
+            for text, selected in (
+                ("ROB2\n适合随机对照试验；本页仅生成 reviewer draft。", True),
+                ("Newcastle-Ottawa Scale\n适合 cohort / case-control；需要人工确认。", False),
+                ("ROBINS-I\n非随机研究偏倚风险；建议不自动评分。", False),
+                ("GRADE placeholder\n仅占位，不生成自动 certainty。", False),
+            ):
+                item = QLabel(text)
+                item.setObjectName("metaQualityToolItem")
+                item.setProperty("selected", "true" if selected else "false")
+                item.setWordWrap(True)
+                item.setMinimumHeight(62)
+                tools_layout.addWidget(item)
+            tools_layout.addStretch(1)
+            body_layout.addWidget(tools)
+
+            domain = QFrame()
+            domain.setObjectName("metaQualityDomainCard")
+            domain_layout = QVBoxLayout(domain)
+            domain_layout.setContentsMargins(14, 12, 14, 12)
+            domain_layout.setSpacing(10)
+            domain_header = QHBoxLayout()
+            domain_title = QLabel("领域评分草稿 / Domain Draft")
+            domain_title.setObjectName("metaQualitySectionTitle")
+            domain_header.addWidget(domain_title)
+            domain_header.addStretch(1)
+            match = QLabel("reviewer-controlled")
+            match.setObjectName("metaQualityGateItem")
+            match.setProperty("status", "ready")
+            domain_header.addWidget(match)
+            domain_layout.addLayout(domain_header)
             rob = _readonly_table(
                 "metaRiskOfBiasDomainTable",
-                ("tool / domain", "draft state", "preview note"),
+                ("tool / domain", "draft state", "reviewer note", "formal boundary"),
                 (
-                    ("NOS Selection", "Draft", "preview score requires final confirmation"),
-                    ("NOS Comparability", "In progress", "preview score requires final confirmation"),
-                    ("NOS Outcome", "Draft", "preview score requires final confirmation"),
-                    ("ROBINS-I Confounding", "not_started", "tool suggestion only"),
-                    ("QUADAS-2", "not_applicable_for_current_type", "depends on diagnostic type"),
+                    ("ROB2 randomization", "low", "draft only", "no auto final judgement"),
+                    ("ROB2 missing outcome data", "some concerns", "reviewer must verify attrition", "no auto final judgement"),
+                    ("NOS comparability", "some concerns", "adjusted variables pending", "no automatic score"),
+                    ("ROBINS-I confounding", "not_started", "tool suggestion only", "disabled until reviewer selects tool"),
+                    ("GRADE certainty", "placeholder_only", "not assessed", "no auto GRADE"),
                 ),
             )
-            rob.setMinimumHeight(150)
-            layout.addWidget(rob)
+            rob.setMinimumHeight(260)
+            domain_layout.addWidget(rob)
 
             score = QLabel("Preview / draft only: no automatic RoB final judgement and no formal quality score.")
             score.setObjectName("metaRiskOfBiasPreviewScoreNotice")
             score.setProperty("riskOfBiasState", "preview_only")
             score.setWordWrap(True)
-            score.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 8px; background: #FFF7E6;")
-            layout.addWidget(score)
+            domain_layout.addWidget(score)
+            body_layout.addWidget(domain, 1)
 
-            save = QPushButton("Save RoB Draft - adapter needed")
+            gates = QFrame()
+            gates.setObjectName("metaQualityGateCard")
+            gates.setFixedWidth(250)
+            gates_layout = QVBoxLayout(gates)
+            gates_layout.setContentsMargins(14, 12, 14, 12)
+            gates_layout.setSpacing(9)
+            gate_title = QLabel("质量评价 Gate / Boundary")
+            gate_title.setObjectName("metaQualitySectionTitle")
+            gates_layout.addWidget(gate_title)
+            for text, status in (
+                ("工具推荐\n可用；仅 suggestion", "ready"),
+                ("Draft 保存\n写入 quality_assessment_records_v1", "ready"),
+                ("最终 RoB 判定\n需要 reviewer complete", "blocked"),
+                ("统计分析\n不因质量评价自动启动", "blocked"),
+                ("Report-ready\n仍需正式分析结果和审阅", "blocked"),
+            ):
+                item = QLabel(text)
+                item.setObjectName("metaQualityGateItem")
+                item.setProperty("status", status)
+                item.setWordWrap(True)
+                gates_layout.addWidget(item)
+            gates_layout.addStretch(1)
+            body_layout.addWidget(gates)
+            layout.addWidget(body)
+
+            action_bar = QFrame()
+            action_bar.setObjectName("metaQualityActionBar")
+            action_layout = QHBoxLayout(action_bar)
+            action_layout.setContentsMargins(12, 10, 12, 10)
+            action_layout.setSpacing(10)
+            hint = QLabel("保存会生成质量评价草稿、summary 和导出表；不会生成最终 RoB/GRADE 或 report-ready package。")
+            hint.setObjectName("metaQualityMuted")
+            hint.setWordWrap(True)
+            action_layout.addWidget(hint, 1)
+
+            save = QPushButton("保存质量评价 Draft")
             save.setObjectName("metaSaveRiskOfBiasDraftButton")
-            save.setProperty("actionSemantic", "adapter_needed")
+            save.setProperty("actionSemantic", "quality_assessment_draft_adapter")
             save.setProperty("formalActionEnabled", False)
             save.setEnabled(False)
             save.setMinimumHeight(34)
-            layout.addWidget(save)
+            action_layout.addWidget(save)
+            layout.addWidget(action_bar)
             return frame
 
         def _build_result_review_panel(self) -> QFrame:
