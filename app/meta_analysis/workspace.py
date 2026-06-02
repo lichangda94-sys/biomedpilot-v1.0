@@ -24,6 +24,9 @@ from app.shared.ui_components.workbench import make_workbench_shell
 from app.version import APP_VERSION
 
 from app.meta_analysis.project_workspace import MetaProjectSummary, create_meta_analysis_project, open_meta_analysis_project
+from app.meta_analysis.pages.protocol_page import write_pubmed_search_execution_artifacts
+from app.meta_analysis.search.pubmed_candidates_handoff_service import PubMedCandidatesHandoffService
+from app.meta_analysis.search.pubmed_search_service import PubMedSearchService
 from app.meta_analysis.services.extraction_schema_registry_v1_service import ExtractionSchemaRegistryV1Service
 from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
 from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
@@ -686,6 +689,14 @@ if QWidget is not None:
         table.resizeRowsToContents()
         return table
 
+    def _relative_or_empty(path: str, root: Path) -> str:
+        if not path:
+            return ""
+        try:
+            return str(Path(path).resolve().relative_to(root.resolve()))
+        except ValueError:
+            return path
+
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
             super().__init__()
@@ -699,6 +710,9 @@ if QWidget is not None:
             self._selected_active_meta_type_id = meta_active_types_v1()[0].type_id
             self._target_ia_buttons: dict[str, QPushButton] = {}
             self._active_type_buttons: dict[str, QPushButton] = {}
+            self._pubmed_search_service_factory: Callable[[], PubMedSearchService] = PubMedSearchService
+            self._pubmed_handoff_service_factory: Callable[[], PubMedCandidatesHandoffService] = PubMedCandidatesHandoffService
+            self._last_pubmed_candidate_preview_id = ""
             self._page_keys: list[str] = []
             self._build_ui()
 
@@ -722,6 +736,12 @@ if QWidget is not None:
 
         def current_project_dir(self) -> Path | None:
             return self._current_project_dir
+
+        def set_pubmed_search_service_factory(self, factory: Callable[[], PubMedSearchService]) -> None:
+            self._pubmed_search_service_factory = factory
+
+        def set_pubmed_handoff_service_factory(self, factory: Callable[[], PubMedCandidatesHandoffService]) -> None:
+            self._pubmed_handoff_service_factory = factory
 
         def set_project_record(self, record) -> None:
             self.set_project_dir(Path(record.project_dir))
@@ -854,10 +874,7 @@ if QWidget is not None:
             )
 
         def _copy_search_query(self) -> None:
-            query = (
-                '("thyroid cancer"[Title/Abstract] OR "thyroid carcinoma"[Title/Abstract]) '
-                'AND ("adiponectin"[Title/Abstract] OR "ADIPOQ"[Title/Abstract])'
-            )
+            query = self._pubmed_query_draft()
             clipboard = QApplication.clipboard() if QApplication is not None else None
             if clipboard is not None:
                 clipboard.setText(query)
@@ -870,6 +887,134 @@ if QWidget is not None:
                     "formal_action_enabled": False,
                 },
             )
+
+        def _pubmed_query_draft(self) -> str:
+            return (
+                '("thyroid cancer"[Title/Abstract] OR "thyroid carcinoma"[Title/Abstract]) '
+                'AND ("adiponectin"[Title/Abstract] OR "ADIPOQ"[Title/Abstract])'
+            )
+
+        def _run_pubmed_search_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                self._set_status("未绑定 Meta 项目；PubMed 检索保持 gated。")
+                return None
+            query = self._pubmed_query_draft()
+            execution = self._pubmed_search_service_factory().search_pubmed(query, max_results=8)
+            paths = write_pubmed_search_execution_artifacts(self._current_project_dir, query, execution)
+            preview_path = Path(paths["pubmed_candidates_preview"])
+            self._last_pubmed_candidate_preview_id = preview_path.name.replace("_candidates_preview.json", "")
+            artifact = self._write_gate_artifact(
+                "ui_runtime/meta_pubmed_search_adapter.json",
+                {
+                    "page_key": "search_strategy",
+                    "service": "PubMedSearchService.search_pubmed",
+                    "query_used": query,
+                    "success": execution.success,
+                    "result_count": execution.result_count,
+                    "returned_count": execution.returned_count,
+                    "search_execution_report": str(Path(paths["search_execution_report"]).relative_to(self._current_project_dir)),
+                    "pubmed_candidates_preview": str(preview_path.relative_to(self._current_project_dir)),
+                    "auto_imported": False,
+                    "auto_screened": False,
+                    "formal_action_enabled": False,
+                },
+            )
+            if hasattr(self, "_pubmed_adapter_status"):
+                self._pubmed_adapter_status.setText(
+                    f"PubMed preview：success={execution.success}; returned={execution.returned_count}; preview={preview_path.name}"
+                )
+            return artifact
+
+        def _latest_pubmed_candidate_preview_id(self) -> str:
+            if self._current_project_dir is None:
+                return ""
+            previews = sorted((self._current_project_dir / "protocol" / "pubmed_candidates").glob("*_candidates_preview.json"))
+            return previews[-1].name.replace("_candidates_preview.json", "") if previews else ""
+
+        def _load_pubmed_preview_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                self._set_status("未绑定 Meta 项目；PubMed preview 读取保持 gated。")
+                return None
+            preview_id = self._last_pubmed_candidate_preview_id or self._latest_pubmed_candidate_preview_id()
+            if not preview_id:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_pubmed_preview_disabled_reason.json",
+                    {
+                        "page_key": "import_dedup",
+                        "disabled_reason": "需要先在 Search Strategy 页面执行 PubMed preview。",
+                        "formal_action_enabled": False,
+                    },
+                )
+            preview = self._pubmed_handoff_service_factory().load_preview(self._current_project_dir, preview_id=preview_id)
+            candidate_ids = [candidate.candidate_id for candidate in preview.candidates]
+            if hasattr(self, "_pubmed_candidate_ids_input") and candidate_ids:
+                self._pubmed_candidate_ids_input.setText(", ".join(candidate_ids[: min(2, len(candidate_ids))]))
+            artifact = self._write_gate_artifact(
+                "ui_runtime/meta_pubmed_preview_adapter.json",
+                {
+                    "page_key": "import_dedup",
+                    "service": "PubMedCandidatesHandoffService.load_preview",
+                    "preview_id": preview_id,
+                    "candidate_count": len(preview.candidates),
+                    "candidate_ids": candidate_ids,
+                    "auto_imported": False,
+                    "auto_screened": False,
+                    "formal_action_enabled": False,
+                },
+            )
+            if hasattr(self, "_pubmed_handoff_status"):
+                self._pubmed_handoff_status.setText(f"Loaded PubMed preview：{len(preview.candidates)} candidates; select IDs before import.")
+            return artifact
+
+        def _import_selected_pubmed_candidates_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                self._set_status("未绑定 Meta 项目；PubMed handoff 保持 gated。")
+                return None
+            preview_id = self._last_pubmed_candidate_preview_id or self._latest_pubmed_candidate_preview_id()
+            raw_ids = self._pubmed_candidate_ids_input.text() if hasattr(self, "_pubmed_candidate_ids_input") else ""
+            selected_ids = tuple(item.strip() for item in raw_ids.replace("\n", ",").split(",") if item.strip())
+            if not preview_id or not selected_ids:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_pubmed_handoff_disabled_reason.json",
+                    {
+                        "page_key": "import_dedup",
+                        "disabled_reason": "需要 PubMed preview 和 reviewer-selected candidate ids 后才能导入。",
+                        "preview_id": preview_id,
+                        "selected_candidate_ids": list(selected_ids),
+                        "formal_action_enabled": False,
+                    },
+                )
+            preview = self._pubmed_handoff_service_factory().load_preview(self._current_project_dir, preview_id=preview_id)
+            known = [candidate.candidate_id for candidate in preview.candidates]
+            rejected_ids = tuple(candidate_id for candidate_id in known if candidate_id not in set(selected_ids))
+            result = self._pubmed_handoff_service_factory().import_selected_candidates(
+                self._current_project_dir,
+                preview_id=preview_id,
+                selected_candidate_ids=selected_ids,
+                rejected_candidate_ids=rejected_ids,
+                actor="uishell_reviewer",
+            )
+            artifact = self._write_gate_artifact(
+                "ui_runtime/meta_pubmed_handoff_adapter.json",
+                {
+                    "page_key": "import_dedup",
+                    "service": "PubMedCandidatesHandoffService.import_selected_candidates",
+                    "success": result.success,
+                    "preview_id": preview_id,
+                    "selected_candidate_ids": list(selected_ids),
+                    "rejected_candidate_ids": list(rejected_ids),
+                    "imported_count": result.imported_count,
+                    "literature_records_path": _relative_or_empty(result.literature_records_path, self._current_project_dir),
+                    "dedup_queue_path": _relative_or_empty(result.dedup_queue_path, self._current_project_dir),
+                    "auto_screened": False,
+                    "formal_action_enabled": False,
+                },
+            )
+            if hasattr(self, "_pubmed_handoff_status"):
+                self._pubmed_handoff_status.setText(
+                    f"PubMed handoff：success={result.success}; imported={result.imported_count}; screening_status=not_started"
+                )
+            return artifact
 
         def _save_screening_draft_artifact(self) -> Path | None:
             service_state = "no_project_bound"
@@ -939,6 +1084,24 @@ if QWidget is not None:
                 "metaSaveSearchDraftButton",
                 "calls_search_strategy_builder_or_writes_disabled_reason",
                 on_click=self._save_search_draft_or_reason,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaRunPubMedSearchButton",
+                "calls_pubmed_search_service_and_writes_candidate_preview",
+                on_click=self._run_pubmed_search_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaLoadPubMedPreviewButton",
+                "loads_latest_pubmed_candidate_preview_or_writes_disabled_reason",
+                on_click=self._load_pubmed_preview_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaImportSelectedPubMedCandidatesButton",
+                "imports_reviewer_selected_pubmed_candidates_to_literature_library",
+                on_click=self._import_selected_pubmed_candidates_adapter,
                 enable=True,
             )
             self._set_button_contract(
@@ -2252,8 +2415,14 @@ if QWidget is not None:
             save_draft.setProperty("formalActionEnabled", False)
             save_draft.setEnabled(False)
             save_draft.setMinimumHeight(34)
+            run_pubmed = QPushButton("Run PubMed preview")
+            run_pubmed.setObjectName("metaRunPubMedSearchButton")
+            run_pubmed.setProperty("actionSemantic", "pubmed_preview_adapter")
+            run_pubmed.setProperty("formalActionEnabled", False)
+            run_pubmed.setMinimumHeight(34)
             action_row.addWidget(copy_query)
             action_row.addWidget(save_draft)
+            action_row.addWidget(run_pubmed)
             action_row.addStretch(1)
 
             main = QHBoxLayout()
@@ -2274,6 +2443,12 @@ if QWidget is not None:
             right_wrap.setLayout(right)
             main.addWidget(right_wrap)
             layout.addLayout(main)
+
+            self._pubmed_adapter_status = QLabel("PubMed preview adapter waits for explicit click; no automatic import or screening.")
+            self._pubmed_adapter_status.setObjectName("metaPubMedAdapterStatus")
+            self._pubmed_adapter_status.setWordWrap(True)
+            self._pubmed_adapter_status.setStyleSheet("color: #475569; font-size: 11px;")
+            layout.addWidget(self._pubmed_adapter_status)
 
             next_ref = QPushButton("下一步：文献导入 / Next: Reference Management")
             next_ref.setObjectName("metaSearchNextReferenceButton")
@@ -2525,6 +2700,36 @@ if QWidget is not None:
                 card_layout.addWidget(button)
                 import_row.addWidget(card)
             layout.addLayout(import_row)
+
+            pubmed_adapter = QFrame()
+            pubmed_adapter.setObjectName("metaPubMedCandidateHandoffAdapter")
+            pubmed_adapter.setProperty("adapterState", "reviewer_selection_required")
+            pubmed_adapter.setStyleSheet("QFrame#metaPubMedCandidateHandoffAdapter { border: 1px solid #BFDBFE; border-radius: 8px; background: #EFF6FF; }")
+            adapter_layout = QHBoxLayout(pubmed_adapter)
+            adapter_layout.setContentsMargins(10, 8, 10, 8)
+            adapter_layout.setSpacing(8)
+            adapter_label = QLabel("PubMed candidate handoff")
+            adapter_label.setObjectName("metaPubMedCandidateHandoffLabel")
+            adapter_label.setStyleSheet("font-weight: 800; color: #1D4ED8;")
+            self._pubmed_candidate_ids_input = QLineEdit()
+            self._pubmed_candidate_ids_input.setObjectName("metaPubMedSelectedCandidateIds")
+            self._pubmed_candidate_ids_input.setPlaceholderText("reviewer-selected candidate_id, comma-separated")
+            load_preview = QPushButton("Load latest PubMed preview")
+            load_preview.setObjectName("metaLoadPubMedPreviewButton")
+            load_preview.setProperty("formalActionEnabled", False)
+            import_selected = QPushButton("Import selected candidates")
+            import_selected.setObjectName("metaImportSelectedPubMedCandidatesButton")
+            import_selected.setProperty("formalActionEnabled", False)
+            adapter_layout.addWidget(adapter_label)
+            adapter_layout.addWidget(self._pubmed_candidate_ids_input, 1)
+            adapter_layout.addWidget(load_preview)
+            adapter_layout.addWidget(import_selected)
+            layout.addWidget(pubmed_adapter)
+
+            self._pubmed_handoff_status = QLabel("PubMed handoff waits for reviewer-selected candidates; no automatic screening.")
+            self._pubmed_handoff_status.setObjectName("metaPubMedHandoffStatus")
+            self._pubmed_handoff_status.setWordWrap(True)
+            layout.addWidget(self._pubmed_handoff_status)
 
             reference_label = QLabel("Reference table preview (mockup-only / local draft)")
             reference_label.setObjectName("metaReferenceTablePreviewLabel")

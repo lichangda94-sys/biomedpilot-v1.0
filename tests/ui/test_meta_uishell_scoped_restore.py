@@ -9,9 +9,10 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QPushButton
+    from PySide6.QtWidgets import QApplication, QLineEdit, QPushButton
 
     from app.meta_analysis.project_workspace import create_meta_analysis_project
+    from app.meta_analysis.search.pubmed_search_service import PubMedSearchExecution, PubMedSearchResult
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget, meta_target_ia_pages
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
@@ -138,6 +139,51 @@ def test_meta_question_type_and_search_buttons_call_services_or_write_gate_artif
     assert search_payload["formal_action_enabled"] is False
 
 
+def test_meta_pubmed_adapter_buttons_call_services_and_write_artifacts(qt_app, tmp_path: Path) -> None:
+    summary = create_meta_analysis_project("UIShell PubMed Adapter", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.set_pubmed_search_service_factory(lambda: _FakePubMedSearchService())
+
+    widget.show_target_ia_page("search_strategy")
+    _button(widget, "metaRunPubMedSearchButton").click()
+    qt_app.processEvents()
+
+    pubmed_gate = summary.project_root / "ui_runtime" / "meta_pubmed_search_adapter.json"
+    assert pubmed_gate.exists()
+    pubmed_payload = json.loads(pubmed_gate.read_text(encoding="utf-8"))
+    assert pubmed_payload["service"] == "PubMedSearchService.search_pubmed"
+    assert pubmed_payload["returned_count"] == 2
+    assert (summary.project_root / pubmed_payload["search_execution_report"]).exists()
+    assert (summary.project_root / pubmed_payload["pubmed_candidates_preview"]).exists()
+
+    widget.show_target_ia_page("import_dedup")
+    _button(widget, "metaLoadPubMedPreviewButton").click()
+    qt_app.processEvents()
+
+    preview_gate = summary.project_root / "ui_runtime" / "meta_pubmed_preview_adapter.json"
+    assert preview_gate.exists()
+    preview_payload = json.loads(preview_gate.read_text(encoding="utf-8"))
+    assert preview_payload["candidate_count"] == 2
+    selected_input = widget.findChild(QLineEdit, "metaPubMedSelectedCandidateIds")
+    assert selected_input is not None
+    assert "pcand-111" in selected_input.text()
+
+    _button(widget, "metaImportSelectedPubMedCandidatesButton").click()
+    qt_app.processEvents()
+
+    handoff_gate = summary.project_root / "ui_runtime" / "meta_pubmed_handoff_adapter.json"
+    assert handoff_gate.exists()
+    handoff_payload = json.loads(handoff_gate.read_text(encoding="utf-8"))
+    assert handoff_payload["service"] == "PubMedCandidatesHandoffService.import_selected_candidates"
+    assert handoff_payload["imported_count"] == 2
+    assert handoff_payload["auto_screened"] is False
+    assert (summary.project_root / handoff_payload["literature_records_path"]).exists()
+    assert (summary.project_root / handoff_payload["dedup_queue_path"]).exists()
+    assert not list((summary.project_root / "screening").glob("*.json"))
+    assert not (summary.project_root / "reports" / "prisma_flow_summary.json").exists()
+
+
 def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_actions(qt_app, tmp_path: Path) -> None:
     summary = create_meta_analysis_project("UIShell Later Gates", tmp_path)
     widget = MetaAnalysisWorkspaceWidget()
@@ -168,3 +214,43 @@ def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_a
     report_button = _button(widget, "metaGenerateReportDisabledButton")
     assert not report_button.isEnabled()
     assert report_button.property("disabledReason")
+
+
+class _FakePubMedSearchService:
+    def search_pubmed(self, query: str, *, max_results: int = 20, timeout_seconds: float = 10.0) -> PubMedSearchExecution:
+        return PubMedSearchExecution(
+            success=True,
+            query_used=query,
+            executed_at="2026-06-02T00:00:00+00:00",
+            result_count=2,
+            returned_count=2,
+            search_execution_id="pubmedexec-ui-adapter",
+            records=(
+                PubMedSearchResult(
+                    pmid="111",
+                    doi="10.1000/ui111",
+                    title="Serum adiponectin and thyroid cancer risk",
+                    journal="Meta UI Journal",
+                    year="2024",
+                    publication_date="2024-01-02",
+                    authors=("Alice Adams",),
+                    abstract="UI adapter candidate one.",
+                    snippet="UI adapter candidate one.",
+                    url="https://pubmed.ncbi.nlm.nih.gov/111/",
+                    query_used=query,
+                ),
+                PubMedSearchResult(
+                    pmid="222",
+                    doi="10.1000/ui222",
+                    title="Adiponectin levels in thyroid carcinoma",
+                    journal="Meta UI Journal",
+                    year="2025",
+                    publication_date="2025",
+                    authors=("Ben Baker",),
+                    abstract="UI adapter candidate two.",
+                    snippet="UI adapter candidate two.",
+                    url="https://pubmed.ncbi.nlm.nih.gov/222/",
+                    query_used=query,
+                ),
+            ),
+        )

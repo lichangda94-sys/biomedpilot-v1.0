@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QApplication, QLineEdit, QPushButton
 
 from app.meta_analysis.pages.literature_library_page import literature_library_state_from_project
 from app.meta_analysis.pages.protocol_page import write_pubmed_search_execution_artifacts
@@ -61,10 +61,12 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with tempfile.TemporaryDirectory(prefix="biomedpilot_meta_batch4_") as temp_name:
             audit_root = Path(temp_name)
-            project_dir = audit_root / "meta_pubmed_handoff_project"
-            project_dir.mkdir(parents=True, exist_ok=True)
-            rows.extend(_audit_ui_gates(app, project_dir, args.screenshot_dir, screenshots, failures))
-            rows.extend(_audit_pubmed_service_chain(project_dir, failures))
+            ui_project_dir = audit_root / "meta_pubmed_ui_project"
+            service_project_dir = audit_root / "meta_pubmed_service_project"
+            ui_project_dir.mkdir(parents=True, exist_ok=True)
+            service_project_dir.mkdir(parents=True, exist_ok=True)
+            rows.extend(_audit_ui_gates(app, ui_project_dir, args.screenshot_dir, screenshots, failures))
+            rows.extend(_audit_pubmed_service_chain(service_project_dir, failures))
     finally:
         cleanup_qt_top_level_widgets(app)
 
@@ -131,6 +133,7 @@ def _audit_ui_gates(
     try:
         widget.resize(1600, 1000)
         widget.set_project_dir(project_dir)
+        widget.set_pubmed_search_service_factory(lambda: PubMedSearchService(fetcher=_fake_pubmed_fetcher))
         widget.show_target_ia_page("search_strategy")
         widget.show()
         app.processEvents()
@@ -156,25 +159,33 @@ def _audit_ui_gates(
         if not search_gate.exists():
             failures.append("META-PUBMED-UI-SEARCH-DRAFT-GATE: expected search draft gate artifact missing")
 
-        run_pubmed_button = widget.findChild(QPushButton, "metaRunPubMedSearchButton")
+        run_pubmed_button = _find_button(widget, "metaRunPubMedSearchButton")
+        run_pubmed_button.click()
+        app.processEvents()
+        pubmed_adapter = project_dir / "ui_runtime" / "meta_pubmed_search_adapter.json"
+        pubmed_payload = _load_json(pubmed_adapter)
+        pubmed_ok = (
+            pubmed_adapter.exists()
+            and pubmed_payload.get("service") == "PubMedSearchService.search_pubmed"
+            and int(pubmed_payload.get("returned_count", 0) or 0) == 3
+            and (project_dir / str(pubmed_payload.get("search_execution_report", ""))).exists()
+            and (project_dir / str(pubmed_payload.get("pubmed_candidates_preview", ""))).exists()
+        )
         rows.append(
-            ContractRow(
+            _row_from_button(
                 contract_id="META-PUBMED-UI-RUN-PUBMED-ACTION",
                 ui_page="Search Strategy",
                 backend_capability="PubMed search execution",
-                branch_source="Backend service exists in current Integration; mature UIShell visible execution button not yet present.",
+                branch_source="UIShell Meta mature Search Strategy page with scoped adapter button.",
                 current_file="app/meta_analysis/workspace.py",
-                object_name="metaRunPubMedSearchButton",
-                label="",
-                enabled=False,
-                button_behavior="missing_visible_adapter_action",
-                disabled_reason="成熟 UIShell Search Strategy 页面没有显式 PubMed 执行按钮；不能把旧 ProtocolPage 按钮伪装为当前页面已接入。",
-                expected_artifact="protocol/search_execution_report.json",
-                live_click_test="scripts/ui_route_contract_meta_batch4_pubmed_handoff.py",
-                status="gap" if run_pubmed_button is None else "connected",
-                observed="missing_visible_button" if run_pubmed_button is None else "visible_button_present",
+                button=run_pubmed_button,
+                expected_artifact=str(pubmed_adapter),
+                status="connected" if pubmed_ok else "broken",
+                observed="pubmed_execution_adapter_verified" if pubmed_ok else f"missing_or_invalid_pubmed_adapter:{pubmed_payload}",
             )
         )
+        if not pubmed_ok:
+            failures.append("META-PUBMED-UI-RUN-PUBMED-ACTION: PubMed execution adapter artifact missing or invalid")
 
         widget.show_target_ia_page("import_dedup")
         app.processEvents()
@@ -203,6 +214,60 @@ def _audit_ui_gates(
             )
             if status == "broken":
                 failures.append("META-PUBMED-UI-IMPORT-GATE: PubMed import gate is missing disabled reason")
+
+        load_preview = _find_button(widget, "metaLoadPubMedPreviewButton")
+        load_preview.click()
+        app.processEvents()
+        preview_adapter = project_dir / "ui_runtime" / "meta_pubmed_preview_adapter.json"
+        preview_payload = _load_json(preview_adapter)
+        preview_ok = preview_adapter.exists() and int(preview_payload.get("candidate_count", 0) or 0) == 3
+        rows.append(
+            _row_from_button(
+                "META-PUBMED-UI-LOAD-PREVIEW",
+                "Import & Deduplication",
+                "load PubMed candidate preview into reviewer-selection controls",
+                "UIShell Meta mature Import & Deduplication page with scoped adapter button.",
+                "app/meta_analysis/workspace.py",
+                load_preview,
+                str(preview_adapter),
+                "connected" if preview_ok else "broken",
+                "pubmed_preview_adapter_verified" if preview_ok else f"missing_or_invalid_preview_adapter:{preview_payload}",
+            )
+        )
+        if not preview_ok:
+            failures.append("META-PUBMED-UI-LOAD-PREVIEW: preview adapter artifact missing or invalid")
+
+        selected_input = widget.findChild(QLineEdit, "metaPubMedSelectedCandidateIds")
+        if selected_input is not None and not selected_input.text().strip():
+            selected_input.setText(", ".join(str(item) for item in preview_payload.get("candidate_ids", [])[:2]))
+        import_selected = _find_button(widget, "metaImportSelectedPubMedCandidatesButton")
+        import_selected.click()
+        app.processEvents()
+        handoff_adapter = project_dir / "ui_runtime" / "meta_pubmed_handoff_adapter.json"
+        handoff_payload = _load_json(handoff_adapter)
+        handoff_ok = (
+            handoff_adapter.exists()
+            and handoff_payload.get("service") == "PubMedCandidatesHandoffService.import_selected_candidates"
+            and int(handoff_payload.get("imported_count", 0) or 0) >= 1
+            and (project_dir / str(handoff_payload.get("literature_records_path", ""))).exists()
+            and (project_dir / str(handoff_payload.get("dedup_queue_path", ""))).exists()
+            and handoff_payload.get("auto_screened") is False
+        )
+        rows.append(
+            _row_from_button(
+                "META-PUBMED-UI-IMPORT-SELECTED",
+                "Import & Deduplication",
+                "import reviewer-selected PubMed candidates to literature library",
+                "UIShell Meta mature Import & Deduplication page with scoped adapter button.",
+                "app/meta_analysis/workspace.py",
+                import_selected,
+                str(handoff_adapter),
+                "connected" if handoff_ok else "broken",
+                "pubmed_handoff_adapter_verified" if handoff_ok else f"missing_or_invalid_handoff_adapter:{handoff_payload}",
+            )
+        )
+        if not handoff_ok:
+            failures.append("META-PUBMED-UI-IMPORT-SELECTED: handoff adapter artifact missing or invalid")
     finally:
         widget.close()
         widget.deleteLater()
