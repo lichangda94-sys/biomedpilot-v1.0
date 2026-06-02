@@ -278,15 +278,15 @@ def _live_click_formal_ora(
     disabled_expectations = {
         "runFormalOraGseaDisabledButton": (
             "BIO-FORMAL-GSEA-RUN-GATE",
-            "formal_ora_gsea_executor_not_connected",
+            "formal_gsea_executor_requires_fgsea_or_clusterprofiler_ranked_gene_list_and_gene_set_schema",
         ),
         "oraGseaPlotReportDisabledButton": (
             "BIO-FORMAL-ORA-PLOT-REPORT-GATE",
-            "ora_gsea_plot_and_report_ready_gate_not_enabled",
+            "ora_plot_gsea_plot_and_report_ready_gate_not_enabled",
         ),
         "enrichmentNextDisabledButton": (
             "BIO-FORMAL-ORA-CORRELATION-NEXT-GATE",
-            "formal_ora_gsea_execution_and_correlation_gate_not_enabled",
+            "formal_gsea_execution_and_correlation_gate_not_enabled",
         ),
     }
     for object_name, (contract_id, disabled_reason) in disabled_expectations.items():

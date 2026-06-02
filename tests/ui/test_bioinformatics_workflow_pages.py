@@ -3528,7 +3528,7 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert enrichment_disabled is not None
     assert not enrichment_disabled.isEnabled()
     assert enrichment_disabled.property("buttonBehavior") == "disabled_correlation_and_formal_gsea_not_connected"
-    assert enrichment_disabled.property("disabledReason") == "formal_ora_gsea_execution_and_correlation_gate_not_enabled"
+    assert enrichment_disabled.property("disabledReason") == "formal_gsea_execution_and_correlation_gate_not_enabled"
     assert "disabled" in enrichment_disabled.toolTip()
 
     detect_backend = widget._enrichment_page.findChild(QPushButton, "detectBioEnrichmentRBackendButton")
@@ -3545,14 +3545,15 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     backend_result = backend_detection_text.toPlainText()
     assert "ReactomePA:" in backend_result
     assert "msigdbr:" in backend_result
-    assert "formal_ora_gsea_execution=disabled" in backend_result
+    assert "formal_ora_python_adapter=enabled_with_local_gmt" in backend_result
+    assert "formal_gsea_execution=disabled" in backend_result
     assert "install_action=none_detect_first_only" in backend_result
 
     ora_gsea_disabled_buttons = {
-        "confirmOraGseaParametersDisabledButton": "formal_ora_gsea_parameter_confirmation_requires_backend_and_result_schema",
-        "runFormalOraGseaDisabledButton": "formal_ora_gsea_executor_not_connected",
-        "reviewOraGseaResultsDisabledButton": "ora_gsea_result_index_not_available",
-        "oraGseaPlotReportDisabledButton": "ora_gsea_plot_and_report_ready_gate_not_enabled",
+        "confirmOraGseaParametersDisabledButton": "formal_gsea_parameter_confirmation_requires_ranked_gene_list_gene_set_backend_and_result_schema",
+        "runFormalOraGseaDisabledButton": "formal_gsea_executor_requires_fgsea_or_clusterprofiler_ranked_gene_list_and_gene_set_schema",
+        "reviewOraGseaResultsDisabledButton": "gsea_result_index_not_available",
+        "oraGseaPlotReportDisabledButton": "ora_plot_gsea_plot_and_report_ready_gate_not_enabled",
     }
     for object_name, disabled_reason in ora_gsea_disabled_buttons.items():
         button = widget._enrichment_page.findChild(QPushButton, object_name)

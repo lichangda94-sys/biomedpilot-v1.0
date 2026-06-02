@@ -188,49 +188,49 @@ if QWidget is not None:
             )
             root.addWidget(self._formal_ora_review_text)
 
-            confirm_button = QPushButton("确认 ORA/GSEA 参数")
+            confirm_button = QPushButton("确认 GSEA 参数")
             confirm_button.setObjectName("confirmOraGseaParametersDisabledButton")
             confirm_button.setEnabled(False)
-            confirm_button.setProperty("buttonBehavior", "disabled_ora_gsea_parameter_confirmation_not_ready")
-            confirm_button.setProperty("disabledReason", "formal_ora_gsea_parameter_confirmation_requires_backend_and_result_schema")
+            confirm_button.setProperty("buttonBehavior", "disabled_gsea_parameter_confirmation_not_ready")
+            confirm_button.setProperty("disabledReason", "formal_gsea_parameter_confirmation_requires_ranked_gene_list_gene_set_backend_and_result_schema")
             confirm_button.setProperty("formalActionEnabled", False)
-            confirm_button.setToolTip("disabled：需要通过 R 后端检测、输入 schema、基因集资源和结果 schema gate 后才能确认正式 ORA/GSEA 参数。")
+            confirm_button.setToolTip("disabled：需要 ranked gene list、gene set source、fgsea/clusterProfiler backend 和 GSEA result schema。")
             root.addWidget(confirm_button)
 
-            run_formal_button = QPushButton("运行正式 ORA/GSEA")
+            run_formal_button = QPushButton("运行正式 GSEA")
             run_formal_button.setObjectName("runFormalOraGseaDisabledButton")
             run_formal_button.setEnabled(False)
-            run_formal_button.setProperty("buttonBehavior", "disabled_formal_ora_gsea_executor_not_connected")
-            run_formal_button.setProperty("disabledReason", "formal_ora_gsea_executor_not_connected")
+            run_formal_button.setProperty("buttonBehavior", "disabled_formal_gsea_executor_not_connected")
+            run_formal_button.setProperty("disabledReason", "formal_gsea_executor_requires_fgsea_or_clusterprofiler_ranked_gene_list_and_gene_set_schema")
             run_formal_button.setProperty("formalActionEnabled", False)
-            run_formal_button.setToolTip("disabled：当前只生成 ORA/GSEA preflight artifact，正式 ORA/GSEA executor 尚未纳入 release gate。")
+            run_formal_button.setToolTip("disabled：Formal ORA 已通过本地 GMT adapter 接入；GSEA 仍需要 fgsea/clusterProfiler、ranked gene list 和结果 schema。")
             root.addWidget(run_formal_button)
 
-            review_button = QPushButton("审阅 ORA/GSEA 结果")
+            review_button = QPushButton("审阅 GSEA 结果")
             review_button.setObjectName("reviewOraGseaResultsDisabledButton")
             review_button.setEnabled(False)
-            review_button.setProperty("buttonBehavior", "disabled_ora_gsea_result_review_without_result_index")
-            review_button.setProperty("disabledReason", "ora_gsea_result_index_not_available")
+            review_button.setProperty("buttonBehavior", "disabled_gsea_result_review_without_result_index")
+            review_button.setProperty("disabledReason", "gsea_result_index_not_available")
             review_button.setProperty("formalActionEnabled", False)
-            review_button.setToolTip("disabled：没有 ORA/GSEA result index 或 manifest，不能进入结果审阅。")
+            review_button.setToolTip("disabled：没有 GSEA result index 或 manifest，不能进入 GSEA 结果审阅。Formal ORA 结果在本页 ORA 审阅区显示。")
             root.addWidget(review_button)
 
             plot_report_button = QPushButton("生成富集图表 / report-ready")
             plot_report_button.setObjectName("oraGseaPlotReportDisabledButton")
             plot_report_button.setEnabled(False)
             plot_report_button.setProperty("buttonBehavior", "disabled_ora_gsea_plot_report_gate_not_enabled")
-            plot_report_button.setProperty("disabledReason", "ora_gsea_plot_and_report_ready_gate_not_enabled")
+            plot_report_button.setProperty("disabledReason", "ora_plot_gsea_plot_and_report_ready_gate_not_enabled")
             plot_report_button.setProperty("formalActionEnabled", False)
-            plot_report_button.setToolTip("disabled：正式 ORA/GSEA plot、report-ready package 和导出 gate 尚未接入。")
+            plot_report_button.setToolTip("disabled：Formal ORA 结果表已接入；ORA/GSEA plot、report-ready package 和导出 gate 尚未接入。")
             root.addWidget(plot_report_button)
 
             next_button = QPushButton("下一步：相关性分析")
             next_button.setObjectName("enrichmentNextDisabledButton")
             next_button.setEnabled(False)
             next_button.setProperty("buttonBehavior", "disabled_correlation_and_formal_gsea_not_connected")
-            next_button.setProperty("disabledReason", "formal_ora_gsea_execution_and_correlation_gate_not_enabled")
+            next_button.setProperty("disabledReason", "formal_gsea_execution_and_correlation_gate_not_enabled")
             next_button.setProperty("formalActionEnabled", False)
-            next_button.setToolTip("disabled：相关性分析和正式 GSEA 执行不属于当前 Bio C1b 接线范围。")
+            next_button.setToolTip("disabled：相关性分析和正式 GSEA 执行不属于当前 Bio C1 接线范围。")
             root.addWidget(next_button)
             root.addStretch(1)
 
@@ -331,7 +331,7 @@ if QWidget is not None:
                 "install_action=none_detect_first_only",
                 "database_download=none_detect_first_only",
                 "formal_ora_python_adapter=enabled_with_local_gmt",
-                "formal_ora_gsea_execution=disabled",
+                "formal_gsea_execution=disabled",
                 detection.message,
             ]
             for package_name in ("ReactomePA", "msigdbr", "fgsea", "clusterProfiler"):

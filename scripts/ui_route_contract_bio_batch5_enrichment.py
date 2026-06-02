@@ -214,7 +214,12 @@ def _audit_page_buttons(
     detect_button = _find_button(page, "detectBioEnrichmentRBackendButton")
     detect_button.click()
     detection_text = _find_plain_text(page, "bioEnrichmentRBackendDetectionText").toPlainText()
-    detect_ok = "ReactomePA:" in detection_text and "msigdbr:" in detection_text and "formal_ora_gsea_execution=disabled" in detection_text
+    detect_ok = (
+        "ReactomePA:" in detection_text
+        and "msigdbr:" in detection_text
+        and "formal_ora_python_adapter=enabled_with_local_gmt" in detection_text
+        and "formal_gsea_execution=disabled" in detection_text
+    )
     rows.append(
         _button_row(
             "BIO-ENRICHMENT-DETECT-R-BACKEND",
@@ -230,24 +235,24 @@ def _audit_page_buttons(
 
     disabled_expectations = {
         "confirmOraGseaParametersDisabledButton": (
-            "BIO-ENRICHMENT-CONFIRM-ORA-GSEA-PARAMETERS-GATE",
-            "formal_ora_gsea_parameter_confirmation_requires_backend_and_result_schema",
+            "BIO-ENRICHMENT-CONFIRM-GSEA-PARAMETERS-GATE",
+            "formal_gsea_parameter_confirmation_requires_ranked_gene_list_gene_set_backend_and_result_schema",
         ),
         "runFormalOraGseaDisabledButton": (
-            "BIO-ENRICHMENT-RUN-FORMAL-ORA-GSEA-GATE",
-            "formal_ora_gsea_executor_not_connected",
+            "BIO-ENRICHMENT-RUN-FORMAL-GSEA-GATE",
+            "formal_gsea_executor_requires_fgsea_or_clusterprofiler_ranked_gene_list_and_gene_set_schema",
         ),
         "reviewOraGseaResultsDisabledButton": (
-            "BIO-ENRICHMENT-REVIEW-RESULTS-GATE",
-            "ora_gsea_result_index_not_available",
+            "BIO-ENRICHMENT-REVIEW-GSEA-RESULTS-GATE",
+            "gsea_result_index_not_available",
         ),
         "oraGseaPlotReportDisabledButton": (
             "BIO-ENRICHMENT-PLOT-REPORT-GATE",
-            "ora_gsea_plot_and_report_ready_gate_not_enabled",
+            "ora_plot_gsea_plot_and_report_ready_gate_not_enabled",
         ),
         "enrichmentNextDisabledButton": (
             "BIO-ENRICHMENT-CORRELATION-NEXT-GATE",
-            "formal_ora_gsea_execution_and_correlation_gate_not_enabled",
+            "formal_gsea_execution_and_correlation_gate_not_enabled",
         ),
     }
     for object_name, (contract_id, disabled_reason) in disabled_expectations.items():

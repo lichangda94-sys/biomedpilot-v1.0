@@ -1,7 +1,7 @@
 # Bioinformatics C1 Closure Matrix
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `606bb2c7881a843d4e41e381116b120248b7877d`
+- head: `731b11547ae83cc3ef0fdde904a8f7f0e545591b`
 - closure_status: `passed_with_documented_gaps`
 - ui_page_count: `7`
 - capability_row_count: `7`
@@ -15,7 +15,7 @@
 | Batch | Report | Head | Rows | Connected | Disabled | Broken |
 | --- | --- | --- | --- | --- | --- | --- |
 | `batch4_formal_deg` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json` | `8b20ac157f3c` | `8` | `8` | `0` | `0` |
-| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `396645e24b7f` | `9` | `4` | `5` | `0` |
+| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `731b11547ae8` | `9` | `4` | `5` | `0` |
 | `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `606bb2c7881a` | `9` | `4` | `5` | `0` |
 | `batch7_report_export` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json` | `8b20ac157f3c` | `13` | `13` | `0` | `0` |
 | `batch8_visible_buttons` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json` | `b47d29ba66a4` | `94` | `56` | `38` | `0` |
@@ -24,7 +24,7 @@
 | `batch11_tcga_gtex_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json` | `c2f144f9f7b7` | `10` | `6` | `4` | `0` |
 | `batch12_tcga_gtex_light_validation` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json` | `648ecbd9691d` | `10` | `10` | `0` | `0` |
 | `batch13_tcga_gtex_data_check` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH13_TCGA_GTEX_DATA_CHECK.json` | `66e528d05d91` | `5` | `5` | `0` | `0` |
-| `batch14_formal_ora` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json` | `396645e24b7f` | `7` | `4` | `3` | `0` |
+| `batch14_formal_ora` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json` | `731b11547ae8` | `7` | `4` | `3` | `0` |
 
 ## Page Baseline Matrix
 
