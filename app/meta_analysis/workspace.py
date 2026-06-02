@@ -29,6 +29,8 @@ from app.meta_analysis.search.pubmed_candidates_handoff_service import PubMedCan
 from app.meta_analysis.search.pubmed_search_service import PubMedSearchService
 from app.meta_analysis.services.dedup_review_v2_service import DedupReviewV2Service
 from app.meta_analysis.services.extraction_schema_registry_v1_service import ExtractionSchemaRegistryV1Service
+from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
+from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
 from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
 from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
 from app.meta_analysis.services.title_abstract_screening_v2_service import (
@@ -1283,15 +1285,131 @@ if QWidget is not None:
             )
 
         def _save_extraction_design_gate(self) -> Path | None:
-            schemas = ExtractionSchemaRegistryV1Service().default_schemas()
+            if self._current_project_dir is None:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_extraction_design_gate.json",
+                    {
+                        "page_key": "fulltext_extraction",
+                        "service": "ExtractionSchemaRegistryV1Service",
+                        "disabled_reason": "Meta 项目目录未绑定，无法保存提取表设计。",
+                        "formal_action_enabled": False,
+                    },
+                )
+            service = ExtractionSchemaRegistryV1Service()
+            registry = service.save_default_registry(self._current_project_dir, project_id=self._current_project_dir.name)
+            selection = service.save_schema_selection(
+                self._current_project_dir,
+                meta_type=self._selected_active_meta_type_id,
+                actor="uishell_reviewer",
+                confirm=False,
+            )
             return self._write_gate_artifact(
                 "ui_runtime/meta_extraction_design_gate.json",
                 {
                     "page_key": "fulltext_extraction",
-                    "service": "ExtractionSchemaRegistryV1Service.default_schemas",
-                    "schema_count": len(schemas),
+                    "service": "ExtractionSchemaRegistryV1Service.save_default_registry/save_schema_selection",
+                    "schema_count": len(registry.schemas),
                     "selected_meta_type": self._selected_active_meta_type_id,
+                    "registry_path": _relative_or_empty(service.registry_path(self._current_project_dir), self._current_project_dir),
+                    "selection_path": _relative_or_empty(service.selection_path(self._current_project_dir), self._current_project_dir),
+                    "selection_status": str(selection.get("status", "")),
+                    "writes_final_extraction": False,
+                    "writes_analysis_input": False,
                     "formal_action_enabled": False,
+                },
+            )
+
+        def _build_fulltext_registry_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_fulltext_registry_adapter.json",
+                    {
+                        "page_key": "fulltext_extraction",
+                        "service": "FullTextManagementService.build_registry_from_screening",
+                        "disabled_reason": "Meta 项目目录未绑定，无法生成全文管理 registry。",
+                        "formal_action_enabled": False,
+                    },
+                )
+            service = FullTextManagementService()
+            result = service.build_registry_from_screening(self._current_project_dir, project_id=self._current_project_dir.name)
+            return self._write_gate_artifact(
+                "ui_runtime/meta_fulltext_registry_adapter.json",
+                {
+                    "page_key": "fulltext_extraction",
+                    "service": "FullTextManagementService.build_registry_from_screening",
+                    "success": result.success,
+                    "record_count": int(result.details.get("record_count", 0)),
+                    "registry_path": _relative_or_empty(result.output_path, self._current_project_dir),
+                    "auto_pdf_fetch": False,
+                    "auto_fulltext_screening": False,
+                    "formal_action_enabled": False,
+                },
+            )
+
+        def _confirm_extraction_draft_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_extraction_draft_adapter.json",
+                    {
+                        "page_key": "fulltext_extraction",
+                        "service": "ManualExtractionEffectRowService",
+                        "disabled_reason": "Meta 项目目录未绑定，无法写入人工提取 draft。",
+                        "formal_action_enabled": False,
+                    },
+                )
+            schema_service = ExtractionSchemaRegistryV1Service()
+            schema_service.save_default_registry(self._current_project_dir, project_id=self._current_project_dir.name)
+            schema_service.save_schema_selection(
+                self._current_project_dir,
+                meta_type=self._selected_active_meta_type_id,
+                actor="uishell_reviewer",
+                confirm=False,
+            )
+            extraction_service = ManualExtractionEffectRowService()
+            study_unit = extraction_service.create_study_unit(
+                self._current_project_dir,
+                record_id="ui-fulltext-draft-record",
+                study_unit_label="UIShell full-text extraction draft",
+                actor="uishell_reviewer",
+                study_design="manual extraction draft",
+                population_description="Reviewer-controlled draft row generated by UI route contract.",
+                project_id=self._current_project_dir.name,
+            )
+            effect = extraction_service.create_effect_row(
+                self._current_project_dir,
+                study_unit_id=study_unit.target_id,
+                actor="uishell_reviewer",
+                project_id=self._current_project_dir.name,
+                schema_meta_type=self._selected_active_meta_type_id,
+                data_input_mode="reported_effect_size",
+                comparison_label="UI route contract draft comparison",
+                group_1_label="exposed",
+                group_2_label="control",
+                outcome_name="draft outcome for route contract",
+                outcome_domain="developer_preview",
+                data_fields={"effect_measure": "OR", "effect_value": "1.25", "ci_low": "0.92", "ci_high": "1.71"},
+                source_page="developer preview",
+                source_table="fulltext extraction gated UI",
+                evidence_note="Draft-only extraction row written by UI adapter; not report-ready.",
+                analysis_role="primary_effect_candidate",
+                extraction_status="draft",
+                analysis_eligibility="not_assessed",
+            )
+            return self._write_gate_artifact(
+                "ui_runtime/meta_extraction_draft_adapter.json",
+                {
+                    "page_key": "fulltext_extraction",
+                    "service": "ManualExtractionEffectRowService.create_study_unit/create_effect_row",
+                    "study_unit_id": study_unit.target_id,
+                    "effect_row_id": effect.target_id,
+                    "effect_rows_path": _relative_or_empty(effect.output_path, self._current_project_dir),
+                    "manifest_path": _relative_or_empty(effect.manifest_path, self._current_project_dir),
+                    "validation_report_path": _relative_or_empty(effect.validation_report_path, self._current_project_dir),
+                    "extraction_status": str(effect.payload.get("extraction_status", "")),
+                    "validation_status": str(effect.payload.get("validation_status", "")),
+                    "analysis_ready": bool(effect.payload.get("analysis_ready", False)),
+                    "formal_action_enabled": False,
+                    "report_ready": False,
                 },
             )
 
@@ -1383,15 +1501,26 @@ if QWidget is not None:
                 enable=True,
             )
             self._set_button_contract(
+                "metaOpenExtractionDesignButton",
+                "navigates_to_extraction_design_tab_and_calls_fulltext_management_registry_adapter",
+                on_click=self._build_fulltext_registry_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
                 "metaSaveExtractionDesignButton",
-                "calls_extraction_schema_registry_and_writes_gate_artifact",
+                "calls_extraction_schema_registry_and_writes_schema_selection_artifact",
                 on_click=self._save_extraction_design_gate,
                 enable=True,
             )
             self._set_button_contract(
                 "metaConfirmExtractionButton",
-                "calls_extraction_schema_registry_and_writes_gate_artifact",
-                on_click=self._save_extraction_design_gate,
+                "calls_manual_extraction_effect_row_service_and_writes_draft_artifact",
+                on_click=self._confirm_extraction_draft_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaBackToFulltextButton",
+                "navigates_back_to_fulltext_management_tab",
                 enable=True,
             )
             self._set_button_contract(
@@ -3815,7 +3944,14 @@ if QWidget is not None:
                 button.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                 button.setProperty("pageKey", "fulltext_extraction")
                 button.setProperty("tabKey", tab)
-                button.clicked.connect(lambda _checked=False, tab_key=tab: self._select_fulltext_extraction_tab(tab_key))
+                if tab in {"提取完成核查", "历史记录"}:
+                    button.setEnabled(False)
+                    button.setProperty("buttonBehavior", "disabled_fulltext_extraction_placeholder_tab")
+                    button.setProperty("disabledReason", "该 tab 需要 reviewer-completed extraction record schema 和历史记录 adapter，当前不伪装为可用。")
+                    button.setProperty("formalActionEnabled", False)
+                else:
+                    button.setProperty("buttonBehavior", "navigates_fulltext_extraction_tab")
+                    button.clicked.connect(lambda _checked=False, tab_key=tab: self._select_fulltext_extraction_tab(tab_key))
                 self._fulltext_extraction_tabs[tab] = button
                 tab_row.addWidget(button)
             tab_row.addStretch(1)
@@ -3869,7 +4005,7 @@ if QWidget is not None:
             save.setObjectName("metaSaveExtractionDesignButton")
             save.setMinimumHeight(34)
             save.setEnabled(False)
-            mark_draft = QPushButton("Mark as Draft Extracted - adapter needed")
+            mark_draft = QPushButton("标记为 Draft Extracted")
             mark_draft.setObjectName("metaConfirmExtractionButton")
             mark_draft.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
             mark_draft.setProperty("pageKey", "fulltext_extraction")
@@ -4007,7 +4143,7 @@ if QWidget is not None:
                 row.setWordWrap(True)
                 side_layout.addWidget(row)
             next_design = QPushButton("进入提取表设计")
-            next_design.setObjectName("metaSaveExtractionDesignButton")
+            next_design.setObjectName("metaOpenExtractionDesignButton")
             next_design.setProperty("formalActionEnabled", False)
             next_design.clicked.connect(lambda _checked=False: self._select_fulltext_extraction_tab("提取表设计"))
             side_layout.addStretch(1)

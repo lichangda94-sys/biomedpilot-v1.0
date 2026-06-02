@@ -324,8 +324,10 @@ def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_a
     extraction_gate = summary.project_root / "ui_runtime" / "meta_extraction_design_gate.json"
     assert extraction_gate.exists()
     extraction_payload = json.loads(extraction_gate.read_text(encoding="utf-8"))
-    assert extraction_payload["service"] == "ExtractionSchemaRegistryV1Service.default_schemas"
+    assert extraction_payload["service"] == "ExtractionSchemaRegistryV1Service.save_default_registry/save_schema_selection"
     assert extraction_payload["schema_count"] >= 1
+    assert extraction_payload["writes_final_extraction"] is False
+    assert extraction_payload["writes_analysis_input"] is False
 
     widget.show_target_ia_page("quality_assessment")
     _button(widget, "metaSaveRiskOfBiasDraftButton").click()

@@ -1,0 +1,144 @@
+{
+  "schema_version": "ui_route_contract_meta_batch7_fulltext_extraction.v1",
+  "created_at": "2026-06-02T11:53:17.859856+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "4211bb71deebab14024fb344dae8c2e5d289e5b9",
+  "scope": "Meta mature UIShell Full-text & Extraction page: fulltext registry, extraction schema selection, manual extraction draft, and disabled placeholder tabs.",
+  "source_matrix": {
+    "ui_baseline": "UIShell high-fidelity Meta target IA Full-text & Extraction Workspace in app/meta_analysis/workspace.py.",
+    "backend_sources": [
+      "app/meta_analysis/services/fulltext_management_service.py",
+      "app/meta_analysis/services/extraction_schema_registry_v1_service.py",
+      "app/meta_analysis/services/manual_extraction_effect_row_service.py"
+    ],
+    "policy": "Full-text and extraction adapters write reviewer-controlled draft artifacts only; no automatic PDF retrieval, final extraction, statistics execution, or report-ready advancement."
+  },
+  "summary": {
+    "row_count": 6,
+    "connected": 4,
+    "disabled": 2,
+    "broken": 0,
+    "failures": []
+  },
+  "screenshots": [
+    {
+      "name": "fulltext_management",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_meta_batch7_fulltext_extraction/01_fulltext_management.png",
+      "page_key": "fulltext_extraction"
+    },
+    {
+      "name": "extraction_design",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_meta_batch7_fulltext_extraction/02_extraction_design.png",
+      "page_key": "fulltext_extraction"
+    },
+    {
+      "name": "back_to_fulltext_management",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_meta_batch7_fulltext_extraction/03_back_to_fulltext_management.png",
+      "page_key": "fulltext_extraction"
+    }
+  ],
+  "rows": [
+    {
+      "contract_id": "META-FULLTEXT-OPEN-DESIGN",
+      "ui_page": "Full-text & Extraction",
+      "backend_capability": "FullTextManagementService.build_registry_from_screening",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaOpenExtractionDesignButton",
+      "label": "进入提取表设计",
+      "enabled": true,
+      "button_behavior": "navigates_to_extraction_design_tab_and_calls_fulltext_management_registry_adapter",
+      "disabled_reason": "",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch7_l0mp8_r6/Meta_Batch_7_Fulltext_Extraction/ui_runtime/meta_fulltext_registry_adapter.json",
+      "live_click_test": "scripts/ui_route_contract_meta_batch7_fulltext_extraction.py",
+      "status": "connected",
+      "observed": "fulltext_registry_written",
+      "batch": "Batch 7: Meta Full-text & Extraction"
+    },
+    {
+      "contract_id": "META-EXTRACTION-SAVE-DESIGN",
+      "ui_page": "Full-text & Extraction",
+      "backend_capability": "ExtractionSchemaRegistryV1Service.save_default_registry/save_schema_selection",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaSaveExtractionDesignButton",
+      "label": "保存提取表设计",
+      "enabled": true,
+      "button_behavior": "calls_extraction_schema_registry_and_writes_schema_selection_artifact",
+      "disabled_reason": "",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch7_l0mp8_r6/Meta_Batch_7_Fulltext_Extraction/ui_runtime/meta_extraction_design_gate.json",
+      "live_click_test": "scripts/ui_route_contract_meta_batch7_fulltext_extraction.py",
+      "status": "connected",
+      "observed": "schema_registry_and_selection_written",
+      "batch": "Batch 7: Meta Full-text & Extraction"
+    },
+    {
+      "contract_id": "META-EXTRACTION-CONFIRM-DRAFT",
+      "ui_page": "Full-text & Extraction",
+      "backend_capability": "ManualExtractionEffectRowService.create_study_unit/create_effect_row",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaConfirmExtractionButton",
+      "label": "标记为 Draft Extracted",
+      "enabled": true,
+      "button_behavior": "calls_manual_extraction_effect_row_service_and_writes_draft_artifact",
+      "disabled_reason": "",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch7_l0mp8_r6/Meta_Batch_7_Fulltext_Extraction/ui_runtime/meta_extraction_draft_adapter.json",
+      "live_click_test": "scripts/ui_route_contract_meta_batch7_fulltext_extraction.py",
+      "status": "connected",
+      "observed": "draft_extraction_row_written_not_report_ready",
+      "batch": "Batch 7: Meta Full-text & Extraction"
+    },
+    {
+      "contract_id": "META-EXTRACTION-BACK-FULLTEXT",
+      "ui_page": "Full-text & Extraction",
+      "backend_capability": "UI tab navigation",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaBackToFulltextButton",
+      "label": "返回全文管理",
+      "enabled": true,
+      "button_behavior": "navigates_back_to_fulltext_management_tab",
+      "disabled_reason": "",
+      "expected_artifact": "",
+      "live_click_test": "scripts/ui_route_contract_meta_batch7_fulltext_extraction.py",
+      "status": "connected",
+      "observed": "returned_to_fulltext_management_tab",
+      "batch": "Batch 7: Meta Full-text & Extraction"
+    },
+    {
+      "contract_id": "META-FULLTEXT-TAB-提取完成核查",
+      "ui_page": "Full-text & Extraction",
+      "backend_capability": "disabled reason for future tab adapter",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaFulltextExtractionTab",
+      "label": "提取完成核查",
+      "enabled": false,
+      "button_behavior": "disabled_fulltext_extraction_placeholder_tab",
+      "disabled_reason": "该 tab 需要 reviewer-completed extraction record schema 和历史记录 adapter，当前不伪装为可用。",
+      "expected_artifact": "",
+      "live_click_test": "scripts/ui_route_contract_meta_batch7_fulltext_extraction.py",
+      "status": "disabled",
+      "observed": "disabled_with_reason",
+      "batch": "Batch 7: Meta Full-text & Extraction"
+    },
+    {
+      "contract_id": "META-FULLTEXT-TAB-历史记录",
+      "ui_page": "Full-text & Extraction",
+      "backend_capability": "disabled reason for future tab adapter",
+      "branch_source": "UIShell high-fidelity Meta page + current Integration service adapter",
+      "current_file": "app/meta_analysis/workspace.py",
+      "object_name": "metaFulltextExtractionTab",
+      "label": "历史记录",
+      "enabled": false,
+      "button_behavior": "disabled_fulltext_extraction_placeholder_tab",
+      "disabled_reason": "该 tab 需要 reviewer-completed extraction record schema 和历史记录 adapter，当前不伪装为可用。",
+      "expected_artifact": "",
+      "live_click_test": "scripts/ui_route_contract_meta_batch7_fulltext_extraction.py",
+      "status": "disabled",
+      "observed": "disabled_with_reason",
+      "batch": "Batch 7: Meta Full-text & Extraction"
+    }
+  ]
+}
