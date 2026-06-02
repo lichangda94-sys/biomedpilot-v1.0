@@ -1,12 +1,12 @@
 # Bioinformatics C1 Closure Matrix
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `c2f144f9f7b786693b4e9e19f2732d0f28bdfe30`
+- head: `648ecbd9691d43d9114eb2056f358f5fc831bbb4`
 - closure_status: `passed_with_documented_gaps`
 - ui_page_count: `7`
 - capability_row_count: `7`
-- input_row_count: `170`
-- connected_rows_from_inputs: `118`
+- input_row_count: `180`
+- connected_rows_from_inputs: `128`
 - disabled_rows_with_reason: `52`
 - broken_rows_from_inputs: `0`
 
@@ -22,6 +22,7 @@
 | `batch9_data_prep_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json` | `546e66394ef2` | `9` | `9` | `0` | `0` |
 | `batch10_geo_online_retrieval` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json` | `dc55902228f5` | `18` | `18` | `0` | `0` |
 | `batch11_tcga_gtex_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json` | `c2f144f9f7b7` | `10` | `6` | `4` | `0` |
+| `batch12_tcga_gtex_light_validation` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json` | `648ecbd9691d` | `10` | `10` | `0` | `0` |
 
 ## Page Baseline Matrix
 
@@ -40,8 +41,8 @@
 | UI page | Required connection | Status | Backend capability | Evidence batches | Current strategy | Remaining gap |
 | --- | --- | --- | --- | --- | --- | --- |
 | Project Home | Project shell, project create/open/current-project routing | `connected` | app.bioinformatics.project_home / BioinformaticsWorkspaceWidget route adapters | `batch8_visible_buttons` | Mature page retained; visible buttons live-clicked or explicitly disabled. | Project Center recent-project backend is still placeholder and must not be treated as connected. |
-| Data Source | GEO / Local / TCGA / GTEx entry points connect to acquisition/retrieval/recognition, not direct analysis | `partial` | create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers | `batch8_visible_buttons, batch9_data_prep_adapters, batch10_geo_online_retrieval, batch11_tcga_gtex_adapters` | All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview and download-plan artifacts. | TCGA/GTEx light download and expression build remain gated with explicit disabled reasons until BIOINF_LIGHT_VALIDATION_MODE=1 or a formal full-download workflow is approved. |
-| Data Check & Preparation | Data recognition, dependency/readiness detection, and preflight artifacts | `connected` | project_recognition; project_readiness; project_standardization | `batch8_visible_buttons, batch9_data_prep_adapters` | Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests. | TCGA/GTEx metadata preview and download-plan artifacts are proven; light download -> expression build -> recognition/readiness still needs a separate gated validation batch. |
+| Data Source | GEO / Local / TCGA / GTEx entry points connect to acquisition/retrieval/recognition, not direct analysis | `partial` | create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers; TCGADownloadPlanExecutor; GTExDownloadPlanExecutor; TCGA/GTEx expression builders | `batch8_visible_buttons, batch9_data_prep_adapters, batch10_geo_online_retrieval, batch11_tcga_gtex_adapters, batch12_tcga_gtex_light_validation` | All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview, download-plan artifacts, light-validation download receipts, and expression build manifests. | TCGA/GTEx light-validation build outputs still need Data Check recognition/readiness live-click evidence before claiming complete external data import coverage. |
+| Data Check & Preparation | Data recognition, dependency/readiness detection, and preflight artifacts | `connected` | project_recognition; project_readiness; project_standardization | `batch8_visible_buttons, batch9_data_prep_adapters` | Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests. | TCGA/GTEx metadata preview, light download, and expression build are proven; recognition/readiness of the built TCGA/GTEx outputs still needs a separate gated validation batch. |
 | Group & Design | Group/comparison/covariate state and blocker handling | `connected` | group_comparison_design build/save adapters | `batch8_visible_buttons, batch9_data_prep_adapters` | Suggestion/save/continue buttons live-clicked and artifact-verified. | Expanded covariate modeling remains gate-scoped unless current design manifest proves the schema. |
 | Analysis Tasks | Formal DEG, ORA/GSEA, survival/clinical task gates | `partial` | formal DEG executor; EnrichmentService preflight/detect; SurvivalService preflight/detect | `batch4_formal_deg, batch5_enrichment, batch6_survival, batch8_visible_buttons` | Formal DEG positive path is connected; enrichment and survival preflight/detect are connected; formal ORA/GSEA and KM/Cox/risk-score remain disabled with reasons. | Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled. |
 | Result & Report | DEG review, plot, report draft, result index, artifact registry | `connected` | result index loader; formal DEG review/export/plot/report-ready adapters | `batch4_formal_deg, batch7_report_export, batch8_visible_buttons` | Formal DEG result review, table export, plot artifact, and report-ready package are live-click verified. | ORA/GSEA and survival preflight artifacts are not promoted into formal result rows. |
@@ -49,7 +50,7 @@
 
 ## Remaining Gaps
 
-- `Data Source`: TCGA/GTEx light download and expression build remain gated with explicit disabled reasons until BIOINF_LIGHT_VALIDATION_MODE=1 or a formal full-download workflow is approved.
+- `Data Source`: TCGA/GTEx light-validation build outputs still need Data Check recognition/readiness live-click evidence before claiming complete external data import coverage.
 - `Analysis Tasks`: Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled.
 
 ## Screenshot Evidence
@@ -92,3 +93,13 @@
 - `batch11_tcga_gtex_adapters` / `04_gtex_adapter_ready`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/04_gtex_adapter_ready.png`
 - `batch11_tcga_gtex_adapters` / `05_gtex_metadata_preview`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/05_gtex_metadata_preview.png`
 - `batch11_tcga_gtex_adapters` / `06_gtex_download_plan`: `docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06_gtex_download_plan.png`
+- `batch12_tcga_gtex_light_validation` / `01_tcga_adapter_ready`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/01_tcga_adapter_ready.png`
+- `batch12_tcga_gtex_light_validation` / `02_tcga_metadata_preview`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/02_tcga_metadata_preview.png`
+- `batch12_tcga_gtex_light_validation` / `03_tcga_download_plan`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03_tcga_download_plan.png`
+- `batch12_tcga_gtex_light_validation` / `03a_tcga_light_download`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03a_tcga_light_download.png`
+- `batch12_tcga_gtex_light_validation` / `03b_tcga_expression_build`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03b_tcga_expression_build.png`
+- `batch12_tcga_gtex_light_validation` / `04_gtex_adapter_ready`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/04_gtex_adapter_ready.png`
+- `batch12_tcga_gtex_light_validation` / `05_gtex_metadata_preview`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/05_gtex_metadata_preview.png`
+- `batch12_tcga_gtex_light_validation` / `06_gtex_download_plan`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06_gtex_download_plan.png`
+- `batch12_tcga_gtex_light_validation` / `06a_gtex_light_download`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06a_gtex_light_download.png`
+- `batch12_tcga_gtex_light_validation` / `06b_gtex_expression_build`: `docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06b_gtex_expression_build.png`

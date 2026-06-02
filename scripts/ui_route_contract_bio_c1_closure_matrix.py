@@ -24,6 +24,7 @@ INPUTS = {
     "batch9_data_prep_adapters": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json",
     "batch10_geo_online_retrieval": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json",
     "batch11_tcga_gtex_adapters": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json",
+    "batch12_tcga_gtex_light_validation": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json",
 }
 
 PAGE_BASELINES = {
@@ -86,7 +87,7 @@ CAPABILITY_MATRIX = [
         "ui_page": "Data Source",
         "requirement": "GEO / Local / TCGA / GTEx entry points connect to acquisition/retrieval/recognition, not direct analysis",
         "status": "partial",
-        "evidence_batches": ["batch8_visible_buttons", "batch9_data_prep_adapters", "batch10_geo_online_retrieval", "batch11_tcga_gtex_adapters"],
+        "evidence_batches": ["batch8_visible_buttons", "batch9_data_prep_adapters", "batch10_geo_online_retrieval", "batch11_tcga_gtex_adapters", "batch12_tcga_gtex_light_validation"],
         "button_contracts": [
             "BIO-BATCH8-DATA_SOURCE",
             "BIO-B9-ACQUISITION-REGISTER-LOCAL",
@@ -97,10 +98,14 @@ CAPABILITY_MATRIX = [
             "BIO-B11-TCGA-DOWNLOAD-PLAN",
             "BIO-B11-GTEX-METADATA-PREVIEW",
             "BIO-B11-GTEX-DOWNLOAD-PLAN",
+            "BIO-B12-LIGHT-TCGA-LIGHT-DOWNLOAD-GATE",
+            "BIO-B12-LIGHT-TCGA-EXPRESSION-BUILD-GATE",
+            "BIO-B12-LIGHT-GTEX-LIGHT-DOWNLOAD-GATE",
+            "BIO-B12-LIGHT-GTEX-EXPRESSION-BUILD-GATE",
         ],
-        "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers",
-        "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview and download-plan artifacts.",
-        "remaining_gap": "TCGA/GTEx light download and expression build remain gated with explicit disabled reasons until BIOINF_LIGHT_VALIDATION_MODE=1 or a formal full-download workflow is approved.",
+        "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers; TCGADownloadPlanExecutor; GTExDownloadPlanExecutor; TCGA/GTEx expression builders",
+        "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview, download-plan artifacts, light-validation download receipts, and expression build manifests.",
+        "remaining_gap": "TCGA/GTEx light-validation build outputs still need Data Check recognition/readiness live-click evidence before claiming complete external data import coverage.",
     },
     {
         "ui_page": "Data Check & Preparation",
@@ -115,7 +120,7 @@ CAPABILITY_MATRIX = [
         ],
         "backend_capability": "project_recognition; project_readiness; project_standardization",
         "current_strategy": "Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests.",
-        "remaining_gap": "TCGA/GTEx metadata preview and download-plan artifacts are proven; light download -> expression build -> recognition/readiness still needs a separate gated validation batch.",
+        "remaining_gap": "TCGA/GTEx metadata preview, light download, and expression build are proven; recognition/readiness of the built TCGA/GTEx outputs still needs a separate gated validation batch.",
     },
     {
         "ui_page": "Group & Design",

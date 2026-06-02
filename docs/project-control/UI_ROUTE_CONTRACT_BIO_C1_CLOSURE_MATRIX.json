@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_c1_closure_matrix.v1",
-  "created_at": "2026-06-02T10:30:00+00:00",
+  "created_at": "2026-06-02T10:38:40+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "c2f144f9f7b786693b4e9e19f2732d0f28bdfe30",
+  "head": "648ecbd9691d43d9114eb2056f358f5fc831bbb4",
   "scope": "Bioinformatics C1 mature UIShell 7-step page route contract closure: UI page -> backend capability -> branch/source -> live-click or disabled-reason evidence.",
   "inputs": {
     "batch4_formal_deg": {
@@ -101,13 +101,25 @@
         "broken": 0,
         "failures": []
       }
+    },
+    "batch12_tcga_gtex_light_validation": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json",
+      "schema_version": "ui_route_contract_bio_batch12_tcga_gtex_light_validation.v1",
+      "head": "648ecbd9691d43d9114eb2056f358f5fc831bbb4",
+      "summary": {
+        "row_count": 10,
+        "connected": 10,
+        "disabled": 0,
+        "broken": 0,
+        "failures": []
+      }
     }
   },
   "summary": {
     "ui_page_count": 7,
     "capability_row_count": 7,
-    "input_row_count": 170,
-    "connected_rows": 118,
+    "input_row_count": 180,
+    "connected_rows": 128,
     "disabled_rows_with_reason": 52,
     "broken": 0,
     "failures": [],
@@ -257,7 +269,8 @@
         "batch8_visible_buttons",
         "batch9_data_prep_adapters",
         "batch10_geo_online_retrieval",
-        "batch11_tcga_gtex_adapters"
+        "batch11_tcga_gtex_adapters",
+        "batch12_tcga_gtex_light_validation"
       ],
       "button_contracts": [
         "BIO-BATCH8-DATA_SOURCE",
@@ -268,11 +281,15 @@
         "BIO-B11-TCGA-METADATA-PREVIEW",
         "BIO-B11-TCGA-DOWNLOAD-PLAN",
         "BIO-B11-GTEX-METADATA-PREVIEW",
-        "BIO-B11-GTEX-DOWNLOAD-PLAN"
+        "BIO-B11-GTEX-DOWNLOAD-PLAN",
+        "BIO-B12-LIGHT-TCGA-LIGHT-DOWNLOAD-GATE",
+        "BIO-B12-LIGHT-TCGA-EXPRESSION-BUILD-GATE",
+        "BIO-B12-LIGHT-GTEX-LIGHT-DOWNLOAD-GATE",
+        "BIO-B12-LIGHT-GTEX-EXPRESSION-BUILD-GATE"
       ],
-      "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers",
-      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview and download-plan artifacts.",
-      "remaining_gap": "TCGA/GTEx light download and expression build remain gated with explicit disabled reasons until BIOINF_LIGHT_VALIDATION_MODE=1 or a formal full-download workflow is approved."
+      "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers; TCGADownloadPlanExecutor; GTExDownloadPlanExecutor; TCGA/GTEx expression builders",
+      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview, download-plan artifacts, light-validation download receipts, and expression build manifests.",
+      "remaining_gap": "TCGA/GTEx light-validation build outputs still need Data Check recognition/readiness live-click evidence before claiming complete external data import coverage."
     },
     {
       "ui_page": "Data Check & Preparation",
@@ -290,7 +307,7 @@
       ],
       "backend_capability": "project_recognition; project_readiness; project_standardization",
       "current_strategy": "Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests.",
-      "remaining_gap": "TCGA/GTEx metadata preview and download-plan artifacts are proven; light download -> expression build -> recognition/readiness still needs a separate gated validation batch."
+      "remaining_gap": "TCGA/GTEx metadata preview, light download, and expression build are proven; recognition/readiness of the built TCGA/GTEx outputs still needs a separate gated validation batch."
     },
     {
       "ui_page": "Group & Design",
@@ -380,7 +397,8 @@
         "batch8_visible_buttons",
         "batch9_data_prep_adapters",
         "batch10_geo_online_retrieval",
-        "batch11_tcga_gtex_adapters"
+        "batch11_tcga_gtex_adapters",
+        "batch12_tcga_gtex_light_validation"
       ],
       "button_contracts": [
         "BIO-BATCH8-DATA_SOURCE",
@@ -391,11 +409,15 @@
         "BIO-B11-TCGA-METADATA-PREVIEW",
         "BIO-B11-TCGA-DOWNLOAD-PLAN",
         "BIO-B11-GTEX-METADATA-PREVIEW",
-        "BIO-B11-GTEX-DOWNLOAD-PLAN"
+        "BIO-B11-GTEX-DOWNLOAD-PLAN",
+        "BIO-B12-LIGHT-TCGA-LIGHT-DOWNLOAD-GATE",
+        "BIO-B12-LIGHT-TCGA-EXPRESSION-BUILD-GATE",
+        "BIO-B12-LIGHT-GTEX-LIGHT-DOWNLOAD-GATE",
+        "BIO-B12-LIGHT-GTEX-EXPRESSION-BUILD-GATE"
       ],
-      "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers",
-      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview and download-plan artifacts.",
-      "remaining_gap": "TCGA/GTEx light download and expression build remain gated with explicit disabled reasons until BIOINF_LIGHT_VALIDATION_MODE=1 or a formal full-download workflow is approved."
+      "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff; TCGAMetadataPreviewService; GTExMetadataPreviewService; TCGA/GTEx download plan draft writers; TCGADownloadPlanExecutor; GTExDownloadPlanExecutor; TCGA/GTEx expression builders",
+      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets; visible TCGA/GTEx adapter live-clicks metadata preview, download-plan artifacts, light-validation download receipts, and expression build manifests.",
+      "remaining_gap": "TCGA/GTEx light-validation build outputs still need Data Check recognition/readiness live-click evidence before claiming complete external data import coverage."
     },
     {
       "ui_page": "Analysis Tasks",
@@ -611,6 +633,56 @@
       "batch": "batch11_tcga_gtex_adapters",
       "page": "06_gtex_download_plan",
       "path": "docs/ui/runtime_screenshots/20260602_bio_batch11_tcga_gtex_adapters/06_gtex_download_plan.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "01_tcga_adapter_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/01_tcga_adapter_ready.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "02_tcga_metadata_preview",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/02_tcga_metadata_preview.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "03_tcga_download_plan",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03_tcga_download_plan.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "03a_tcga_light_download",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03a_tcga_light_download.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "03b_tcga_expression_build",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03b_tcga_expression_build.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "04_gtex_adapter_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/04_gtex_adapter_ready.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "05_gtex_metadata_preview",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/05_gtex_metadata_preview.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "06_gtex_download_plan",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06_gtex_download_plan.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "06a_gtex_light_download",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06a_gtex_light_download.png"
+    },
+    {
+      "batch": "batch12_tcga_gtex_light_validation",
+      "page": "06b_gtex_expression_build",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06b_gtex_expression_build.png"
     }
   ]
 }

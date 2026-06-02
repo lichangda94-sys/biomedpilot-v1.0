@@ -185,6 +185,7 @@ def _audit_tcga(
             allow_disabled=True,
         )
     )
+    _shot(widget, "03a_tcga_light_download", screenshot_dir, screenshots)
     rows.append(
         _click_or_disabled(
             "BIO-B11-TCGA-EXPRESSION-BUILD-GATE",
@@ -199,6 +200,7 @@ def _audit_tcga(
             allow_disabled=True,
         )
     )
+    _shot(widget, "03b_tcga_expression_build", screenshot_dir, screenshots)
     return rows
 
 
@@ -269,6 +271,7 @@ def _audit_gtex(
             allow_disabled=True,
         )
     )
+    _shot(widget, "06a_gtex_light_download", screenshot_dir, screenshots)
     rows.append(
         _click_or_disabled(
             "BIO-B11-GTEX-EXPRESSION-BUILD-GATE",
@@ -283,6 +286,7 @@ def _audit_gtex(
             allow_disabled=True,
         )
     )
+    _shot(widget, "06b_gtex_expression_build", screenshot_dir, screenshots)
     return rows
 
 
@@ -421,7 +425,11 @@ def _shot(widget: QWidget, name: str, screenshot_dir: Path, screenshots: list[di
     screenshot_dir.mkdir(parents=True, exist_ok=True)
     path = screenshot_dir / f"{name}.png"
     widget.grab().save(str(path))
-    screenshots.append({"name": name, "path": str(path.relative_to(REPO_ROOT))})
+    try:
+        display_path = str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        display_path = str(path)
+    screenshots.append({"name": name, "path": display_path})
 
 
 def _settle(app: QApplication | None, ms: int = 120) -> None:

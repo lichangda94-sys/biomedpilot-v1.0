@@ -1,0 +1,228 @@
+{
+  "schema_version": "ui_route_contract_bio_batch12_tcga_gtex_light_validation.v1",
+  "created_at": "2026-06-02T10:38:14+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "648ecbd9691d43d9114eb2056f358f5fc831bbb4",
+  "scope": "Bioinformatics TCGA/GTEx light-validation Data Source adapter: visible source request, metadata preview, download-plan, limited download receipt, and expression build manifest.",
+  "gate_policy": {
+    "light_validation_mode": "1",
+    "BIOINF_TCGA_DOWNLOAD_LIMIT_FILES": "1",
+    "BIOINF_GTEX_DOWNLOAD_LIMIT_FILES": "1",
+    "BIOINF_GTEX_LIMIT_SAMPLES": "3",
+    "BIOINF_GTEX_LIMIT_GENES": "10",
+    "formal_analysis": "not opened by this batch",
+    "production_use": "light validation artifacts are not report-ready production analysis inputs"
+  },
+  "screenshots": [
+    {
+      "name": "01_tcga_adapter_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/01_tcga_adapter_ready.png"
+    },
+    {
+      "name": "02_tcga_metadata_preview",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/02_tcga_metadata_preview.png"
+    },
+    {
+      "name": "03_tcga_download_plan",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03_tcga_download_plan.png"
+    },
+    {
+      "name": "03a_tcga_light_download",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03a_tcga_light_download.png"
+    },
+    {
+      "name": "03b_tcga_expression_build",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/03b_tcga_expression_build.png"
+    },
+    {
+      "name": "04_gtex_adapter_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/04_gtex_adapter_ready.png"
+    },
+    {
+      "name": "05_gtex_metadata_preview",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/05_gtex_metadata_preview.png"
+    },
+    {
+      "name": "06_gtex_download_plan",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06_gtex_download_plan.png"
+    },
+    {
+      "name": "06a_gtex_light_download",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06a_gtex_light_download.png"
+    },
+    {
+      "name": "06b_gtex_expression_build",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch12_tcga_gtex_light_validation/06b_gtex_expression_build.png"
+    }
+  ],
+  "summary": {
+    "row_count": 10,
+    "connected": 10,
+    "disabled": 0,
+    "broken": 0,
+    "failures": []
+  },
+  "rows": [
+    {
+      "contract_id": "BIO-B12-LIGHT-TCGA-SOURCE-REQUEST",
+      "source": "TCGA",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsDataSourceSelectPreviewButton",
+      "label": "配置 TCGA 来源",
+      "backend_capability": "app.bioinformatics.data_source_requests.create_data_source_request",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "creates visible TCGA Data Source request draft and opens TCGA/GTEx adapter panel",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/manifests/data_source_requests.json; request_id=dsr-447a126aaf; status=draft; source_type=tcga",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/manifests/data_source_requests.json; request_id=dsr-447a126aaf; status=draft; source_type=tcga",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-TCGA-METADATA-PREVIEW",
+      "source": "TCGA",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsTcgaPreviewButton",
+      "label": "TCGA preview",
+      "backend_capability": "app.bioinformatics.data_sources.tcga_preview.TCGAMetadataPreviewService.build_preview",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "calls GDC metadata preview and renders case/sample/file counts",
+      "artifact_evidence": "TCGA preview：TCGA-THCA | case=507; sample=1562; file=564; size=2.23 GB | 下一步：生成下载计划草案。TCGA+GTEx 自动合并仍禁用。",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "TCGA preview：TCGA-THCA | case=507; sample=1562; file=564; size=2.23 GB | 下一步：生成下载计划草案。TCGA+GTEx 自动合并仍禁用。",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-TCGA-DOWNLOAD-PLAN",
+      "source": "TCGA",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsTcgaCreatePlanButton",
+      "label": "TCGA 下载计划",
+      "backend_capability": "app.bioinformatics.data_sources.tcga_preview.write_tcga_download_plan_draft",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "writes TCGA download plan draft and plan-only acquisition record",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/tcga_download_plans/tcga-plan-1ada70992d.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/tcga_download_plans/tcga-plan-1ada70992d.json",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-TCGA-LIGHT-DOWNLOAD-GATE",
+      "source": "TCGA",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsTcgaDownloadRawButton",
+      "label": "TCGA 轻量下载",
+      "backend_capability": "app.bioinformatics.data_sources.tcga_download_executor.TCGADownloadPlanExecutor.execute_plan",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "executes only when light validation gate is explicitly opened; light validation only, not formal analysis",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/download_receipts/tcga-dl-d8b2d7f3ed.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/download_receipts/tcga-dl-d8b2d7f3ed.json",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-TCGA-EXPRESSION-BUILD-GATE",
+      "source": "TCGA",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsTcgaBuildExpressionButton",
+      "label": "TCGA 构建矩阵",
+      "backend_capability": "app.bioinformatics.data_sources.tcga_expression_builder.TCGAExpressionQuantificationBuilder.build_from_record",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "builds expression matrix only after a raw download receipt exists; light validation only, not formal analysis",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/standardized_data/tcga/tcga_thca/tcga_b64_fb8ac713a4/data_prepared/tcga/tcga_expression_build_manifest.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/standardized_data/tcga/tcga_thca/tcga_b64_fb8ac713a4/data_prepared/tcga/tcga_expression_build_manifest.json",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-GTEX-SOURCE-REQUEST",
+      "source": "GTEx",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsDataSourceSelectPreviewButton",
+      "label": "配置 GTEx 来源",
+      "backend_capability": "app.bioinformatics.data_source_requests.create_data_source_request",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "creates visible GTEx Data Source request draft and opens TCGA/GTEx adapter panel",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/manifests/data_source_requests.json; request_id=dsr-a7675f10f9; status=draft; source_type=gtex",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/manifests/data_source_requests.json; request_id=dsr-a7675f10f9; status=draft; source_type=gtex",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-GTEX-METADATA-PREVIEW",
+      "source": "GTEx",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsGtexPreviewButton",
+      "label": "GTEx preview",
+      "backend_capability": "app.bioinformatics.data_sources.gtex_preview.GTExMetadataPreviewService.build_preview",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "calls GTEx tissue metadata preview and renders donor/sample/file counts",
+      "artifact_evidence": "GTEx preview：甲状腺 (Thyroid) | donor=574; sample=653; file=1 | GTEx 不自动作为 TCGA normal control。",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "GTEx preview：甲状腺 (Thyroid) | donor=574; sample=653; file=1 | GTEx 不自动作为 TCGA normal control。",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-GTEX-DOWNLOAD-PLAN",
+      "source": "GTEx",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsGtexCreatePlanButton",
+      "label": "GTEx 下载计划",
+      "backend_capability": "app.bioinformatics.data_sources.gtex_preview.write_gtex_download_plan_draft",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "writes GTEx download plan draft and plan-only acquisition record",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/gtex_download_plans/gtex-plan-0dae0b5a7c.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/gtex_download_plans/gtex-plan-0dae0b5a7c.json",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-GTEX-LIGHT-DOWNLOAD-GATE",
+      "source": "GTEx",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsGtexDownloadRawButton",
+      "label": "GTEx 轻量下载",
+      "backend_capability": "app.bioinformatics.data_sources.gtex_download_executor.GTExDownloadPlanExecutor.execute_plan",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "executes only when light validation gate is explicitly opened; light validation only, not formal analysis",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/download_receipts/gtex-dl-3b4867883e.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/acquisition/download_receipts/gtex-dl-3b4867883e.json",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    },
+    {
+      "contract_id": "BIO-B12-LIGHT-GTEX-EXPRESSION-BUILD-GATE",
+      "source": "GTEx",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsGtexBuildExpressionButton",
+      "label": "GTEx 构建矩阵",
+      "backend_capability": "app.bioinformatics.data_sources.gtex_expression_builder.GTExExpressionMatrixBuilder.build_from_record",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "builds expression matrix only after a raw download receipt exists; light validation only, not formal analysis",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/standardized_data/gtex/gtex_thyroid/gtex-g63-810abcd0d1/data_prepared/gtex/gtex_expression_build_manifest.json",
+      "live_click_test": "button.click()",
+      "status": "connected",
+      "observed": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch11_tcga_gtex_yjpg7yqf/project/bio_batch_11_tcga_gtex_adapters/standardized_data/gtex/gtex_thyroid/gtex-g63-810abcd0d1/data_prepared/gtex/gtex_expression_build_manifest.json",
+      "disabled_reason": "",
+      "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+    }
+  ],
+  "batch": "Batch 12: Bioinformatics TCGA/GTEx light-validation download/build"
+}
