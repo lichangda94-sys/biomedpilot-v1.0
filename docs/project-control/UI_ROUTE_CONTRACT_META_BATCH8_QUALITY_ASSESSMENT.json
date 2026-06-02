@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_meta_batch8_quality_assessment.v1",
-  "created_at": "2026-06-02T14:05:02.514358+00:00",
+  "created_at": "2026-06-02T14:36:58.087232+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "4300b4ab1f913d88d2278a7ada0ac238c470b66e",
+  "head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
   "scope": "Meta mature UIShell Quality Assessment page: reviewer-controlled quality draft, quality summary, and export artifacts.",
   "source_matrix": {
     "ui_baseline": "UIShell high-fidelity Meta target IA Quality Assessment Workspace in app/meta_analysis/workspace.py.",
@@ -43,10 +43,10 @@
       "enabled": true,
       "button_behavior": "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
       "disabled_reason": "",
-      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8_cpzf4kao/Meta_Batch_8_Quality_Assessment/ui_runtime/meta_risk_of_bias_disabled_reason.json",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8_lcwuc15p/Meta_Batch_8_Quality_Assessment/ui_runtime/meta_risk_of_bias_disabled_reason.json",
       "live_click_test": "scripts/ui_route_contract_meta_batch8_quality_assessment.py",
       "status": "connected",
-      "observed": "draft_saved={\"assessment_count\": 1, \"assessment_id\": \"qa-9496a0838a54\", \"report_ready\": false, \"statistics_run\": false, \"status\": \"draft\", \"tool_name\": \"ROB2\"}",
+      "observed": "draft_saved={\"assessment_count\": 1, \"assessment_id\": \"qa-49937c1b62a7\", \"report_ready\": false, \"statistics_run\": false, \"status\": \"draft\", \"tool_name\": \"ROB2\"}",
       "batch": "Batch 8: Meta Quality Assessment"
     },
     {
@@ -60,7 +60,7 @@
       "enabled": true,
       "button_behavior": "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
       "disabled_reason": "",
-      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8_cpzf4kao/Meta_Batch_8_Quality_Assessment/exports/quality_assessment_v1.csv",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8_lcwuc15p/Meta_Batch_8_Quality_Assessment/exports/quality_assessment_v1.csv",
       "live_click_test": "scripts/ui_route_contract_meta_batch8_quality_assessment.py",
       "status": "connected",
       "observed": "quality_json_and_csv_exported",
@@ -77,10 +77,10 @@
       "enabled": true,
       "button_behavior": "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
       "disabled_reason": "",
-      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8_cpzf4kao/Meta_Batch_8_Quality_Assessment/ui_runtime/meta_risk_of_bias_disabled_reason.json",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch8_lcwuc15p/Meta_Batch_8_Quality_Assessment/ui_runtime/meta_risk_of_bias_disabled_reason.json",
       "live_click_test": "scripts/ui_route_contract_meta_batch8_quality_assessment.py",
       "status": "connected",
-      "observed": "formal_quality_gate_closed={\"assessment_count\": 1, \"assessment_id\": \"qa-9496a0838a54\", \"report_ready\": false, \"statistics_run\": false, \"status\": \"draft\", \"tool_name\": \"ROB2\"}",
+      "observed": "formal_quality_gate_closed={\"assessment_count\": 1, \"assessment_id\": \"qa-49937c1b62a7\", \"report_ready\": false, \"statistics_run\": false, \"status\": \"draft\", \"tool_name\": \"ROB2\"}",
       "batch": "Batch 8: Meta Quality Assessment"
     }
   ]

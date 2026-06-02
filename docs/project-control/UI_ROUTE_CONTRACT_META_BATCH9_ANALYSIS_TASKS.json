@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_meta_batch9_analysis_tasks.v1",
-  "created_at": "2026-06-02T14:05:02.576903+00:00",
+  "created_at": "2026-06-02T14:36:58.176392+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "4300b4ab1f913d88d2278a7ada0ac238c470b66e",
+  "head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
   "scope": "Meta mature UIShell Analysis Tasks page: analysis plan draft, preflight/applicability artifacts, and formal executor gate.",
   "source_matrix": {
     "ui_baseline": "UIShell high-fidelity Meta target IA Analysis Tasks Workspace in app/meta_analysis/workspace.py.",
@@ -44,7 +44,7 @@
       "enabled": true,
       "button_behavior": "calls_analysis_setup_service_and_writes_plan_draft_artifact",
       "disabled_reason": "",
-      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch9_ropgz3ta/Meta_Batch_9_Analysis_Tasks/ui_runtime/meta_analysis_plan_draft_adapter.json",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch9_xs_8z9js/Meta_Batch_9_Analysis_Tasks/ui_runtime/meta_analysis_plan_draft_adapter.json",
       "live_click_test": "scripts/ui_route_contract_meta_batch9_analysis_tasks.py",
       "status": "connected",
       "observed": "analysis_plan_draft_written={\"analysis_profile_type\": \"TREATMENT_EFFECT_META\", \"errors\": [], \"report_ready\": false, \"warnings\": [\"developer_preview_analysis_plan\"]}",
@@ -61,7 +61,7 @@
       "enabled": true,
       "button_behavior": "calls_analysis_setup_service_preflight_and_writes_applicability_artifacts",
       "disabled_reason": "",
-      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch9_ropgz3ta/Meta_Batch_9_Analysis_Tasks/ui_runtime/meta_analysis_preflight_adapter.json",
+      "expected_artifact": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_meta_batch9_xs_8z9js/Meta_Batch_9_Analysis_Tasks/ui_runtime/meta_analysis_preflight_adapter.json",
       "live_click_test": "scripts/ui_route_contract_meta_batch9_analysis_tasks.py",
       "status": "connected",
       "observed": "analysis_preflight_artifacts_written={\"analysis_profile_type\": \"TREATMENT_EFFECT_META\", \"analysis_result_created\": false, \"dataset_created\": true, \"errors\": [\"extraction_records_missing\", \"extraction_records_empty\", \"analysis_ready_dataset_has_no_included_studies\"], \"formal_statistics_run\": false, \"report_ready\": false, \"success\": false, \"warnings\": [\"developer_preview_analysis_plan\", \"random_effects_tau_squared_unstable_with_fewer_than_three_studies\", \"or_rr_zero_event_continuity_correction_will_be_reported_when_applied\"]}",

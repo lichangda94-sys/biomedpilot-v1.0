@@ -1,7 +1,7 @@
 # UI Route Contract - Meta Batch 9 Analysis Tasks
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `4300b4ab1f913d88d2278a7ada0ac238c470b66e`
+- head: `fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881`
 - scope: Meta mature UIShell Analysis Tasks page: analysis plan draft, preflight/applicability artifacts, and formal executor gate.
 - rows: `3`
 - connected: `2`
