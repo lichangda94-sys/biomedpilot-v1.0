@@ -1,15 +1,15 @@
 # UI Route Contract LabTools Batch 2
 
-- Created: `2026-06-02T12:38:32.132431+00:00`
+- Created: `2026-06-02T14:00:52.394935+00:00`
 - Branch: `integration/release-bio-c1-ui-shell`
-- HEAD: `fb364d9eb81d44387712f0b85382119fb150c135`
+- HEAD: `6ffcbe7a650809cbbf25df8842619322d177f83d`
 - Scope: LabTools approved home, second-level module list, connected calculators/reagent/cell/WB/image run-request gates.
 
 ## Summary
 
-- Rows: 22
+- Rows: 21
 - Connected: 18
-- Disabled with reason: 4
+- Disabled with reason: 3
 - Broken: 0
 
 ## Approved Structure
@@ -44,7 +44,6 @@ Runtime screenshots for this batch are stored under:
 | LABTOOLS-SECONDARY-CELL_EXPERIMENTS | LabTools Experiment Modules | `labtoolsSecondaryEntryButton` | connected | `navigates_to_labtools_secondary_cell_experiments` | current_page_key=cell_experiments |
 | LABTOOLS-SECONDARY-PROTEIN_EXPERIMENTS | LabTools Experiment Modules | `labtoolsSecondaryEntryButton` | connected | `navigates_to_labtools_secondary_protein_experiments` | current_page_key=protein_experiments |
 | LABTOOLS-SECONDARY-NUCLEIC_ACID_EXPERIMENTS | LabTools Experiment Modules | `labtoolsSecondaryEntryButton` | connected | `navigates_to_labtools_secondary_nucleic_acid_experiments` | current_page_key=nucleic_acid_experiments |
-| LABTOOLS-SECONDARY-NUCLEIC_ACID_EXPERIMENTS-DISABLED-GATE | 核酸实验 | `labToolsC1DisabledActionButton` | disabled | `disabled_labtools_secondary_backend_not_connected` | PCR/qPCR adapters, primer registry, and result processing gates are not connected in C1. |
 | LABTOOLS-SECONDARY-IMMUNO_ABSORBANCE | LabTools Experiment Modules | `labtoolsSecondaryEntryButton` | connected | `navigates_to_labtools_secondary_immuno_absorbance` | current_page_key=immuno_absorbance |
 | LABTOOLS-SECONDARY-IMMUNO_ABSORBANCE-DISABLED-GATE | 免疫与吸光度实验 | `labToolsC1DisabledActionButton` | disabled | `disabled_labtools_secondary_backend_not_connected` | ELISA/BCA formal records, curve fitting, and report export are not connected in C1. |
 | LABTOOLS-SECONDARY-IHC | LabTools Experiment Modules | `labtoolsSecondaryEntryButton` | connected | `navigates_to_labtools_secondary_ihc` | current_page_key=ihc |

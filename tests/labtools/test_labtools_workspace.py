@@ -151,9 +151,38 @@ def test_labtools_c2_secondary_routes_connect_cell_and_protein_workbenches(qt_ap
     assert western_tabs.count() >= 5
 
 
+def test_labtools_nucleic_acid_route_connects_qpcr_adapter_and_gates_remaining_work(qt_app) -> None:
+    widget = LabToolsWorkspaceWidget()
+    widget.show_experiment_modules()
+    button = next(
+        item
+        for item in widget.current_page_widget().findChildren(QPushButton, "labtoolsSecondaryEntryButton")
+        if item.property("pageKey") == "nucleic_acid_experiments"
+    )
+
+    button.click()
+
+    current_page = widget.current_page_widget()
+    tabs = current_page.findChild(QTabWidget, "nucleicAcidExperimentTabs")
+    assert widget.current_page_key() == "nucleic_acid_experiments"
+    assert current_page.property("connectionStatus") == "connected"
+    assert tabs is not None
+    assert [tabs.tabText(index) for index in range(tabs.count())] == ["qPCR 配液", "引物库", "PCR 程序", "结果处理"]
+    assert current_page.findChild(QPushButton, "qpcrMixCalculateButton") is not None
+    for object_name in (
+        "nucleicPrimerRegistryGateDisabledButton",
+        "nucleicPcrProgramGateDisabledButton",
+        "nucleicResultProcessingGateDisabledButton",
+    ):
+        disabled = current_page.findChild(QPushButton, object_name)
+        assert disabled is not None
+        assert not disabled.isEnabled()
+        assert disabled.property("disabledReason")
+
+
 @pytest.mark.parametrize(
     "page_key",
-    ["nucleic_acid_experiments", "immuno_absorbance", "ihc"],
+    ["immuno_absorbance", "ihc"],
 )
 def test_labtools_unconnected_secondary_placeholders_keep_disabled_reason(qt_app, page_key: str) -> None:
     widget = LabToolsWorkspaceWidget()

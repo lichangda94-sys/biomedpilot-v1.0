@@ -180,7 +180,7 @@ def _audit_workspace_routes(app: QApplication, failures: list[str]) -> list[Cont
             )
             if not ok:
                 failures.append(f"{contract_id}: route did not reach {entry.page_key}")
-            if entry.page_key in {"nucleic_acid_experiments", "immuno_absorbance", "ihc"}:
+            if entry.page_key in {"immuno_absorbance", "ihc"}:
                 disabled = _find_button(widget.current_page_widget(), "labToolsC1DisabledActionButton")
                 rows.append(_classify_gate_row(f"{contract_id}-DISABLED-GATE", entry.title, disabled))
             widget.show_experiment_modules()

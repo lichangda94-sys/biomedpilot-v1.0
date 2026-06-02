@@ -1,13 +1,13 @@
 {
   "schema_version": "ui_route_contract_labtools_batch2.v1",
-  "created_at": "2026-06-02T12:38:32.132431+00:00",
+  "created_at": "2026-06-02T14:00:52.394935+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "fb364d9eb81d44387712f0b85382119fb150c135",
+  "head": "6ffcbe7a650809cbbf25df8842619322d177f83d",
   "scope": "LabTools approved home, second-level module list, connected calculators/reagent/cell/WB/image run-request gates.",
   "summary": {
-    "row_count": 22,
+    "row_count": 21,
     "connected": 18,
-    "disabled": 4,
+    "disabled": 3,
     "broken": 0,
     "failures": []
   },
@@ -153,29 +153,12 @@
       "label": "进入核酸实验",
       "enabled": true,
       "button_behavior": "navigates_to_labtools_secondary_nucleic_acid_experiments",
-      "disabled_reason": "PCR/qPCR adapters, primer registry, and result processing gates are not connected in C1.",
+      "disabled_reason": "qPCR mix calculation is connected; primer registry, PCR program records, plate layout, Ct/Cq result processing, and report gates are not connected in this release batch.",
       "runtime_effect": "navigates to secondary page nucleic_acid_experiments",
       "artifact_evidence": "current_page_key=nucleic_acid_experiments",
       "live_click_test": "scripts/ui_route_contract_labtools_batch2.py",
       "status": "connected",
       "observed": "expected=nucleic_acid_experiments; observed=nucleic_acid_experiments",
-      "batch": "Batch 2: LabTools Adapter Contract"
-    },
-    {
-      "contract_id": "LABTOOLS-SECONDARY-NUCLEIC_ACID_EXPERIMENTS-DISABLED-GATE",
-      "module": "LabTools",
-      "surface": "核酸实验",
-      "current_file": "app/labtools/workspace.py",
-      "object_name": "labToolsC1DisabledActionButton",
-      "label": "C2 接入后启用",
-      "enabled": false,
-      "button_behavior": "disabled_labtools_secondary_backend_not_connected",
-      "disabled_reason": "PCR/qPCR adapters, primer registry, and result processing gates are not connected in C1.",
-      "runtime_effect": "gate classified by enabled state and disabled reason",
-      "artifact_evidence": "PCR/qPCR adapters, primer registry, and result processing gates are not connected in C1.",
-      "live_click_test": "scripts/ui_route_contract_labtools_batch2.py",
-      "status": "disabled",
-      "observed": "disabled_with_reason",
       "batch": "Batch 2: LabTools Adapter Contract"
     },
     {

@@ -27,7 +27,7 @@ def labtools_features() -> list[FeatureItem]:
 
 try:
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QStackedWidget, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QStackedWidget, QTabWidget, QVBoxLayout, QWidget
 
     from app.app_identity import load_labtools_pixmap
     from app.labtools.labtools_home import LabToolsHomeWidget
@@ -39,7 +39,7 @@ try:
         get_labtools_secondary_entry,
         labtools_secondary_entries,
     )
-    from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget, ReagentPreparationWorkflowWidget
+    from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget, QpcrMixCalculatorWidget, ReagentPreparationWorkflowWidget
     from app.labtools.ui.cell_experiment_widgets import LabToolsCellExperimentPage
     from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING, button_stylesheet, status_chip_stylesheet
@@ -170,8 +170,9 @@ if QWidget is not None:
                     get_labtools_secondary_by_page("protein_experiments"),
                     LabToolsWesternBlotWidget(),
                 ),
-                "nucleic_acid_experiments": self._secondary_placeholder_page(
-                    get_labtools_secondary_by_page("nucleic_acid_experiments")
+                "nucleic_acid_experiments": self._connected_page(
+                    get_labtools_secondary_by_page("nucleic_acid_experiments"),
+                    self._nucleic_acid_experiments_page(),
                 ),
                 "immuno_absorbance": self._secondary_placeholder_page(get_labtools_secondary_by_page("immuno_absorbance")),
                 "ihc": self._secondary_placeholder_page(get_labtools_secondary_by_page("ihc")),
@@ -345,9 +346,84 @@ if QWidget is not None:
             layout.addStretch(1)
             return page
 
+        def _nucleic_acid_experiments_page(self) -> QWidget:
+            page = QWidget()
+            page.setObjectName("labToolsNucleicAcidExperimentsPage")
+            page.setProperty("uiPrimitive", "labtools_c2_gated_workbench")
+            page.setStyleSheet(self._placeholder_stylesheet())
+
+            layout = QVBoxLayout(page)
+            layout.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
+            layout.setSpacing(SPACING["md"])
+
+            title = QLabel("核酸实验 / Nucleic Acid Experiments")
+            title.setObjectName("labToolsC1Title")
+            description = QLabel("当前接入 qPCR 配液计算 adapter；PCR 程序、引物库、plate layout 和结果处理保持 gate，避免伪装正式核酸实验全流程。")
+            description.setObjectName("labToolsC1Description")
+            description.setWordWrap(True)
+            layout.addWidget(title)
+            layout.addWidget(description)
+
+            tabs = QTabWidget()
+            tabs.setObjectName("nucleicAcidExperimentTabs")
+            tabs.addTab(QpcrMixCalculatorWidget(), "qPCR 配液")
+            tabs.addTab(
+                self._disabled_gate_tab(
+                    "nucleicPrimerRegistryGate",
+                    "Primer registry / 引物库",
+                    "primer_registry_not_connected",
+                    "Primer registry, validation, and persistence are not connected in this release batch.",
+                ),
+                "引物库",
+            )
+            tabs.addTab(
+                self._disabled_gate_tab(
+                    "nucleicPcrProgramGate",
+                    "PCR program / 程序记录",
+                    "pcr_program_record_not_connected",
+                    "PCR/qPCR program templates, thermal-cycler profile storage, and run history are not connected in this release batch.",
+                ),
+                "PCR 程序",
+            )
+            tabs.addTab(
+                self._disabled_gate_tab(
+                    "nucleicResultProcessingGate",
+                    "Result processing / 结果处理",
+                    "nucleic_result_processing_not_connected",
+                    "Ct/Cq import, delta-delta-Ct, melt-curve review, and report export gates are not connected in this release batch.",
+                ),
+                "结果处理",
+            )
+            layout.addWidget(tabs, 1)
+            return page
+
+        def _disabled_gate_tab(self, object_name: str, title_text: str, behavior: str, reason_text: str) -> QWidget:
+            tab = QWidget()
+            tab.setObjectName(object_name)
+            layout = QVBoxLayout(tab)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["md"])
+            title = QLabel(title_text)
+            title.setObjectName("labToolsC1Title")
+            reason = QLabel(reason_text)
+            reason.setObjectName("labToolsC1DisabledReason")
+            reason.setWordWrap(True)
+            disabled = QPushButton("等待接入")
+            disabled.setObjectName(f"{object_name}DisabledButton")
+            disabled.setEnabled(False)
+            disabled.setProperty("buttonBehavior", f"disabled_{behavior}")
+            disabled.setProperty("disabledReason", reason_text)
+            disabled.setToolTip(reason_text)
+            disabled.setAccessibleDescription(reason_text)
+            layout.addWidget(title)
+            layout.addWidget(reason)
+            layout.addWidget(disabled, alignment=Qt.AlignLeft)
+            layout.addStretch(1)
+            return tab
+
         def _placeholder_stylesheet(self) -> str:
             return f"""
-            QWidget#labToolsC1PlaceholderPage, QWidget#labToolsExperimentModulesPage {{
+            QWidget#labToolsC1PlaceholderPage, QWidget#labToolsExperimentModulesPage, QWidget#labToolsNucleicAcidExperimentsPage {{
                 background: {COLORS["background"]};
                 color: {COLORS["text"]};
                 font-size: {FONT_SIZE["body"]}px;

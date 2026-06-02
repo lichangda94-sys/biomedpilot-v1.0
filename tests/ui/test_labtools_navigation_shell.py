@@ -91,7 +91,6 @@ def test_experiment_modules_route_to_expected_second_level_list(labtools_window)
 @pytest.mark.parametrize(
     ("page_key", "semantic_key", "expected_text"),
     [
-        ("nucleic_acid_experiments", "labtools.page.nucleic_acid_experiments", "PCR/qPCR adapters"),
         ("immuno_absorbance", "labtools.page.immuno_absorbance", "ELISA/BCA formal"),
         ("ihc", "labtools.page.ihc", "IHC record model"),
     ],
@@ -113,6 +112,22 @@ def test_labtools_unconnected_secondary_routes_are_explicitly_disabled(
     assert disabled is not None
     assert not disabled.isEnabled()
     assert expected_text in disabled.property("disabledReason")
+
+
+def test_labtools_nucleic_acid_secondary_route_calls_qpcr_adapter(labtools_window) -> None:
+    page = labtools_window._labtools_page
+    _primary_button(labtools_window, "experiment_modules").click()
+
+    _secondary_button(labtools_window, "nucleic_acid_experiments").click()
+
+    current_page = page.current_page_widget()
+    tabs = current_page.findChild(QTabWidget, "nucleicAcidExperimentTabs")
+    assert page.current_page_key() == "nucleic_acid_experiments"
+    assert page.property("semanticKey") == "labtools.page.nucleic_acid_experiments"
+    assert current_page.property("connectionStatus") == "connected"
+    assert tabs is not None
+    assert current_page.findChild(QPushButton, "qpcrMixCalculateButton") is not None
+    assert current_page.findChild(QPushButton, "nucleicPrimerRegistryGateDisabledButton").property("disabledReason")
 
 
 def test_labtools_c2_primary_routes_call_backend_widgets(labtools_window) -> None:
