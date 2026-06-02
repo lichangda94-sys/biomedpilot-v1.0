@@ -1,7 +1,7 @@
 # UI Route Contract - Meta Batch 7 Full-text & Extraction
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `4211bb71deebab14024fb344dae8c2e5d289e5b9`
+- head: `4300b4ab1f913d88d2278a7ada0ac238c470b66e`
 - scope: Meta mature UIShell Full-text & Extraction page: fulltext registry, extraction schema selection, manual extraction draft, and disabled placeholder tabs.
 - rows: `6`
 - connected: `4`
