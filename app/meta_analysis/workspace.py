@@ -217,6 +217,20 @@ _META_STATUS_SEMANTIC_KEYS = {
     "planned": FeatureStatusKey.PLANNED.value,
 }
 
+_META_TARGET_PAGE_HEADER_TEXT = {
+    "project_home": ("Meta 分析 / Meta Analysis", "系统综述与 Meta 分析流程管理，当前为 Developer Preview（本地测试版）。"),
+    "question_meta_type": ("Meta Analysis / 研究问题与 Meta 类型", "定义研究问题，选择适合的 Meta 分析类型，系统将为您推荐后续流程与方法。"),
+    "search_strategy": ("检索策略 / Search Strategy Builder", "构建英文检索式，管理检索数据库与字段，当前为 Developer Preview。"),
+    "import_dedup": ("文献导入与去重 / Import & Deduplication", "导入文献、维护文献库和去重候选；所有写入必须保留人工审核。"),
+    "screening": ("筛选 / Screening Workspace", "标题与摘要筛选、人工决策、AI 建议仅供参考。"),
+    "fulltext_extraction": ("全文与数据提取 / Full-text & Extraction", "管理全文获取状态、进行数据提取与质控追踪，确保数据提取逻辑和可追溯。"),
+    "quality_assessment": ("质量评价 / Quality Assessment", "按 Meta 类型选择评价工具；当前保存动作仍为 reviewer-confirmed gate。"),
+    "analysis_tasks": ("统计分析 / Meta Analysis Tasks", "显示类型专属统计任务边界；正式统计执行仍保持 gate。"),
+    "result_report": ("结果与报告 / Result & Report", "结果审阅和报告草稿需要正式统计结果与 reviewer acceptance。"),
+    "report_export": ("报告导出 / Report Export", "当前结果未通过 Report-ready Gate，正式报告生成与导出功能已禁用。"),
+    "meta_settings": ("Meta 设置 / Meta Settings", "Meta 偏好、日志和外部资源检测入口；不执行正式分析。"),
+}
+
 
 def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
     version_status = f"{APP_VERSION} · 内部测试版 / {META_SOFTWARE_STATUS} · {META_ANALYSIS_MAINLINE_CONTRACT_VERSION}"
@@ -4242,24 +4256,12 @@ if QWidget is not None:
             pages = {page.key: page for page in meta_target_ia_pages()}
             current = pages[self._current_target_page_key]
             if hasattr(self, "_workspace_title_label"):
-                if self._current_target_page_key == "question_meta_type":
-                    self._workspace_title_label.setText("Meta Analysis / 研究问题与 Meta 类型")
-                    self._workspace_subtitle_label.setText("定义研究问题，选择适合的 Meta 分析类型，系统将为您推荐后续流程与方法。")
-                elif self._current_target_page_key == "search_strategy":
-                    self._workspace_title_label.setText("检索策略 / Search Strategy Builder")
-                    self._workspace_subtitle_label.setText("构建英文检索式，管理检索数据库与字段，当前为 Developer Preview。")
-                elif self._current_target_page_key == "screening":
-                    self._workspace_title_label.setText("筛选 / Screening Workspace")
-                    self._workspace_subtitle_label.setText("标题与摘要筛选、人工决策、AI 建议仅供参考。")
-                elif self._current_target_page_key == "fulltext_extraction":
-                    self._workspace_title_label.setText("全文与数据提取 / Full-text & Extraction")
-                    self._workspace_subtitle_label.setText("管理全文获取状态、进行数据提取与质控追踪，确保数据提取逻辑和可追溯。")
-                elif self._current_target_page_key == "result_report":
-                    self._workspace_title_label.setText("导出与报告 / Export & Report")
-                    self._workspace_subtitle_label.setText("当前结果未通过 Report-ready Gate，正式报告生成与导出功能已禁用。")
-                elif self._current_target_page_key == "project_home":
-                    self._workspace_title_label.setText("Meta 分析 / Meta Analysis")
-                    self._workspace_subtitle_label.setText("系统综述与 Meta 分析流程管理，当前为 Developer Preview（本地测试版）。")
+                title, subtitle = _META_TARGET_PAGE_HEADER_TEXT.get(
+                    self._current_target_page_key,
+                    ("Meta 分析 / Meta Analysis", "系统综述与 Meta 分析流程管理，当前为 Developer Preview（本地测试版）。"),
+                )
+                self._workspace_title_label.setText(title)
+                self._workspace_subtitle_label.setText(subtitle)
             for key, button in self._target_ia_buttons.items():
                 is_current = key == self._current_target_page_key
                 button.setChecked(is_current)

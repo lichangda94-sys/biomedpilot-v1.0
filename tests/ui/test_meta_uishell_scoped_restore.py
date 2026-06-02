@@ -71,6 +71,29 @@ def test_meta_uishell_target_ia_nav_items_live_click_pages(qt_app) -> None:
         assert widget.current_target_page_key() == page_key
 
 
+def test_meta_target_ia_header_titles_follow_current_page(qt_app) -> None:
+    widget = MetaAnalysisWorkspaceWidget()
+    expected = {
+        "project_home": "Meta 分析 / Meta Analysis",
+        "question_meta_type": "Meta Analysis / 研究问题与 Meta 类型",
+        "search_strategy": "检索策略 / Search Strategy Builder",
+        "import_dedup": "文献导入与去重 / Import & Deduplication",
+        "screening": "筛选 / Screening Workspace",
+        "fulltext_extraction": "全文与数据提取 / Full-text & Extraction",
+        "quality_assessment": "质量评价 / Quality Assessment",
+        "analysis_tasks": "统计分析 / Meta Analysis Tasks",
+        "result_report": "结果与报告 / Result & Report",
+        "report_export": "报告导出 / Report Export",
+        "meta_settings": "Meta 设置 / Meta Settings",
+    }
+
+    for page_key, title in expected.items():
+        widget.show_target_ia_page(page_key)
+        qt_app.processEvents()
+
+        assert widget._workspace_title_label.text() == title
+
+
 def test_meta_uishell_buttons_are_not_empty_and_disabled_buttons_explain_gate(qt_app) -> None:
     widget = MetaAnalysisWorkspaceWidget()
     gaps: list[str] = []
