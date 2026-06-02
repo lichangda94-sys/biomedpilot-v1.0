@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "created_at": "2026-06-02T14:37:19.530318+00:00",
+  "created_at": "2026-06-02T14:40:56.712233+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
+  "head": "bc30258f58513f598720a3689d708e1096a161b7",
   "summary": {
     "batch_count": 24,
     "row_count": 477,
@@ -10,8 +10,8 @@
     "disabled": 103,
     "broken": 0,
     "freshness": {
-      "current-head-proof": 7,
-      "prior-proof-docs-only-head-drift": 17
+      "current-head-proof": 4,
+      "prior-proof-docs-only-head-drift": 20
     }
   },
   "modules": {
@@ -37,7 +37,7 @@
       "connected": 144,
       "disabled": 15,
       "broken": 0,
-      "prior-proof-docs-only-head-drift": 4
+      "current-head-proof": 4
     },
     "Meta Analysis": {
       "batches": 7,
@@ -45,7 +45,7 @@
       "connected": 49,
       "disabled": 22,
       "broken": 0,
-      "current-head-proof": 7
+      "prior-proof-docs-only-head-drift": 7
     },
     "Shell": {
       "batches": 1,
@@ -259,8 +259,8 @@
     {
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH2.json",
       "branch": "integration/release-bio-c1-ui-shell",
-      "evidence_head": "13128f797492631045373d8a21437d47d658eda3",
-      "freshness": "prior-proof-docs-only-head-drift",
+      "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
+      "freshness": "current-head-proof",
       "row_count": 21,
       "connected": 18,
       "disabled": 3,
@@ -282,8 +282,8 @@
     {
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH3_CELL_EXPERIMENTS.json",
       "branch": "integration/release-bio-c1-ui-shell",
-      "evidence_head": "fa4871dee1258d7006169cd21b77d38161c2e1a7",
-      "freshness": "prior-proof-docs-only-head-drift",
+      "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
+      "freshness": "current-head-proof",
       "row_count": 44,
       "connected": 38,
       "disabled": 6,
@@ -300,8 +300,8 @@
     {
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH4_PROTEIN_WB.json",
       "branch": "integration/release-bio-c1-ui-shell",
-      "evidence_head": "13128f797492631045373d8a21437d47d658eda3",
-      "freshness": "prior-proof-docs-only-head-drift",
+      "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
+      "freshness": "current-head-proof",
       "row_count": 83,
       "connected": 82,
       "disabled": 1,
@@ -319,8 +319,8 @@
     {
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH5_SECONDARY_REMAINDER.json",
       "branch": "integration/release-bio-c1-ui-shell",
-      "evidence_head": "13128f797492631045373d8a21437d47d658eda3",
-      "freshness": "prior-proof-docs-only-head-drift",
+      "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
+      "freshness": "current-head-proof",
       "row_count": 11,
       "connected": 6,
       "disabled": 5,
@@ -338,7 +338,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_META_BATCH3.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 33,
       "connected": 18,
       "disabled": 15,
@@ -355,7 +355,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_META_BATCH4_PUBMED_HANDOFF.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 13,
       "connected": 12,
       "disabled": 1,
@@ -376,7 +376,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_META_BATCH5_DEDUP_SCREENING.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 6,
       "connected": 3,
       "disabled": 3,
@@ -393,7 +393,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_META_BATCH6_SCREENING_DECISIONS.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 7,
       "connected": 7,
       "disabled": 0,
@@ -410,7 +410,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_META_BATCH7_FULLTEXT_EXTRACTION.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 6,
       "connected": 4,
       "disabled": 2,
@@ -427,7 +427,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_META_BATCH8_QUALITY_ASSESSMENT.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 3,
       "connected": 3,
       "disabled": 0,
@@ -444,7 +444,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_META_BATCH9_ANALYSIS_TASKS.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "fc2cdb2028d6d01d1ccdac1906b3d5b2dbc66881",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 3,
       "connected": 2,
       "disabled": 1,

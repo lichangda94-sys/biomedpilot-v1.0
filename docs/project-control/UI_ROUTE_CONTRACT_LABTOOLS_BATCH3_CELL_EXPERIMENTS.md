@@ -1,8 +1,8 @@
 # UI Route Contract LabTools Batch 3: Cell Experiments
 
-- Created: `2026-06-02T13:33:45.561132+00:00`
+- Created: `2026-06-02T14:40:19.186339+00:00`
 - Branch: `integration/release-bio-c1-ui-shell`
-- HEAD: `fa4871dee1258d7006169cd21b77d38161c2e1a7`
+- HEAD: `bc30258f58513f598720a3689d708e1096a161b7`
 - Scope: LabTools Cell Experiments deep live-click contract for profile, inventory, record templates, and cell image-analysis run-request gates.
 
 ## Summary

@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_labtools_batch3_cell_experiments.v1",
-  "created_at": "2026-06-02T13:33:45.561132+00:00",
+  "created_at": "2026-06-02T14:40:19.186339+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "fa4871dee1258d7006169cd21b77d38161c2e1a7",
+  "head": "bc30258f58513f598720a3689d708e1096a161b7",
   "scope": "LabTools Cell Experiments deep live-click contract for profile, inventory, record templates, and cell image-analysis run-request gates.",
   "summary": {
     "row_count": 44,
