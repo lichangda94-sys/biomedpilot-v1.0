@@ -1,0 +1,122 @@
+{
+  "schema_version": "ui_route_contract_bio_batch13_tcga_gtex_data_check.v1",
+  "created_at": "2026-06-02T10:47:16+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "66e528d05d913d148eb6461014b3ea03a8735b60",
+  "scope": "Bioinformatics TCGA/GTEx light-validation build outputs into mature Data Check page: pre-recognition selection, recognition report, readiness report, and analysis capability matrix.",
+  "gate_policy": {
+    "light_validation_mode": "1",
+    "formal_analysis": "not opened by this batch",
+    "production_use": "recognition/readiness artifacts are preflight evidence, not report-ready production analysis"
+  },
+  "screenshots": [
+    {
+      "name": "01_tcga_built_source_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/01_tcga_built_source_ready.png"
+    },
+    {
+      "name": "01_gtex_built_source_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/01_gtex_built_source_ready.png"
+    },
+    {
+      "name": "02_data_check_tcga_gtex_selected",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/02_data_check_tcga_gtex_selected.png"
+    },
+    {
+      "name": "03_data_check_recognition_done",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/03_data_check_recognition_done.png"
+    },
+    {
+      "name": "04_readiness_before_run",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/04_readiness_before_run.png"
+    },
+    {
+      "name": "05_readiness_after_run",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch13_tcga_gtex_data_check/05_readiness_after_run.png"
+    }
+  ],
+  "summary": {
+    "row_count": 5,
+    "connected": 5,
+    "disabled": 0,
+    "broken": 0,
+    "failures": []
+  },
+  "rows": [
+    {
+      "contract_id": "BIO-B13-SETUP-TCGA-BUILD-SOURCE",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsTcgaBuildExpressionButton",
+      "label": "TCGA build setup",
+      "backend_capability": "app.bioinformatics.data_sources.tcga_expression_builder.TCGAExpressionQuantificationBuilder.build_from_record",
+      "source_file": "app/bioinformatics/data_sources/tcga_expression_builder/TCGAExpressionQuantificationBuilder.py",
+      "runtime_effect": "TCGA expression build registered as reference source for Data Check",
+      "artifact_evidence": "standardized_data/tcga/tcga_thca/tcga_b64_7fb4b6d189/data_prepared/tcga/tcga_expression_build_manifest.json",
+      "live_click_test": "route_state_assertion_after_visible_clicks",
+      "status": "connected",
+      "observed": "standardized_data/tcga/tcga_thca/tcga_b64_7fb4b6d189/data_prepared/tcga/tcga_expression_build_manifest.json",
+      "disabled_reason": "",
+      "batch": "Batch 13: Bioinformatics TCGA/GTEx Data Check recognition/readiness"
+    },
+    {
+      "contract_id": "BIO-B13-SETUP-GTEX-BUILD-SOURCE",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsGtexBuildExpressionButton",
+      "label": "GTEx build setup",
+      "backend_capability": "app.bioinformatics.data_sources.gtex_expression_builder.GTExExpressionMatrixBuilder.build_from_record",
+      "source_file": "app/bioinformatics/data_sources/gtex_expression_builder/GTExExpressionMatrixBuilder.py",
+      "runtime_effect": "GTEx expression build registered as reference source for Data Check",
+      "artifact_evidence": "standardized_data/gtex/gtex_thyroid/gtex-g63-900d42a07d/data_prepared/gtex/gtex_expression_build_manifest.json",
+      "live_click_test": "route_state_assertion_after_visible_clicks",
+      "status": "connected",
+      "observed": "standardized_data/gtex/gtex_thyroid/gtex-g63-900d42a07d/data_prepared/gtex/gtex_expression_build_manifest.json",
+      "disabled_reason": "",
+      "batch": "Batch 13: Bioinformatics TCGA/GTEx Data Check recognition/readiness"
+    },
+    {
+      "contract_id": "BIO-B13-DATA-CHECK-PRE-INPUT-LIST",
+      "page_key": "data_check_preparation",
+      "object_name": "preRecognitionInputList",
+      "label": "pre-recognition source list",
+      "backend_capability": "app.bioinformatics.workflow_pages._pending_data_check_rows",
+      "source_file": "app/bioinformatics/workflow_pages.py",
+      "runtime_effect": "renders TCGA/GTEx expression build outputs as selectable pre-recognition inputs",
+      "artifact_evidence": "preRecognitionInputList rows=2; contains TCGA and GTEx",
+      "live_click_test": "route_state_assertion_after_visible_clicks",
+      "status": "connected",
+      "observed": "preRecognitionInputList rows=2; contains TCGA and GTEx",
+      "disabled_reason": "",
+      "batch": "Batch 13: Bioinformatics TCGA/GTEx Data Check recognition/readiness"
+    },
+    {
+      "contract_id": "BIO-B13-DATA-CHECK-RUN-RECOGNITION-TCGA-GTEX",
+      "page_key": "data_check_preparation",
+      "object_name": "bioinformaticsRunRecognitionButton",
+      "label": "开始识别",
+      "backend_capability": "app.bioinformatics.project_recognition.run_project_recognition_for_paths",
+      "source_file": "app/bioinformatics/project_recognition.py",
+      "runtime_effect": "recognizes selected TCGA/GTEx built expression assets",
+      "artifact_evidence": "logs/recognition/recognition_report.json; recognized_data/current.json; logs/recognition/group_preview_report.json; selected_input_count=8",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "logs/recognition/recognition_report.json; recognized_data/current.json; logs/recognition/group_preview_report.json; selected_input_count=8",
+      "disabled_reason": "",
+      "batch": "Batch 13: Bioinformatics TCGA/GTEx Data Check recognition/readiness"
+    },
+    {
+      "contract_id": "BIO-B13-DATA-CHECK-RUN-READINESS-TCGA-GTEX",
+      "page_key": "data_check_preparation",
+      "object_name": "bioinformaticsRunDataCheckButton",
+      "label": "重新运行数据检查",
+      "backend_capability": "app.bioinformatics.project_readiness.run_project_readiness",
+      "source_file": "app/bioinformatics/project_readiness.py",
+      "runtime_effect": "writes readiness report and analysis capability matrix for TCGA/GTEx built outputs",
+      "artifact_evidence": "logs/readiness/readiness_report.json; manifests/analysis_capability_matrix.json; overall_status=ready_with_warnings",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "logs/readiness/readiness_report.json; manifests/analysis_capability_matrix.json; overall_status=ready_with_warnings",
+      "disabled_reason": "",
+      "batch": "Batch 13: Bioinformatics TCGA/GTEx Data Check recognition/readiness"
+    }
+  ]
+}
