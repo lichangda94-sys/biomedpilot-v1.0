@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "created_at": "2026-06-02T14:40:56.712233+00:00",
+  "created_at": "2026-06-02T14:44:34.820855+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "bc30258f58513f598720a3689d708e1096a161b7",
+  "head": "b427a7dfbd5f7ee7001152c4789d92dba3af5870",
   "summary": {
     "batch_count": 24,
     "row_count": 477,
@@ -10,8 +10,7 @@
     "disabled": 103,
     "broken": 0,
     "freshness": {
-      "current-head-proof": 4,
-      "prior-proof-docs-only-head-drift": 20
+      "prior-proof-docs-only-head-drift": 24
     }
   },
   "modules": {
@@ -37,7 +36,7 @@
       "connected": 144,
       "disabled": 15,
       "broken": 0,
-      "current-head-proof": 4
+      "prior-proof-docs-only-head-drift": 4
     },
     "Meta Analysis": {
       "batches": 7,
@@ -260,7 +259,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH2.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 21,
       "connected": 18,
       "disabled": 3,
@@ -283,7 +282,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH3_CELL_EXPERIMENTS.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 44,
       "connected": 38,
       "disabled": 6,
@@ -301,7 +300,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH4_PROTEIN_WB.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 83,
       "connected": 82,
       "disabled": 1,
@@ -320,7 +319,7 @@
       "file": "docs/project-control/UI_ROUTE_CONTRACT_LABTOOLS_BATCH5_SECONDARY_REMAINDER.json",
       "branch": "integration/release-bio-c1-ui-shell",
       "evidence_head": "bc30258f58513f598720a3689d708e1096a161b7",
-      "freshness": "current-head-proof",
+      "freshness": "prior-proof-docs-only-head-drift",
       "row_count": 11,
       "connected": 6,
       "disabled": 5,

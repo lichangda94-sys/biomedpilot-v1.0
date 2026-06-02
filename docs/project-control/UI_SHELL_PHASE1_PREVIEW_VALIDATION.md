@@ -8,9 +8,9 @@
 
 - `python3 scripts/package_app.py --app-name "BioMedPilot Integration Preview" --smoke-test`: passed.
 - `codesign --verify --deep --strict --verbose=2 "dist/BioMedPilot Integration Preview.app"`: passed.
-- `open -W -n "dist/BioMedPilot Integration Preview.app" --args --gui-startup-check --gui-startup-check-output /tmp/biomedpilot_phase1_shell_f650bfd_gui_startup.json`: passed.
+- `open -W -n "dist/BioMedPilot Integration Preview.app" --args --gui-startup-check --gui-startup-check-output /tmp/biomedpilot_phase1_shell_b427a7d_gui_startup.json`: passed.
 - GUI startup JSON: `status=passed`, `window_visible=true`, `window_active=true`, `window_title=BioMedPilot / 医研智析`, `window_size={'width': 1120, 'height': 720}`.
-- Rebuilt package git head: `f650bfd`.
+- Rebuilt package git head: `b427a7d`.
 - Bundle executable: `BioMedPilotIntegrationPreview`.
 - Launcher architecture: `Mach-O 64-bit executable arm64`.
 
