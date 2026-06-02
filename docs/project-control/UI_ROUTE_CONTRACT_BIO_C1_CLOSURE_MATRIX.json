@@ -1,0 +1,495 @@
+{
+  "schema_version": "ui_route_contract_bio_c1_closure_matrix.v1",
+  "created_at": "2026-06-02T08:41:38+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "fdf14a4ff6e9a7ce92a6f58e42f7ac40db278adf",
+  "scope": "Bioinformatics C1 mature UIShell 7-step page route contract closure: UI page -> backend capability -> branch/source -> live-click or disabled-reason evidence.",
+  "inputs": {
+    "batch4_formal_deg": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json",
+      "schema_version": "ui_route_contract_bio_batch4_formal_deg.v1",
+      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "summary": {
+        "row_count": 8,
+        "connected": 8,
+        "disabled": 0,
+        "broken": 0,
+        "failures": []
+      }
+    },
+    "batch5_enrichment": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json",
+      "schema_version": "ui_route_contract_bio_batch5_enrichment.v1",
+      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "summary": {
+        "row_count": 9,
+        "connected": 4,
+        "disabled": 5,
+        "broken": 0,
+        "failures": []
+      }
+    },
+    "batch6_survival": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json",
+      "schema_version": "ui_route_contract_bio_batch6_survival.v1",
+      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "summary": {
+        "row_count": 9,
+        "connected": 4,
+        "disabled": 5,
+        "broken": 0,
+        "failures": []
+      }
+    },
+    "batch7_report_export": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json",
+      "schema_version": "ui_route_contract_bio_batch7_report_export.v1",
+      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "summary": {
+        "row_count": 13,
+        "connected": 13,
+        "disabled": 0,
+        "broken": 0,
+        "failures": []
+      }
+    },
+    "batch8_visible_buttons": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json",
+      "schema_version": "ui_route_contract_bio_batch8_visible_buttons.v1",
+      "head": "b47d29ba66a4395cf0ab7324df9d8cd42adccd41",
+      "summary": {
+        "row_count": 94,
+        "connected": 56,
+        "disabled": 38,
+        "broken": 0,
+        "external_open_calls": 4,
+        "failures": []
+      }
+    },
+    "batch9_data_prep_adapters": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json",
+      "schema_version": "ui_route_contract_bio_batch9_data_prep_adapters.v1",
+      "head": "546e66394ef2f2fb745b804eb5cb66967be419a0",
+      "summary": {
+        "row_count": 9,
+        "connected": 9,
+        "broken": 0,
+        "failures": []
+      }
+    }
+  },
+  "summary": {
+    "ui_page_count": 7,
+    "capability_row_count": 7,
+    "input_row_count": 142,
+    "connected_rows": 94,
+    "disabled_rows_with_reason": 48,
+    "broken": 0,
+    "failures": [],
+    "closure_status": "passed_with_documented_gaps"
+  },
+  "page_baselines": [
+    {
+      "page_key": "project_home",
+      "ui_page": "Project Home",
+      "visual_baseline": "UIShell 7-step Bio high-fidelity gated shell",
+      "source_branch": "codex/integration-labtools-ui-c2-carryover",
+      "source_commits": [
+        "08e9bd1",
+        "900ba60",
+        "2063ce8",
+        "74c19ad"
+      ],
+      "visible_button_summary": {
+        "connected": 9,
+        "total": 13,
+        "disabled": 4
+      }
+    },
+    {
+      "page_key": "data_source",
+      "ui_page": "Data Source",
+      "visual_baseline": "UIShell 7-step Bio high-fidelity gated shell",
+      "source_branch": "codex/integration-labtools-ui-c2-carryover",
+      "source_commits": [
+        "08e9bd1",
+        "900ba60",
+        "2063ce8",
+        "74c19ad"
+      ],
+      "visible_button_summary": {
+        "connected": 7,
+        "total": 17,
+        "disabled": 10
+      }
+    },
+    {
+      "page_key": "data_check_preparation",
+      "ui_page": "Data Check & Preparation",
+      "visual_baseline": "UIShell 7-step Bio high-fidelity gated shell",
+      "source_branch": "codex/integration-labtools-ui-c2-carryover",
+      "source_commits": [
+        "08e9bd1",
+        "62739aa",
+        "2063ce8",
+        "74c19ad"
+      ],
+      "visible_button_summary": {
+        "connected": 6,
+        "total": 7,
+        "disabled": 1
+      }
+    },
+    {
+      "page_key": "group_design",
+      "ui_page": "Group & Design",
+      "visual_baseline": "UIShell 7-step Bio high-fidelity gated shell",
+      "source_branch": "codex/integration-labtools-ui-c2-carryover",
+      "source_commits": [
+        "08e9bd1",
+        "62739aa",
+        "2063ce8",
+        "74c19ad"
+      ],
+      "visible_button_summary": {
+        "connected": 6,
+        "total": 16,
+        "disabled": 10
+      }
+    },
+    {
+      "page_key": "analysis_tasks",
+      "ui_page": "Analysis Tasks",
+      "visual_baseline": "UIShell 7-step Bio high-fidelity gated shell",
+      "source_branch": "codex/integration-labtools-ui-c2-carryover",
+      "source_commits": [
+        "08e9bd1",
+        "4061d72",
+        "2063ce8",
+        "74c19ad"
+      ],
+      "visible_button_summary": {
+        "disabled": 4,
+        "total": 15,
+        "connected": 11
+      }
+    },
+    {
+      "page_key": "result_report",
+      "ui_page": "Result & Report",
+      "visual_baseline": "UIShell 7-step Bio high-fidelity gated shell",
+      "source_branch": "codex/integration-labtools-ui-c2-carryover",
+      "source_commits": [
+        "08e9bd1",
+        "2d5a560",
+        "2063ce8",
+        "74c19ad"
+      ],
+      "visible_button_summary": {
+        "connected": 11,
+        "total": 19,
+        "disabled": 8
+      }
+    },
+    {
+      "page_key": "report_export",
+      "ui_page": "Report Export",
+      "visual_baseline": "UIShell 7-step Bio high-fidelity gated shell",
+      "source_branch": "codex/integration-labtools-ui-c2-carryover",
+      "source_commits": [
+        "08e9bd1",
+        "2d5a560",
+        "2063ce8",
+        "74c19ad"
+      ],
+      "visible_button_summary": {
+        "connected": 6,
+        "total": 7,
+        "disabled": 1
+      }
+    }
+  ],
+  "capability_matrix": [
+    {
+      "ui_page": "Project Home",
+      "requirement": "Project shell, project create/open/current-project routing",
+      "status": "connected",
+      "evidence_batches": [
+        "batch8_visible_buttons"
+      ],
+      "button_contracts": [
+        "BIO-BATCH8-PROJECT_HOME"
+      ],
+      "backend_capability": "app.bioinformatics.project_home / BioinformaticsWorkspaceWidget route adapters",
+      "current_strategy": "Mature page retained; visible buttons live-clicked or explicitly disabled.",
+      "remaining_gap": "Project Center recent-project backend is still placeholder and must not be treated as connected."
+    },
+    {
+      "ui_page": "Data Source",
+      "requirement": "GEO / Local / TCGA / GTEx entry points connect to acquisition/retrieval/recognition, not direct analysis",
+      "status": "partial",
+      "evidence_batches": [
+        "batch8_visible_buttons",
+        "batch9_data_prep_adapters"
+      ],
+      "button_contracts": [
+        "BIO-BATCH8-DATA_SOURCE",
+        "BIO-B9-ACQUISITION-REGISTER-LOCAL",
+        "BIO-B9-DATA-SOURCE-LOCAL-DRAFT"
+      ],
+      "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff",
+      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain.",
+      "remaining_gap": "GEO/TCGA/GTEx online retrieval has request/route evidence only; live network retrieval artifacts are not proven by C1 batches yet."
+    },
+    {
+      "ui_page": "Data Check & Preparation",
+      "requirement": "Data recognition, dependency/readiness detection, and preflight artifacts",
+      "status": "connected",
+      "evidence_batches": [
+        "batch8_visible_buttons",
+        "batch9_data_prep_adapters"
+      ],
+      "button_contracts": [
+        "BIO-B9-DATA-CHECK-RUN-RECOGNITION",
+        "BIO-B9-DATA-CHECK-RUN-READINESS",
+        "BIO-B9-DATA-CHECK-OPEN-STANDARDIZATION",
+        "BIO-B9-DATA-CHECK-GENERATE-STANDARDIZED-ASSETS"
+      ],
+      "backend_capability": "project_recognition; project_readiness; project_standardization",
+      "current_strategy": "Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests.",
+      "remaining_gap": "Formal remote dataset retrieval must still be proven separately before claiming full external data import."
+    },
+    {
+      "ui_page": "Group & Design",
+      "requirement": "Group/comparison/covariate state and blocker handling",
+      "status": "connected",
+      "evidence_batches": [
+        "batch8_visible_buttons",
+        "batch9_data_prep_adapters"
+      ],
+      "button_contracts": [
+        "BIO-B9-GROUP-DESIGN-SUGGEST-COMPARISON",
+        "BIO-B9-GROUP-DESIGN-SAVE-CONFIRMED-DESIGN",
+        "BIO-B9-GROUP-DESIGN-CONTINUE-ANALYSIS-TASKS"
+      ],
+      "backend_capability": "group_comparison_design build/save adapters",
+      "current_strategy": "Suggestion/save/continue buttons live-clicked and artifact-verified.",
+      "remaining_gap": "Expanded covariate modeling remains gate-scoped unless current design manifest proves the schema."
+    },
+    {
+      "ui_page": "Analysis Tasks",
+      "requirement": "Formal DEG, ORA/GSEA, survival/clinical task gates",
+      "status": "partial",
+      "evidence_batches": [
+        "batch4_formal_deg",
+        "batch5_enrichment",
+        "batch6_survival",
+        "batch8_visible_buttons"
+      ],
+      "button_contracts": [
+        "BIO-FORMAL-DEG-DEPENDENCY-DETECT",
+        "BIO-FORMAL-DEG-PARAMETER-CONFIRM",
+        "BIO-FORMAL-DEG-CONTROLLED-RUN",
+        "BIO-ENRICHMENT-RUN-PREFLIGHT",
+        "BIO-ENRICHMENT-DETECT-R-BACKEND",
+        "BIO-SURVIVAL-RUN-PREFLIGHT",
+        "BIO-SURVIVAL-DETECT-BACKEND"
+      ],
+      "backend_capability": "formal DEG executor; EnrichmentService preflight/detect; SurvivalService preflight/detect",
+      "current_strategy": "Formal DEG positive path is connected; enrichment and survival preflight/detect are connected; formal ORA/GSEA and KM/Cox/risk-score remain disabled with reasons.",
+      "remaining_gap": "Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled."
+    },
+    {
+      "ui_page": "Result & Report",
+      "requirement": "DEG review, plot, report draft, result index, artifact registry",
+      "status": "connected",
+      "evidence_batches": [
+        "batch4_formal_deg",
+        "batch7_report_export",
+        "batch8_visible_buttons"
+      ],
+      "button_contracts": [
+        "BIO-FORMAL-DEG-RESULT-REVIEW",
+        "BIO-FORMAL-DEG-REVIEW-CSV-EXPORT",
+        "BIO-FORMAL-DEG-PLOT-ARTIFACT",
+        "BIO-FORMAL-DEG-REPORT-READY-PACKAGE",
+        "BIO-RESULT-REPORT-REFRESH-CROSS-GATE"
+      ],
+      "backend_capability": "result index loader; formal DEG review/export/plot/report-ready adapters",
+      "current_strategy": "Formal DEG result review, table export, plot artifact, and report-ready package are live-click verified.",
+      "remaining_gap": "ORA/GSEA and survival preflight artifacts are not promoted into formal result rows."
+    },
+    {
+      "ui_page": "Report Export",
+      "requirement": "Report-ready gate and export only after gate passes",
+      "status": "connected",
+      "evidence_batches": [
+        "batch4_formal_deg",
+        "batch7_report_export",
+        "batch8_visible_buttons"
+      ],
+      "button_contracts": [
+        "BIO-FORMAL-DEG-REPORT-EXPORT-GATE",
+        "BIO-REPORT-EXPORT-DRAFT-CROSS-GATE",
+        "BIO-REPORT-EXPORT-FORMAL-DEG-PACKAGE-GATE"
+      ],
+      "backend_capability": "report draft manifest and formal DEG report-ready package export",
+      "current_strategy": "Formal DEG package export is live-click verified after report-ready gate; report draft stays separate from report-ready promotion.",
+      "remaining_gap": "Non-DEG report-ready exports remain closed until their formal result schemas are connected."
+    }
+  ],
+  "remaining_gaps": [
+    {
+      "ui_page": "Data Source",
+      "requirement": "GEO / Local / TCGA / GTEx entry points connect to acquisition/retrieval/recognition, not direct analysis",
+      "status": "partial",
+      "evidence_batches": [
+        "batch8_visible_buttons",
+        "batch9_data_prep_adapters"
+      ],
+      "button_contracts": [
+        "BIO-BATCH8-DATA_SOURCE",
+        "BIO-B9-ACQUISITION-REGISTER-LOCAL",
+        "BIO-B9-DATA-SOURCE-LOCAL-DRAFT"
+      ],
+      "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff",
+      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain.",
+      "remaining_gap": "GEO/TCGA/GTEx online retrieval has request/route evidence only; live network retrieval artifacts are not proven by C1 batches yet."
+    },
+    {
+      "ui_page": "Analysis Tasks",
+      "requirement": "Formal DEG, ORA/GSEA, survival/clinical task gates",
+      "status": "partial",
+      "evidence_batches": [
+        "batch4_formal_deg",
+        "batch5_enrichment",
+        "batch6_survival",
+        "batch8_visible_buttons"
+      ],
+      "button_contracts": [
+        "BIO-FORMAL-DEG-DEPENDENCY-DETECT",
+        "BIO-FORMAL-DEG-PARAMETER-CONFIRM",
+        "BIO-FORMAL-DEG-CONTROLLED-RUN",
+        "BIO-ENRICHMENT-RUN-PREFLIGHT",
+        "BIO-ENRICHMENT-DETECT-R-BACKEND",
+        "BIO-SURVIVAL-RUN-PREFLIGHT",
+        "BIO-SURVIVAL-DETECT-BACKEND"
+      ],
+      "backend_capability": "formal DEG executor; EnrichmentService preflight/detect; SurvivalService preflight/detect",
+      "current_strategy": "Formal DEG positive path is connected; enrichment and survival preflight/detect are connected; formal ORA/GSEA and KM/Cox/risk-score remain disabled with reasons.",
+      "remaining_gap": "Formal ORA/GSEA executor and survival KM/log-rank/Cox/risk-score/report-ready execution are intentionally not enabled."
+    }
+  ],
+  "screenshots": [
+    {
+      "batch": "batch4_formal_deg",
+      "page": "01_analysis_tasks_formal_deg_ready",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/01_analysis_tasks_formal_deg_ready.png"
+    },
+    {
+      "batch": "batch4_formal_deg",
+      "page": "02_result_review_formal_deg",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/02_result_review_formal_deg.png"
+    },
+    {
+      "batch": "batch4_formal_deg",
+      "page": "03_result_review_plot_gate",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/03_result_review_plot_gate.png"
+    },
+    {
+      "batch": "batch4_formal_deg",
+      "page": "04_report_export_formal_deg_ready",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260601_bio_batch4_formal_deg/04_report_export_formal_deg_ready.png"
+    },
+    {
+      "batch": "batch5_enrichment",
+      "page": "Bio Enrichment ORA/GSEA gate",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch5_enrichment/01_enrichment_ora_gsea_gate.png"
+    },
+    {
+      "batch": "batch6_survival",
+      "page": "Bio Survival/Clinical gate",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch6_survival/01_survival_clinical_gate.png"
+    },
+    {
+      "batch": "batch7_report_export",
+      "page": "Result & Report",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch7_report_export/01_result_report_cross_gate.png"
+    },
+    {
+      "batch": "batch7_report_export",
+      "page": "Report Export",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch7_report_export/02_report_export_formal_only_gate.png"
+    },
+    {
+      "batch": "batch8_visible_buttons",
+      "page": "project_home",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch8_visible_buttons/01_project_home.png"
+    },
+    {
+      "batch": "batch8_visible_buttons",
+      "page": "data_source",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch8_visible_buttons/02_data_source.png"
+    },
+    {
+      "batch": "batch8_visible_buttons",
+      "page": "data_check_preparation",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch8_visible_buttons/03_data_check_preparation.png"
+    },
+    {
+      "batch": "batch8_visible_buttons",
+      "page": "group_design",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch8_visible_buttons/04_group_design.png"
+    },
+    {
+      "batch": "batch8_visible_buttons",
+      "page": "analysis_tasks",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch8_visible_buttons/05_analysis_tasks.png"
+    },
+    {
+      "batch": "batch8_visible_buttons",
+      "page": "result_report",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch8_visible_buttons/06_result_report.png"
+    },
+    {
+      "batch": "batch8_visible_buttons",
+      "page": "report_export",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch8_visible_buttons/07_report_export.png"
+    },
+    {
+      "batch": "batch9_data_prep_adapters",
+      "page": "01_data_source",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/01_data_source.png"
+    },
+    {
+      "batch": "batch9_data_prep_adapters",
+      "page": "02_recognition_before_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/02_recognition_before_click.png"
+    },
+    {
+      "batch": "batch9_data_prep_adapters",
+      "page": "03_recognition_after_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/03_recognition_after_click.png"
+    },
+    {
+      "batch": "batch9_data_prep_adapters",
+      "page": "04_readiness",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/04_readiness.png"
+    },
+    {
+      "batch": "batch9_data_prep_adapters",
+      "page": "05_standardization_before_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/05_standardization_before_click.png"
+    },
+    {
+      "batch": "batch9_data_prep_adapters",
+      "page": "06_standardization_after_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/06_standardization_after_click.png"
+    },
+    {
+      "batch": "batch9_data_prep_adapters",
+      "page": "07_group_design_prepared",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/07_group_design_prepared.png"
+    }
+  ]
+}
