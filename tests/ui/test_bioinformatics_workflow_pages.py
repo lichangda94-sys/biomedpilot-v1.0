@@ -3613,6 +3613,36 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert survival_disabled.property("disabledReason") == "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled"
     assert "KM/Cox/log-rank" in survival_disabled.toolTip()
 
+    survival_detect_backend = widget._survival_page.findChild(QPushButton, "detectSurvivalBackendButton")
+    survival_detection_text = widget._survival_page.findChild(QPlainTextEdit, "survivalBackendDetectionText")
+    assert survival_detect_backend is not None
+    assert survival_detect_backend.isEnabled()
+    assert survival_detect_backend.property("buttonBehavior") == "calls_survival_service_detect_backend_dependencies"
+    assert survival_detect_backend.property("detectOnly") is True
+    assert survival_detect_backend.property("installAllowed") is False
+    assert survival_detect_backend.property("engineExecutionAllowed") is False
+    assert survival_detection_text is not None
+    survival_detect_backend.click()
+    survival_backend_result = survival_detection_text.toPlainText()
+    assert "lifelines:" in survival_backend_result
+    assert "formal_survival_execution_enabled=False" in survival_backend_result
+    assert "KM/log-rank/Cox/risk_score=disabled" in survival_backend_result
+
+    survival_disabled_buttons = {
+        "runKmCurveDisabledButton": "km_curve_executor_not_connected",
+        "runLogRankDisabledButton": "logrank_executor_not_connected",
+        "runCoxModelDisabledButton": "cox_model_executor_not_connected",
+        "generateRiskScoreDisabledButton": "risk_score_model_not_connected",
+        "survivalReportExportDisabledButton": "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled",
+    }
+    for object_name, disabled_reason in survival_disabled_buttons.items():
+        button = widget._survival_page.findChild(QPushButton, object_name)
+        assert button is not None
+        assert not button.isEnabled()
+        assert button.property("disabledReason") == disabled_reason
+        assert button.property("formalActionEnabled") is False
+        assert "disabled" in button.toolTip()
+
     survival_source = tmp_path / "geo_cleaning_plan.json"
     survival_source.write_text(
         json.dumps(

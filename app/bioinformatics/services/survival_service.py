@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.bioinformatics.adapters.survival_adapter import SurvivalAdapter
+from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -98,6 +99,13 @@ class SurvivalService:
             )
             self._finish_task(task, result)
             return result
+
+    def detect_backend_dependencies(self) -> dict[str, object]:
+        snapshot = check_survival_backend_dependencies()
+        snapshot["formal_survival_execution_enabled"] = False
+        snapshot["report_ready_gate_enabled"] = False
+        snapshot["message"] = "Survival backend detection is preflight-only; no KM, log-rank, Cox, risk score, or clinical report-ready execution was started."
+        return snapshot
 
     def _validate(self, cleaning_plan_path: str) -> str | None:
         if not cleaning_plan_path.strip():

@@ -28,10 +28,10 @@ def initial_survival_state() -> SurvivalPageState:
 
 try:
     from PySide6.QtCore import Signal
-    from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 except Exception:  # pragma: no cover
     Signal = None
-    QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QPushButton = QVBoxLayout = QWidget = None
+    QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QPlainTextEdit = QPushButton = QVBoxLayout = QWidget = None
 
 
 if QWidget is not None:
@@ -127,6 +127,65 @@ if QWidget is not None:
             self._error_label.setWordWrap(True)
             self._error_label.setStyleSheet("color: #B42318;")
             root.addWidget(self._error_label)
+
+            backend_button = QPushButton("检测 Survival 后端")
+            backend_button.setObjectName("detectSurvivalBackendButton")
+            backend_button.setProperty("buttonRole", "secondary")
+            backend_button.setProperty("buttonBehavior", "calls_survival_service_detect_backend_dependencies")
+            backend_button.setProperty("formalActionEnabled", False)
+            backend_button.setProperty("detectOnly", True)
+            backend_button.setProperty("installAllowed", False)
+            backend_button.setProperty("engineExecutionAllowed", False)
+            backend_button.clicked.connect(self._detect_backend_dependencies)
+            root.addWidget(backend_button)
+
+            self._backend_detection_text = QPlainTextEdit()
+            self._backend_detection_text.setObjectName("survivalBackendDetectionText")
+            self._backend_detection_text.setReadOnly(True)
+            self._backend_detection_text.setMinimumHeight(108)
+            self._backend_detection_text.setPlainText(
+                "状态：尚未检测 Survival 后端。\n"
+                "必需/候选能力：lifelines、R survival、survminer。\n"
+                "策略：detect-only，不安装、不执行 KM/log-rank/Cox/risk score。"
+            )
+            root.addWidget(self._backend_detection_text)
+
+            km_button = QPushButton("运行 KM 曲线")
+            km_button.setObjectName("runKmCurveDisabledButton")
+            km_button.setEnabled(False)
+            km_button.setProperty("buttonBehavior", "disabled_km_curve_executor_not_connected")
+            km_button.setProperty("disabledReason", "km_curve_executor_not_connected")
+            km_button.setProperty("formalActionEnabled", False)
+            km_button.setToolTip("disabled：当前只生成 survival preflight artifact，KM curve executor 尚未纳入 release gate。")
+            root.addWidget(km_button)
+
+            logrank_button = QPushButton("运行 log-rank 检验")
+            logrank_button.setObjectName("runLogRankDisabledButton")
+            logrank_button.setEnabled(False)
+            logrank_button.setProperty("buttonBehavior", "disabled_logrank_executor_not_connected")
+            logrank_button.setProperty("disabledReason", "logrank_executor_not_connected")
+            logrank_button.setProperty("formalActionEnabled", False)
+            logrank_button.setToolTip("disabled：log-rank p-value executor 未接入；不能生成正式生存统计结论。")
+            root.addWidget(logrank_button)
+
+            cox_button = QPushButton("运行 Cox 模型")
+            cox_button.setObjectName("runCoxModelDisabledButton")
+            cox_button.setEnabled(False)
+            cox_button.setProperty("buttonBehavior", "disabled_cox_model_executor_not_connected")
+            cox_button.setProperty("disabledReason", "cox_model_executor_not_connected")
+            cox_button.setProperty("formalActionEnabled", False)
+            cox_button.setToolTip("disabled：Cox model executor、HR schema 和协变量审查 gate 未接入。")
+            root.addWidget(cox_button)
+
+            risk_button = QPushButton("生成 risk score")
+            risk_button.setObjectName("generateRiskScoreDisabledButton")
+            risk_button.setEnabled(False)
+            risk_button.setProperty("buttonBehavior", "disabled_risk_score_model_not_connected")
+            risk_button.setProperty("disabledReason", "risk_score_model_not_connected")
+            risk_button.setProperty("formalActionEnabled", False)
+            risk_button.setToolTip("disabled：risk score model、评分公式、训练/验证 schema 未接入。")
+            root.addWidget(risk_button)
+
             next_button = QPushButton("下一步：报告导出")
             next_button.setObjectName("survivalReportExportDisabledButton")
             next_button.setEnabled(False)
@@ -174,6 +233,26 @@ if QWidget is not None:
                 self._summary_label.setText("没有生成生存分析预检。")
                 self._error_label.setText(result.message)
             return result
+
+        def _detect_backend_dependencies(self) -> None:
+            snapshot = self._service.detect_backend_dependencies()
+            lifelines = snapshot.get("python_lifelines") if isinstance(snapshot.get("python_lifelines"), dict) else {}
+            r_survival = snapshot.get("r_survival") if isinstance(snapshot.get("r_survival"), dict) else {}
+            r_packages = r_survival.get("packages") if isinstance(r_survival.get("packages"), dict) else {}
+            lines = [
+                f"status={snapshot.get('status')}",
+                f"lifelines: available={lifelines.get('available')} version={lifelines.get('version') or '-'}",
+                f"R survival: {r_packages.get('survival') if isinstance(r_packages, dict) else 'not_checked'}",
+                f"R survminer: {r_packages.get('survminer') if isinstance(r_packages, dict) else 'not_checked'}",
+                "install_action=none_detect_first_only",
+                "formal_survival_execution_enabled=False",
+                "report_ready_gate_enabled=False",
+                "KM/log-rank/Cox/risk_score=disabled",
+                str(snapshot.get("message") or ""),
+                "blockers=" + ", ".join(str(item) for item in snapshot.get("blockers", []) or []) if snapshot.get("blockers") else "blockers=none",
+                "warnings=" + ", ".join(str(item) for item in snapshot.get("warnings", []) or []) if snapshot.get("warnings") else "warnings=none",
+            ]
+            self._backend_detection_text.setPlainText("\n".join(lines))
 
         def _auto_select_project_artifact(self) -> None:
             if self._project_root is None:
