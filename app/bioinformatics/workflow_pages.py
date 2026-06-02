@@ -98,6 +98,7 @@ from app.bioinformatics.data_sources import (
     write_gtex_download_plan_draft,
     write_tcga_download_plan_draft,
 )
+from app.bioinformatics.data_sources.live_validation import light_validation_enabled
 from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
 from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
 from app.bioinformatics.immune_infiltration import (
@@ -244,6 +245,7 @@ QFrame#dataSourcePanel,
 QFrame#dataSourceSideCard,
 QFrame#dataSourceQuickAccessCard,
 QFrame#bioinformaticsDataSourceGatedOverview,
+QFrame#bioinformaticsExternalDataAdapterPanel,
 QFrame#geoDownloadListPanel,
 QFrame#historicalCacheDataCard {
     background: #FFFFFF;
@@ -560,6 +562,12 @@ def _data_source_icon(accent: str, symbol: str, size: int) -> QIcon:
     icon.addPixmap(pixmap, QIcon.Normal)
     icon.addPixmap(pixmap, QIcon.Disabled)
     return icon
+
+
+def _set_combo_data(combo: QComboBox, value: str) -> None:
+    index = combo.findData(value)
+    if index >= 0:
+        combo.setCurrentIndex(index)
 
 
 def _side_card(title: str) -> QFrame:
@@ -1609,6 +1617,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_gtex_workflow_state()
         _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_data_source_project_gate_passes")
         self._refresh_geo_retrieval_adapter_state()
+        self._refresh_external_data_adapter_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1969,6 +1978,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         source_grid.setColumnStretch(4, 1)
         content_layout.addLayout(source_grid)
         content_layout.addWidget(self._geo_retrieval_adapter_panel())
+        content_layout.addWidget(self._external_data_adapter_panel())
         layout.addWidget(content)
 
         self._source_status_table = _table(["source", "status", "artifact / service", "blocked action", "next gate"])
@@ -2167,6 +2177,9 @@ class BioinformaticsDataSourceWidget(QWidget):
         if hasattr(self, "_geo_retrieval_panel"):
             self._geo_retrieval_panel.setVisible(source_key == "geo")
             self._refresh_geo_retrieval_adapter_state()
+        if hasattr(self, "_external_data_adapter_panel_widget"):
+            self._external_data_adapter_panel_widget.setVisible(source_key in {"tcga", "gtex"})
+            self._refresh_external_data_adapter_state()
         source = _DATA_SOURCE_REQUESTS.get(source_key)
         if source is None:
             self._set_status("未知数据来源入口。", error=True)
@@ -2195,6 +2208,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._render_gated_source_tables(selected_source=source_key)
         if source_key == "geo":
             self._refresh_geo_retrieval_adapter_state()
+        if source_key in {"tcga", "gtex"}:
+            self._refresh_external_data_adapter_state()
 
     def latest_data_source_request_path(self) -> Path | None:
         return getattr(self, "_last_data_source_request_path", None)
@@ -2259,6 +2274,81 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._geo_retrieval_status.setObjectName("bioinformaticsGeoRetrievalStatus")
         self._geo_retrieval_status.setPlainText("等待输入 GSE 编号。")
         layout.addWidget(self._geo_retrieval_status)
+        return panel
+
+    def _external_data_adapter_panel(self) -> QFrame:
+        panel = QFrame()
+        self._external_data_adapter_panel_widget = panel
+        panel.setObjectName("bioinformaticsExternalDataAdapterPanel")
+        panel.setProperty("formalActionEnabled", False)
+        panel.setVisible(False)
+        panel.setStyleSheet(
+            "QFrame#bioinformaticsExternalDataAdapterPanel { background: #F8FAFC; border: 1px solid #DDE5F0; border-radius: 12px; }"
+        )
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(10)
+        title = QLabel("TCGA / GTEx 外部数据接线")
+        title.setObjectName("dataSourceCardTitle")
+        title.setWordWrap(True)
+        subtitle = QLabel("使用当前默认项目/组织执行 metadata preview、下载计划和轻量下载/构建验收；不会自动合并 TCGA+GTEx，也不会直接运行 DEG/GSEA。")
+        subtitle.setObjectName("dataSourceMutedText")
+        subtitle.setWordWrap(True)
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+
+        tcga_row = QHBoxLayout()
+        tcga_row.setSpacing(8)
+        self._tcga_adapter_preview_button = _button("TCGA preview", "secondaryButton", self._adapter_preview_tcga)
+        self._tcga_adapter_preview_button.setObjectName("bioinformaticsTcgaPreviewButton")
+        self._tcga_adapter_preview_button.setProperty("buttonBehavior", "calls_tcga_metadata_preview_service")
+        self._tcga_adapter_plan_button = _button("TCGA 下载计划", "secondaryButton", self._adapter_create_tcga_plan)
+        self._tcga_adapter_plan_button.setObjectName("bioinformaticsTcgaCreatePlanButton")
+        self._tcga_adapter_plan_button.setProperty("buttonBehavior", "writes_tcga_download_plan_draft")
+        self._tcga_adapter_download_button = _button("TCGA 轻量下载", "secondaryButton", self._adapter_download_tcga)
+        self._tcga_adapter_download_button.setObjectName("bioinformaticsTcgaDownloadRawButton")
+        self._tcga_adapter_download_button.setProperty("buttonBehavior", "executes_tcga_download_plan_limited_or_cached")
+        self._tcga_adapter_expression_button = _button("TCGA 构建矩阵", "secondaryButton", self._adapter_build_tcga_expression)
+        self._tcga_adapter_expression_button.setObjectName("bioinformaticsTcgaBuildExpressionButton")
+        self._tcga_adapter_expression_button.setProperty("buttonBehavior", "builds_tcga_expression_matrix_artifacts")
+        for button in (
+            self._tcga_adapter_preview_button,
+            self._tcga_adapter_plan_button,
+            self._tcga_adapter_download_button,
+            self._tcga_adapter_expression_button,
+        ):
+            tcga_row.addWidget(button)
+        tcga_row.addStretch(1)
+        layout.addLayout(tcga_row)
+
+        gtex_row = QHBoxLayout()
+        gtex_row.setSpacing(8)
+        self._gtex_adapter_preview_button = _button("GTEx preview", "secondaryButton", self._adapter_preview_gtex)
+        self._gtex_adapter_preview_button.setObjectName("bioinformaticsGtexPreviewButton")
+        self._gtex_adapter_preview_button.setProperty("buttonBehavior", "calls_gtex_metadata_preview_service")
+        self._gtex_adapter_plan_button = _button("GTEx 下载计划", "secondaryButton", self._adapter_create_gtex_plan)
+        self._gtex_adapter_plan_button.setObjectName("bioinformaticsGtexCreatePlanButton")
+        self._gtex_adapter_plan_button.setProperty("buttonBehavior", "writes_gtex_download_plan_draft")
+        self._gtex_adapter_download_button = _button("GTEx 轻量下载", "secondaryButton", self._adapter_download_gtex)
+        self._gtex_adapter_download_button.setObjectName("bioinformaticsGtexDownloadRawButton")
+        self._gtex_adapter_download_button.setProperty("buttonBehavior", "executes_gtex_download_plan_limited_or_cached")
+        self._gtex_adapter_expression_button = _button("GTEx 构建矩阵", "secondaryButton", self._adapter_build_gtex_expression)
+        self._gtex_adapter_expression_button.setObjectName("bioinformaticsGtexBuildExpressionButton")
+        self._gtex_adapter_expression_button.setProperty("buttonBehavior", "builds_gtex_expression_matrix_artifacts")
+        for button in (
+            self._gtex_adapter_preview_button,
+            self._gtex_adapter_plan_button,
+            self._gtex_adapter_download_button,
+            self._gtex_adapter_expression_button,
+        ):
+            gtex_row.addWidget(button)
+        gtex_row.addStretch(1)
+        layout.addLayout(gtex_row)
+
+        self._external_data_adapter_status = _text_preview(106)
+        self._external_data_adapter_status.setObjectName("bioinformaticsExternalDataAdapterStatus")
+        self._external_data_adapter_status.setPlainText("等待选择 TCGA 或 GTEx 来源。默认验证目标：TCGA-THCA / GTEx Thyroid。")
+        layout.addWidget(self._external_data_adapter_status)
         return panel
 
     def _geo_accession_value(self) -> str:
@@ -2355,6 +2445,149 @@ class BioinformaticsDataSourceWidget(QWidget):
                 if enabled
                 else reason
             )
+
+    def _adapter_preview_tcga(self) -> TCGAPreviewSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            self._refresh_external_data_adapter_state()
+            return None
+        _set_combo_data(self._tcga_project_combo, "TCGA-THCA")
+        _set_combo_data(self._tcga_purpose_combo, "differential_expression")
+        _set_combo_data(self._tcga_sample_scope_combo, "tumor_normal")
+        summary = self.preview_tcga_downloadable_data()
+        if summary is not None:
+            self._external_data_adapter_status.setPlainText(
+                "\n".join(
+                    [
+                        f"TCGA preview：{summary.request.project_id}",
+                        f"case={summary.case_count}; sample={summary.sample_count}; file={summary.file_count}; size={format_bytes_zh(summary.estimated_size_bytes, has_unknown=summary.size_has_unknown)}",
+                        "下一步：生成下载计划草案。TCGA+GTEx 自动合并仍禁用。",
+                    ]
+                )
+            )
+        self._refresh_external_data_adapter_state()
+        return summary
+
+    def _adapter_create_tcga_plan(self) -> AcquisitionSummary | None:
+        if self._tcga_preview_summary is None:
+            self._adapter_preview_tcga()
+        summary = self.create_tcga_download_plan_draft()
+        plan_path = latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id()) if self._project_root is not None else None
+        if summary is not None:
+            self._external_data_adapter_status.setPlainText(
+                f"TCGA 下载计划已生成：{plan_path.name if plan_path else '-'}；下载按钮只在轻量验收模式启用。"
+            )
+        self._refresh_external_data_adapter_state()
+        return summary
+
+    def _adapter_download_tcga(self) -> TCGADownloadExecutionResult | None:
+        if not light_validation_enabled():
+            self._external_data_adapter_status.setPlainText("TCGA 下载未执行：需要 BIOINF_LIGHT_VALIDATION_MODE=1 或显式全量下载流程。")
+            self._set_status("TCGA 下载 gate 未打开：当前不执行大规模 GDC 下载。", error=True)
+            self._refresh_external_data_adapter_state()
+            return None
+        if latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id()) is None and self._project_root is not None:
+            self._adapter_create_tcga_plan()
+        result = self.download_tcga_raw_files()
+        if result is not None:
+            self._external_data_adapter_status.setPlainText(
+                f"TCGA 轻量下载完成：acquired={result.success_count + result.cache_hit_count}; failed={result.failed_count}; receipt={result.receipt_path}"
+            )
+        self._refresh_external_data_adapter_state()
+        return result
+
+    def _adapter_build_tcga_expression(self) -> TCGAExpressionBuildResult | None:
+        result = self.build_tcga_expression_matrix()
+        if result is not None:
+            self._external_data_adapter_status.setPlainText(
+                f"TCGA 表达矩阵已构建：sample={result.sample_count}; gene={result.gene_count}; manifest={result.build_manifest_path}"
+            )
+        self._refresh_external_data_adapter_state()
+        return result
+
+    def _adapter_preview_gtex(self) -> GTExPreviewSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            self._refresh_external_data_adapter_state()
+            return None
+        _set_combo_data(self._gtex_tissue_combo, "gtex_thyroid")
+        _set_combo_data(self._gtex_purpose_combo, "normal_expression_view")
+        summary = self.preview_gtex_downloadable_data()
+        if summary is not None:
+            self._external_data_adapter_status.setPlainText(
+                "\n".join(
+                    [
+                        f"GTEx preview：{summary.request.tissue_label_zh} ({summary.request.tissue_site_detail})",
+                        f"donor={summary.donor_count}; sample={summary.sample_count}; file={summary.file_count}",
+                        "GTEx 不自动作为 TCGA normal control。",
+                    ]
+                )
+            )
+        self._refresh_external_data_adapter_state()
+        return summary
+
+    def _adapter_create_gtex_plan(self) -> AcquisitionSummary | None:
+        if self._gtex_preview_summary is None:
+            self._adapter_preview_gtex()
+        summary = self.create_gtex_download_plan_draft()
+        plan_path = latest_gtex_download_plan_path(self._project_root, tissue_id=str(self._gtex_tissue_combo.currentData() or "")) if self._project_root is not None else None
+        if summary is not None:
+            self._external_data_adapter_status.setPlainText(
+                f"GTEx 下载计划已生成：{plan_path.name if plan_path else '-'}；可进行轻量表达切片下载。"
+            )
+        self._refresh_external_data_adapter_state()
+        return summary
+
+    def _adapter_download_gtex(self) -> GTExDownloadExecutionResult | None:
+        if not light_validation_enabled():
+            self._external_data_adapter_status.setPlainText("GTEx 下载未执行：需要 BIOINF_LIGHT_VALIDATION_MODE=1 或显式全量下载流程。")
+            self._set_status("GTEx 下载 gate 未打开：当前不执行外部表达矩阵下载。", error=True)
+            self._refresh_external_data_adapter_state()
+            return None
+        selected_tissue = str(self._gtex_tissue_combo.currentData() or "")
+        if latest_gtex_download_plan_path(self._project_root, tissue_id=selected_tissue or None) is None and self._project_root is not None:
+            self._adapter_create_gtex_plan()
+        result = self.download_gtex_raw_files()
+        if result is not None:
+            self._external_data_adapter_status.setPlainText(
+                f"GTEx 轻量下载完成：acquired={result.success_count + result.cache_hit_count}; failed={result.failed_count}; receipt={result.receipt_path}"
+            )
+        self._refresh_external_data_adapter_state()
+        return result
+
+    def _adapter_build_gtex_expression(self) -> GTExExpressionBuildResult | None:
+        result = self.build_gtex_expression_matrix()
+        if result is not None:
+            self._external_data_adapter_status.setPlainText(
+                f"GTEx 表达矩阵已构建：sample={result.sample_count}; gene={result.gene_count}; manifest={result.build_manifest_path}"
+            )
+        self._refresh_external_data_adapter_state()
+        return result
+
+    def _refresh_external_data_adapter_state(self) -> None:
+        if not hasattr(self, "_tcga_adapter_preview_button"):
+            return
+        has_project = self._project_root is not None
+        tcga_plan = latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id()) if has_project else None
+        tcga_raw = latest_tcga_raw_expression_record_path(self._project_root, project_id=self._selected_tcga_project_id()) if has_project else None
+        gtex_tissue = str(self._gtex_tissue_combo.currentData() or "") if hasattr(self, "_gtex_tissue_combo") else ""
+        gtex_plan = latest_gtex_download_plan_path(self._project_root, tissue_id=gtex_tissue or None) if has_project else None
+        gtex_raw = latest_gtex_raw_expression_record_path(self._project_root, tissue_id=gtex_tissue or None) if has_project else None
+        download_gate = light_validation_enabled()
+        states = (
+            (self._tcga_adapter_preview_button, has_project, "disabled_until_project_open"),
+            (self._tcga_adapter_plan_button, has_project and self._tcga_preview_summary is not None and self._tcga_preview_summary.is_download_plan_available, "requires_tcga_metadata_preview_artifact"),
+            (self._tcga_adapter_download_button, has_project and tcga_plan is not None and download_gate, "requires_tcga_download_plan_and_light_validation_gate"),
+            (self._tcga_adapter_expression_button, has_project and tcga_raw is not None, "requires_tcga_raw_download_receipt"),
+            (self._gtex_adapter_preview_button, has_project, "disabled_until_project_open"),
+            (self._gtex_adapter_plan_button, has_project and self._gtex_preview_summary is not None and self._gtex_preview_summary.is_download_plan_available, "requires_gtex_metadata_preview_artifact"),
+            (self._gtex_adapter_download_button, has_project and gtex_plan is not None and download_gate, "requires_gtex_download_plan_and_light_validation_gate"),
+            (self._gtex_adapter_expression_button, has_project and gtex_raw is not None, "requires_gtex_raw_download_receipt"),
+        )
+        for button, enabled, reason in states:
+            button.setEnabled(enabled)
+            button.setProperty("disabledReason", "" if enabled else reason)
+            button.setToolTip("已接入：点击会调用对应 TCGA/GTEx acquisition adapter。" if enabled else reason)
 
     def _render_gated_source_tables(self, *, selected_source: str) -> None:
         selected = selected_source or "none"
