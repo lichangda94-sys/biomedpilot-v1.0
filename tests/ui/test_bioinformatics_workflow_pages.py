@@ -1688,8 +1688,12 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     assert not widget.findChild(QPushButton, "local_importCopyPathButton").isVisible()
     assert not widget._dataset_list_panel._download_selected_button.isEnabled()
     assert not widget._dataset_list_panel._delete_selected_button.isEnabled()
-    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
-    assert check_buttons == ["下一步：数据识别"]
+    check_buttons = {button.objectName(): button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()}
+    assert check_buttons == {
+        "bioinformaticsGeoContinueRecognitionButton": "进入数据识别",
+        "primaryButton": "下一步：数据识别",
+    }
+    assert not widget.findChild(QPushButton, "bioinformaticsGeoContinueRecognitionButton").isEnabled()
     assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：0 个"
     assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
     assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据检查：0 个"
@@ -1717,8 +1721,12 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     assert not widget._dataset_list_panel._download_selected_button.isEnabled()
     assert widget._dataset_list_panel._delete_selected_button.isEnabled()
     assert widget._next_button.isEnabled()
-    check_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
-    assert check_buttons == ["下一步：数据识别"]
+    check_buttons = {button.objectName(): button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()}
+    assert check_buttons == {
+        "bioinformaticsGeoContinueRecognitionButton": "进入数据识别",
+        "primaryButton": "下一步：数据识别",
+    }
+    assert not widget.findChild(QPushButton, "bioinformaticsGeoContinueRecognitionButton").isEnabled()
     assert widget._registered_count_label.text() == "已保存数据来源：1 个；待处理：0 个；可识别：1 个"
     assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：1 个"
     assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"

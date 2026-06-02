@@ -22,6 +22,7 @@ INPUTS = {
     "batch7_report_export": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json",
     "batch8_visible_buttons": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json",
     "batch9_data_prep_adapters": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json",
+    "batch10_geo_online_retrieval": PROJECT_CONTROL / "UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json",
 }
 
 PAGE_BASELINES = {
@@ -84,15 +85,17 @@ CAPABILITY_MATRIX = [
         "ui_page": "Data Source",
         "requirement": "GEO / Local / TCGA / GTEx entry points connect to acquisition/retrieval/recognition, not direct analysis",
         "status": "partial",
-        "evidence_batches": ["batch8_visible_buttons", "batch9_data_prep_adapters"],
+        "evidence_batches": ["batch8_visible_buttons", "batch9_data_prep_adapters", "batch10_geo_online_retrieval"],
         "button_contracts": [
             "BIO-BATCH8-DATA_SOURCE",
             "BIO-B9-ACQUISITION-REGISTER-LOCAL",
             "BIO-B9-DATA-SOURCE-LOCAL-DRAFT",
+            "BIO-B10-GSE6004-DOWNLOAD-GEO-ASSETS",
+            "BIO-B10-GSE153659-DOWNLOAD-GEO-ASSETS",
         ],
         "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff",
-        "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain.",
-        "remaining_gap": "GEO/TCGA/GTEx online retrieval has request/route evidence only; live network retrieval artifacts are not proven by C1 batches yet.",
+        "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets, then recognition/readiness artifacts.",
+        "remaining_gap": "TCGA/GTEx still have request/preview/download-plan evidence but not a complete live retrieval -> recognition -> readiness chain in C1.",
     },
     {
         "ui_page": "Data Check & Preparation",
@@ -107,7 +110,7 @@ CAPABILITY_MATRIX = [
         ],
         "backend_capability": "project_recognition; project_readiness; project_standardization",
         "current_strategy": "Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests.",
-        "remaining_gap": "Formal remote dataset retrieval must still be proven separately before claiming full external data import.",
+        "remaining_gap": "TCGA/GTEx remote dataset retrieval must still be proven separately before claiming complete external data import coverage.",
     },
     {
         "ui_page": "Group & Design",

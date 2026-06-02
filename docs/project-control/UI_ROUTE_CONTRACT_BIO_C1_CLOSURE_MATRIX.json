@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_c1_closure_matrix.v1",
-  "created_at": "2026-06-02T08:41:38+00:00",
+  "created_at": "2026-06-02T09:42:07+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "fdf14a4ff6e9a7ce92a6f58e42f7ac40db278adf",
+  "head": "dc55902228f578a86799cea28b81ebd8eeaa03a3",
   "scope": "Bioinformatics C1 mature UIShell 7-step page route contract closure: UI page -> backend capability -> branch/source -> live-click or disabled-reason evidence.",
   "inputs": {
     "batch4_formal_deg": {
@@ -76,13 +76,26 @@
         "broken": 0,
         "failures": []
       }
+    },
+    "batch10_geo_online_retrieval": {
+      "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json",
+      "schema_version": "ui_route_contract_bio_batch10_geo_online_retrieval.v1",
+      "head": "dc55902228f578a86799cea28b81ebd8eeaa03a3",
+      "summary": {
+        "row_count": 18,
+        "connected": 18,
+        "disabled": 0,
+        "broken": 0,
+        "failures": [],
+        "execution_note": "GSE6004 and GSE153659 were live-clicked in separate controlled runs to avoid long-running Qt cleanup in a combined network run."
+      }
     }
   },
   "summary": {
     "ui_page_count": 7,
     "capability_row_count": 7,
-    "input_row_count": 142,
-    "connected_rows": 94,
+    "input_row_count": 160,
+    "connected_rows": 112,
     "disabled_rows_with_reason": 48,
     "broken": 0,
     "failures": [],
@@ -230,16 +243,19 @@
       "status": "partial",
       "evidence_batches": [
         "batch8_visible_buttons",
-        "batch9_data_prep_adapters"
+        "batch9_data_prep_adapters",
+        "batch10_geo_online_retrieval"
       ],
       "button_contracts": [
         "BIO-BATCH8-DATA_SOURCE",
         "BIO-B9-ACQUISITION-REGISTER-LOCAL",
-        "BIO-B9-DATA-SOURCE-LOCAL-DRAFT"
+        "BIO-B9-DATA-SOURCE-LOCAL-DRAFT",
+        "BIO-B10-GSE6004-DOWNLOAD-GEO-ASSETS",
+        "BIO-B10-GSE153659-DOWNLOAD-GEO-ASSETS"
       ],
       "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff",
-      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain.",
-      "remaining_gap": "GEO/TCGA/GTEx online retrieval has request/route evidence only; live network retrieval artifacts are not proven by C1 batches yet."
+      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets, then recognition/readiness artifacts.",
+      "remaining_gap": "TCGA/GTEx still have request/preview/download-plan evidence but not a complete live retrieval -> recognition -> readiness chain in C1."
     },
     {
       "ui_page": "Data Check & Preparation",
@@ -257,7 +273,7 @@
       ],
       "backend_capability": "project_recognition; project_readiness; project_standardization",
       "current_strategy": "Buttons write recognition, readiness, capability matrix, standardized asset, analysis-ready, and repository manifests.",
-      "remaining_gap": "Formal remote dataset retrieval must still be proven separately before claiming full external data import."
+      "remaining_gap": "TCGA/GTEx remote dataset retrieval must still be proven separately before claiming complete external data import coverage."
     },
     {
       "ui_page": "Group & Design",
@@ -345,16 +361,19 @@
       "status": "partial",
       "evidence_batches": [
         "batch8_visible_buttons",
-        "batch9_data_prep_adapters"
+        "batch9_data_prep_adapters",
+        "batch10_geo_online_retrieval"
       ],
       "button_contracts": [
         "BIO-BATCH8-DATA_SOURCE",
         "BIO-B9-ACQUISITION-REGISTER-LOCAL",
-        "BIO-B9-DATA-SOURCE-LOCAL-DRAFT"
+        "BIO-B9-DATA-SOURCE-LOCAL-DRAFT",
+        "BIO-B10-GSE6004-DOWNLOAD-GEO-ASSETS",
+        "BIO-B10-GSE153659-DOWNLOAD-GEO-ASSETS"
       ],
       "backend_capability": "create_data_source_request; register_acquisition; local source manifest handoff",
-      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain.",
-      "remaining_gap": "GEO/TCGA/GTEx online retrieval has request/route evidence only; live network retrieval artifacts are not proven by C1 batches yet."
+      "current_strategy": "All four source buttons write request drafts; Local has adapter proof into acquisition and recognition chain; visible GEO adapter live-click downloads GSE6004/GSE153659 metadata and assets, then recognition/readiness artifacts.",
+      "remaining_gap": "TCGA/GTEx still have request/preview/download-plan evidence but not a complete live retrieval -> recognition -> readiness chain in C1."
     },
     {
       "ui_page": "Analysis Tasks",
@@ -490,6 +509,56 @@
       "batch": "batch9_data_prep_adapters",
       "page": "07_group_design_prepared",
       "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/07_group_design_prepared.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE6004_01_geo_adapter_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE6004_01_geo_adapter_ready.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE6004_02_geo_metadata_downloaded",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE6004_02_geo_metadata_downloaded.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE6004_03_geo_assets_downloaded",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE6004_03_geo_assets_downloaded.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE6004_04_recognition_complete",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE6004_04_recognition_complete.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE6004_05_readiness_complete",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE6004_05_readiness_complete.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE153659_01_geo_adapter_ready",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE153659_01_geo_adapter_ready.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE153659_02_geo_metadata_downloaded",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE153659_02_geo_metadata_downloaded.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE153659_03_geo_assets_downloaded",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE153659_03_geo_assets_downloaded.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE153659_04_recognition_complete",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE153659_04_recognition_complete.png"
+    },
+    {
+      "batch": "batch10_geo_online_retrieval",
+      "page": "GSE153659_05_readiness_complete",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch10_geo_online_retrieval/GSE153659_05_readiness_complete.png"
     }
   ]
 }

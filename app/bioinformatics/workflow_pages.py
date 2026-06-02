@@ -1608,6 +1608,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_tcga_workflow_state()
         self._refresh_gtex_workflow_state()
         _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_data_source_project_gate_passes")
+        self._refresh_geo_retrieval_adapter_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1967,6 +1968,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         source_grid.addWidget(self._research_source_card(), 0, 4)
         source_grid.setColumnStretch(4, 1)
         content_layout.addLayout(source_grid)
+        content_layout.addWidget(self._geo_retrieval_adapter_panel())
         layout.addWidget(content)
 
         self._source_status_table = _table(["source", "status", "artifact / service", "blocked action", "next gate"])
@@ -2162,6 +2164,9 @@ class BioinformaticsDataSourceWidget(QWidget):
 
     def _select_gated_source_preview(self, source_key: str) -> None:
         self._render_gated_source_tables(selected_source=source_key)
+        if hasattr(self, "_geo_retrieval_panel"):
+            self._geo_retrieval_panel.setVisible(source_key == "geo")
+            self._refresh_geo_retrieval_adapter_state()
         source = _DATA_SOURCE_REQUESTS.get(source_key)
         if source is None:
             self._set_status("未知数据来源入口。", error=True)
@@ -2188,9 +2193,168 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._set_status(f"{source['title']} 已生成来源配置草稿：{draft.request_path.name}；下一步仍需进入 Data Check & Preparation。")
         self._refresh_geo_download_list()
         self._render_gated_source_tables(selected_source=source_key)
+        if source_key == "geo":
+            self._refresh_geo_retrieval_adapter_state()
 
     def latest_data_source_request_path(self) -> Path | None:
         return getattr(self, "_last_data_source_request_path", None)
+
+    def _geo_retrieval_adapter_panel(self) -> QFrame:
+        panel = QFrame()
+        self._geo_retrieval_panel = panel
+        panel.setObjectName("bioinformaticsGeoRetrievalAdapterPanel")
+        panel.setProperty("formalActionEnabled", False)
+        panel.setVisible(False)
+        panel.setStyleSheet(
+            "QFrame#bioinformaticsGeoRetrievalAdapterPanel { background: #F8FAFC; border: 1px solid #DDE5F0; border-radius: 12px; }"
+        )
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(10)
+        title = QLabel("GEO accession 获取接线")
+        title.setObjectName("dataSourceCardTitle")
+        title.setWordWrap(True)
+        subtitle = QLabel("输入 GSE 编号后依次获取元数据、下载候选资产，再进入数据识别；不直接运行 DEG/GSEA。")
+        subtitle.setObjectName("dataSourceMutedText")
+        subtitle.setWordWrap(True)
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        self._geo_accession_input = QLineEdit()
+        self._geo_accession_input.setObjectName("bioinformaticsGeoAccessionInput")
+        self._geo_accession_input.setPlaceholderText("GSE6004 / GSE153659")
+        self._geo_accession_input.setMinimumHeight(36)
+        self._geo_accession_input.textChanged.connect(lambda _: self._refresh_geo_retrieval_adapter_state())
+        row.addWidget(self._geo_accession_input, 1)
+        self._geo_search_metadata_button = _button("检索元数据", "secondaryButton", self._run_geo_accession_metadata_search)
+        self._geo_search_metadata_button.setObjectName("bioinformaticsGeoSearchMetadataButton")
+        self._geo_search_metadata_button.setProperty("buttonBehavior", "calls_geo_accession_metadata_search")
+        self._geo_add_to_project_button = _button("加入项目", "secondaryButton", self._add_geo_accession_to_project)
+        self._geo_add_to_project_button.setObjectName("bioinformaticsGeoAddToProjectButton")
+        self._geo_add_to_project_button.setProperty("buttonBehavior", "registers_geo_accession_plan")
+        row.addWidget(self._geo_search_metadata_button)
+        row.addWidget(self._geo_add_to_project_button)
+        layout.addLayout(row)
+
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        self._geo_download_metadata_button = _button("下载 GEO 元数据", "secondaryButton", self._download_geo_accession_metadata)
+        self._geo_download_metadata_button.setObjectName("bioinformaticsGeoDownloadMetadataButton")
+        self._geo_download_metadata_button.setProperty("buttonBehavior", "downloads_geo_family_soft_and_asset_manifest")
+        self._geo_download_assets_button = _button("下载候选资产", "secondaryButton", self._download_geo_accession_assets)
+        self._geo_download_assets_button.setObjectName("bioinformaticsGeoDownloadAssetsButton")
+        self._geo_download_assets_button.setProperty("buttonBehavior", "downloads_selected_geo_series_matrix_or_supplementary_assets")
+        self._geo_continue_recognition_button = _button("进入数据识别", "primaryButton", self.continue_to_recognition)
+        self._geo_continue_recognition_button.setObjectName("bioinformaticsGeoContinueRecognitionButton")
+        self._geo_continue_recognition_button.setProperty("buttonBehavior", "opens_data_check_when_geo_assets_ready")
+        actions.addWidget(self._geo_download_metadata_button)
+        actions.addWidget(self._geo_download_assets_button)
+        actions.addWidget(self._geo_continue_recognition_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+
+        self._geo_retrieval_status = _text_preview(92)
+        self._geo_retrieval_status.setObjectName("bioinformaticsGeoRetrievalStatus")
+        self._geo_retrieval_status.setPlainText("等待输入 GSE 编号。")
+        layout.addWidget(self._geo_retrieval_status)
+        return panel
+
+    def _geo_accession_value(self) -> str:
+        if not hasattr(self, "_geo_accession_input"):
+            return ""
+        accession = _normalize_gse_id(self._geo_accession_input.text())
+        if accession:
+            self._geo_accession_input.setText(accession)
+        return accession
+
+    def _run_geo_accession_metadata_search(self) -> GseDatasetPreview | None:
+        accession = self._geo_accession_value()
+        if not accession:
+            self._geo_retrieval_status.setPlainText("请输入 GSE 编号。")
+            self._set_status("请输入 GSE 编号。", error=True)
+            self._refresh_geo_retrieval_adapter_state()
+            return None
+        self._gse_input.setText(accession)
+        preview = self.search_gse_dataset()
+        if preview is not None:
+            self._geo_retrieval_status.setPlainText(
+                "\n".join(
+                    [
+                        f"GSE：{preview.gse_id}",
+                        f"标题：{preview.title}",
+                        f"平台：{preview.platform}",
+                        f"样本数：{preview.sample_count}",
+                        "下一步：加入项目后下载 GEO 元数据。",
+                    ]
+                )
+            )
+        self._refresh_geo_retrieval_adapter_state()
+        return preview
+
+    def _add_geo_accession_to_project(self) -> AcquisitionSummary | None:
+        accession = self._geo_accession_value()
+        if not accession:
+            self._set_status("请输入 GSE 编号。", error=True)
+            self._refresh_geo_retrieval_adapter_state()
+            return None
+        if self._gse_preview is None or self._gse_preview.gse_id.upper() != accession.upper():
+            self._run_geo_accession_metadata_search()
+        summary = self.register_gse_dataset()
+        if summary is not None:
+            self._geo_retrieval_status.setPlainText(f"{accession} 已加入项目下载列表；下一步下载 GEO 元数据。")
+        self._refresh_geo_retrieval_adapter_state()
+        return summary
+
+    def _download_geo_accession_metadata(self) -> object | None:
+        accession = self._geo_accession_value()
+        if not accession:
+            self._set_status("请输入 GSE 编号。", error=True)
+            self._refresh_geo_retrieval_adapter_state()
+            return None
+        if not _is_geo_saved_to_download_list(self._project_root, accession):
+            self._add_geo_accession_to_project()
+        result = self._download_gse_geo_metadata(accession)
+        self._geo_retrieval_status.setPlainText(_geo_download_result_status_text(result, fallback=f"{accession} metadata 下载未完成。"))
+        self._refresh_geo_retrieval_adapter_state()
+        return result
+
+    def _download_geo_accession_assets(self) -> object | None:
+        accession = self._geo_accession_value()
+        if not accession:
+            self._set_status("请输入 GSE 编号。", error=True)
+            self._refresh_geo_retrieval_adapter_state()
+            return None
+        result = self._download_gse_geo_assets(accession)
+        self._geo_retrieval_status.setPlainText(_geo_download_result_status_text(result, fallback=f"{accession} 候选资产下载未完成。"))
+        self._refresh_geo_retrieval_adapter_state()
+        return result
+
+    def _refresh_geo_retrieval_adapter_state(self) -> None:
+        if not hasattr(self, "_geo_search_metadata_button"):
+            return
+        accession = _normalize_gse_id(self._geo_accession_input.text())
+        has_project = self._project_root is not None
+        has_accession = bool(accession)
+        saved = _is_geo_saved_to_download_list(self._project_root, accession) if has_accession else False
+        pending_assets = _candidate_has_pending_geo_assets(self._project_root, accession) if has_accession else False
+        ready_count = _ready_registered_source_count(self._project_root)
+        states = (
+            (self._geo_search_metadata_button, has_project and has_accession, "disabled_until_project_and_gse_accession"),
+            (self._geo_add_to_project_button, has_project and has_accession, "disabled_until_geo_metadata_preview"),
+            (self._geo_download_metadata_button, has_project and has_accession and saved, "disabled_until_geo_accession_added_to_project"),
+            (self._geo_download_assets_button, has_project and has_accession and pending_assets, "disabled_until_geo_asset_manifest_has_pending_assets"),
+            (self._geo_continue_recognition_button, has_project and has_accession and ready_count > 0, "disabled_until_downloaded_geo_files_ready_for_recognition"),
+        )
+        for button, enabled, reason in states:
+            button.setEnabled(enabled)
+            button.setProperty("disabledReason", "" if enabled else reason)
+            button.setToolTip(
+                "已接入：点击会调用对应 GEO acquisition adapter。"
+                if enabled
+                else reason
+            )
 
     def _render_gated_source_tables(self, *, selected_source: str) -> None:
         selected = selected_source or "none"
@@ -5383,7 +5547,9 @@ class BioinformaticsRecognitionWidget(QWidget):
         tech_layout.addStretch(1)
         root.addWidget(_button("技术操作", "secondaryButton", lambda: tech_ops.setVisible(not tech_ops.isVisible())), alignment=Qt.AlignLeft)
         root.addWidget(tech_ops)
-        root.addWidget(_button("继续：数据准备与标准化", "primaryButton", self.continue_to_readiness), alignment=Qt.AlignLeft)
+        continue_button = _button("继续：数据准备与标准化", "primaryButton", self.continue_to_readiness)
+        continue_button.setObjectName("bioinformaticsRecognitionContinueReadinessButton")
+        root.addWidget(continue_button, alignment=Qt.AlignLeft)
         _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_recognition_input_selected")
 
     def _render_report(self, report: dict[str, object]) -> None:
@@ -16026,6 +16192,25 @@ def _append_geo_deg_results_to_index(project_root: Path, summaries: list[dict[st
         )
         seen_paths.add(result_path)
     write_result_index(project_root, entries)
+
+
+def _geo_download_result_status_text(result: object | None, *, fallback: str) -> str:
+    if result is None:
+        return fallback
+    status = str(getattr(result, "status", "") or "")
+    message = str(getattr(result, "message", "") or fallback)
+    downloaded_files = tuple(getattr(result, "downloaded_files", ()) or ())
+    receipt_path = str(getattr(result, "receipt_path", "") or "")
+    target_dir = str(getattr(result, "target_dir", "") or "")
+    return "\n".join(
+        [
+            f"状态：{status or 'unknown'}",
+            f"结果：{message}",
+            f"下载文件数：{len(downloaded_files)}",
+            f"receipt：{receipt_path or '-'}",
+            f"目录：{target_dir or '-'}",
+        ]
+    )
 
 
 def _toggle_details(edit: QPlainTextEdit) -> None:
