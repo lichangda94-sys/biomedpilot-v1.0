@@ -1,7 +1,7 @@
 # Phase 1 Preview Startup Validation
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `3ee1ee212b878714745fb77f640ff1bcc5dcfb26`
+- head: `121e8101f8df6ad883c16d35a9373e3026233a2c`
 - screenshot_dir: `/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup`
 - click_count: `14`
 - passed_clicks: `14`
@@ -11,7 +11,7 @@
 ## Packaged App Launch Gate
 
 - app_path: `/Users/changdali/Developer/biomedpilot v1.0/Integration/dist/BioMedPilot Integration Preview.app`
-- packaged_git_head: `3ee1ee2`
+- packaged_git_head: `121e810`
 - direct_launcher_smoke: `passed`
 - launchservices_gui_startup_check: `passed`
 - gui_startup_status: `passed`
