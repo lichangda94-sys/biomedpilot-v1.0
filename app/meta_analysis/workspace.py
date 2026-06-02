@@ -28,6 +28,7 @@ from app.meta_analysis.pages.protocol_page import write_pubmed_search_execution_
 from app.meta_analysis.search.pubmed_candidates_handoff_service import PubMedCandidatesHandoffService
 from app.meta_analysis.search.pubmed_search_service import PubMedSearchService
 from app.meta_analysis.services.dedup_review_v2_service import DedupReviewV2Service
+from app.meta_analysis.services.analysis_setup_service import AnalysisSetupService
 from app.meta_analysis.services.extraction_schema_registry_v1_service import ExtractionSchemaRegistryV1Service
 from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
 from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
@@ -1468,6 +1469,107 @@ if QWidget is not None:
                 },
             )
 
+        def _analysis_setup_profile_type(self) -> str:
+            mapping = {
+                "binary_outcome_meta": "TREATMENT_EFFECT_META",
+                "continuous_outcome_meta": "TREATMENT_EFFECT_META",
+                "survival_outcome_meta": "PROGNOSTIC_FACTOR_META",
+                "prevalence_incidence_meta": "PREVALENCE_INCIDENCE_META",
+                "diagnostic_accuracy_meta": "DIAGNOSTIC_ACCURACY_META",
+                "exposure_disease_risk_meta": "EXPOSURE_DISEASE_RISK_META",
+                "biomarker_expression_difference_meta": "CONTINUOUS_BIOMARKER_DIFFERENCE_META",
+                "correlation_meta": "CORRELATION_META",
+                "prognostic_factor_meta": "PROGNOSTIC_FACTOR_META",
+                "dose_response_meta": "TREATMENT_EFFECT_META",
+            }
+            return mapping.get(self._selected_active_meta_type_id, "TREATMENT_EFFECT_META")
+
+        def _save_analysis_plan_draft_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_analysis_plan_draft_adapter.json",
+                    {
+                        "page_key": "analysis_tasks",
+                        "service": "AnalysisSetupService",
+                        "disabled_reason": "Meta 项目目录未绑定，无法生成 analysis plan draft。",
+                        "formal_action_enabled": False,
+                    },
+                )
+            service = AnalysisSetupService()
+            profile_type = self._analysis_setup_profile_type()
+            plan = service.create_plan(
+                self._current_project_dir,
+                profile_type=profile_type,
+                outcome_name="draft outcome for route contract",
+                effect_measure="OR",
+                model="random",
+                requested_method="meta_analysis",
+            )
+            plan_path = service.save_analysis_plan(self._current_project_dir, plan)
+            return self._write_gate_artifact(
+                "ui_runtime/meta_analysis_plan_draft_adapter.json",
+                {
+                    "page_key": "analysis_tasks",
+                    "service": "AnalysisSetupService.create_plan/save_analysis_plan",
+                    "ui_meta_type": self._selected_active_meta_type_id,
+                    "analysis_profile_type": profile_type,
+                    "plan_id": plan.plan_id,
+                    "analysis_plan_path": _relative_or_empty(plan_path, self._current_project_dir),
+                    "warnings": list(plan.warnings),
+                    "errors": list(plan.errors),
+                    "analysis_ready_dataset_created": False,
+                    "statistics_run": False,
+                    "formal_action_enabled": False,
+                    "report_ready": False,
+                },
+            )
+
+        def _run_analysis_preflight_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                return self._write_gate_artifact(
+                    "ui_runtime/meta_analysis_preflight_adapter.json",
+                    {
+                        "page_key": "analysis_tasks",
+                        "service": "AnalysisSetupService.run_preflight",
+                        "disabled_reason": "Meta 项目目录未绑定，无法执行 analysis preflight。",
+                        "formal_action_enabled": False,
+                    },
+                )
+            service = AnalysisSetupService()
+            profile_type = self._analysis_setup_profile_type()
+            plan = service.create_plan(
+                self._current_project_dir,
+                profile_type=profile_type,
+                outcome_name="draft outcome for route contract",
+                effect_measure="OR",
+                model="random",
+                requested_method="meta_analysis",
+            )
+            summary = service.run_preflight(self._current_project_dir, plan)
+            return self._write_gate_artifact(
+                "ui_runtime/meta_analysis_preflight_adapter.json",
+                {
+                    "page_key": "analysis_tasks",
+                    "service": "AnalysisSetupService.run_preflight",
+                    "ui_meta_type": self._selected_active_meta_type_id,
+                    "analysis_profile_type": profile_type,
+                    "success": summary.success,
+                    "message": summary.message,
+                    "analysis_plan_path": _relative_or_empty(summary.output_paths.get("analysis_plan", ""), self._current_project_dir),
+                    "analysis_ready_dataset_path": _relative_or_empty(summary.output_paths.get("analysis_ready_dataset", ""), self._current_project_dir),
+                    "analysis_ready_datasets_path": _relative_or_empty(summary.output_paths.get("analysis_ready_datasets", ""), self._current_project_dir),
+                    "applicability_warnings_path": _relative_or_empty(summary.output_paths.get("applicability_warnings", ""), self._current_project_dir),
+                    "warnings": list(summary.warnings),
+                    "errors": list(summary.errors),
+                    "dataset_created": summary.dataset is not None,
+                    "dataset_validation_errors": list(summary.dataset.validation_errors) if summary.dataset is not None else [],
+                    "formal_statistics_run": False,
+                    "analysis_result_created": False,
+                    "formal_action_enabled": False,
+                    "report_ready": False,
+                },
+            )
+
         def _write_report_gate_reason(self) -> Path | None:
             return self._write_gate_artifact(
                 "ui_runtime/meta_report_export_disabled_reason.json",
@@ -1584,6 +1686,18 @@ if QWidget is not None:
                 "metaSaveRiskOfBiasDraftButton",
                 "calls_quality_assessment_service_and_writes_draft_quality_artifacts",
                 on_click=self._write_rob_disabled_reason,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaBuildAnalysisPlanDraftButton",
+                "calls_analysis_setup_service_and_writes_plan_draft_artifact",
+                on_click=self._save_analysis_plan_draft_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaRunAnalysisPreflightButton",
+                "calls_analysis_setup_service_preflight_and_writes_applicability_artifacts",
+                on_click=self._run_analysis_preflight_adapter,
                 enable=True,
             )
 
@@ -1896,16 +2010,7 @@ if QWidget is not None:
             self._report_export_gate_panel = self._build_report_export_gate_panel()
             self._add_target_runtime_page("report_export", self._report_export_gate_panel)
 
-            self._analysis_tasks_panel = self._build_target_boundary_panel(
-                page_key="analysis_tasks",
-                title="Meta Analysis Tasks / 统计分析",
-                status_key="planned",
-                rows=(
-                    "Pairwise Meta executor is not enabled in this runtime shell.",
-                    "Network Meta remains planned / disabled.",
-                    "No formal statistical output, figure output, report, or export is generated.",
-                ),
-            )
+            self._analysis_tasks_panel = self._build_analysis_tasks_panel()
             self._add_target_runtime_page("analysis_tasks", self._analysis_tasks_panel)
 
             self._meta_settings_panel = self._build_target_boundary_panel(
@@ -1934,6 +2039,245 @@ if QWidget is not None:
             widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
             scroll.setWidget(widget)
             self._target_runtime_page_indices[page_key] = self._target_runtime_stack.addWidget(scroll)
+
+        def _build_analysis_tasks_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaAnalysisTasksRuntimePanel")
+            frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
+            frame.setProperty("pageKey", "analysis_tasks")
+            frame.setProperty("runtimeStatus", "planned")
+            frame.setProperty("resultSemanticKey", "no_formal_result")
+            frame.setProperty("reportStatusKey", "report.status.draft")
+            frame.setProperty("exportGate", "disabled_empty_result")
+            frame.setProperty("formalActionEnabled", False)
+            frame.setStyleSheet(
+                """
+                QFrame#metaAnalysisTasksRuntimePanel {
+                    background: #F5F7FB;
+                    border: 0;
+                }
+                QFrame#metaAnalysisStepper,
+                QFrame#metaAnalysisTaskCard,
+                QFrame#metaAnalysisReadinessCard,
+                QFrame#metaAnalysisGateCard,
+                QFrame#metaAnalysisActionBar {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 12px;
+                }
+                QLabel#metaAnalysisTaskTitle,
+                QLabel#metaAnalysisSectionTitle {
+                    color: #0F172A;
+                    font-size: 13px;
+                    font-weight: 850;
+                }
+                QLabel#metaAnalysisMuted {
+                    color: #64748B;
+                    font-size: 11px;
+                }
+                QLabel#metaAnalysisStepDone,
+                QLabel#metaAnalysisStepCurrent,
+                QLabel#metaAnalysisStepTodo {
+                    color: #94A3B8;
+                    font-size: 10px;
+                    font-weight: 750;
+                }
+                QLabel#metaAnalysisStepDone,
+                QLabel#metaAnalysisStepCurrent {
+                    color: #2563EB;
+                    font-weight: 900;
+                }
+                QLabel#metaAnalysisMethodItem,
+                QLabel#metaAnalysisGateItem,
+                QLabel#metaAnalysisPreflightNotice {
+                    background: #F8FAFC;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 8px;
+                    color: #334155;
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+                QLabel#metaAnalysisMethodItem[selected="true"],
+                QLabel#metaAnalysisGateItem[status="ready"] {
+                    background: #ECFDF5;
+                    border-color: #BBF7D0;
+                    color: #059669;
+                    font-weight: 850;
+                }
+                QLabel#metaAnalysisGateItem[status="blocked"] {
+                    background: #FEF2F2;
+                    border-color: #FECACA;
+                    color: #DC2626;
+                    font-weight: 850;
+                }
+                QLabel#metaAnalysisPreflightNotice {
+                    background: #FFFBEB;
+                    border-color: #FDE68A;
+                    color: #B45309;
+                }
+                QPushButton#metaBuildAnalysisPlanDraftButton,
+                QPushButton#metaRunAnalysisPreflightButton {
+                    background: #FFFFFF;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 9px;
+                    color: #334155;
+                    font-size: 12px;
+                    font-weight: 800;
+                    padding: 9px 12px;
+                }
+                QPushButton#metaTargetBoundaryDisabledAction {
+                    background: #F3F4F6;
+                    border: 1px solid #E5E7EB;
+                    border-radius: 9px;
+                    color: #9CA3AF;
+                    font-size: 12px;
+                    font-weight: 850;
+                    padding: 9px 12px;
+                }
+                """
+            )
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(10)
+
+            title = QLabel("Meta Analysis Tasks / 统计分析")
+            title.setObjectName("metaAnalysisTaskTitle")
+            layout.addWidget(title)
+
+            stepper = QFrame()
+            stepper.setObjectName("metaAnalysisStepper")
+            stepper_layout = QHBoxLayout(stepper)
+            stepper_layout.setContentsMargins(14, 9, 14, 9)
+            stepper_layout.setSpacing(8)
+            steps = (
+                ("✓", "项目首页", "done"),
+                ("✓", "研究问题与\nMeta类型", "done"),
+                ("✓", "检索策略", "done"),
+                ("✓", "文献导入与\n去重", "done"),
+                ("✓", "文献筛选", "done"),
+                ("✓", "全文与数据\n提取", "done"),
+                ("✓", "质量评价", "done"),
+                ("8", "统计分析\nAnalysis", "current"),
+                ("9", "结果与报告", "todo"),
+                ("10", "报告导出", "todo"),
+            )
+            for marker, text, state in steps:
+                item = QLabel(f"{marker}\n{text}")
+                item.setObjectName("metaAnalysisStepCurrent" if state == "current" else ("metaAnalysisStepDone" if state == "done" else "metaAnalysisStepTodo"))
+                item.setAlignment(Qt.AlignCenter)
+                item.setMinimumWidth(70)
+                stepper_layout.addWidget(item, 1)
+            layout.addWidget(stepper)
+
+            body = QFrame()
+            body.setObjectName("metaAnalysisTaskCard")
+            body_layout = QHBoxLayout(body)
+            body_layout.setContentsMargins(12, 12, 12, 12)
+            body_layout.setSpacing(12)
+
+            methods = QFrame()
+            methods.setObjectName("metaAnalysisTaskCard")
+            methods.setFixedWidth(260)
+            methods_layout = QVBoxLayout(methods)
+            methods_layout.setContentsMargins(14, 12, 14, 12)
+            methods_layout.setSpacing(9)
+            methods_title = QLabel("分析方法 / Method")
+            methods_title.setObjectName("metaAnalysisSectionTitle")
+            methods_layout.addWidget(methods_title)
+            for text, selected in (
+                ("Pairwise Meta\n计划草稿与 preflight 可用；正式运行需数据 gate。", True),
+                ("Subgroup / Sensitivity\n仅计划字段；不自动执行。", False),
+                ("Publication bias\n少于 10 项研究时仅警告。", False),
+                ("Network Meta\n未实现，保持 disabled。", False),
+            ):
+                item = QLabel(text)
+                item.setObjectName("metaAnalysisMethodItem")
+                item.setProperty("selected", "true" if selected else "false")
+                item.setWordWrap(True)
+                item.setMinimumHeight(64)
+                methods_layout.addWidget(item)
+            methods_layout.addStretch(1)
+            body_layout.addWidget(methods)
+
+            readiness = QFrame()
+            readiness.setObjectName("metaAnalysisReadinessCard")
+            readiness_layout = QVBoxLayout(readiness)
+            readiness_layout.setContentsMargins(14, 12, 14, 12)
+            readiness_layout.setSpacing(10)
+            readiness_title = QLabel("运行准备 / Preflight")
+            readiness_title.setObjectName("metaAnalysisSectionTitle")
+            readiness_layout.addWidget(readiness_title)
+            table = _readonly_table(
+                "metaAnalysisTaskPreflightTable",
+                ("input", "state", "adapter result", "formal boundary"),
+                (
+                    ("analysis plan", "draftable", "AnalysisSetupService.create_plan", "no statistics"),
+                    ("analysis-ready dataset", "preflight only", "validation errors recorded if extraction missing", "not final"),
+                    ("applicability warnings", "writable", "warnings/errors manifest", "not report-ready"),
+                    ("formal executor", "disabled", "requires valid dataset and reviewer confirmation", "not connected in this batch"),
+                ),
+            )
+            table.setMinimumHeight(250)
+            readiness_layout.addWidget(table)
+            notice = QLabel("Preflight 可以写入 analysis plan、analysis-ready dataset alias 和 applicability warnings；不会运行正式统计或生成结果图。")
+            notice.setObjectName("metaAnalysisPreflightNotice")
+            notice.setWordWrap(True)
+            readiness_layout.addWidget(notice)
+            body_layout.addWidget(readiness, 1)
+
+            gates = QFrame()
+            gates.setObjectName("metaAnalysisGateCard")
+            gates.setFixedWidth(260)
+            gates_layout = QVBoxLayout(gates)
+            gates_layout.setContentsMargins(14, 12, 14, 12)
+            gates_layout.setSpacing(9)
+            gate_title = QLabel("执行 Gate / Boundary")
+            gate_title.setObjectName("metaAnalysisSectionTitle")
+            gates_layout.addWidget(gate_title)
+            for text, status in (
+                ("Plan draft\n可写入 analysis_plan.json", "ready"),
+                ("Preflight\n可生成 applicability warnings", "ready"),
+                ("正式统计执行\n需要有效 extraction records", "blocked"),
+                ("图表与结果表\n需要 formal result", "blocked"),
+                ("Report-ready\n仍需审阅与报告包", "blocked"),
+            ):
+                item = QLabel(text)
+                item.setObjectName("metaAnalysisGateItem")
+                item.setProperty("status", status)
+                item.setWordWrap(True)
+                gates_layout.addWidget(item)
+            gates_layout.addStretch(1)
+            body_layout.addWidget(gates)
+            layout.addWidget(body)
+
+            action_bar = QFrame()
+            action_bar.setObjectName("metaAnalysisActionBar")
+            action_layout = QHBoxLayout(action_bar)
+            action_layout.setContentsMargins(12, 10, 12, 10)
+            action_layout.setSpacing(10)
+            hint = QLabel("本页只开放计划草稿和 preflight；正式统计运行保持 gate，避免伪装生产级 Meta 分析。")
+            hint.setObjectName("metaAnalysisMuted")
+            hint.setWordWrap(True)
+            action_layout.addWidget(hint, 1)
+            draft = QPushButton("生成分析计划 Draft")
+            draft.setObjectName("metaBuildAnalysisPlanDraftButton")
+            draft.setProperty("formalActionEnabled", False)
+            draft.setMinimumHeight(34)
+            preflight = QPushButton("运行 Preflight")
+            preflight.setObjectName("metaRunAnalysisPreflightButton")
+            preflight.setProperty("formalActionEnabled", False)
+            preflight.setMinimumHeight(34)
+            formal = QPushButton("正式统计运行 Gate")
+            formal.setObjectName("metaTargetBoundaryDisabledAction")
+            formal.setProperty("formalActionEnabled", False)
+            formal.setProperty("actionSemantic", "disabled_formal_statistics_gate")
+            formal.setEnabled(False)
+            formal.setMinimumHeight(34)
+            action_layout.addWidget(draft)
+            action_layout.addWidget(preflight)
+            action_layout.addWidget(formal)
+            layout.addWidget(action_bar)
+            return frame
 
         def _build_target_boundary_panel(self, *, page_key: str, title: str, rows: tuple[str, ...], status_key: str) -> QFrame:
             frame = QFrame()

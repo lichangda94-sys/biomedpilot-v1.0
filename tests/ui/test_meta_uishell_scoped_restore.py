@@ -342,6 +342,28 @@ def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_a
     assert (summary.project_root / "quality" / "quality_assessment_records_v1.json").exists()
     assert (summary.project_root / "exports" / "quality_assessment_v1.csv").exists()
 
+    widget.show_target_ia_page("analysis_tasks")
+    _button(widget, "metaBuildAnalysisPlanDraftButton").click()
+    qt_app.processEvents()
+    analysis_plan_gate = summary.project_root / "ui_runtime" / "meta_analysis_plan_draft_adapter.json"
+    assert analysis_plan_gate.exists()
+    analysis_plan_payload = json.loads(analysis_plan_gate.read_text(encoding="utf-8"))
+    assert analysis_plan_payload["service"] == "AnalysisSetupService.create_plan/save_analysis_plan"
+    assert analysis_plan_payload["statistics_run"] is False
+    assert analysis_plan_payload["report_ready"] is False
+    assert (summary.project_root / "analysis" / "analysis_plan.json").exists()
+
+    _button(widget, "metaRunAnalysisPreflightButton").click()
+    qt_app.processEvents()
+    analysis_preflight_gate = summary.project_root / "ui_runtime" / "meta_analysis_preflight_adapter.json"
+    assert analysis_preflight_gate.exists()
+    analysis_preflight_payload = json.loads(analysis_preflight_gate.read_text(encoding="utf-8"))
+    assert analysis_preflight_payload["service"] == "AnalysisSetupService.run_preflight"
+    assert analysis_preflight_payload["formal_statistics_run"] is False
+    assert analysis_preflight_payload["analysis_result_created"] is False
+    assert analysis_preflight_payload["report_ready"] is False
+    assert (summary.project_root / "analysis" / "applicability_warnings.json").exists()
+
     widget.show_target_ia_page("result_report")
     report_button = _button(widget, "metaGenerateReportDisabledButton")
     assert not report_button.isEnabled()
