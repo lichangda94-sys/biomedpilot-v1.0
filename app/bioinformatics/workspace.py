@@ -373,7 +373,7 @@ if QWidget is not None:
                 on_back=self.show_data_source,
             )
             self._readiness_page = BioinformaticsReadinessDashboardWidget(
-                on_continue=self.show_group_design,
+                on_continue=self.show_standardization,
                 on_back=self.show_data_source,
             )
             self._standardized_assets_page = BioinformaticsStandardizedAssetsWidget(

@@ -2791,7 +2791,7 @@ def test_standardization_page_userized_surface_hides_technical_fields(qt_app, pr
     widget.generate_assets()
 
     button_texts = {button.text() for button in widget.findChildren(QPushButton)}
-    assert {"生成标准化数据", "确认分组与比较设计", "继续到分析任务中心"}.issubset(button_texts)
+    assert {"生成标准化数据", "确认分组与比较设计", "继续：分组与分析设计"}.issubset(button_texts)
     assert widget.findChild(QLabel, "standardizationExpressionStatus") is not None
     assert "表达矩阵" in widget.findChild(QLabel, "standardizationExpressionStatus").text()
     assert "样本信息" in widget.findChild(QLabel, "standardizationSampleStatus").text()

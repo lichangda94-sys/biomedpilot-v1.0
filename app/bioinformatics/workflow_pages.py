@@ -5337,7 +5337,9 @@ class BioinformaticsRecognitionWidget(QWidget):
         pre_layout.addLayout(pre_actions)
         root.addWidget(pre_card)
         actions = QHBoxLayout()
-        actions.addWidget(_button("开始识别", "primaryButton", self.run_recognition))
+        self._run_recognition_button = _button("开始识别", "primaryButton", self.run_recognition)
+        self._run_recognition_button.setObjectName("bioinformaticsRunRecognitionButton")
+        actions.addWidget(self._run_recognition_button)
         actions.addWidget(_button("刷新", "secondaryButton", self.refresh_report))
         actions.addStretch(1)
         root.addLayout(actions)
@@ -5496,6 +5498,14 @@ class BioinformaticsRecognitionWidget(QWidget):
     def _refresh_pre_recognition_selection_state(self) -> None:
         selected_count = len(self._selected_pre_recognition_rows())
         self._delete_selected_inputs_button.setEnabled(selected_count > 0)
+        self._run_recognition_button.setEnabled(selected_count > 0)
+        if selected_count > 0:
+            self._run_recognition_button.setProperty("disabledReason", None)
+            self._run_recognition_button.setToolTip("运行数据识别 service，并写入 recognition artifact。")
+        else:
+            reason = "disabled_until_recognition_input_selected"
+            self._run_recognition_button.setProperty("disabledReason", reason)
+            self._run_recognition_button.setToolTip(reason)
         header_item = self._pre_recognition_table.horizontalHeaderItem(0)
         if header_item is not None:
             all_checked = bool(self._pre_recognition_checks) and selected_count == len(self._pre_recognition_checks)
@@ -6957,7 +6967,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         developer_layout.addWidget(self._developer_details)
         self._manifest = self._developer_details
         root.addWidget(developer_card)
-        root.addWidget(_button("继续到分析任务中心", "primaryButton", self.continue_to_workflow), alignment=Qt.AlignLeft)
+        root.addWidget(_button("继续：分组与分析设计", "primaryButton", self.continue_to_workflow), alignment=Qt.AlignLeft)
         _annotate_bio_page_buttons(self, default_disabled_reason="disabled_until_standardized_assets_or_confirmation_exists")
 
     def _render(self, artifacts: dict[str, object]) -> None:

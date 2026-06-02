@@ -1,0 +1,171 @@
+{
+  "schema_version": "ui_route_contract_bio_batch9_data_prep_adapters.v1",
+  "created_at": "2026-06-02T08:20:20+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "546e66394ef2f2fb745b804eb5cb66967be419a0",
+  "scope": "Bioinformatics mature Data Source -> Data Check -> Standardization -> Group Design adapter chain with button-click artifact proof.",
+  "screenshots": [
+    {
+      "page": "01_data_source",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/01_data_source.png"
+    },
+    {
+      "page": "02_recognition_before_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/02_recognition_before_click.png"
+    },
+    {
+      "page": "03_recognition_after_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/03_recognition_after_click.png"
+    },
+    {
+      "page": "04_readiness",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/04_readiness.png"
+    },
+    {
+      "page": "05_standardization_before_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/05_standardization_before_click.png"
+    },
+    {
+      "page": "06_standardization_after_click",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/06_standardization_after_click.png"
+    },
+    {
+      "page": "07_group_design_prepared",
+      "path": "docs/ui/runtime_screenshots/20260602_bio_batch9_data_prep_adapters/07_group_design_prepared.png"
+    }
+  ],
+  "summary": {
+    "row_count": 9,
+    "connected": 9,
+    "broken": 0,
+    "failures": []
+  },
+  "rows": [
+    {
+      "contract_id": "BIO-B9-ACQUISITION-REGISTER-LOCAL",
+      "page_key": "data_source",
+      "object_name": "register_acquisition",
+      "label": "register local integrated RNA-seq file",
+      "backend_capability": "app.bioinformatics.project_workspace_binding.register_acquisition",
+      "source_file": "app/bioinformatics/project_workspace_binding.py",
+      "runtime_effect": "acquisition plan/record/handoff and source manifest",
+      "artifact_evidence": "acquisition/plans/latest_acquisition_plan.json; acquisition/records/latest_acquisition_record.json; acquisition/handoffs/latest_acquisition_handoff.json",
+      "live_click_test": "adapter_service_seed_for_ui_click_chain",
+      "status": "connected",
+      "observed": "service_artifacts_verified",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-DATA-SOURCE-LOCAL-DRAFT",
+      "page_key": "data_source",
+      "object_name": "bioinformaticsDataSourceSelectPreviewButton",
+      "label": "配置本地导入",
+      "backend_capability": "app.bioinformatics.data_source_requests.create_data_source_request",
+      "source_file": "app/bioinformatics/data_source_requests.py",
+      "runtime_effect": "data source request draft and request index",
+      "artifact_evidence": "manifests/data_source_requests.json",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "artifacts_verified",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-DATA-CHECK-RUN-RECOGNITION",
+      "page_key": "data_check_preparation",
+      "object_name": "bioinformaticsRunRecognitionButton",
+      "label": "开始识别",
+      "backend_capability": "app.bioinformatics.project_recognition.run_project_recognition_for_paths",
+      "source_file": "app/bioinformatics/project_recognition.py",
+      "runtime_effect": "recognition report/current recognition/group preview artifacts",
+      "artifact_evidence": "logs/recognition/recognition_report.json; recognized_data/current.json; logs/recognition/group_preview_report.json",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "artifacts_verified",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-DATA-CHECK-RUN-READINESS",
+      "page_key": "data_check_preparation",
+      "object_name": "bioinformaticsRunDataCheckButton",
+      "label": "重新运行数据检查",
+      "backend_capability": "app.bioinformatics.project_readiness.run_project_readiness",
+      "source_file": "app/bioinformatics/project_readiness.py",
+      "runtime_effect": "readiness report and analysis capability matrix",
+      "artifact_evidence": "logs/readiness/readiness_report.json; manifests/analysis_capability_matrix.json",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "artifacts_verified",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-DATA-CHECK-OPEN-STANDARDIZATION",
+      "page_key": "data_check_preparation",
+      "object_name": "primaryButton",
+      "label": "生成标准化数据",
+      "backend_capability": "app.bioinformatics.workspace.BioinformaticsWorkspaceWidget.show_standardization",
+      "source_file": "app/bioinformatics/workspace/BioinformaticsWorkspaceWidget.py",
+      "runtime_effect": "readiness continue opens standardized assets page before group design",
+      "artifact_evidence": "route_state_assertion",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "current_route_key=standardized_assets; current_page=bioinformaticsStandardizedAssetsPage",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-DATA-CHECK-GENERATE-STANDARDIZED-ASSETS",
+      "page_key": "data_check_preparation",
+      "object_name": "primaryButton",
+      "label": "生成标准化数据",
+      "backend_capability": "app.bioinformatics.project_standardization.generate_standardized_assets",
+      "source_file": "app/bioinformatics/project_standardization.py",
+      "runtime_effect": "standardized asset registry, analysis-ready manifest, and repository manifest",
+      "artifact_evidence": "manifests/standardized_assets_registry.json; standardized_data/analysis_ready_assets/analysis_ready_manifest.json; standardized_data/repositories/repository_manifest.json",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "artifacts_verified",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-GROUP-DESIGN-SUGGEST-COMPARISON",
+      "page_key": "group_design",
+      "object_name": "bioinformaticsGroupDesignSuggestionButton",
+      "label": "从对照组生成比较",
+      "backend_capability": "app.bioinformatics.group_comparison_design.build_default_comparison_rows",
+      "source_file": "app/bioinformatics/group_comparison_design.py",
+      "runtime_effect": "one-vs-control suggestions preview artifact",
+      "artifact_evidence": "analysis/group_design/one_vs_control_suggestions_preview.json",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "artifacts_verified",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-GROUP-DESIGN-SAVE-CONFIRMED-DESIGN",
+      "page_key": "group_design",
+      "object_name": "bioinformaticsGroupDesignSaveButton",
+      "label": "保存分组与比较设计",
+      "backend_capability": "app.bioinformatics.group_comparison_design.save_group_comparison_design",
+      "source_file": "app/bioinformatics/group_comparison_design.py",
+      "runtime_effect": "confirmed group comparison design and updated task center",
+      "artifact_evidence": "manifests/group_comparison_design.json; manifests/analysis_task_center.json",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "artifacts_verified",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    },
+    {
+      "contract_id": "BIO-B9-GROUP-DESIGN-CONTINUE-ANALYSIS-TASKS",
+      "page_key": "group_design",
+      "object_name": "bioinformaticsGroupDesignContinueButton",
+      "label": "继续：分析任务中心",
+      "backend_capability": "app.bioinformatics.workspace.BioinformaticsWorkspaceWidget.show_analysis_tasks",
+      "source_file": "app/bioinformatics/workspace/BioinformaticsWorkspaceWidget.py",
+      "runtime_effect": "opens Analysis Tasks after saved design gate",
+      "artifact_evidence": "route_state_assertion",
+      "live_click_test": "clicked_visible_button",
+      "status": "connected",
+      "observed": "current_target_page_key=analysis_tasks; current_page=bioinformaticsAnalysisTaskCenterPage",
+      "batch": "Batch 9: Bioinformatics data-prep adapter chain"
+    }
+  ]
+}
