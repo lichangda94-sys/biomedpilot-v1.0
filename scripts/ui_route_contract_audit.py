@@ -256,7 +256,7 @@ def _audit_centers_actions(app: QApplication, failures: list[str]) -> list[Contr
                     current_file="app/shell/centers_page.py",
                     button=button,
                     runtime_effect=effect,
-                    artifact_evidence=f"temp_audit_root={root}; proof={ok}",
+                    artifact_evidence=f"isolated_temp_project_control_root; proof={ok}",
                     observed="artifact_or_service_verified" if ok else "missing_expected_artifact_or_state",
                     status="connected" if ok else "broken",
                 )
