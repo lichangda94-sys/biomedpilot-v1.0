@@ -1,0 +1,287 @@
+{
+  "schema_version": "biomedpilot.phase1.preview_startup.v1",
+  "created_at": "2026-06-02T01:51:29+00:00",
+  "branch": "integration/release-bio-c1-ui-shell",
+  "head": "8755673a420b8745c00b0015892812869726a279",
+  "screenshots": [
+    {
+      "name": "01_welcome",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/01_welcome.png",
+      "workspace": "welcome"
+    },
+    {
+      "name": "02_about_from_welcome",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/02_about_from_welcome.png",
+      "workspace": "about"
+    },
+    {
+      "name": "03_settings_from_welcome",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/03_settings_from_welcome.png",
+      "workspace": "settings"
+    },
+    {
+      "name": "04_home_dashboard",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/04_home_dashboard.png",
+      "workspace": "dashboard"
+    },
+    {
+      "name": "05_sidebar_dashboard",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/05_sidebar_dashboard.png",
+      "workspace": "dashboard"
+    },
+    {
+      "name": "06_bio_workspace_entry",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/06_bio_workspace_entry.png",
+      "workspace": "bioinformatics"
+    },
+    {
+      "name": "07_meta_workspace_entry",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/07_meta_workspace_entry.png",
+      "workspace": "meta_analysis"
+    },
+    {
+      "name": "08_labtools_workspace_entry",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/08_labtools_workspace_entry.png",
+      "workspace": "labtools"
+    },
+    {
+      "name": "09_sidebar_dashboard",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/09_sidebar_dashboard.png",
+      "workspace": "dashboard"
+    },
+    {
+      "name": "09_sidebar_bioinformatics",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/09_sidebar_bioinformatics.png",
+      "workspace": "bioinformatics"
+    },
+    {
+      "name": "09_sidebar_meta_analysis",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/09_sidebar_meta_analysis.png",
+      "workspace": "meta_analysis"
+    },
+    {
+      "name": "09_sidebar_labtools",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/09_sidebar_labtools.png",
+      "workspace": "labtools"
+    },
+    {
+      "name": "09_sidebar_settings",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/09_sidebar_settings.png",
+      "workspace": "settings"
+    },
+    {
+      "name": "09_sidebar_test_feedback",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/09_sidebar_test_feedback.png",
+      "workspace": "test_feedback"
+    },
+    {
+      "name": "09_sidebar_about",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/09_sidebar_about.png",
+      "workspace": "about"
+    }
+  ],
+  "clicks": [
+    {
+      "scope": "welcome_about",
+      "object_name": "aboutButton",
+      "text": "关于",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_about",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "welcome",
+      "expected_workspace": "about",
+      "actual_workspace": "about",
+      "result": "passed"
+    },
+    {
+      "scope": "welcome_settings",
+      "object_name": "loginTopIconButton",
+      "text": "",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_settings",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "welcome",
+      "expected_workspace": "settings",
+      "actual_workspace": "settings",
+      "result": "passed"
+    },
+    {
+      "scope": "welcome_enter",
+      "object_name": "primaryButton",
+      "text": "进入本地工作台",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_dashboard",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "welcome",
+      "expected_workspace": "dashboard",
+      "actual_workspace": "dashboard",
+      "result": "passed"
+    },
+    {
+      "scope": "home_bio",
+      "object_name": "bioModuleButton",
+      "text": "进入模块",
+      "enabled": true,
+      "button_behavior": "navigates_to_module_workspace_nav.bioinformatics",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "dashboard",
+      "expected_workspace": "bioinformatics",
+      "actual_workspace": "bioinformatics",
+      "result": "passed"
+    },
+    {
+      "scope": "home_meta",
+      "object_name": "metaModuleButton",
+      "text": "进入模块",
+      "enabled": true,
+      "button_behavior": "navigates_to_module_workspace_nav.meta_analysis",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "dashboard",
+      "expected_workspace": "meta_analysis",
+      "actual_workspace": "meta_analysis",
+      "result": "passed"
+    },
+    {
+      "scope": "home_labtools",
+      "object_name": "labtoolsModuleButton",
+      "text": "进入模块",
+      "enabled": true,
+      "button_behavior": "navigates_to_module_workspace_nav.labtools",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "dashboard",
+      "expected_workspace": "labtools",
+      "actual_workspace": "labtools",
+      "result": "passed"
+    },
+    {
+      "scope": "sidebar_dashboard",
+      "object_name": "appSidebarButton",
+      "text": "工作台 / Dashboard",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_dashboard",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "labtools",
+      "expected_workspace": "dashboard",
+      "actual_workspace": "dashboard",
+      "result": "passed"
+    },
+    {
+      "scope": "sidebar_bioinformatics",
+      "object_name": "appSidebarButton",
+      "text": "生信分析 / Bioinformatics",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_bioinformatics",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "dashboard",
+      "expected_workspace": "bioinformatics",
+      "actual_workspace": "bioinformatics",
+      "result": "passed"
+    },
+    {
+      "scope": "sidebar_meta_analysis",
+      "object_name": "appSidebarButton",
+      "text": "Meta 分析 / Meta Analysis",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_meta_analysis",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "bioinformatics",
+      "expected_workspace": "meta_analysis",
+      "actual_workspace": "meta_analysis",
+      "result": "passed"
+    },
+    {
+      "scope": "sidebar_labtools",
+      "object_name": "appSidebarButton",
+      "text": "实验工具 / LabTools",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_labtools",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "meta_analysis",
+      "expected_workspace": "labtools",
+      "actual_workspace": "labtools",
+      "result": "passed"
+    },
+    {
+      "scope": "sidebar_settings",
+      "object_name": "appSidebarAuxButton",
+      "text": "设置中心 / Settings",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_settings",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "labtools",
+      "expected_workspace": "settings",
+      "actual_workspace": "settings",
+      "result": "passed"
+    },
+    {
+      "scope": "sidebar_test_feedback",
+      "object_name": "appSidebarAuxButton",
+      "text": "测试反馈 / Test Feedback",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_test_feedback",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "settings",
+      "expected_workspace": "test_feedback",
+      "actual_workspace": "test_feedback",
+      "result": "passed"
+    },
+    {
+      "scope": "sidebar_about",
+      "object_name": "appSidebarAuxButton",
+      "text": "关于 / About",
+      "enabled": true,
+      "button_behavior": "navigates_to_shell_route_about",
+      "disabled_reason": "",
+      "formal_action_enabled": false,
+      "file_write_allowed": false,
+      "clicked": true,
+      "previous_workspace": "test_feedback",
+      "expected_workspace": "about",
+      "actual_workspace": "about",
+      "result": "passed"
+    }
+  ],
+  "summary": {
+    "click_count": 13,
+    "passed_clicks": 13,
+    "failed_clicks": [],
+    "disabled_without_reason_count": 0
+  },
+  "disabled_without_reason": []
+}
