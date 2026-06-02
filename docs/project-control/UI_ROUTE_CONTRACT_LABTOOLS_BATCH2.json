@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_labtools_batch2.v1",
-  "created_at": "2026-06-01T15:06:18.160144+00:00",
+  "created_at": "2026-06-02T12:38:32.132431+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "48a548a7ae67796c71b778cb3ec18779002dd7d4",
+  "head": "fb364d9eb81d44387712f0b85382119fb150c135",
   "scope": "LabTools approved home, second-level module list, connected calculators/reagent/cell/WB/image run-request gates.",
   "summary": {
     "row_count": 22,
@@ -11,6 +11,53 @@
     "broken": 0,
     "failures": []
   },
+  "screenshots": [
+    {
+      "name": "01_home",
+      "page_key": "home",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/01_home.png"
+    },
+    {
+      "name": "02_general_calculators",
+      "page_key": "general_calculators",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/02_general_calculators.png"
+    },
+    {
+      "name": "03_reagent_preparation",
+      "page_key": "reagent_preparation",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/03_reagent_preparation.png"
+    },
+    {
+      "name": "04_experiment_modules",
+      "page_key": "experiment_modules",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/04_experiment_modules.png"
+    },
+    {
+      "name": "05_cell_experiments",
+      "page_key": "cell_experiments",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/05_cell_experiments.png"
+    },
+    {
+      "name": "06_protein_experiments",
+      "page_key": "protein_experiments",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/06_protein_experiments.png"
+    },
+    {
+      "name": "07_nucleic_acid_experiments",
+      "page_key": "nucleic_acid_experiments",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/07_nucleic_acid_experiments.png"
+    },
+    {
+      "name": "08_immuno_absorbance",
+      "page_key": "immuno_absorbance",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/08_immuno_absorbance.png"
+    },
+    {
+      "name": "09_ihc",
+      "page_key": "ihc",
+      "path": "docs/ui/runtime_screenshots/20260602_labtools_batch2_route_contract/09_ihc.png"
+    }
+  ],
   "rows": [
     {
       "contract_id": "LABTOOLS-HOME-GENERAL_CALCULATORS",
@@ -244,7 +291,7 @@
       "button_behavior": "upserts_reagent_template_local_json",
       "disabled_reason": "",
       "runtime_effect": "upserts reagent template local JSON",
-      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_labtools_batch2_qt54rz6v/reagent_templates.json",
+      "artifact_evidence": "reagent_templates.json exists; template_count=1",
       "live_click_test": "scripts/ui_route_contract_labtools_batch2.py",
       "status": "connected",
       "observed": "template_json_verified",
@@ -278,7 +325,7 @@
       "button_behavior": "upserts_cell_profile_store",
       "disabled_reason": "",
       "runtime_effect": "upserts cell profile store",
-      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_labtools_batch2_qt54rz6v/cell_profiles.json",
+      "artifact_evidence": "cell_profiles.json exists; profile_count=1",
       "live_click_test": "scripts/ui_route_contract_labtools_batch2.py",
       "status": "connected",
       "observed": "cell_profile_store_verified",
@@ -295,7 +342,7 @@
       "button_behavior": "creates_freezing_batch_and_cryovial_inventory",
       "disabled_reason": "",
       "runtime_effect": "creates freezing batch and cryovial inventory",
-      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_labtools_batch2_qt54rz6v/cell_inventory.json",
+      "artifact_evidence": "cell_inventory.json exists; cryovial_count>=1",
       "live_click_test": "scripts/ui_route_contract_labtools_batch2.py",
       "status": "connected",
       "observed": "cryovial_inventory_verified",
@@ -346,7 +393,7 @@
       "button_behavior": "creates_wb_roi_run_request_without_running_engine",
       "disabled_reason": "",
       "runtime_effect": "creates WB ROI run request without running external engine",
-      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_labtools_batch2_qt54rz6v/wb_roi_tasks/image_task_d1caccf15e21/logs/run_request.json",
+      "artifact_evidence": "wb_roi run_request.json exists; wb_rois.csv exists",
       "live_click_test": "scripts/ui_route_contract_labtools_batch2.py",
       "status": "connected",
       "observed": "wb_roi_run_request_verified",
@@ -380,7 +427,7 @@
       "button_behavior": "creates_image_analysis_run_request_without_running_engine",
       "disabled_reason": "",
       "runtime_effect": "creates image analysis run request without running ImageJ/Fiji",
-      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_labtools_batch2_qt54rz6v/cell_image_tasks/image_task_5fb3d37aa373/logs/run_request.json",
+      "artifact_evidence": "cell_image run_request.json exists; task.status=run_request_created",
       "live_click_test": "scripts/ui_route_contract_labtools_batch2.py",
       "status": "connected",
       "observed": "image_run_request_verified",

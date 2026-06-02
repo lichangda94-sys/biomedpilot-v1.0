@@ -34,6 +34,7 @@ from app.shared.qt_lifecycle import cleanup_qt_top_level_widgets
 
 DEFAULT_JSON = REPO_ROOT / "docs" / "project-control" / "UI_ROUTE_CONTRACT_LABTOOLS_BATCH2.json"
 DEFAULT_MARKDOWN = REPO_ROOT / "docs" / "project-control" / "UI_ROUTE_CONTRACT_LABTOOLS_BATCH2.md"
+DEFAULT_SCREENSHOT_DIR = REPO_ROOT / "docs" / "ui" / "runtime_screenshots" / "20260602_labtools_batch2_route_contract"
 
 
 @dataclass
@@ -59,11 +60,13 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     app = QApplication.instance() or QApplication([])
     rows: list[ContractRow] = []
+    screenshots: list[dict[str, str]] = []
     failures: list[str] = []
     try:
         with tempfile.TemporaryDirectory(prefix="biomedpilot_labtools_batch2_") as temp_name:
             audit_root = Path(temp_name)
             rows.extend(_audit_workspace_routes(app, failures))
+            screenshots.extend(_capture_workspace_screenshots(app, args.screenshot_dir))
             rows.extend(_audit_calculator_runtime(failures))
             rows.extend(_audit_reagent_runtime(audit_root, failures))
             rows.extend(_audit_cell_runtime(audit_root, failures))
@@ -85,6 +88,7 @@ def main(argv: list[str] | None = None) -> int:
             "broken": sum(1 for row in rows if row.status == "broken"),
             "failures": failures,
         },
+        "screenshots": screenshots,
         "rows": [asdict(row) for row in rows],
     }
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
@@ -105,6 +109,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Phase 1 Batch 2 LabTools route contract live-click audit.")
     parser.add_argument("--json-out", type=Path, default=DEFAULT_JSON)
     parser.add_argument("--markdown-out", type=Path, default=DEFAULT_MARKDOWN)
+    parser.add_argument("--screenshot-dir", type=Path, default=DEFAULT_SCREENSHOT_DIR)
     return parser.parse_args(argv)
 
 
@@ -258,7 +263,7 @@ def _audit_reagent_runtime(audit_root: Path, failures: list[str]) -> list[Contra
                 current_file="app/labtools/ui/calculator_widgets.py",
                 button=save_button,
                 runtime_effect="upserts reagent template local JSON",
-                artifact_evidence=str(store.resolved_path()),
+                artifact_evidence="reagent_templates.json exists; template_count=1",
                 observed="template_json_verified" if ok else "missing_template_json",
                 status="connected" if ok else "broken",
             )
@@ -312,7 +317,7 @@ def _audit_cell_runtime(audit_root: Path, failures: list[str]) -> list[ContractR
                 current_file="app/labtools/ui/cell_experiment_widgets.py",
                 button=save_profile,
                 runtime_effect="upserts cell profile store",
-                artifact_evidence=str(profile_store.resolved_path()),
+                artifact_evidence="cell_profiles.json exists; profile_count=1",
                 observed="cell_profile_store_verified" if ok else "missing_cell_profile_store",
                 status="connected" if ok else "broken",
             )
@@ -333,7 +338,7 @@ def _audit_cell_runtime(audit_root: Path, failures: list[str]) -> list[ContractR
                 current_file="app/labtools/ui/cell_experiment_widgets.py",
                 button=create_batch,
                 runtime_effect="creates freezing batch and cryovial inventory",
-                artifact_evidence=str(inventory_store.resolved_path()),
+                artifact_evidence="cell_inventory.json exists; cryovial_count>=1",
                 observed="cryovial_inventory_verified" if ok else "missing_cryovial_inventory",
                 status="connected" if ok else "broken",
             )
@@ -413,7 +418,7 @@ def _audit_western_blot_runtime(audit_root: Path, failures: list[str]) -> list[C
                 current_file="app/labtools/ui/western_blot_roi_widgets.py",
                 button=measure,
                 runtime_effect="creates WB ROI run request without running external engine",
-                artifact_evidence=str(workspace.run_request_path) if workspace else "missing_wb_roi_workspace",
+                artifact_evidence="wb_roi run_request.json exists; wb_rois.csv exists" if workspace else "missing_wb_roi_workspace",
                 observed="wb_roi_run_request_verified" if ok else "missing_wb_roi_run_request",
                 status="connected" if ok else "broken",
             )
@@ -453,7 +458,7 @@ def _audit_image_analysis_runtime(audit_root: Path, failures: list[str]) -> list
                 current_file="app/labtools/ui/image_analysis_widgets.py",
                 button=action,
                 runtime_effect="creates image analysis run request without running ImageJ/Fiji",
-                artifact_evidence=str(workspace.run_request_path) if workspace else "missing_image_analysis_workspace",
+                artifact_evidence="cell_image run_request.json exists; task.status=run_request_created" if workspace else "missing_image_analysis_workspace",
                 observed="image_run_request_verified" if ok else "missing_image_run_request",
                 status="connected" if ok else "broken",
             )
@@ -476,6 +481,38 @@ def _save_reagent_template(widget: ReagentPreparationWorkflowWidget) -> None:
     _find_child(widget, QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(False)
     _find_button(widget, "reagentTemplateAddComponentButton").click()
     _find_button(widget, "reagentTemplateSaveButton").click()
+
+
+def _capture_workspace_screenshots(app: QApplication, screenshot_dir: Path) -> list[dict[str, str]]:
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+    widget = LabToolsWorkspaceWidget()
+    widget.resize(1600, 1000)
+    widget.show()
+    app.processEvents()
+    shots: list[dict[str, str]] = []
+    pages = (
+        ("01_home", "home", widget.show_home),
+        ("02_general_calculators", "general_calculators", widget.show_general_calculators),
+        ("03_reagent_preparation", "reagent_preparation", widget.show_reagent_preparation),
+        ("04_experiment_modules", "experiment_modules", widget.show_experiment_modules),
+        ("05_cell_experiments", "cell_experiments", widget.show_cell_experiments),
+        ("06_protein_experiments", "protein_experiments", widget.show_protein_experiments),
+        ("07_nucleic_acid_experiments", "nucleic_acid_experiments", lambda: widget.show_secondary("nucleic_acid_experiments")),
+        ("08_immuno_absorbance", "immuno_absorbance", lambda: widget.show_secondary("immuno_absorbance")),
+        ("09_ihc", "ihc", lambda: widget.show_secondary("ihc")),
+    )
+    try:
+        for stem, page_key, route in pages:
+            route()
+            app.processEvents()
+            path = screenshot_dir / f"{stem}.png"
+            widget.grab().save(str(path))
+            shots.append({"name": stem, "page_key": page_key, "path": str(path.relative_to(REPO_ROOT))})
+    finally:
+        widget.close()
+        widget.deleteLater()
+        app.processEvents()
+    return shots
 
 
 def _primary_button(widget: LabToolsWorkspaceWidget, page_key: str) -> QPushButton:
@@ -577,11 +614,24 @@ def _render_markdown(payload: dict[str, object]) -> str:
         "- Experiment Modules second-level entries: Cell Experiments, Protein Experiments, Nucleic Acid Experiments, Immunoassay & Absorbance, Immunohistochemistry.",
         "- Image analysis is not a primary or second-level module entry; it is a gated workbench inside Cell Experiments and Protein / Western Blot.",
         "",
+        "## Screenshots",
+        "",
+        "Runtime screenshots for this batch are stored under:",
+        "",
+        f"`{DEFAULT_SCREENSHOT_DIR.relative_to(REPO_ROOT)}`",
+        "",
+    ]
+    for screenshot in payload.get("screenshots", []):
+        lines.append(f"- `{_md(screenshot['name'])}` / `{_md(screenshot['page_key'])}`: `{_md(screenshot['path'])}`")
+    lines.extend(
+        [
+            "",
         "## Rows",
         "",
         "| Contract | Surface | Object | Status | Behavior | Evidence |",
         "| --- | --- | --- | --- | --- | --- |",
-    ]
+        ]
+    )
     for row in payload["rows"]:
         lines.append(
             "| {contract_id} | {surface} | `{object_name}` | {status} | `{button_behavior}` | {evidence} |".format(
