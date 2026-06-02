@@ -6,7 +6,9 @@ from app.shell.dashboard import build_dashboard_model
 def test_dashboard_model_loads() -> None:
     dashboard = build_dashboard_model()
     assert dashboard.product_name == "BioMedPilot / 医研智析"
-    assert "Bioinformatics Analysis" in dashboard.product_subtitle
+    assert "Bioinformatics" in dashboard.product_subtitle
+    assert "Meta Analysis" in dashboard.product_subtitle
+    assert "LabTools" in dashboard.product_subtitle
     assert dashboard.bioinformatics_features
     assert dashboard.meta_analysis_features
 

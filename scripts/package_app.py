@@ -90,7 +90,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     build_info_path = resource_root / BUILD_INFO_FILENAME
     _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
     _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
-    _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
+    launcher_mode = _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
     _ad_hoc_sign_app(app_path)
 
     return PackagingResult(
@@ -98,7 +98,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         launcher_path=launcher_path,
         resource_root=resource_root,
         build_info_path=build_info_path,
-        mode="local-python-launcher",
+        mode=launcher_mode,
         python_executable=options.python_executable,
         app_version=APP_VERSION,
         git_head=git_head,
@@ -205,6 +205,7 @@ def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
         "CFBundlePackageType": "APPL",
         "CFBundleExecutable": app_name,
         "LSMinimumSystemVersion": "12.0",
+        "NSPrincipalClass": "NSApplication",
         "NSHighResolutionCapable": True,
         "BioMedPilotVersion": APP_VERSION,
         "BioMedPilotChannel": APP_CHANNEL,
@@ -214,7 +215,14 @@ def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
         plistlib.dump(payload, handle)
 
 
-def _write_launcher(path: Path, *, app_name: str, python_executable: str) -> None:
+def _write_launcher(path: Path, *, app_name: str, python_executable: str) -> str:
+    if sys.platform == "darwin" and _write_native_launcher(path, app_name=app_name, python_executable=python_executable):
+        return "local-python-native-launcher"
+    _write_shell_launcher(path, app_name=app_name, python_executable=python_executable)
+    return "local-python-launcher"
+
+
+def _write_shell_launcher(path: Path, *, app_name: str, python_executable: str) -> None:
     script = f"""#!/bin/sh
 set -eu
 APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
@@ -251,6 +259,181 @@ esac
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+
+
+def _write_native_launcher(path: Path, *, app_name: str, python_executable: str) -> bool:
+    clang = shutil.which("clang")
+    if not clang:
+        return False
+    try:
+        flags = _python_embed_flags(python_executable)
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+        return False
+
+    source_path = path.with_suffix(".launcher.c")
+    source_path.write_text(_native_launcher_source(app_name), encoding="utf-8")
+    command = [
+        clang,
+        str(source_path),
+        "-o",
+        str(path),
+        *flags["cflags"],
+        *flags["ldflags"],
+    ]
+    try:
+        subprocess.run(command, check=True, text=True, capture_output=True)
+    except subprocess.CalledProcessError:
+        source_path.unlink(missing_ok=True)
+        path.unlink(missing_ok=True)
+        return False
+    source_path.unlink(missing_ok=True)
+    path.chmod(0o755)
+    return True
+
+
+def _python_embed_flags(python_executable: str) -> dict[str, list[str]]:
+    code = """
+import json
+import sysconfig
+
+include = sysconfig.get_config_var("INCLUDEPY")
+libdir = sysconfig.get_config_var("LIBDIR")
+libpl = sysconfig.get_config_var("LIBPL") or libdir
+version = sysconfig.get_config_var("VERSION")
+payload = {
+    "cflags": [f"-I{include}"],
+    "ldflags": [f"-L{libdir}", f"-L{libpl}", f"-lpython{version}", "-ldl", "-framework", "CoreFoundation", "-framework", "AppKit"],
+}
+print(json.dumps(payload))
+"""
+    completed = subprocess.run(
+        [python_executable, "-c", code],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    payload = json.loads(completed.stdout)
+    return {
+        "cflags": [str(flag) for flag in payload["cflags"]],
+        "ldflags": [str(flag) for flag in payload["ldflags"]],
+    }
+
+
+def _native_launcher_source(app_name: str) -> str:
+    escaped_app_name = app_name.replace("\\", "\\\\").replace('"', '\\"')
+    return f"""#include <Python.h>
+#include <mach-o/dyld.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
+static int has_arg(int argc, char **argv, const char *target) {{
+    for (int index = 1; index < argc; index++) {{
+        if (strcmp(argv[index], target) == 0) {{
+            return 1;
+        }}
+    }}
+    return 0;
+}}
+
+static void parent_dir(char *path) {{
+    char *slash = strrchr(path, '/');
+    if (slash != NULL) {{
+        *slash = '\\0';
+    }}
+}}
+
+static int executable_path(char *buffer, size_t buffer_size) {{
+    uint32_t size = (uint32_t)buffer_size;
+    if (_NSGetExecutablePath(buffer, &size) != 0) {{
+        return 0;
+    }}
+    char resolved[PATH_MAX];
+    if (realpath(buffer, resolved) == NULL) {{
+        return 0;
+    }}
+    snprintf(buffer, buffer_size, "%s", resolved);
+    return 1;
+}}
+
+static void write_launch_header(const char *resource_root, int argc, char **argv) {{
+    FILE *log_file = freopen("/tmp/biomedpilot_integration_preview_launch.log", "w", stdout);
+    if (log_file != NULL) {{
+        freopen("/tmp/biomedpilot_integration_preview_launch.log", "a", stderr);
+    }}
+    time_t now = time(NULL);
+    struct tm *utc = gmtime(&now);
+    char stamp[32] = "";
+    if (utc != NULL) {{
+        strftime(stamp, sizeof(stamp), "%Y-%m-%dT%H:%M:%SZ", utc);
+    }}
+    printf("started_at=%s\\n", stamp);
+    printf("launcher=native-embedded-python\\n");
+    printf("app={escaped_app_name}\\n");
+    printf("resource_root=%s\\n", resource_root);
+    printf("args=");
+    for (int index = 1; index < argc; index++) {{
+        printf("%s%s", index == 1 ? "" : " ", argv[index]);
+    }}
+    printf("\\n");
+    fflush(stdout);
+}}
+
+int main(int argc, char **argv) {{
+    char executable[PATH_MAX];
+    if (!executable_path(executable, sizeof(executable))) {{
+        fprintf(stderr, "{escaped_app_name}: unable to resolve executable path.\\n");
+        return 126;
+    }}
+
+    char contents_dir[PATH_MAX];
+    snprintf(contents_dir, sizeof(contents_dir), "%s", executable);
+    parent_dir(contents_dir);
+    parent_dir(contents_dir);
+
+    char resource_root[PATH_MAX];
+    snprintf(resource_root, sizeof(resource_root), "%s/Resources/app", contents_dir);
+    if (chdir(resource_root) != 0) {{
+        fprintf(stderr, "{escaped_app_name}: unable to enter resource root: %s\\n", resource_root);
+        return 126;
+    }}
+
+    setenv("BIOMEDPILOT_LAUNCH_MODE", "packaged-local-python", 1);
+    setenv("PYTHONDONTWRITEBYTECODE", "1", 1);
+    const char *old_pythonpath = getenv("PYTHONPATH");
+    char pythonpath[PATH_MAX * 2];
+    if (old_pythonpath != NULL && strlen(old_pythonpath) > 0) {{
+        snprintf(pythonpath, sizeof(pythonpath), "%s:%s", resource_root, old_pythonpath);
+    }} else {{
+        snprintf(pythonpath, sizeof(pythonpath), "%s", resource_root);
+    }}
+    setenv("PYTHONPATH", pythonpath, 1);
+
+    if (!has_arg(argc, argv, "--smoke-test")) {{
+        write_launch_header(resource_root, argc, argv);
+    }}
+
+    int embedded_argc = argc + 2;
+    char **embedded_argv = calloc((size_t)embedded_argc + 1, sizeof(char *));
+    if (embedded_argv == NULL) {{
+        fprintf(stderr, "{escaped_app_name}: unable to allocate Python argv.\\n");
+        return 125;
+    }}
+    embedded_argv[0] = argv[0];
+    embedded_argv[1] = "-m";
+    embedded_argv[2] = "app.main";
+    for (int index = 1; index < argc; index++) {{
+        embedded_argv[index + 2] = argv[index];
+    }}
+
+    int result = Py_BytesMain(embedded_argc, embedded_argv);
+    free(embedded_argv);
+    return result;
+}}
+"""
 
 
 def _ad_hoc_sign_app(app_path: Path) -> None:

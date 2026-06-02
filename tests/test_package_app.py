@@ -23,13 +23,14 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
         )
     )
 
-    assert result.mode == "local-python-launcher"
+    assert result.mode in {"local-python-native-launcher", "local-python-launcher"}
     assert result.app_version == "0.1.0-internal-beta"
     assert result.app_path.exists()
     assert result.launcher_path.exists()
     assert result.build_info_path.exists()
     assert os.access(result.launcher_path, os.X_OK)
-    assert 'PYTHONDONTWRITEBYTECODE="1"' in result.launcher_path.read_text(encoding="utf-8")
+    if result.mode == "local-python-launcher":
+        assert 'PYTHONDONTWRITEBYTECODE="1"' in result.launcher_path.read_text(encoding="utf-8")
     if sys.platform == "darwin":
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
     assert (result.resource_root / "app" / "main.py").exists()
@@ -54,6 +55,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
         info = plistlib.load(handle)
     assert info["CFBundleExecutable"] == "BioMedPilotTest"
     assert info["CFBundleName"] == "BioMedPilotTest"
+    assert info["NSPrincipalClass"] == "NSApplication"
     assert info["BioMedPilotVersion"] == "0.1.0-internal-beta"
 
 
@@ -79,6 +81,6 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
-    assert "labtools_features=1" in completed.stdout
+    assert "labtools_features=4" in completed.stdout
     if sys.platform == "darwin":
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
