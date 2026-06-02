@@ -28,8 +28,6 @@ JSON_PATH = REPO_ROOT / "docs" / "release_validation" / "20260602_phase1_preview
 
 def main() -> int:
     SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-    for old_shot in SCREENSHOT_DIR.glob("*.png"):
-        old_shot.unlink()
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     app = QApplication.instance() or QApplication([])
     window = MainWindow()
@@ -86,27 +84,37 @@ def main() -> int:
 
     shot("01_welcome")
 
+    click_button(window._welcome_page.findChild(QPushButton, "loginTopIconButton"), scope="welcome_settings", expected="settings")
+    shot("02_settings_from_welcome")
+    window.logout()
+    app.processEvents()
+    QTest.qWait(80)
+
     click_button(window._welcome_page.findChild(QPushButton, "aboutButton"), scope="welcome_about", expected="about")
-    shot("02_about_from_welcome")
+    shot("03_about_from_welcome")
+    window.logout()
+    app.processEvents()
+    QTest.qWait(80)
 
     click_button(window._welcome_page.findChild(QPushButton, "primaryButton"), scope="welcome_enter", expected="dashboard")
-    shot("03_home_dashboard")
-    shot("04_sidebar_dashboard")
+    shot("04_home_dashboard")
+    shot("05_sidebar_dashboard")
 
     click_button(window._dashboard_page.findChild(QPushButton, "bioModuleButton"), scope="home_bio", expected="bioinformatics")
-    shot("05_bio_workspace_entry")
+    shot("06_bio_workspace_entry")
     window.show_dashboard()
     click_button(window._dashboard_page.findChild(QPushButton, "metaModuleButton"), scope="home_meta", expected="meta_analysis")
-    shot("06_meta_workspace_entry")
+    shot("07_meta_workspace_entry")
     window.show_dashboard()
     click_button(window._dashboard_page.findChild(QPushButton, "labtoolsModuleButton"), scope="home_labtools", expected="labtools")
-    shot("07_labtools_workspace_entry")
+    shot("08_labtools_workspace_entry")
 
     for key, expected in (
         ("dashboard", "dashboard"),
         ("bioinformatics", "bioinformatics"),
         ("meta_analysis", "meta_analysis"),
         ("labtools", "labtools"),
+        ("centers", "centers"),
         ("settings", "settings"),
         ("test_feedback", "test_feedback"),
         ("about", "about"),

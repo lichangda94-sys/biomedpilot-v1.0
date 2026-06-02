@@ -4,7 +4,7 @@ Date: 2026-06-01
 
 Branch: `integration/release-bio-c1-ui-shell`
 
-Current audited HEAD: `58d06df1b3d38c8c60ef3aba859f24088f76062c`
+Current audited HEAD: `066f69654eea01d44074ffce54693defeac00881` plus the in-progress Phase 1 Shell recovery patch.
 
 ## Objective
 
@@ -27,9 +27,9 @@ The phase must make these rules enforceable:
 | Existing route inventory | `docs/project-control/UI_ROUTE_FEATURE_INVENTORY.md` | Starting inventory; must be promoted from source audit to executable contract. |
 | Feature asset inventory | `docs/project-control/FEATURE_ASSET_INVENTORY.md` | Tracks feature-level migration risk and acceptance state. |
 | Historical UI recovery check | `docs/ui/UI线路既往检查.md` | Identifies historical recovery commits and branches. |
-| Latest release validation | `docs/release_validation/20260601_ui_shell_and_live_validation.md` | Supplies screenshot evidence and current live Bio/Meta findings. |
+| Latest release validation | `docs/release_validation/20260602_phase1_preview_startup.md` | Supplies current Shell screenshot and live-click evidence for Welcome, Home, Sidebar, Settings, Centers, About, and module adapter entries. |
 | Button contract test | `tests/ui/test_release_ui_button_contracts.py` | Existing static contract test for button metadata and disabled reasons. |
-| Preview launch repair | commits `8519391`, `75e98c9`, `58d06df` | Confirms packaged preview must be validated through real LaunchServices opening, not smoke-only. |
+| Preview launch repair | commits `8519391`, `75e98c9`, `58d06df`, `066f696` package gate | Confirms packaged preview must be validated through real LaunchServices opening, not smoke-only. |
 
 ## Phase 1 Scope
 
@@ -249,11 +249,22 @@ Live evidence:
 
 ## First Implementation Steps
 
-1. Create Phase 1 contract appendix from current UI sources and existing validation JSON.
-2. Add or update a route-contract audit script that instantiates Shell/Bio/Meta/LabTools pages offscreen and emits JSON rows.
-3. Extend live-click tests so each button outcome is classified as service, artifact, navigation, disabled, or broken.
-4. Run Batch 0 Shell freeze verification and package preview.
-5. Start Batch 1 Bioinformatics adapter contract because Bio live validation already has current evidence and known blocker for `GSE153659`.
+1. Freeze the Shell baseline by keeping Welcome top-bar Settings visible and preserving Sidebar Centers as a Shell support route.
+2. Keep `scripts/ui_route_contract_audit.py` as the Batch 0 contract authority; it must instantiate Shell pages offscreen and emit JSON/Markdown rows.
+3. Keep `scripts/phase1_preview_startup_validation.py` as the screenshot/live-click authority for Welcome, Home, Sidebar, Settings, Centers, About, and module adapter entries.
+4. Run Batch 0 Shell freeze verification and package preview after every Shell route change.
+5. Continue Batch 1 Bioinformatics adapter contract from current mature 7-step pages; `GSE6004` and `GSE153659` GEO retrieval/recognition/readiness now have Batch 10 evidence, while TCGA/GTEx and formal ORA/GSEA/survival remain documented gaps.
+
+## Current Phase 1 Recovery Findings
+
+The current Phase 1 recovery audit found two Shell regressions relative to the frozen contract:
+
+| Finding | Evidence | Recovery |
+| --- | --- | --- |
+| Welcome Settings was not visible in the runtime page tree. | `scripts/ui_route_contract_audit.py` initially failed with missing `loginTopIconButton`. | Restore `_build_top_bar()` into `BioMedPilotLoginWidget._build_ui()` and live-click `welcome_settings -> settings`. |
+| Sidebar Centers route was absent while Centers remained part of the Shell contract. | `scripts/ui_route_contract_audit.py` failed with missing `pageKey=centers`; `tests/ui/test_shell_centers.py` still required the route. | Restore Centers entry in `SidebarWidget`, add `MainWindow.show_centers()`, and route it to `build_centers_page()`. |
+
+The recovery scope is Shell-only: no Bioinformatics, Meta Analysis, LabTools feature page, backend, or `project_storage/` migration is included in this phase.
 
 ## Stop Conditions
 

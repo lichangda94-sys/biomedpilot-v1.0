@@ -124,6 +124,7 @@ class BioMedPilotLoginWidget(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+        root.addWidget(self._build_top_bar())
 
         main = QWidget()
         main.setObjectName("loginMainContent")
