@@ -3707,7 +3707,7 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert survival_disabled is not None
     assert not survival_disabled.isEnabled()
     assert survival_disabled.property("buttonBehavior") == "disabled_survival_clinical_report_ready_not_connected"
-    assert survival_disabled.property("disabledReason") == "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled"
+    assert survival_disabled.property("disabledReason") == "survival_clinical_report_ready_requires_km_logrank_cox_risk_score_results_and_gate"
     assert "KM/Cox/log-rank" in survival_disabled.toolTip()
 
     survival_detect_backend = widget._survival_page.findChild(QPushButton, "detectSurvivalBackendButton")
@@ -3724,13 +3724,14 @@ def test_bio_workspace_enrichment_and_survival_gate_pages_call_services(qt_app, 
     assert "lifelines:" in survival_backend_result
     assert "formal_survival_execution_enabled=False" in survival_backend_result
     assert "KM/log-rank/Cox/risk_score=disabled" in survival_backend_result
+    assert "disabled_gate_basis=lifelines_or_r_survival_backend_required_plus_result_schema" in survival_backend_result
 
     survival_disabled_buttons = {
-        "runKmCurveDisabledButton": "km_curve_executor_not_connected",
-        "runLogRankDisabledButton": "logrank_executor_not_connected",
-        "runCoxModelDisabledButton": "cox_model_executor_not_connected",
-        "generateRiskScoreDisabledButton": "risk_score_model_not_connected",
-        "survivalReportExportDisabledButton": "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled",
+        "runKmCurveDisabledButton": "km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema",
+        "runLogRankDisabledButton": "logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate",
+        "runCoxModelDisabledButton": "cox_model_executor_requires_lifelines_or_r_survival_backend_covariate_schema_and_hr_result_schema",
+        "generateRiskScoreDisabledButton": "risk_score_requires_validated_model_formula_training_validation_schema_and_report_gate",
+        "survivalReportExportDisabledButton": "survival_clinical_report_ready_requires_km_logrank_cox_risk_score_results_and_gate",
     }
     for object_name, disabled_reason in survival_disabled_buttons.items():
         button = widget._survival_page.findChild(QPushButton, object_name)

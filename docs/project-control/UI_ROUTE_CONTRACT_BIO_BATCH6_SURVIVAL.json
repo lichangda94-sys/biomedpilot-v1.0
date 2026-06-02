@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_batch6_survival.v1",
-  "created_at": "2026-06-02T08:29:19.035354+00:00",
+  "created_at": "2026-06-02T11:21:32.481628+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+  "head": "606bb2c7881a843d4e41e381116b120248b7877d",
   "scope": "Bioinformatics survival/clinical input gate, backend dependency detection, KM/log-rank/Cox/risk score disabled gates, and clinical report-ready gate.",
   "summary": {
     "row_count": 9,
@@ -45,10 +45,10 @@
       "button_behavior": "selects_cleaning_plan_json",
       "formal_action_enabled": false,
       "runtime_effect": "opens file picker and writes selected cleaning plan path into input",
-      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_zyhaefb_/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
+      "artifact_evidence": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
       "live_click_test": "clicked",
       "status": "connected",
-      "observed": "path_input=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_zyhaefb_/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
+      "observed": "path_input=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/project/bio_batch_6_survival/analysis/cleaning/geo_cleaning_plan.json",
       "disabled_reason": "",
       "batch": "Batch 6: Bioinformatics Survival/Clinical Gate"
     },
@@ -62,7 +62,7 @@
       "button_behavior": "calls_survival_service_create_preflight_artifact",
       "formal_action_enabled": false,
       "runtime_effect": "calls SurvivalService.create_preflight and writes geo_survival_preflight artifact",
-      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_zyhaefb_/projects/bio_batch_6_survival/bioinformatics/survival/geo_survival_preflight_fa5b2bf7522e.json",
+      "artifact_evidence": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch6_survival_rflos5bu/projects/bio_batch_6_survival/bioinformatics/survival/geo_survival_preflight_79ecb755d01b.json",
       "live_click_test": "clicked",
       "status": "connected",
       "observed": "survival_analysis_executed=False",
@@ -96,11 +96,11 @@
       "button_behavior": "disabled_km_curve_executor_not_connected",
       "formal_action_enabled": false,
       "runtime_effect": "disabled with explicit release gate reason",
-      "artifact_evidence": "km_curve_executor_not_connected",
+      "artifact_evidence": "km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema",
       "live_click_test": "disabled_state_and_reason_verified",
       "status": "disabled",
-      "observed": "enabled=False; disabledReason=km_curve_executor_not_connected",
-      "disabled_reason": "km_curve_executor_not_connected",
+      "observed": "enabled=False; disabledReason=km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema",
+      "disabled_reason": "km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema",
       "batch": "Batch 6: Bioinformatics Survival/Clinical Gate"
     },
     {
@@ -113,11 +113,11 @@
       "button_behavior": "disabled_logrank_executor_not_connected",
       "formal_action_enabled": false,
       "runtime_effect": "disabled with explicit release gate reason",
-      "artifact_evidence": "logrank_executor_not_connected",
+      "artifact_evidence": "logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate",
       "live_click_test": "disabled_state_and_reason_verified",
       "status": "disabled",
-      "observed": "enabled=False; disabledReason=logrank_executor_not_connected",
-      "disabled_reason": "logrank_executor_not_connected",
+      "observed": "enabled=False; disabledReason=logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate",
+      "disabled_reason": "logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate",
       "batch": "Batch 6: Bioinformatics Survival/Clinical Gate"
     },
     {
@@ -130,11 +130,11 @@
       "button_behavior": "disabled_cox_model_executor_not_connected",
       "formal_action_enabled": false,
       "runtime_effect": "disabled with explicit release gate reason",
-      "artifact_evidence": "cox_model_executor_not_connected",
+      "artifact_evidence": "cox_model_executor_requires_lifelines_or_r_survival_backend_covariate_schema_and_hr_result_schema",
       "live_click_test": "disabled_state_and_reason_verified",
       "status": "disabled",
-      "observed": "enabled=False; disabledReason=cox_model_executor_not_connected",
-      "disabled_reason": "cox_model_executor_not_connected",
+      "observed": "enabled=False; disabledReason=cox_model_executor_requires_lifelines_or_r_survival_backend_covariate_schema_and_hr_result_schema",
+      "disabled_reason": "cox_model_executor_requires_lifelines_or_r_survival_backend_covariate_schema_and_hr_result_schema",
       "batch": "Batch 6: Bioinformatics Survival/Clinical Gate"
     },
     {
@@ -147,11 +147,11 @@
       "button_behavior": "disabled_risk_score_model_not_connected",
       "formal_action_enabled": false,
       "runtime_effect": "disabled with explicit release gate reason",
-      "artifact_evidence": "risk_score_model_not_connected",
+      "artifact_evidence": "risk_score_requires_validated_model_formula_training_validation_schema_and_report_gate",
       "live_click_test": "disabled_state_and_reason_verified",
       "status": "disabled",
-      "observed": "enabled=False; disabledReason=risk_score_model_not_connected",
-      "disabled_reason": "risk_score_model_not_connected",
+      "observed": "enabled=False; disabledReason=risk_score_requires_validated_model_formula_training_validation_schema_and_report_gate",
+      "disabled_reason": "risk_score_requires_validated_model_formula_training_validation_schema_and_report_gate",
       "batch": "Batch 6: Bioinformatics Survival/Clinical Gate"
     },
     {
@@ -164,11 +164,11 @@
       "button_behavior": "disabled_survival_clinical_report_ready_not_connected",
       "formal_action_enabled": false,
       "runtime_effect": "disabled with explicit release gate reason",
-      "artifact_evidence": "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled",
+      "artifact_evidence": "survival_clinical_report_ready_requires_km_logrank_cox_risk_score_results_and_gate",
       "live_click_test": "disabled_state_and_reason_verified",
       "status": "disabled",
-      "observed": "enabled=False; disabledReason=km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled",
-      "disabled_reason": "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled",
+      "observed": "enabled=False; disabledReason=survival_clinical_report_ready_requires_km_logrank_cox_risk_score_results_and_gate",
+      "disabled_reason": "survival_clinical_report_ready_requires_km_logrank_cox_risk_score_results_and_gate",
       "batch": "Batch 6: Bioinformatics Survival/Clinical Gate"
     }
   ]

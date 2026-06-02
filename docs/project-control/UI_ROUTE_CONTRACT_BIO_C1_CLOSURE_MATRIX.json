@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_c1_closure_matrix.v1",
-  "created_at": "2026-06-02T11:15:38+00:00",
+  "created_at": "2026-06-02T11:21:54+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "396645e24b7fc3628b44bd7030107f737d4a358f",
+  "head": "606bb2c7881a843d4e41e381116b120248b7877d",
   "scope": "Bioinformatics C1 mature UIShell 7-step page route contract closure: UI page -> backend capability -> branch/source -> live-click or disabled-reason evidence.",
   "inputs": {
     "batch4_formal_deg": {
@@ -32,7 +32,7 @@
     "batch6_survival": {
       "path": "docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json",
       "schema_version": "ui_route_contract_bio_batch6_survival.v1",
-      "head": "8b20ac157f3c582381cedc2690293327fc5c64f3",
+      "head": "606bb2c7881a843d4e41e381116b120248b7877d",
       "summary": {
         "row_count": 9,
         "connected": 4,

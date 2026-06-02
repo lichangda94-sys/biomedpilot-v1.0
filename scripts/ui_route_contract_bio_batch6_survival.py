@@ -213,7 +213,12 @@ def _audit_page_buttons(
     detect_button = _find_button(page, "detectSurvivalBackendButton")
     detect_button.click()
     detection_text = _find_plain_text(page, "survivalBackendDetectionText").toPlainText()
-    detect_ok = "lifelines:" in detection_text and "formal_survival_execution_enabled=False" in detection_text and "KM/log-rank/Cox/risk_score=disabled" in detection_text
+    detect_ok = (
+        "lifelines:" in detection_text
+        and "formal_survival_execution_enabled=False" in detection_text
+        and "KM/log-rank/Cox/risk_score=disabled" in detection_text
+        and "disabled_gate_basis=lifelines_or_r_survival_backend_required_plus_result_schema" in detection_text
+    )
     rows.append(
         _button_row(
             "BIO-SURVIVAL-DETECT-BACKEND",
@@ -228,13 +233,25 @@ def _audit_page_buttons(
         failures.append("BIO-SURVIVAL-DETECT-BACKEND: backend detection output did not include expected survival gates")
 
     disabled_expectations = {
-        "runKmCurveDisabledButton": ("BIO-SURVIVAL-KM-CURVE-GATE", "km_curve_executor_not_connected"),
-        "runLogRankDisabledButton": ("BIO-SURVIVAL-LOGRANK-GATE", "logrank_executor_not_connected"),
-        "runCoxModelDisabledButton": ("BIO-SURVIVAL-COX-MODEL-GATE", "cox_model_executor_not_connected"),
-        "generateRiskScoreDisabledButton": ("BIO-SURVIVAL-RISK-SCORE-GATE", "risk_score_model_not_connected"),
+        "runKmCurveDisabledButton": (
+            "BIO-SURVIVAL-KM-CURVE-GATE",
+            "km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema",
+        ),
+        "runLogRankDisabledButton": (
+            "BIO-SURVIVAL-LOGRANK-GATE",
+            "logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate",
+        ),
+        "runCoxModelDisabledButton": (
+            "BIO-SURVIVAL-COX-MODEL-GATE",
+            "cox_model_executor_requires_lifelines_or_r_survival_backend_covariate_schema_and_hr_result_schema",
+        ),
+        "generateRiskScoreDisabledButton": (
+            "BIO-SURVIVAL-RISK-SCORE-GATE",
+            "risk_score_requires_validated_model_formula_training_validation_schema_and_report_gate",
+        ),
         "survivalReportExportDisabledButton": (
             "BIO-SURVIVAL-CLINICAL-REPORT-READY-GATE",
-            "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled",
+            "survival_clinical_report_ready_requires_km_logrank_cox_risk_score_results_and_gate",
         ),
     }
     for object_name, (contract_id, disabled_reason) in disabled_expectations.items():

@@ -154,45 +154,45 @@ if QWidget is not None:
             km_button.setObjectName("runKmCurveDisabledButton")
             km_button.setEnabled(False)
             km_button.setProperty("buttonBehavior", "disabled_km_curve_executor_not_connected")
-            km_button.setProperty("disabledReason", "km_curve_executor_not_connected")
+            km_button.setProperty("disabledReason", "km_curve_executor_requires_lifelines_or_r_survival_backend_and_result_schema")
             km_button.setProperty("formalActionEnabled", False)
-            km_button.setToolTip("disabled：当前只生成 survival preflight artifact，KM curve executor 尚未纳入 release gate。")
+            km_button.setToolTip("disabled：需要 lifelines 或 R survival 后端、validated survival result schema 和 KM plot gate。")
             root.addWidget(km_button)
 
             logrank_button = QPushButton("运行 log-rank 检验")
             logrank_button.setObjectName("runLogRankDisabledButton")
             logrank_button.setEnabled(False)
             logrank_button.setProperty("buttonBehavior", "disabled_logrank_executor_not_connected")
-            logrank_button.setProperty("disabledReason", "logrank_executor_not_connected")
+            logrank_button.setProperty("disabledReason", "logrank_executor_requires_lifelines_or_r_survival_backend_event_schema_and_grouping_gate")
             logrank_button.setProperty("formalActionEnabled", False)
-            logrank_button.setToolTip("disabled：log-rank p-value executor 未接入；不能生成正式生存统计结论。")
+            logrank_button.setToolTip("disabled：需要 lifelines 或 R survival 后端、事件编码 schema、分组策略和正式 p-value 结果 schema。")
             root.addWidget(logrank_button)
 
             cox_button = QPushButton("运行 Cox 模型")
             cox_button.setObjectName("runCoxModelDisabledButton")
             cox_button.setEnabled(False)
             cox_button.setProperty("buttonBehavior", "disabled_cox_model_executor_not_connected")
-            cox_button.setProperty("disabledReason", "cox_model_executor_not_connected")
+            cox_button.setProperty("disabledReason", "cox_model_executor_requires_lifelines_or_r_survival_backend_covariate_schema_and_hr_result_schema")
             cox_button.setProperty("formalActionEnabled", False)
-            cox_button.setToolTip("disabled：Cox model executor、HR schema 和协变量审查 gate 未接入。")
+            cox_button.setToolTip("disabled：需要 lifelines 或 R survival 后端、协变量审查 gate、HR/CI/p-value result schema。")
             root.addWidget(cox_button)
 
             risk_button = QPushButton("生成 risk score")
             risk_button.setObjectName("generateRiskScoreDisabledButton")
             risk_button.setEnabled(False)
             risk_button.setProperty("buttonBehavior", "disabled_risk_score_model_not_connected")
-            risk_button.setProperty("disabledReason", "risk_score_model_not_connected")
+            risk_button.setProperty("disabledReason", "risk_score_requires_validated_model_formula_training_validation_schema_and_report_gate")
             risk_button.setProperty("formalActionEnabled", False)
-            risk_button.setToolTip("disabled：risk score model、评分公式、训练/验证 schema 未接入。")
+            risk_button.setToolTip("disabled：需要 validated model formula、训练/验证 schema、risk group manifest 和 report gate。")
             root.addWidget(risk_button)
 
             next_button = QPushButton("下一步：报告导出")
             next_button.setObjectName("survivalReportExportDisabledButton")
             next_button.setEnabled(False)
             next_button.setProperty("buttonBehavior", "disabled_survival_clinical_report_ready_not_connected")
-            next_button.setProperty("disabledReason", "km_cox_logrank_risk_score_and_clinical_report_ready_gate_not_enabled")
+            next_button.setProperty("disabledReason", "survival_clinical_report_ready_requires_km_logrank_cox_risk_score_results_and_gate")
             next_button.setProperty("formalActionEnabled", False)
-            next_button.setToolTip("disabled：KM/Cox/log-rank、risk score 和 clinical report-ready 不属于当前 Bio C1b 接线范围。")
+            next_button.setToolTip("disabled：KM/Cox/log-rank、risk score 结果和 clinical report-ready package gate 尚未满足。")
             root.addWidget(next_button)
             root.addStretch(1)
 
@@ -248,6 +248,7 @@ if QWidget is not None:
                 "formal_survival_execution_enabled=False",
                 "report_ready_gate_enabled=False",
                 "KM/log-rank/Cox/risk_score=disabled",
+                "disabled_gate_basis=lifelines_or_r_survival_backend_required_plus_result_schema",
                 str(snapshot.get("message") or ""),
                 "blockers=" + ", ".join(str(item) for item in snapshot.get("blockers", []) or []) if snapshot.get("blockers") else "blockers=none",
                 "warnings=" + ", ".join(str(item) for item in snapshot.get("warnings", []) or []) if snapshot.get("warnings") else "warnings=none",

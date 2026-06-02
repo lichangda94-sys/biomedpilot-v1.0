@@ -1,7 +1,7 @@
 # Bioinformatics C1 Closure Matrix
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `396645e24b7fc3628b44bd7030107f737d4a358f`
+- head: `606bb2c7881a843d4e41e381116b120248b7877d`
 - closure_status: `passed_with_documented_gaps`
 - ui_page_count: `7`
 - capability_row_count: `7`
@@ -16,7 +16,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `batch4_formal_deg` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json` | `8b20ac157f3c` | `8` | `8` | `0` | `0` |
 | `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `396645e24b7f` | `9` | `4` | `5` | `0` |
-| `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `8b20ac157f3c` | `9` | `4` | `5` | `0` |
+| `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `606bb2c7881a` | `9` | `4` | `5` | `0` |
 | `batch7_report_export` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json` | `8b20ac157f3c` | `13` | `13` | `0` | `0` |
 | `batch8_visible_buttons` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json` | `b47d29ba66a4` | `94` | `56` | `38` | `0` |
 | `batch9_data_prep_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json` | `546e66394ef2` | `9` | `9` | `0` | `0` |
