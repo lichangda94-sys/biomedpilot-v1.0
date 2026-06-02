@@ -1,8 +1,8 @@
 # UI Route Contract LabTools Batch 2
 
-- Created: `2026-06-02T14:00:52.394935+00:00`
+- Created: `2026-06-02T14:18:03.691550+00:00`
 - Branch: `integration/release-bio-c1-ui-shell`
-- HEAD: `6ffcbe7a650809cbbf25df8842619322d177f83d`
+- HEAD: `13128f797492631045373d8a21437d47d658eda3`
 - Scope: LabTools approved home, second-level module list, connected calculators/reagent/cell/WB/image run-request gates.
 
 ## Summary

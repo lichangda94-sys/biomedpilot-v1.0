@@ -1,8 +1,8 @@
 # UI Route Contract LabTools Batch 5: Secondary Remainder
 
-- Created: `2026-06-02T14:00:51+00:00`
+- Created: `2026-06-02T14:18:58+00:00`
 - Branch: `integration/release-bio-c1-ui-shell`
-- HEAD: `6ffcbe7a650809cbbf25df8842619322d177f83d`
+- HEAD: `13128f797492631045373d8a21437d47d658eda3`
 - Scope: LabTools remaining secondary modules: connect Nucleic Acid qPCR mix adapter; keep Immunoassay/Absorbance and IHC disabled with explicit reasons.
 
 ## Summary
