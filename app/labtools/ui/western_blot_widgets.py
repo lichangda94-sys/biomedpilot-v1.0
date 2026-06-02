@@ -166,6 +166,7 @@ if QWidget is not None:
 
             scroll.setWidget(content)
             root.addWidget(scroll)
+            self._apply_button_contract_metadata()
 
         def _build_sections_tab(self) -> QWidget:
             tab = QWidget()
@@ -923,6 +924,56 @@ if QWidget is not None:
             if isinstance(status, QLabel):
                 return status
             raise RuntimeError("Western Blot record status widget is missing")
+
+        def _apply_button_contract_metadata(self) -> None:
+            metadata = {
+                "bcaParseOdMatrixButton": "parses_bca_od_matrix_into_plate_table",
+                "bcaApplyBatchAnnotationButton": "applies_bca_annotation_to_well_range",
+                "bcaApplySelectedAnnotationButton": "applies_bca_annotation_to_selected_wells",
+                "bcaSetBlankButton": "marks_selected_bca_wells_as_blank",
+                "bcaSetStandardButton": "marks_selected_bca_wells_as_standard",
+                "bcaSetSampleButton": "marks_selected_bca_wells_as_sample",
+                "bcaSetUnusedButton": "marks_selected_bca_wells_as_unused",
+                "bcaCalculateButton": "calculates_bca_standard_curve_and_sample_concentrations",
+                "bcaCopyResultButton": "copies_bca_result_text_after_calculation",
+                "refreshBlankLaneLayoutButton": "generates_blank_sds_page_lane_layout",
+                "importLoadingLaneLayoutButton": "imports_latest_protein_loading_lane_layout_or_generates_blank_layout",
+                "primaryButton": "calculates_sds_page_gel_batch_from_user_template",
+                "sdsPageTemplateJsonExportButton": "exports_sds_page_template_json_after_calculation",
+                "sdsPageTemplateJsonImportButton": "imports_sds_page_template_json_with_conflict_policy",
+                "sdsPageXlsxExportButton": "exports_sds_page_gel_calculation_xlsx_after_calculation",
+                "openBcaAssayToolButton": "opens_bca_assay_tab",
+                "openProteinLoadingToolButton": "opens_protein_loading_tab",
+                "openSdsPageGelToolButton": "opens_sds_page_gel_lane_layout_tab",
+            }
+            for button in self.findChildren(QPushButton):
+                object_name = button.objectName()
+                if object_name.startswith("wbWorkflowStepButton_"):
+                    button.setProperty("buttonBehavior", "opens_western_blot_workflow_step_tab")
+                    button.setProperty("formalActionEnabled", False)
+                elif object_name.startswith("wbRecordSaveButton_"):
+                    button.setProperty("buttonBehavior", "persists_western_blot_workflow_record_json")
+                    button.setProperty("formalActionEnabled", False)
+                elif object_name.startswith("wbRecordSaveSopTemplateButton_"):
+                    button.setProperty("buttonBehavior", "persists_western_blot_workflow_sop_template_record")
+                    button.setProperty("formalActionEnabled", False)
+                elif object_name.startswith("wbRecordLoadLastButton_"):
+                    button.setProperty("buttonBehavior", "loads_latest_western_blot_workflow_record_for_step")
+                    button.setProperty("formalActionEnabled", False)
+                elif object_name.startswith("wbRecordExportTextButton_"):
+                    button.setProperty("buttonBehavior", "exports_western_blot_workflow_record_text")
+                    button.setProperty("formalActionEnabled", False)
+                elif object_name in metadata:
+                    button.setProperty("buttonBehavior", metadata[object_name])
+                    button.setProperty("formalActionEnabled", False)
+            for object_name, reason in {
+                "bcaCopyResultButton": "Requires a generated BCA calculation before copy is enabled.",
+                "sdsPageTemplateJsonExportButton": "Requires a generated SDS-PAGE template calculation before template export is enabled.",
+                "sdsPageXlsxExportButton": "Requires a generated SDS-PAGE calculation before XLSX export is enabled.",
+            }.items():
+                button = self.findChild(QPushButton, object_name)
+                if button is not None and not button.isEnabled():
+                    button.setProperty("disabledReason", reason)
 
         def _handle_calculate(self) -> None:
             try:

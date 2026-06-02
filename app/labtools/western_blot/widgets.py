@@ -87,6 +87,7 @@ if QWidget is not None:
             root.addWidget(self._build_action_card())
             root.addWidget(self._build_result_card(), 1)
             root.addWidget(self._build_record_card())
+            self._apply_button_contract_metadata()
             self._refresh_history()
 
         def _build_config_card(self) -> QFrame:
@@ -412,6 +413,34 @@ if QWidget is not None:
         def _set_record_actions_enabled(self, enabled: bool) -> None:
             for button in (self._save_record_button, self._copy_markdown_button, self._export_markdown_button, self._export_csv_button):
                 button.setEnabled(enabled)
+                if not enabled:
+                    button.setProperty("disabledReason", "Requires a generated protein loading calculation before this record/export action is enabled.")
+
+        def _apply_button_contract_metadata(self) -> None:
+            metadata = {
+                "wbLoadingSaveRecordButton": "persists_protein_loading_record_json_after_calculation",
+                "wbLoadingCopyMarkdownButton": "copies_protein_loading_record_markdown_after_calculation",
+                "wbLoadingExportMarkdownButton": "exports_protein_loading_record_markdown_after_calculation",
+                "wbLoadingExportCsvButton": "exports_protein_loading_record_csv_after_calculation",
+                "wbLoadingViewRecordButton": "loads_selected_protein_loading_record_into_result_panels",
+                "wbLoadingDeleteRecordButton": "deletes_selected_protein_loading_record_after_confirmation",
+                "wbLoadingRefreshRecordHistoryButton": "reloads_protein_loading_record_history",
+            }
+            for object_name, behavior in metadata.items():
+                button = self.findChild(QPushButton, object_name)
+                if button is None:
+                    continue
+                button.setProperty("buttonBehavior", behavior)
+                button.setProperty("formalActionEnabled", False)
+            for object_name in (
+                "wbLoadingSaveRecordButton",
+                "wbLoadingCopyMarkdownButton",
+                "wbLoadingExportMarkdownButton",
+                "wbLoadingExportCsvButton",
+            ):
+                button = self.findChild(QPushButton, object_name)
+                if button is not None and not button.isEnabled():
+                    button.setProperty("disabledReason", "Requires a generated protein loading calculation before this record/export action is enabled.")
 
         def _refresh_history(self) -> None:
             try:
