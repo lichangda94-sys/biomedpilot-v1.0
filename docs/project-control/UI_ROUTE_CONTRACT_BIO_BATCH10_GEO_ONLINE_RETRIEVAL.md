@@ -1,7 +1,7 @@
 # Bioinformatics Batch 10 GEO Online Retrieval Route Contract
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `dc55902228f578a86799cea28b81ebd8eeaa03a3`
+- head: `e837762525d2366934be6baf5ae9e730a1f8abaa`
 - accessions: `GSE6004, GSE153659`
 - row_count: `18`
 - connected: `18`
@@ -18,8 +18,8 @@
 平台：570
 样本数：18
 下一步：加入项目后下载 GEO 元数据。 |
-| `BIO-B10-GSE6004-ADD-GEO-ACCESSION` | `GSE6004` | `data_source` | `bioinformaticsGeoAddToProjectButton` | 加入项目 | `connected` | `app.bioinformatics.project_workspace_binding.register_acquisition` | acquisition/handoffs/acq-1e9a2656.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-1e9a2656.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-1e9a2656.json; acquisition/records/latest_acquisition_record.json |
-| `BIO-B10-GSE6004-DOWNLOAD-GEO-METADATA` | `GSE6004` | `data_source` | `bioinformaticsGeoDownloadMetadataButton` | 下载 GEO 元数据 | `connected` | `app.bioinformatics.download.DatasetDownloadService.create_candidate_download_task` | raw_data/geo/GSE6004/GSE6004_family.soft.gz; raw_data/geo/GSE6004/GSE6004_asset_manifest.json; acquisition/download_receipts/dl-ea787ab6c7.json |
+| `BIO-B10-GSE6004-ADD-GEO-ACCESSION` | `GSE6004` | `data_source` | `bioinformaticsGeoAddToProjectButton` | 加入项目 | `connected` | `app.bioinformatics.project_workspace_binding.register_acquisition` | acquisition/handoffs/acq-ed4c31a2.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-ed4c31a2.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-ed4c31a2.json; acquisition/records/latest_acquisition_record.json |
+| `BIO-B10-GSE6004-DOWNLOAD-GEO-METADATA` | `GSE6004` | `data_source` | `bioinformaticsGeoDownloadMetadataButton` | 下载 GEO 元数据 | `connected` | `app.bioinformatics.download.DatasetDownloadService.create_candidate_download_task` | raw_data/geo/GSE6004/GSE6004_family.soft.gz; raw_data/geo/GSE6004/GSE6004_asset_manifest.json; acquisition/download_receipts/dl-5ea5f18c0e.json |
 | `BIO-B10-GSE6004-DOWNLOAD-GEO-ASSETS` | `GSE6004` | `data_source` | `bioinformaticsGeoDownloadAssetsButton` | 下载候选资产 | `connected` | `app.bioinformatics.download.DatasetDownloadService.download_geo_manifest_assets` | raw_data/geo/GSE6004/GSE6004_family.soft.gz; raw_data/geo/GSE6004/matrix/GSE6004_series_matrix.txt.gz |
 | `BIO-B10-GSE6004-CONTINUE-TO-RECOGNITION` | `GSE6004` | `data_source` | `bioinformaticsGeoContinueRecognitionButton` | 进入数据识别 | `connected` | `app.bioinformatics.workspace.BioinformaticsWorkspaceWidget.show_recognition` | route=recognition |
 | `BIO-B10-GSE6004-RUN-RECOGNITION` | `GSE6004` | `data_check_preparation` | `bioinformaticsRunRecognitionButton` | 开始识别 | `connected` | `app.bioinformatics.project_recognition.run_project_recognition_for_paths` | logs/recognition/recognition_report.json; recognized_data/current.json; logs/recognition/group_preview_report.json |
@@ -31,8 +31,8 @@
 平台：24676
 样本数：31
 下一步：加入项目后下载 GEO 元数据。 |
-| `BIO-B10-GSE153659-ADD-GEO-ACCESSION` | `GSE153659` | `data_source` | `bioinformaticsGeoAddToProjectButton` | 加入项目 | `connected` | `app.bioinformatics.project_workspace_binding.register_acquisition` | acquisition/handoffs/acq-8be76340.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-8be76340.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-8be76340.json; acquisition/records/latest_acquisition_record.json |
-| `BIO-B10-GSE153659-DOWNLOAD-GEO-METADATA` | `GSE153659` | `data_source` | `bioinformaticsGeoDownloadMetadataButton` | 下载 GEO 元数据 | `connected` | `app.bioinformatics.download.DatasetDownloadService.create_candidate_download_task` | raw_data/geo/GSE153659/GSE153659_family.soft.gz; raw_data/geo/GSE153659/GSE153659_asset_manifest.json; acquisition/download_receipts/dl-a3631a2f9d.json |
+| `BIO-B10-GSE153659-ADD-GEO-ACCESSION` | `GSE153659` | `data_source` | `bioinformaticsGeoAddToProjectButton` | 加入项目 | `connected` | `app.bioinformatics.project_workspace_binding.register_acquisition` | acquisition/handoffs/acq-9c6b577d.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-9c6b577d.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-9c6b577d.json; acquisition/records/latest_acquisition_record.json |
+| `BIO-B10-GSE153659-DOWNLOAD-GEO-METADATA` | `GSE153659` | `data_source` | `bioinformaticsGeoDownloadMetadataButton` | 下载 GEO 元数据 | `connected` | `app.bioinformatics.download.DatasetDownloadService.create_candidate_download_task` | raw_data/geo/GSE153659/GSE153659_family.soft.gz; raw_data/geo/GSE153659/GSE153659_asset_manifest.json; acquisition/download_receipts/dl-a35eb6201c.json |
 | `BIO-B10-GSE153659-DOWNLOAD-GEO-ASSETS` | `GSE153659` | `data_source` | `bioinformaticsGeoDownloadAssetsButton` | 下载候选资产 | `connected` | `app.bioinformatics.download.DatasetDownloadService.download_geo_manifest_assets` | raw_data/geo/GSE153659/GSE153659_family.soft.gz; raw_data/geo/GSE153659/matrix/GSE153659_series_matrix.txt.gz; raw_data/geo/GSE153659/supplementary/GSE153659_FPKM_Matrix.xlsx |
 | `BIO-B10-GSE153659-CONTINUE-TO-RECOGNITION` | `GSE153659` | `data_source` | `bioinformaticsGeoContinueRecognitionButton` | 进入数据识别 | `connected` | `app.bioinformatics.workspace.BioinformaticsWorkspaceWidget.show_recognition` | route=recognition |
 | `BIO-B10-GSE153659-RUN-RECOGNITION` | `GSE153659` | `data_check_preparation` | `bioinformaticsRunRecognitionButton` | 开始识别 | `connected` | `app.bioinformatics.project_recognition.run_project_recognition_for_paths` | logs/recognition/recognition_report.json; recognized_data/current.json; logs/recognition/group_preview_report.json |

@@ -1,7 +1,7 @@
 # Bioinformatics Batch 9 Data-Prep Adapter Route Contract
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `4a0577982b6c87645f6d1a0bac0adbd56728f7b0`
+- head: `e837762525d2366934be6baf5ae9e730a1f8abaa`
 - scope: Bioinformatics mature Data Source -> Data Check -> Standardization -> Group Design adapter chain with button-click artifact proof.
 - row_count: `9`
 - connected: `9`

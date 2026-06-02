@@ -1,7 +1,7 @@
 # Bioinformatics C1 Closure Matrix
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `4a0577982b6c87645f6d1a0bac0adbd56728f7b0`
+- head: `e837762525d2366934be6baf5ae9e730a1f8abaa`
 - closure_status: `passed_with_documented_gaps`
 - ui_page_count: `7`
 - capability_row_count: `7`
@@ -9,27 +9,23 @@
 - connected_rows_from_inputs: `136`
 - disabled_rows_with_reason: `56`
 - broken_rows_from_inputs: `0`
-- stale_input_batches: `batch10_geo_online_retrieval`
+- stale_input_batches: `none`
 
 ## Inputs
 
 | Batch | Report | Head | Current HEAD? | Rows | Connected | Disabled | Broken |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `batch4_formal_deg` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json` | `4a0577982b6c` | `yes` | `8` | `8` | `0` | `0` |
-| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `4a0577982b6c` | `yes` | `9` | `4` | `5` | `0` |
-| `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `4a0577982b6c` | `yes` | `9` | `4` | `5` | `0` |
-| `batch7_report_export` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json` | `4a0577982b6c` | `yes` | `13` | `13` | `0` | `0` |
-| `batch8_visible_buttons` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json` | `4a0577982b6c` | `yes` | `94` | `55` | `39` | `0` |
-| `batch9_data_prep_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json` | `4a0577982b6c` | `yes` | `9` | `9` | `0` | `0` |
-| `batch10_geo_online_retrieval` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json` | `dc55902228f5` | `no` | `18` | `18` | `0` | `0` |
-| `batch11_tcga_gtex_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json` | `4a0577982b6c` | `yes` | `10` | `6` | `4` | `0` |
-| `batch12_tcga_gtex_light_validation` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json` | `4a0577982b6c` | `yes` | `10` | `10` | `0` | `0` |
-| `batch13_tcga_gtex_data_check` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH13_TCGA_GTEX_DATA_CHECK.json` | `4a0577982b6c` | `yes` | `5` | `5` | `0` | `0` |
-| `batch14_formal_ora` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json` | `4a0577982b6c` | `yes` | `7` | `4` | `3` | `0` |
-
-## Input Freshness Notes
-
-The batches listed as stale retain earlier passing evidence and were not refreshed against the current HEAD in this closure run. Treat them as prior evidence until their own batch contracts are regenerated.
+| `batch4_formal_deg` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH4_FORMAL_DEG.json` | `e837762525d2` | `yes` | `8` | `8` | `0` | `0` |
+| `batch5_enrichment` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH5_ENRICHMENT.json` | `e837762525d2` | `yes` | `9` | `4` | `5` | `0` |
+| `batch6_survival` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH6_SURVIVAL.json` | `e837762525d2` | `yes` | `9` | `4` | `5` | `0` |
+| `batch7_report_export` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH7_REPORT_EXPORT.json` | `e837762525d2` | `yes` | `13` | `13` | `0` | `0` |
+| `batch8_visible_buttons` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH8_VISIBLE_BUTTONS.json` | `e837762525d2` | `yes` | `94` | `55` | `39` | `0` |
+| `batch9_data_prep_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH9_DATA_PREP_ADAPTERS.json` | `e837762525d2` | `yes` | `9` | `9` | `0` | `0` |
+| `batch10_geo_online_retrieval` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH10_GEO_ONLINE_RETRIEVAL.json` | `e837762525d2` | `yes` | `18` | `18` | `0` | `0` |
+| `batch11_tcga_gtex_adapters` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH11_TCGA_GTEX_ADAPTERS.json` | `e837762525d2` | `yes` | `10` | `6` | `4` | `0` |
+| `batch12_tcga_gtex_light_validation` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH12_TCGA_GTEX_LIGHT_VALIDATION.json` | `e837762525d2` | `yes` | `10` | `10` | `0` | `0` |
+| `batch13_tcga_gtex_data_check` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH13_TCGA_GTEX_DATA_CHECK.json` | `e837762525d2` | `yes` | `5` | `5` | `0` | `0` |
+| `batch14_formal_ora` | `docs/project-control/UI_ROUTE_CONTRACT_BIO_BATCH14_FORMAL_ORA.json` | `e837762525d2` | `yes` | `7` | `4` | `3` | `0` |
 
 ## Page Baseline Matrix
 

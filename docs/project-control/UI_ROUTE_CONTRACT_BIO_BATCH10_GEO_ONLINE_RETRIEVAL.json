@@ -1,8 +1,8 @@
 {
   "schema_version": "ui_route_contract_bio_batch10_geo_online_retrieval.v1",
-  "created_at": "2026-06-02T09:42:07+00:00",
+  "created_at": "2026-06-02T14:32:32+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "dc55902228f578a86799cea28b81ebd8eeaa03a3",
+  "head": "e837762525d2366934be6baf5ae9e730a1f8abaa",
   "scope": "Bioinformatics Data Source visible GEO adapter: GSE metadata search, project registration, online metadata download, online asset download, recognition, and readiness.",
   "accessions": [
     "GSE6004",
@@ -55,8 +55,7 @@
     "connected": 18,
     "disabled": 0,
     "broken": 0,
-    "failures": [],
-    "execution_note": "GSE6004 and GSE153659 were live-clicked in separate controlled runs to avoid long-running Qt cleanup in a combined network run."
+    "failures": []
   },
   "rows": [
     {
@@ -100,7 +99,7 @@
       "backend_capability": "app.bioinformatics.project_workspace_binding.register_acquisition",
       "source_file": "app/bioinformatics/workflow_pages.py",
       "runtime_effect": "registers GEO accession as plan-only pending source",
-      "artifact_evidence": "acquisition/handoffs/acq-1e9a2656.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-1e9a2656.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-1e9a2656.json; acquisition/records/latest_acquisition_record.json",
+      "artifact_evidence": "acquisition/handoffs/acq-ed4c31a2.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-ed4c31a2.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-ed4c31a2.json; acquisition/records/latest_acquisition_record.json",
       "live_click_test": "button.click()",
       "status": "connected",
       "observed": "enabled=True; disabledReason=",
@@ -116,7 +115,7 @@
       "backend_capability": "app.bioinformatics.download.DatasetDownloadService.create_candidate_download_task",
       "source_file": "app/bioinformatics/download/dataset_download_service.py",
       "runtime_effect": "downloads GEO family SOFT metadata, writes receipt, asset manifest, and acquisition record",
-      "artifact_evidence": "raw_data/geo/GSE6004/GSE6004_family.soft.gz; raw_data/geo/GSE6004/GSE6004_asset_manifest.json; acquisition/download_receipts/dl-ea787ab6c7.json",
+      "artifact_evidence": "raw_data/geo/GSE6004/GSE6004_family.soft.gz; raw_data/geo/GSE6004/GSE6004_asset_manifest.json; acquisition/download_receipts/dl-5ea5f18c0e.json",
       "live_click_test": "button.click()",
       "status": "connected",
       "observed": "enabled=True; disabledReason=",
@@ -244,7 +243,7 @@
       "backend_capability": "app.bioinformatics.project_workspace_binding.register_acquisition",
       "source_file": "app/bioinformatics/workflow_pages.py",
       "runtime_effect": "registers GEO accession as plan-only pending source",
-      "artifact_evidence": "acquisition/handoffs/acq-8be76340.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-8be76340.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-8be76340.json; acquisition/records/latest_acquisition_record.json",
+      "artifact_evidence": "acquisition/handoffs/acq-9c6b577d.json; acquisition/handoffs/latest_acquisition_handoff.json; acquisition/plans/acq-9c6b577d.json; acquisition/plans/latest_acquisition_plan.json; acquisition/records/acq-9c6b577d.json; acquisition/records/latest_acquisition_record.json",
       "live_click_test": "button.click()",
       "status": "connected",
       "observed": "enabled=True; disabledReason=",
@@ -260,7 +259,7 @@
       "backend_capability": "app.bioinformatics.download.DatasetDownloadService.create_candidate_download_task",
       "source_file": "app/bioinformatics/download/dataset_download_service.py",
       "runtime_effect": "downloads GEO family SOFT metadata, writes receipt, asset manifest, and acquisition record",
-      "artifact_evidence": "raw_data/geo/GSE153659/GSE153659_family.soft.gz; raw_data/geo/GSE153659/GSE153659_asset_manifest.json; acquisition/download_receipts/dl-a3631a2f9d.json",
+      "artifact_evidence": "raw_data/geo/GSE153659/GSE153659_family.soft.gz; raw_data/geo/GSE153659/GSE153659_asset_manifest.json; acquisition/download_receipts/dl-a35eb6201c.json",
       "live_click_test": "button.click()",
       "status": "connected",
       "observed": "enabled=True; disabledReason=",

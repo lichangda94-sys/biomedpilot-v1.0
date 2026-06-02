@@ -1,8 +1,8 @@
 # UI Route Contract Bio Batch 4: Formal DEG
 
-- Created: `2026-06-02T12:59:32.249729+00:00`
+- Created: `2026-06-02T14:28:37.813892+00:00`
 - Branch: `integration/release-bio-c1-ui-shell`
-- HEAD: `4a0577982b6c87645f6d1a0bac0adbd56728f7b0`
+- HEAD: `e837762525d2366934be6baf5ae9e730a1f8abaa`
 - Scope: Bioinformatics Formal DEG positive runtime path: dependency detect, parameter confirmation, controlled run, result review, plot, report-ready package, and report export gate.
 
 ## Summary
@@ -17,13 +17,13 @@
 | Contract | Surface | Object | Status | Behavior | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | BIO-FORMAL-DEG-DEPENDENCY-DETECT | Analysis Tasks | `check_deg_backend_dependencies` | connected | `detect_first_no_install` | status=passed; packages=numpy,pandas,scipy,statsmodels |
-| BIO-FORMAL-DEG-PARAMETER-CONFIRM | Analysis Tasks | `analysisTaskConfirmFormalDegParametersButton` | connected | `writes_formal_deg_parameter_confirmation` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_fe_7_iub/project/bio_batch_4_formal_deg/manifests/formal_deg_parameter_confirmation.json |
-| BIO-FORMAL-DEG-CONTROLLED-RUN | Analysis Tasks | `analysisTaskRunFormalControlledDegButton` | connected | `runs_formal_controlled_deg_when_gate_passes` | result_id=formal-deg-615eec9b90; result_table=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_fe_7_iub/project/bio_batch_4_formal_deg/results/tables/formal-deg-615eec9b90.tsv; result_index=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_fe_7_iub/project/bio_batch_4_formal_deg/results/summaries/result_index.json |
-| BIO-FORMAL-DEG-RESULT-REVIEW | Result & Report | `resultReportRefreshButton` | connected | `calls_load_result_index_and_formal_deg_gates` | selected_result_id=formal-deg-615eec9b90 |
-| BIO-FORMAL-DEG-REVIEW-CSV-EXPORT | Result & Report | `formalDegReviewExportCsvButton` | connected | `exports_formal_deg_review_table_when_gate_passes` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_fe_7_iub/project/bio_batch_4_formal_deg/results/exports/formal_deg_review/formal-deg-615eec9b90_review.csv |
-| BIO-FORMAL-DEG-PLOT-ARTIFACT | Result & Report | `formalDegPlotButton` | connected | `creates_formal_deg_plot_artifact_when_gate_passes` | formal-deg-615eec9b90-volcano_plot-artifact |
-| BIO-FORMAL-DEG-REPORT-READY-PACKAGE | Result & Report | `formalDegReportReadyButton` | connected | `creates_formal_deg_report_ready_package_when_gate_passes` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_fe_7_iub/project/bio_batch_4_formal_deg/report_package/formal_deg/formal-deg-615eec9b90/20260602T125929Z/formal_deg_report_package_manifest.json |
-| BIO-FORMAL-DEG-REPORT-EXPORT-GATE | Report Export | `reportReadyExportButton` | connected | `exports_report_ready_package_when_gate_passes` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_fe_7_iub/project/bio_batch_4_formal_deg/report_package/formal_deg/formal-deg-615eec9b90/20260602T125929Z_2/formal_deg_report_package_manifest.json |
+| BIO-FORMAL-DEG-PARAMETER-CONFIRM | Analysis Tasks | `analysisTaskConfirmFormalDegParametersButton` | connected | `writes_formal_deg_parameter_confirmation` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_82rsnuom/project/bio_batch_4_formal_deg/manifests/formal_deg_parameter_confirmation.json |
+| BIO-FORMAL-DEG-CONTROLLED-RUN | Analysis Tasks | `analysisTaskRunFormalControlledDegButton` | connected | `runs_formal_controlled_deg_when_gate_passes` | result_id=formal-deg-42e350339d; result_table=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_82rsnuom/project/bio_batch_4_formal_deg/results/tables/formal-deg-42e350339d.tsv; result_index=/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_82rsnuom/project/bio_batch_4_formal_deg/results/summaries/result_index.json |
+| BIO-FORMAL-DEG-RESULT-REVIEW | Result & Report | `resultReportRefreshButton` | connected | `calls_load_result_index_and_formal_deg_gates` | selected_result_id=formal-deg-42e350339d |
+| BIO-FORMAL-DEG-REVIEW-CSV-EXPORT | Result & Report | `formalDegReviewExportCsvButton` | connected | `exports_formal_deg_review_table_when_gate_passes` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_82rsnuom/project/bio_batch_4_formal_deg/results/exports/formal_deg_review/formal-deg-42e350339d_review.csv |
+| BIO-FORMAL-DEG-PLOT-ARTIFACT | Result & Report | `formalDegPlotButton` | connected | `creates_formal_deg_plot_artifact_when_gate_passes` | formal-deg-42e350339d-volcano_plot-artifact |
+| BIO-FORMAL-DEG-REPORT-READY-PACKAGE | Result & Report | `formalDegReportReadyButton` | connected | `creates_formal_deg_report_ready_package_when_gate_passes` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_82rsnuom/project/bio_batch_4_formal_deg/report_package/formal_deg/formal-deg-42e350339d/20260602T142834Z/formal_deg_report_package_manifest.json |
+| BIO-FORMAL-DEG-REPORT-EXPORT-GATE | Report Export | `reportReadyExportButton` | connected | `exports_report_ready_package_when_gate_passes` | /private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch4_formal_deg_82rsnuom/project/bio_batch_4_formal_deg/report_package/formal_deg/formal-deg-42e350339d/20260602T142834Z_2/formal_deg_report_package_manifest.json |
 
 ## Screenshots
 

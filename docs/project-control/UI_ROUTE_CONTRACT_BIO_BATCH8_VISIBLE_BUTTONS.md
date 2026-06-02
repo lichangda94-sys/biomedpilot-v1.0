@@ -1,7 +1,7 @@
 # Bioinformatics Batch 8 Visible Button Route Contract
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `4a0577982b6c87645f6d1a0bac0adbd56728f7b0`
+- head: `e837762525d2366934be6baf5ae9e730a1f8abaa`
 - scope: Bioinformatics C1 mature 7-step visible-button closure: every visible button is live-clicked or verified disabled with reason.
 - row_count: `94`
 - connected: `55`
@@ -31,10 +31,10 @@
 | `data_source` | `dataSourceTabButton` | 已获取数据 | `disabled` | `disabled_until_tab_router_connected` | disabled_pending_data_source_tab_router |
 | `data_source` | `dataSourceTabButton` | 检索记录 | `disabled` | `disabled_until_tab_router_connected` | disabled_pending_data_source_tab_router |
 | `data_source` | `dataSourceTabButton` | 数据连接管理 | `disabled` | `disabled_until_tab_router_connected` | disabled_pending_data_source_tab_router |
-| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置 GEO 来源 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests.json; manifests/data_source_requests/dsr-c15a58c4c5.json |
-| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置 TCGA 来源 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests/dsr-df5124610d.json |
-| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置 GTEx 来源 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests/dsr-a8abfe4600.json |
-| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置本地导入 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests/dsr-6484cf8090.json |
+| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置 GEO 来源 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests.json; manifests/data_source_requests/dsr-77a7d508e9.json |
+| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置 TCGA 来源 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests/dsr-ad28f7dcb0.json |
+| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置 GTEx 来源 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests/dsr-a84e1776fc.json |
+| `data_source` | `bioinformaticsDataSourceSelectPreviewButton` | 配置本地导入 | `connected` | `creates_data_source_request_draft_when_project_open` | manifests/data_source_requests/dsr-0594290113.json |
 | `data_source` | `dataSourceResearchSearchButton` | 进入检索 | `connected` | `calls_bio_search_or_preview_service` | data_source/data_source -> chinese_search/data_source |
 | `data_source` | `` | 查看详情 | `connected` | `toggles_or_opens_bio_diagnostics` | page text digest changed |
 | `data_source` | `secondaryButton` | 下载所选 | `disabled` | `exports_opens_or_copies_existing_bio_artifact` | disabled_until_data_source_project_gate_passes |
@@ -69,7 +69,7 @@
 | `analysis_tasks` | `analysisTaskPrimaryButton` | 参数总览 | `disabled` | `disabled_analysis_parameter_overview_placeholder` | disabled_analysis_overview_placeholder |
 | `analysis_tasks` | `analysisTaskGhostButton` | 分析文档 | `disabled` | `disabled_analysis_documentation_placeholder` | disabled_analysis_documentation_placeholder |
 | `analysis_tasks` | `bioinformaticsAnalysisRefreshButton` | 刷新任务状态 | `connected` | `calls_load_analysis_task_center` | refresh completed without exception |
-| `analysis_tasks` | `bioinformaticsAnalysisComparisonConfigButton` | 确认分组与比较设计 | `connected` | `writes_manual_comparison_config_and_reruns_readiness` | acquisition/handoffs/acq-5153ceaa.json; acquisition/plans/acq-5153ceaa.json; acquisition/records/acq-5153ceaa.json; acquisition/source_manifests/acq-5153ceaa_source_manifest.json; raw_data/local_import/manual_supplements/comparison_config_manual.tsv |
+| `analysis_tasks` | `bioinformaticsAnalysisComparisonConfigButton` | 确认分组与比较设计 | `connected` | `writes_manual_comparison_config_and_reruns_readiness` | acquisition/handoffs/acq-ee3e23df.json; acquisition/plans/acq-ee3e23df.json; acquisition/records/acq-ee3e23df.json; acquisition/source_manifests/acq-ee3e23df_source_manifest.json; raw_data/local_import/manual_supplements/comparison_config_manual.tsv |
 | `analysis_tasks` | `bioinformaticsAnalysisOpenDegConfigButton` | 进入差异分析配置 | `connected` | `opens_deg_config_preflight_page` | analysis_tasks/analysis_tasks -> deg_config/analysis_tasks |
 | `analysis_tasks` | `analysisTaskConfirmFormalDegParametersButton` | 确认 formal DEG 参数 | `disabled` | `writes_formal_deg_parameter_confirmation` | requires_formal_deg_parameter_manifest_and_dependency_snapshot |
 | `analysis_tasks` | `analysisTaskRunFormalControlledDegButton` | 运行两组 controlled DEG | `disabled` | `runs_formal_controlled_deg_when_gate_passes` | requires_confirmed_formal_deg_gate |
@@ -97,16 +97,16 @@
 | `result_report` | `formalDegPlotButton` | 生成 formal DEG plot artifact | `disabled` | `creates_formal_deg_plot_artifact_when_gate_passes` | requires_formal_computed_deg_result |
 | `result_report` | `formalDegReportReadyButton` | 生成 formal DEG report-ready package | `disabled` | `creates_formal_deg_report_ready_package_when_gate_passes` | requires_formal_deg_plot_or_table_only_gate |
 | `result_report` | `resultReportToggleDeveloperDiagnosticsButton` | 展开技术细节 | `connected` | `toggles_developer_diagnostics` | page text digest changed |
-| `result_report` | `resultReportOpenResultsFolderButton` | 打开结果文件夹 | `connected` | `opens_results_folder` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/results |
-| `result_report` | `resultReportOpenParamsJsonButton` | 打开参数 JSON | `connected` | `opens_result_manager_json` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/manifests/result_manager.json |
+| `result_report` | `resultReportOpenResultsFolderButton` | 打开结果文件夹 | `connected` | `opens_results_folder` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_bc0cmngy/project/bio_batch_8_visible_buttons/results |
+| `result_report` | `resultReportOpenParamsJsonButton` | 打开参数 JSON | `connected` | `opens_result_manager_json` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_bc0cmngy/project/bio_batch_8_visible_buttons/manifests/result_manager.json |
 | `result_report` | `resultReportContinueReportExportButton` | 继续：报告查看 | `connected` | `opens_report_export_gate_when_result_exists` | page text digest changed |
 | `report_export` | `resultReportGhostButton` | 返回 Result & Report | `connected` | `navigates_back_to_previous_bio_page` | report_viewer/report_export -> results_browser/result_report |
 | `report_export` | `reportExportRefreshDraftButton` | 刷新报告草稿 | `connected` | `generates_markdown_report_draft_only` | logs/reports/project_report_builder_report.json; reports/project_analysis_report.md; reports/project_report_manifest.json |
-| `report_export` | `reportExportOpenDraftFolderButton` | 打开报告草稿文件夹 | `connected` | `opens_report_draft_folder` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/reports |
+| `report_export` | `reportExportOpenDraftFolderButton` | 打开报告草稿文件夹 | `connected` | `opens_report_draft_folder` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_bc0cmngy/project/bio_batch_8_visible_buttons/reports |
 | `report_export` | `reportExportCopySummaryButton` | 复制报告摘要 | `connected` | `copies_report_draft_summary` | page text digest changed |
 | `report_export` | `reportReadyExportButton` | Export report-ready package | `disabled` | `exports_report_ready_package_when_gate_passes` | requires_report_ready_gate_passed |
 | `report_export` | `reportExportToggleDeveloperDiagnosticsButton` | 展开技术细节 | `connected` | `toggles_developer_diagnostics` | page text digest changed |
-| `report_export` | `reportExportDeveloperOpenDraftFolderButton` | 打开报告草稿文件夹 | `connected` | `opens_report_draft_folder` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_wjhl0ejz/project/bio_batch_8_visible_buttons/reports |
+| `report_export` | `reportExportDeveloperOpenDraftFolderButton` | 打开报告草稿文件夹 | `connected` | `opens_report_draft_folder` | file:///private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_bio_batch8_bc0cmngy/project/bio_batch_8_visible_buttons/reports |
 
 ## Screenshots
 
