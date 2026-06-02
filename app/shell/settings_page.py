@@ -83,10 +83,7 @@ def build_settings_page(
             subtitle="管理全局偏好、外部能力、分析资源与系统配置。",
             module_key=ModuleKey.SETTINGS.value,
             page_key="settings",
-            status_widgets=[
-                make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview"),
-                make_status_chip("Shell scoped baseline", status_key="shell_only"),
-            ],
+            status_widgets=[make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview")],
         )
     )
 

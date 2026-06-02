@@ -21,7 +21,6 @@ from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
 from app.labtools.workspace import LabToolsWorkspaceWidget
 from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.dashboard import DashboardModel, build_dashboard_model
-from app.shell.centers_page import build_centers_page
 from app.shell.login import BioMedPilotLoginWidget, LocalSession
 from app.shell.module_selection import ModuleSelectionWidget
 from app.shell.settings_page import build_settings_page
@@ -78,7 +77,6 @@ class MainWindow(QMainWindow):
         self._bioinformatics_page = BioinformaticsWorkspaceWidget(on_back=self.show_dashboard)
         self._meta_analysis_page = MetaAnalysisWorkspaceWidget(on_back=self.show_dashboard)
         self._labtools_page = LabToolsWorkspaceWidget(on_back=self.show_dashboard)
-        self._centers_page = self._build_centers_page()
         self._settings_page = self._build_settings_page()
         self._testing_page = self._build_testing_page()
         self._about_page = self._build_about_page()
@@ -86,7 +84,6 @@ class MainWindow(QMainWindow):
         self._stack.addWidget(self._bioinformatics_page)
         self._stack.addWidget(self._meta_analysis_page)
         self._stack.addWidget(self._labtools_page)
-        self._stack.addWidget(self._centers_page)
         self._stack.addWidget(self._settings_page)
         self._stack.addWidget(self._testing_page)
         self._stack.addWidget(self._about_page)
@@ -100,7 +97,6 @@ class MainWindow(QMainWindow):
             on_bioinformatics=self.show_bioinformatics,
             on_meta_analysis=self.show_meta_analysis,
             on_labtools=self.show_labtools,
-            on_centers=self.show_centers,
             on_settings=self.show_settings,
             on_test_feedback=self.show_test_feedback,
             on_about=self.show_about,
@@ -156,20 +152,6 @@ class MainWindow(QMainWindow):
         self._set_sidebar_active("labtools")
         self.setWindowTitle("BioMedPilot / LabTools")
 
-    def show_centers(self) -> None:
-        self._centers_page = self._build_centers_page()
-        centers_index = self._stack.indexOf(self._centers_page)
-        if centers_index < 0:
-            old_centers = next((self._stack.widget(index) for index in range(self._stack.count()) if self._stack.widget(index).objectName() == "centersPage"), None)
-            if old_centers is not None:
-                old_index = self._stack.indexOf(old_centers)
-                self._stack.insertWidget(old_index, self._centers_page)
-                self._stack.removeWidget(old_centers)
-                old_centers.deleteLater()
-        self._stack.setCurrentWidget(self._centers_page)
-        self._set_sidebar_active("centers")
-        self.setWindowTitle("BioMedPilot / Centers")
-
     def show_settings(self) -> None:
         self._stack.setCurrentWidget(self._settings_page)
         self._set_sidebar_active("settings")
@@ -216,8 +198,6 @@ class MainWindow(QMainWindow):
             return "meta_analysis"
         if current is self._labtools_page:
             return "labtools"
-        if current is self._centers_page:
-            return "centers"
         if current is self._settings_page:
             return "settings"
         if current is self._testing_page:
@@ -300,9 +280,6 @@ class MainWindow(QMainWindow):
 
     def _build_settings_page(self) -> QWidget:
         return build_settings_page()
-
-    def _build_centers_page(self) -> QWidget:
-        return build_centers_page(project_center=self._project_center)
 
     def _build_testing_page(self) -> QWidget:
         summary = testing_mode_summary()

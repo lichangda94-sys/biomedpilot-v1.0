@@ -78,12 +78,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"LabTools workspace fallback active: {LABTOOLS_WORKSPACE_IMPORT_ERROR}", file=sys.stderr)
     window = MainWindow()
     window.show()
-    window.setWindowState(window.windowState() & ~window.windowState().WindowMinimized | window.windowState().WindowActive)
-    window.raise_()
-    window.activateWindow()
+    _bring_window_to_front(window)
     second_activation = activate_macos_app()
-    QTimer.singleShot(0, window.raise_)
-    QTimer.singleShot(0, window.activateWindow)
+    QTimer.singleShot(0, lambda: _bring_window_to_front(window))
+    QTimer.singleShot(150, lambda: _bring_window_to_front(window))
+    QTimer.singleShot(500, lambda: _bring_window_to_front(window))
     if args.gui_startup_check:
         def finish_startup_check() -> None:
             qt_app.processEvents()
@@ -107,6 +106,14 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         window.close()
         cleanup_qt_top_level_widgets(qt_app)
+
+
+def _bring_window_to_front(window) -> None:
+    window.setWindowState(window.windowState() & ~window.windowState().WindowMinimized | window.windowState().WindowActive)
+    window.show()
+    window.raise_()
+    window.activateWindow()
+    activate_macos_app()
 
 
 def _gui_startup_payload(window, qt_app, first_activation, second_activation) -> dict[str, object]:

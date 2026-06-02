@@ -28,6 +28,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert result.app_path.exists()
     assert result.launcher_path.exists()
     assert result.build_info_path.exists()
+    assert (result.app_path / "Contents" / "Resources" / "biomedpilot_app_icon.icns").exists()
     assert os.access(result.launcher_path, os.X_OK)
     if result.mode == "local-python-launcher":
         assert 'PYTHONDONTWRITEBYTECODE="1"' in result.launcher_path.read_text(encoding="utf-8")
@@ -54,9 +55,31 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
     assert info["CFBundleExecutable"] == "BioMedPilotTest"
+    assert info["CFBundleIconFile"] == "biomedpilot_app_icon.icns"
     assert info["CFBundleName"] == "BioMedPilotTest"
     assert info["NSPrincipalClass"] == "NSApplication"
     assert info["BioMedPilotVersion"] == "0.1.0-internal-beta"
+
+
+def test_package_app_uses_space_free_bundle_executable(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilot Integration Preview",
+            python_executable=sys.executable,
+        )
+    )
+
+    assert result.executable_name == "BioMedPilotIntegrationPreview"
+    assert result.launcher_path.name == "BioMedPilotIntegrationPreview"
+    assert result.launcher_path.exists()
+
+    with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
+        info = plistlib.load(handle)
+    assert info["CFBundleName"] == "BioMedPilot Integration Preview"
+    assert info["CFBundleExecutable"] == "BioMedPilotIntegrationPreview"
+    assert info["CFBundleIconFile"] == "biomedpilot_app_icon.icns"
 
 
 def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:

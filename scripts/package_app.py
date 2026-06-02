@@ -19,6 +19,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO_FILENAME
 
 DEFAULT_APP_NAME = "BioMedPilot"
+APP_ICON_RESOURCE_NAME = "biomedpilot_app_icon.icns"
 COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
 PACKAGE_RESOURCE_FILES = (
@@ -55,6 +56,7 @@ class PackagingResult:
     python_executable: str
     app_version: str
     git_head: str
+    executable_name: str
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
@@ -66,7 +68,8 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     macos_dir = contents_dir / "MacOS"
     resources_dir = contents_dir / "Resources"
     resource_root = resources_dir / "app"
-    launcher_path = macos_dir / options.app_name
+    executable_name = _launcher_executable_name(options.app_name)
+    launcher_path = macos_dir / executable_name
 
     if app_path.exists() and options.clean:
         shutil.rmtree(app_path)
@@ -86,10 +89,16 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
 
     _copy_package_resources(repo_root, resource_root)
     _create_project_storage(resource_root / "project_storage")
+    _copy_bundle_icon(repo_root, resources_dir)
     git_head = _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
     _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
-    _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
+    _write_info_plist(
+        contents_dir / "Info.plist",
+        app_name=options.app_name,
+        executable_name=executable_name,
+        git_head=git_head,
+    )
     launcher_mode = _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
     _ad_hoc_sign_app(app_path)
 
@@ -102,6 +111,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         python_executable=options.python_executable,
         app_version=APP_VERSION,
         git_head=git_head,
+        executable_name=executable_name,
     )
 
 
@@ -131,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"git_head={result.git_head}")
     print(f"mode={result.mode}")
     print(f"python={result.python_executable}")
+    print(f"executable={result.executable_name}")
     print(f"build_info={result.build_info_path}")
     print("standalone=false")
     print("network_downloads=false")
@@ -174,6 +185,12 @@ def _copy_package_resources(repo_root: Path, resource_root: Path) -> None:
             shutil.copytree(source, resource_root / relative_name, ignore=_copy_ignore, dirs_exist_ok=True)
 
 
+def _copy_bundle_icon(repo_root: Path, resources_dir: Path) -> None:
+    source = repo_root / "assets" / "icons" / "app" / APP_ICON_RESOURCE_NAME
+    if source.exists():
+        shutil.copy2(source, resources_dir / APP_ICON_RESOURCE_NAME)
+
+
 def _create_project_storage(storage_root: Path) -> None:
     for dirname in STORAGE_DIRS:
         target = storage_root / dirname
@@ -195,7 +212,12 @@ def _write_build_info(path: Path, *, repo_root: Path, git_head: str) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
+def _launcher_executable_name(app_name: str) -> str:
+    normalized = "".join(character for character in app_name if character.isalnum() or character in {"_", "-"})
+    return normalized or DEFAULT_APP_NAME
+
+
+def _write_info_plist(path: Path, *, app_name: str, executable_name: str, git_head: str) -> None:
     payload = {
         "CFBundleName": app_name,
         "CFBundleDisplayName": "BioMedPilot / 医研智析",
@@ -203,7 +225,8 @@ def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
         "CFBundleVersion": APP_BUNDLE_VERSION,
         "CFBundleShortVersionString": APP_BUNDLE_VERSION,
         "CFBundlePackageType": "APPL",
-        "CFBundleExecutable": app_name,
+        "CFBundleExecutable": executable_name,
+        "CFBundleIconFile": APP_ICON_RESOURCE_NAME,
         "LSMinimumSystemVersion": "12.0",
         "NSPrincipalClass": "NSApplication",
         "NSHighResolutionCapable": True,

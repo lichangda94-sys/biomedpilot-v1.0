@@ -1,8 +1,8 @@
 {
   "schema_version": "biomedpilot.phase1.preview_startup.v1",
-  "created_at": "2026-06-02T01:51:29+00:00",
+  "created_at": "2026-06-02T03:09:34+00:00",
   "branch": "integration/release-bio-c1-ui-shell",
-  "head": "8755673a420b8745c00b0015892812869726a279",
+  "head": "2b28d07daca4fac4303eba99aa22824bdbfc8dac",
   "screenshots": [
     {
       "name": "01_welcome",
@@ -15,33 +15,28 @@
       "workspace": "about"
     },
     {
-      "name": "03_settings_from_welcome",
-      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/03_settings_from_welcome.png",
-      "workspace": "settings"
-    },
-    {
-      "name": "04_home_dashboard",
-      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/04_home_dashboard.png",
+      "name": "03_home_dashboard",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/03_home_dashboard.png",
       "workspace": "dashboard"
     },
     {
-      "name": "05_sidebar_dashboard",
-      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/05_sidebar_dashboard.png",
+      "name": "04_sidebar_dashboard",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/04_sidebar_dashboard.png",
       "workspace": "dashboard"
     },
     {
-      "name": "06_bio_workspace_entry",
-      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/06_bio_workspace_entry.png",
+      "name": "05_bio_workspace_entry",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/05_bio_workspace_entry.png",
       "workspace": "bioinformatics"
     },
     {
-      "name": "07_meta_workspace_entry",
-      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/07_meta_workspace_entry.png",
+      "name": "06_meta_workspace_entry",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/06_meta_workspace_entry.png",
       "workspace": "meta_analysis"
     },
     {
-      "name": "08_labtools_workspace_entry",
-      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/08_labtools_workspace_entry.png",
+      "name": "07_labtools_workspace_entry",
+      "path": "/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup/07_labtools_workspace_entry.png",
       "workspace": "labtools"
     },
     {
@@ -97,21 +92,6 @@
       "result": "passed"
     },
     {
-      "scope": "welcome_settings",
-      "object_name": "loginTopIconButton",
-      "text": "",
-      "enabled": true,
-      "button_behavior": "navigates_to_shell_route_settings",
-      "disabled_reason": "",
-      "formal_action_enabled": false,
-      "file_write_allowed": false,
-      "clicked": true,
-      "previous_workspace": "welcome",
-      "expected_workspace": "settings",
-      "actual_workspace": "settings",
-      "result": "passed"
-    },
-    {
       "scope": "welcome_enter",
       "object_name": "primaryButton",
       "text": "进入本地工作台",
@@ -121,7 +101,7 @@
       "formal_action_enabled": false,
       "file_write_allowed": false,
       "clicked": true,
-      "previous_workspace": "welcome",
+      "previous_workspace": "about",
       "expected_workspace": "dashboard",
       "actual_workspace": "dashboard",
       "result": "passed"
@@ -233,7 +213,7 @@
     },
     {
       "scope": "sidebar_settings",
-      "object_name": "appSidebarAuxButton",
+      "object_name": "appSidebarButton",
       "text": "设置中心 / Settings",
       "enabled": true,
       "button_behavior": "navigates_to_shell_route_settings",
@@ -278,8 +258,8 @@
     }
   ],
   "summary": {
-    "click_count": 13,
-    "passed_clicks": 13,
+    "click_count": 12,
+    "passed_clicks": 12,
     "failed_clicks": [],
     "disabled_without_reason_count": 0
   },
