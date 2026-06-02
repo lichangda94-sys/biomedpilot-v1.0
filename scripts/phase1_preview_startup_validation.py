@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import plistlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,7 @@ from app.shell.main_window import MainWindow
 SCREENSHOT_DIR = REPO_ROOT / "docs" / "ui" / "runtime_screenshots" / "20260602_phase1_preview_startup"
 REPORT_PATH = REPO_ROOT / "docs" / "release_validation" / "20260602_phase1_preview_startup.md"
 JSON_PATH = REPO_ROOT / "docs" / "release_validation" / "20260602_phase1_preview_startup.json"
+PREVIEW_APP_PATH = REPO_ROOT / "dist" / "BioMedPilot Integration Preview.app"
 
 
 def main() -> int:
@@ -129,6 +131,7 @@ def main() -> int:
         "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "branch": _git_output("branch", "--show-current"),
         "head": _git_output("rev-parse", "HEAD"),
+        "packaged_app_gate": _packaged_app_gate(),
         "screenshots": screenshots,
         "clicks": clicks,
         "summary": {
@@ -206,7 +209,94 @@ def _git_output(*args: str) -> str:
     return completed.stdout.strip()
 
 
+def _packaged_app_gate() -> dict[str, Any]:
+    gate: dict[str, Any] = {
+        "app_path": str(PREVIEW_APP_PATH),
+        "exists": PREVIEW_APP_PATH.exists(),
+        "packaged_git_head": "",
+        "cf_bundle_executable": "",
+        "launcher_arch": "",
+        "codesign": "not_run",
+        "direct_launcher_smoke": "not_run",
+        "launchservices_gui_startup_check": "not_run",
+        "gui_startup_payload_path": "",
+        "gui_startup_status": "",
+        "gui_window_visible": None,
+        "gui_window_size": {},
+    }
+    if not PREVIEW_APP_PATH.exists():
+        return gate
+
+    info_path = PREVIEW_APP_PATH / "Contents" / "Info.plist"
+    try:
+        with info_path.open("rb") as handle:
+            info = plistlib.load(handle)
+    except (OSError, plistlib.InvalidFileException):
+        info = {}
+    executable_name = str(info.get("CFBundleExecutable") or "")
+    gate["packaged_git_head"] = str(info.get("BioMedPilotGitHead") or "")
+    gate["cf_bundle_executable"] = executable_name
+    launcher_path = PREVIEW_APP_PATH / "Contents" / "MacOS" / executable_name
+
+    if launcher_path.exists():
+        file_result = _run_command(["file", str(launcher_path)])
+        gate["launcher_arch"] = file_result["stdout"].strip()
+        smoke_env = os.environ.copy()
+        smoke_env.setdefault("QT_QPA_PLATFORM", "offscreen")
+        smoke_result = _run_command([str(launcher_path), "--smoke-test"], env=smoke_env)
+        gate["direct_launcher_smoke"] = "passed" if smoke_result["returncode"] == 0 else "failed"
+
+    codesign_result = _run_command(["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(PREVIEW_APP_PATH)])
+    gate["codesign"] = "valid_on_disk" if codesign_result["returncode"] == 0 else "failed"
+
+    startup_path = Path("/tmp") / f"biomedpilot_phase1_shell_{_git_output('rev-parse', '--short', 'HEAD')}_gui_startup.json"
+    open_env = os.environ.copy()
+    open_env.pop("QT_QPA_PLATFORM", None)
+    open_result = _run_command(
+        [
+            "open",
+            "-W",
+            "-n",
+            str(PREVIEW_APP_PATH),
+            "--args",
+            "--gui-startup-check",
+            "--gui-startup-check-output",
+            str(startup_path),
+        ],
+        env=open_env,
+        timeout=15,
+    )
+    gate["launchservices_gui_startup_check"] = "passed" if open_result["returncode"] == 0 else "failed"
+    gate["gui_startup_payload_path"] = str(startup_path)
+    if startup_path.exists():
+        try:
+            startup_payload = json.loads(startup_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            startup_payload = {}
+        gate["gui_startup_status"] = str(startup_payload.get("status") or "")
+        gate["gui_window_visible"] = startup_payload.get("window_visible")
+        gate["gui_window_size"] = startup_payload.get("window_size") or {}
+    return gate
+
+
+def _run_command(command: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None) -> dict[str, Any]:
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            env=env,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"returncode": 124, "stdout": "", "stderr": str(exc)}
+    return {"returncode": completed.returncode, "stdout": completed.stdout, "stderr": completed.stderr}
+
+
 def _markdown_report(payload: dict[str, Any]) -> str:
+    package_gate = payload["packaged_app_gate"]
     lines = [
         "# Phase 1 Preview Startup Validation",
         "",
@@ -217,6 +307,19 @@ def _markdown_report(payload: dict[str, Any]) -> str:
         f"- passed_clicks: `{payload['summary']['passed_clicks']}`",
         f"- failed_clicks: `{len(payload['summary']['failed_clicks'])}`",
         f"- disabled_without_reason_count: `{payload['summary']['disabled_without_reason_count']}`",
+        "",
+        "## Packaged App Launch Gate",
+        "",
+        f"- app_path: `{package_gate['app_path']}`",
+        f"- packaged_git_head: `{package_gate['packaged_git_head']}`",
+        f"- direct_launcher_smoke: `{package_gate['direct_launcher_smoke']}`",
+        f"- launchservices_gui_startup_check: `{package_gate['launchservices_gui_startup_check']}`",
+        f"- gui_startup_status: `{package_gate['gui_startup_status']}`",
+        f"- gui_window_visible: `{package_gate['gui_window_visible']}`",
+        f"- gui_window_size: `{package_gate['gui_window_size']}`",
+        f"- codesign: `{package_gate['codesign']}`",
+        f"- launcher_arch: `{package_gate['launcher_arch']}`",
+        f"- cf_bundle_executable: `{package_gate['cf_bundle_executable']}`",
         "",
         "## Click Results",
         "",
