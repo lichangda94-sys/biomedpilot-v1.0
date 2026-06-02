@@ -27,6 +27,7 @@ from app.meta_analysis.project_workspace import MetaProjectSummary, create_meta_
 from app.meta_analysis.pages.protocol_page import write_pubmed_search_execution_artifacts
 from app.meta_analysis.search.pubmed_candidates_handoff_service import PubMedCandidatesHandoffService
 from app.meta_analysis.search.pubmed_search_service import PubMedSearchService
+from app.meta_analysis.services.dedup_review_v2_service import DedupReviewV2Service
 from app.meta_analysis.services.extraction_schema_registry_v1_service import ExtractionSchemaRegistryV1Service
 from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
 from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
@@ -712,6 +713,8 @@ if QWidget is not None:
             self._active_type_buttons: dict[str, QPushButton] = {}
             self._pubmed_search_service_factory: Callable[[], PubMedSearchService] = PubMedSearchService
             self._pubmed_handoff_service_factory: Callable[[], PubMedCandidatesHandoffService] = PubMedCandidatesHandoffService
+            self._dedup_review_service_factory: Callable[[], DedupReviewV2Service] = DedupReviewV2Service
+            self._title_abstract_screening_service_factory: Callable[[], TitleAbstractScreeningV2Service] = TitleAbstractScreeningV2Service
             self._last_pubmed_candidate_preview_id = ""
             self._page_keys: list[str] = []
             self._build_ui()
@@ -742,6 +745,12 @@ if QWidget is not None:
 
         def set_pubmed_handoff_service_factory(self, factory: Callable[[], PubMedCandidatesHandoffService]) -> None:
             self._pubmed_handoff_service_factory = factory
+
+        def set_dedup_review_service_factory(self, factory: Callable[[], DedupReviewV2Service]) -> None:
+            self._dedup_review_service_factory = factory
+
+        def set_title_abstract_screening_service_factory(self, factory: Callable[[], TitleAbstractScreeningV2Service]) -> None:
+            self._title_abstract_screening_service_factory = factory
 
         def set_project_record(self, record) -> None:
             self.set_project_dir(Path(record.project_dir))
@@ -1016,11 +1025,108 @@ if QWidget is not None:
                 )
             return artifact
 
+        def _build_dedup_review_queue_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                self._set_status("未绑定 Meta 项目；Dedup review queue 保持 gated。")
+                return None
+            result = self._dedup_review_service_factory().build_review_queue(
+                self._current_project_dir,
+                project_id=self._current_project_dir.name,
+            )
+            artifact = self._write_gate_artifact(
+                "ui_runtime/meta_dedup_review_queue_adapter.json",
+                {
+                    "page_key": "import_dedup",
+                    "service": "DedupReviewV2Service.build_review_queue",
+                    "success": result.success,
+                    "group_count": result.group_count,
+                    "risk_level_counts": result.risk_level_counts,
+                    "output_path": _relative_or_empty(result.output_path, self._current_project_dir),
+                    "auto_merged": False,
+                    "auto_deleted": False,
+                    "auto_screened": False,
+                    "formal_action_enabled": False,
+                },
+            )
+            if hasattr(self, "_dedup_adapter_status"):
+                self._dedup_adapter_status.setText(
+                    f"Dedup queue：success={result.success}; groups={result.group_count}; no auto merge/delete."
+                )
+            return artifact
+
+        def _generate_deduplicated_set_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                self._set_status("未绑定 Meta 项目；deduplicated set 保持 gated。")
+                return None
+            service = self._dedup_review_service_factory()
+            queue_path = service.review_queue_path(self._current_project_dir)
+            queue_missing = not queue_path.exists()
+            if queue_missing:
+                service.build_review_queue(self._current_project_dir, project_id=self._current_project_dir.name)
+            payload = service.generate_deduplicated_set(self._current_project_dir, project_id=self._current_project_dir.name)
+            unresolved = [str(item) for item in payload.get("unresolved_group_ids", [])]
+            artifact = self._write_gate_artifact(
+                "ui_runtime/meta_deduplicated_set_adapter.json",
+                {
+                    "page_key": "import_dedup",
+                    "service": "DedupReviewV2Service.generate_deduplicated_set",
+                    "queue_was_missing": queue_missing,
+                    "output_path": _relative_or_empty(service.deduplicated_set_path(self._current_project_dir), self._current_project_dir),
+                    "original_count": int(payload.get("original_count", 0) or 0),
+                    "deduplicated_count": int(payload.get("deduplicated_count", 0) or 0),
+                    "active_record_count": int(payload.get("active_record_count", 0) or 0),
+                    "pending_duplicate_group_count": int(payload.get("pending_duplicate_group_count", 0) or 0),
+                    "unresolved_group_ids": unresolved,
+                    "blocker": "unresolved_duplicate_groups_require_reviewer_decision" if unresolved else "",
+                    "auto_merged": False,
+                    "auto_deleted": False,
+                    "auto_screened": False,
+                    "formal_action_enabled": False,
+                },
+            )
+            if hasattr(self, "_dedup_adapter_status"):
+                suffix = f"; unresolved={len(unresolved)}" if unresolved else ""
+                self._dedup_adapter_status.setText(
+                    f"Deduplicated set：records={payload.get('active_record_count', 0)}{suffix}; screening not started."
+                )
+            return artifact
+
+        def _build_screening_queue_from_dedup_adapter(self) -> Path | None:
+            if self._current_project_dir is None:
+                self._set_status("未绑定 Meta 项目；screening queue 保持 gated。")
+                return None
+            service = self._title_abstract_screening_service_factory()
+            result = service.build_queue(self._current_project_dir, project_id=self._current_project_dir.name)
+            artifact = self._write_gate_artifact(
+                "ui_runtime/meta_dedup_to_screening_queue_adapter.json",
+                {
+                    "page_key": "import_dedup",
+                    "service": "TitleAbstractScreeningV2Service.build_queue",
+                    "success": result.success,
+                    "source_type": result.source_type,
+                    "record_count": result.record_count,
+                    "output_path": _relative_or_empty(result.output_path, self._current_project_dir),
+                    "warnings": list(result.warnings),
+                    "auto_screening_enabled": False,
+                    "auto_prisma_update": False,
+                    "formal_action_enabled": False,
+                },
+            )
+            if hasattr(self, "_dedup_adapter_status"):
+                warning = f"; warnings={len(result.warnings)}" if result.warnings else ""
+                self._dedup_adapter_status.setText(
+                    f"Screening queue：records={result.record_count}; source={result.source_type}{warning}; reviewer decision required."
+                )
+            return artifact
+
         def _save_screening_draft_artifact(self) -> Path | None:
             service_state = "no_project_bound"
             if self._current_project_dir is not None:
                 try:
-                    TitleAbstractScreeningV2Service().build_queue(self._current_project_dir, project_id=self._current_project_dir.name)
+                    self._title_abstract_screening_service_factory().build_queue(
+                        self._current_project_dir,
+                        project_id=self._current_project_dir.name,
+                    )
                     service_state = "called_TitleAbstractScreeningV2Service.build_queue"
                 except Exception as exc:
                     service_state = f"screening_queue_gate_blocked:{exc}"
@@ -1102,6 +1208,24 @@ if QWidget is not None:
                 "metaImportSelectedPubMedCandidatesButton",
                 "imports_reviewer_selected_pubmed_candidates_to_literature_library",
                 on_click=self._import_selected_pubmed_candidates_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaBuildDedupReviewQueueButton",
+                "calls_dedup_review_v2_build_review_queue",
+                on_click=self._build_dedup_review_queue_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaGenerateDeduplicatedSetButton",
+                "calls_dedup_review_v2_generate_deduplicated_set",
+                on_click=self._generate_deduplicated_set_adapter,
+                enable=True,
+            )
+            self._set_button_contract(
+                "metaBuildScreeningQueueFromDedupButton",
+                "calls_title_abstract_screening_v2_build_queue",
+                on_click=self._build_screening_queue_from_dedup_adapter,
                 enable=True,
             )
             self._set_button_contract(
@@ -2765,6 +2889,39 @@ if QWidget is not None:
             chip = make_status_chip("no automatic merge / reviewer review required", status_key="blocked")
             chip.setObjectName("metaDedupReviewerRequiredChip")
             layout.addWidget(chip)
+
+            adapter_actions = QFrame()
+            adapter_actions.setObjectName("metaDedupScreeningAdapterActions")
+            adapter_actions.setStyleSheet(
+                "QFrame#metaDedupScreeningAdapterActions { border: 1px solid #BFDBFE; border-radius: 8px; background: #EFF6FF; }"
+            )
+            adapter_action_layout = QVBoxLayout(adapter_actions)
+            adapter_action_layout.setContentsMargins(10, 8, 10, 8)
+            adapter_action_layout.setSpacing(8)
+            adapter_title = QLabel("Reviewer-gated dedup adapter")
+            adapter_title.setObjectName("metaDedupAdapterTitle")
+            adapter_title.setStyleSheet("font-weight: 800; color: #1D4ED8;")
+            adapter_action_layout.addWidget(adapter_title)
+            adapter_button_row = QHBoxLayout()
+            for object_name, text in (
+                ("metaBuildDedupReviewQueueButton", "Build dedup review queue"),
+                ("metaGenerateDeduplicatedSetButton", "Generate deduplicated set"),
+                ("metaBuildScreeningQueueFromDedupButton", "Build screening queue"),
+            ):
+                button = QPushButton(text)
+                button.setObjectName(object_name)
+                button.setProperty("formalActionEnabled", False)
+                button.setProperty("fileWriteAllowed", True)
+                button.setMinimumHeight(34)
+                adapter_button_row.addWidget(button)
+            adapter_action_layout.addLayout(adapter_button_row)
+            self._dedup_adapter_status = QLabel(
+                "Dedup adapter waits for explicit reviewer action; auto merge/delete and auto screening remain disabled."
+            )
+            self._dedup_adapter_status.setObjectName("metaDedupAdapterStatus")
+            self._dedup_adapter_status.setWordWrap(True)
+            adapter_action_layout.addWidget(self._dedup_adapter_status)
+            layout.addWidget(adapter_actions)
 
             action_row = QHBoxLayout()
             for object_name, text in (

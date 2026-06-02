@@ -184,6 +184,55 @@ def test_meta_pubmed_adapter_buttons_call_services_and_write_artifacts(qt_app, t
     assert not (summary.project_root / "reports" / "prisma_flow_summary.json").exists()
 
 
+def test_meta_dedup_to_screening_buttons_call_services_and_write_artifacts(qt_app, tmp_path: Path) -> None:
+    summary = create_meta_analysis_project("UIShell Dedup Screening Adapter", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.set_pubmed_search_service_factory(lambda: _FakePubMedSearchService())
+
+    widget.show_target_ia_page("search_strategy")
+    _button(widget, "metaRunPubMedSearchButton").click()
+    qt_app.processEvents()
+
+    widget.show_target_ia_page("import_dedup")
+    _button(widget, "metaLoadPubMedPreviewButton").click()
+    qt_app.processEvents()
+    _button(widget, "metaImportSelectedPubMedCandidatesButton").click()
+    qt_app.processEvents()
+
+    _button(widget, "metaBuildDedupReviewQueueButton").click()
+    qt_app.processEvents()
+    dedup_queue_gate = summary.project_root / "ui_runtime" / "meta_dedup_review_queue_adapter.json"
+    assert dedup_queue_gate.exists()
+    dedup_queue_payload = json.loads(dedup_queue_gate.read_text(encoding="utf-8"))
+    assert dedup_queue_payload["service"] == "DedupReviewV2Service.build_review_queue"
+    assert dedup_queue_payload["auto_merged"] is False
+    assert dedup_queue_payload["auto_deleted"] is False
+    assert (summary.project_root / dedup_queue_payload["output_path"]).exists()
+
+    _button(widget, "metaGenerateDeduplicatedSetButton").click()
+    qt_app.processEvents()
+    deduplicated_gate = summary.project_root / "ui_runtime" / "meta_deduplicated_set_adapter.json"
+    assert deduplicated_gate.exists()
+    deduplicated_payload = json.loads(deduplicated_gate.read_text(encoding="utf-8"))
+    assert deduplicated_payload["service"] == "DedupReviewV2Service.generate_deduplicated_set"
+    assert deduplicated_payload["active_record_count"] == 2
+    assert deduplicated_payload["auto_screened"] is False
+    assert (summary.project_root / deduplicated_payload["output_path"]).exists()
+
+    _button(widget, "metaBuildScreeningQueueFromDedupButton").click()
+    qt_app.processEvents()
+    screening_gate = summary.project_root / "ui_runtime" / "meta_dedup_to_screening_queue_adapter.json"
+    assert screening_gate.exists()
+    screening_payload = json.loads(screening_gate.read_text(encoding="utf-8"))
+    assert screening_payload["service"] == "TitleAbstractScreeningV2Service.build_queue"
+    assert screening_payload["source_type"] == "deduplicated_literature_v2"
+    assert screening_payload["record_count"] == 2
+    assert screening_payload["auto_screening_enabled"] is False
+    assert (summary.project_root / screening_payload["output_path"]).exists()
+    assert not (summary.project_root / "reports" / "prisma_flow_summary.json").exists()
+
+
 def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_actions(qt_app, tmp_path: Path) -> None:
     summary = create_meta_analysis_project("UIShell Later Gates", tmp_path)
     widget = MetaAnalysisWorkspaceWidget()
