@@ -1,7 +1,7 @@
 # Phase 1 Preview Startup Validation
 
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `538ef113e43fc4842eb454f305e65ced0b099525`
+- head: `d6ae941b04e6a7ed9aeddef6d2cb9f9fba07fea2`
 - screenshot_dir: `/Users/changdali/Developer/biomedpilot v1.0/Integration/docs/ui/runtime_screenshots/20260602_phase1_preview_startup`
 - click_count: `14`
 - passed_clicks: `14`
