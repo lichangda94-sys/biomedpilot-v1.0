@@ -2173,6 +2173,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         return card
 
     def _select_gated_source_preview(self, source_key: str) -> None:
+        self._current_external_source_key = source_key
         self._render_gated_source_tables(selected_source=source_key)
         if hasattr(self, "_geo_retrieval_panel"):
             self._geo_retrieval_panel.setVisible(source_key == "geo")
@@ -2180,6 +2181,12 @@ class BioinformaticsDataSourceWidget(QWidget):
         if hasattr(self, "_external_data_adapter_panel_widget"):
             self._external_data_adapter_panel_widget.setVisible(source_key in {"tcga", "gtex"})
             self._refresh_external_data_adapter_state()
+        if source_key == "local_file":
+            if self._project_root is None:
+                self._set_status("本地导入暂不可用：请先创建或打开生信分析项目。", error=True)
+                return
+            self._choose_local_data()
+            return
         source = _DATA_SOURCE_REQUESTS.get(source_key)
         if source is None:
             self._set_status("未知数据来源入口。", error=True)
@@ -2297,7 +2304,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(title)
         layout.addWidget(subtitle)
 
-        tcga_row = QHBoxLayout()
+        self._tcga_adapter_controls = QFrame()
+        self._tcga_adapter_controls.setObjectName("bioinformaticsTcgaAdapterControls")
+        tcga_row = QHBoxLayout(self._tcga_adapter_controls)
+        tcga_row.setContentsMargins(0, 0, 0, 0)
         tcga_row.setSpacing(8)
         self._tcga_adapter_preview_button = _button("TCGA preview", "secondaryButton", self._adapter_preview_tcga)
         self._tcga_adapter_preview_button.setObjectName("bioinformaticsTcgaPreviewButton")
@@ -2319,9 +2329,12 @@ class BioinformaticsDataSourceWidget(QWidget):
         ):
             tcga_row.addWidget(button)
         tcga_row.addStretch(1)
-        layout.addLayout(tcga_row)
+        layout.addWidget(self._tcga_adapter_controls)
 
-        gtex_row = QHBoxLayout()
+        self._gtex_adapter_controls = QFrame()
+        self._gtex_adapter_controls.setObjectName("bioinformaticsGtexAdapterControls")
+        gtex_row = QHBoxLayout(self._gtex_adapter_controls)
+        gtex_row.setContentsMargins(0, 0, 0, 0)
         gtex_row.setSpacing(8)
         self._gtex_adapter_preview_button = _button("GTEx preview", "secondaryButton", self._adapter_preview_gtex)
         self._gtex_adapter_preview_button.setObjectName("bioinformaticsGtexPreviewButton")
@@ -2343,7 +2356,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         ):
             gtex_row.addWidget(button)
         gtex_row.addStretch(1)
-        layout.addLayout(gtex_row)
+        layout.addWidget(self._gtex_adapter_controls)
 
         self._external_data_adapter_status = _text_preview(106)
         self._external_data_adapter_status.setObjectName("bioinformaticsExternalDataAdapterStatus")
@@ -2431,7 +2444,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         pending_assets = _candidate_has_pending_geo_assets(self._project_root, accession) if has_accession else False
         ready_count = _ready_registered_source_count(self._project_root)
         states = (
-            (self._geo_search_metadata_button, has_project and has_accession, "disabled_until_project_and_gse_accession"),
+            (self._geo_search_metadata_button, has_accession, "disabled_until_gse_accession"),
             (self._geo_add_to_project_button, has_project and has_accession, "disabled_until_geo_metadata_preview"),
             (self._geo_download_metadata_button, has_project and has_accession and saved, "disabled_until_geo_accession_added_to_project"),
             (self._geo_download_assets_button, has_project and has_accession and pending_assets, "disabled_until_geo_asset_manifest_has_pending_assets"),
@@ -2567,6 +2580,11 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _refresh_external_data_adapter_state(self) -> None:
         if not hasattr(self, "_tcga_adapter_preview_button"):
             return
+        active_source = getattr(self, "_current_external_source_key", "")
+        if hasattr(self, "_tcga_adapter_controls"):
+            self._tcga_adapter_controls.setVisible(active_source == "tcga")
+        if hasattr(self, "_gtex_adapter_controls"):
+            self._gtex_adapter_controls.setVisible(active_source == "gtex")
         has_project = self._project_root is not None
         tcga_plan = latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id()) if has_project else None
         tcga_raw = latest_tcga_raw_expression_record_path(self._project_root, project_id=self._selected_tcga_project_id()) if has_project else None
@@ -2575,11 +2593,11 @@ class BioinformaticsDataSourceWidget(QWidget):
         gtex_raw = latest_gtex_raw_expression_record_path(self._project_root, tissue_id=gtex_tissue or None) if has_project else None
         download_gate = light_validation_enabled()
         states = (
-            (self._tcga_adapter_preview_button, has_project, "disabled_until_project_open"),
+            (self._tcga_adapter_preview_button, active_source == "tcga", "disabled_until_tcga_source_selected"),
             (self._tcga_adapter_plan_button, has_project and self._tcga_preview_summary is not None and self._tcga_preview_summary.is_download_plan_available, "requires_tcga_metadata_preview_artifact"),
             (self._tcga_adapter_download_button, has_project and tcga_plan is not None and download_gate, "requires_tcga_download_plan_and_light_validation_gate"),
             (self._tcga_adapter_expression_button, has_project and tcga_raw is not None, "requires_tcga_raw_download_receipt"),
-            (self._gtex_adapter_preview_button, has_project, "disabled_until_project_open"),
+            (self._gtex_adapter_preview_button, active_source == "gtex", "disabled_until_gtex_source_selected"),
             (self._gtex_adapter_plan_button, has_project and self._gtex_preview_summary is not None and self._gtex_preview_summary.is_download_plan_available, "requires_gtex_metadata_preview_artifact"),
             (self._gtex_adapter_download_button, has_project and gtex_plan is not None and download_gate, "requires_gtex_download_plan_and_light_validation_gate"),
             (self._gtex_adapter_expression_button, has_project and gtex_raw is not None, "requires_gtex_raw_download_receipt"),

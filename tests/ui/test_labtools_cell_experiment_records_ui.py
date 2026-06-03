@@ -110,3 +110,55 @@ def test_record_templates_have_from_last_export_and_seeding_calculation(qapp, tm
     result = page.findChild(QLabel, "seedingCalculationResult").text()
     assert "需要细胞悬液体积" in result
     assert "需要培养基体积" in result
+
+
+def test_saved_cell_profiles_refresh_record_selectors(qapp, tmp_path) -> None:
+    from PySide6.QtWidgets import QComboBox, QLineEdit, QPushButton
+
+    from app.labtools.cell_experiments import CellExperimentRecordStore, CellProfileStore, FreezingInventoryStore
+    from app.labtools.ui.cell_experiment_widgets import LabToolsCellExperimentPage
+
+    profile_store = CellProfileStore(tmp_path / "profiles.json")
+    inventory_store = FreezingInventoryStore(tmp_path / "inventory.json")
+    record_store = CellExperimentRecordStore(tmp_path / "records.json", profile_store=profile_store, inventory_store=inventory_store)
+    page = LabToolsCellExperimentPage(profile_store=profile_store, inventory_store=inventory_store, record_store=record_store)
+
+    selector = page.findChild(QComboBox, "cellRecordProfileSelector_passage")
+    assert selector is not None
+    assert selector.count() == 0
+
+    page.findChild(QLineEdit, "cellProfileField_cell_name").setText("BCPAP")
+    page.findChild(QLineEdit, "cellProfileField_current_passage").setText("P3")
+    page.findChild(QPushButton, "cellProfileSaveButton").click()
+    qapp.processEvents()
+
+    assert selector.count() == 1
+    assert "BCPAP" in selector.itemText(0)
+
+
+def test_cell_image_analysis_previews_image_and_generates_run_request(qapp, tmp_path) -> None:
+    from PySide6.QtWidgets import QPushButton, QTextEdit
+
+    from app.labtools.ui.image_analysis_widgets import scratch_area_workbench_widget
+
+    image_path = tmp_path / "scratch.png"
+    image_path.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xff\xff?"
+        b"\x00\x05\xfe\x02\xfeA\xe2!\xbc\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    widget = scratch_area_workbench_widget()
+    widget.set_image_paths_for_testing((str(image_path),))
+
+    preview = widget.findChild(QTextEdit, "imageWorkbenchPreviewPanel")
+    assert preview is not None
+    assert "scratch.png" in preview.toHtml()
+    assert "<img" in preview.toHtml()
+
+    generate = next(button for button in widget.findChildren(QPushButton, "imageWorkbenchPrimaryActionButton") if button.text() == "生成分析任务")
+    generate.click()
+    qapp.processEvents()
+
+    assert widget.latest_workspace() is not None
+    result = widget.findChild(QTextEdit, "imageWorkbenchResultPanel")
+    assert "RunRequest 已生成" in result.toPlainText()

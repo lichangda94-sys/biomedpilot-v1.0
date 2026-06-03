@@ -10,7 +10,9 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPlainTextEdit, QPush
 
 from app.shared.data_center.service import DataCenter
 from app.shared.environment.checks import check_local_environment
+from app.meta_analysis.project_workspace import create_meta_analysis_project
 from app.shared.project_center.service import ProjectCenter
+from app.shared.storage import default_storage_root
 from app.shared.report_center import REPORT_TYPES
 from app.shared.semantic_keys import NavKey
 from app.shared.task_center.service import TaskCenter, TaskStatus, TaskType
@@ -76,12 +78,16 @@ def build_centers_page(
 def _project_center_page(project_center: ProjectCenter) -> QWidget:
     page = _base_center_page("projectCenterPage", "project")
     output = _readonly_output("projectCenterStatusText")
-    page.layout().addWidget(_summary_card("Project Center", "读取最近项目，或创建 testing-level 项目索引用于验证 Project Center 写入链路。"))
+    page.layout().addWidget(_summary_card("Project Center", "读取真实项目索引，创建 Bio/Meta 本地测试项目，并导出项目索引；Meta 项目会生成正式 workspace manifest。"))
     row = _button_row()
     refresh = _center_button("刷新项目列表", "centersRefreshProjectsButton", "calls_project_center_recent_projects")
-    create = _center_button("创建测试项目记录", "centersCreateProjectRecordButton", "calls_project_center_create_project_and_writes_projects_index")
+    create = _center_button("创建 Bio 测试项目", "centersCreateProjectRecordButton", "calls_project_center_create_bio_project_and_writes_projects_index")
+    create_meta = _center_button("创建 Meta 测试项目", "centersCreateMetaProjectButton", "calls_meta_project_workspace_create_and_project_center_index")
+    export = _center_button("导出项目索引", "centersExportProjectIndexButton", "writes_project_center_index_summary_artifact")
     row.addWidget(refresh)
     row.addWidget(create)
+    row.addWidget(create_meta)
+    row.addWidget(export)
     row.addStretch(1)
     page.layout().addLayout(row)
     page.layout().addWidget(output)
@@ -94,8 +100,28 @@ def _project_center_page(project_center: ProjectCenter) -> QWidget:
         record = project_center.create_project(project_name=f"Centers Test {uuid4().hex[:6]}", project_type="bioinformatics", status="testing")
         output.setPlainText(f"created_project_id={record.project_id}\nprojects_index={project_center.storage_path}")
 
+    def create_meta_record() -> None:
+        summary = create_meta_analysis_project(f"Centers Meta {uuid4().hex[:6]}", default_storage_root() / "projects", research_topic="甲状腺癌与脂联素水平", allow_existing_nonempty=True)
+        record = project_center.create_project(
+            project_id=summary.project_id,
+            project_name=summary.project_name,
+            project_type="meta_analysis",
+            project_dir=str(summary.project_root),
+            current_stage=summary.workflow_stage,
+            status=summary.status,
+        )
+        output.setPlainText(f"created_meta_project_id={record.project_id}\nmeta_manifest={summary.manifest_path}\nprojects_index={project_center.storage_path}")
+
+    def export_index() -> None:
+        records = project_center.list_projects(limit=None)
+        path = _center_artifact_root(project_center) / "project_center_index_summary.json"
+        _write_json(path, {"project_count": len(records), "projects": [asdict(record) for record in records]})
+        output.setPlainText(f"project_center_index_summary={path}\nproject_count={len(records)}")
+
     refresh.clicked.connect(render)
     create.clicked.connect(create_record)
+    create_meta.clicked.connect(create_meta_record)
+    export.clicked.connect(export_index)
     render()
     return page
 

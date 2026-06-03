@@ -182,7 +182,7 @@ class MetaActiveType:
 
 def meta_target_ia_pages() -> tuple[MetaTargetIAPage, ...]:
     return (
-        MetaTargetIAPage("project_home", "Project Home / 项目首页", "shell_only", "项目状态总览；不声明生产级系统综述能力。", "main_flow", 1),
+        MetaTargetIAPage("project_home", "Project Home / 项目首页", "testing", "项目状态总览；连接到本地 Meta 项目和最小联网检索工作流。", "main_flow", 1),
         MetaTargetIAPage("question_meta_type", "Question & Meta Type / 研究问题与 Meta 类型", "testing", "选择 active Meta 类型，控制后续 extraction schema、质量评价和统计任务。", "main_flow", 2),
         MetaTargetIAPage("search_strategy", "Search Strategy / 检索策略", "testing", "检索策略和检索计划；不是自动系统综述结论。", "main_flow", 3),
         MetaTargetIAPage("import_dedup", "Import & Deduplication / 文献导入与去重", "testing", "导入、文献库和去重壳层；保留人工审核。", "main_flow", 4),
@@ -462,26 +462,27 @@ if QWidget is not None:
         color: #64748B;
         font-size: 11px;
     }
-    QLabel#metaProjectHomeStepDone,
-    QLabel#metaProjectHomeStepTodo,
-    QLabel#metaProjectHomeStepCurrent {
+    QLabel#metaProjectHomeStepDone, QPushButton#metaProjectHomeStepDone,
+    QLabel#metaProjectHomeStepTodo, QPushButton#metaProjectHomeStepTodo,
+    QLabel#metaProjectHomeStepCurrent, QPushButton#metaProjectHomeStepCurrent {
         border: 1px solid #E5E7EB;
         border-radius: 10px;
         padding: 8px 10px;
         color: #475569;
         font-size: 10px;
         font-weight: 750;
+        text-align: left;
     }
-    QLabel#metaProjectHomeStepCurrent {
+    QLabel#metaProjectHomeStepCurrent, QPushButton#metaProjectHomeStepCurrent {
         background: #EAF3FF;
         border-color: #93C5FD;
         color: #2563EB;
     }
-    QLabel#metaProjectHomeStepTodo {
+    QLabel#metaProjectHomeStepTodo, QPushButton#metaProjectHomeStepTodo {
         background: #FFFFFF;
         color: #64748B;
     }
-    QLabel#metaProjectHomeStepDone {
+    QLabel#metaProjectHomeStepDone, QPushButton#metaProjectHomeStepDone {
         background: #F0FDF4;
         border-color: #BBF7D0;
         color: #059669;
@@ -2464,7 +2465,7 @@ if QWidget is not None:
                 row = QHBoxLayout()
                 row.setSpacing(8)
                 for number, zh, en, state in step_row:
-                    row.addWidget(self._project_home_step_label(number, zh, en, state), 1)
+                    row.addWidget(self._project_home_step_button(number, zh, en, state), 1)
                 layout.addLayout(row)
                 if row_index == 0:
                     divider = QHBoxLayout()
@@ -2482,16 +2483,32 @@ if QWidget is not None:
                     layout.addLayout(divider)
             return card
 
-        def _project_home_step_label(self, number: str, zh: str, en: str, state: str) -> QLabel:
-            label = QLabel(f"{number}    {zh}\n{en}")
+        def _project_home_step_button(self, number: str, zh: str, en: str, state: str) -> QPushButton:
+            route_map = {
+                "1": "project_home",
+                "2": "question_meta_type",
+                "3": "search_strategy",
+                "4": "import_dedup",
+                "5": "import_dedup",
+                "6": "screening",
+                "7": "fulltext_extraction",
+                "8": "fulltext_extraction",
+                "9": "quality_assessment",
+                "10": "analysis_tasks",
+                "11": "result_report",
+                "12": "report_export",
+            }
+            label = QPushButton(f"{number}    {zh}\n{en}")
             label.setObjectName(
                 "metaProjectHomeStepCurrent"
                 if state == "current"
                 else ("metaProjectHomeStepDone" if state == "done" else "metaProjectHomeStepTodo")
             )
-            label.setWordWrap(True)
+            label.setProperty("buttonBehavior", "navigates_to_meta_target_ia_page_from_project_home")
+            label.setProperty("targetPageKey", route_map[number])
+            label.setProperty("formalActionEnabled", False)
+            label.clicked.connect(lambda _checked=False, page_key=route_map[number]: self.show_target_ia_page(page_key))
             label.setMinimumHeight(70)
-            label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             return label
 
         def _build_project_home_question_card(self) -> QFrame:

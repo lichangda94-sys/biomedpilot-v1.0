@@ -185,6 +185,24 @@ def test_meta_pubmed_adapter_buttons_call_services_and_write_artifacts(qt_app, t
     assert not (summary.project_root / "reports" / "prisma_flow_summary.json").exists()
 
 
+def test_meta_project_home_step_buttons_navigate_to_runtime_pages(qt_app, tmp_path: Path) -> None:
+    summary = create_meta_analysis_project("UIShell Step Buttons", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+
+    search_step = next(button for button in widget.findChildren(QPushButton, "metaProjectHomeStepTodo") if button.property("targetPageKey") == "search_strategy")
+    search_step.click()
+    qt_app.processEvents()
+
+    assert widget.current_target_page_key() == "search_strategy"
+
+    import_step = next(button for button in widget.findChildren(QPushButton, "metaProjectHomeStepTodo") if button.property("targetPageKey") == "import_dedup")
+    import_step.click()
+    qt_app.processEvents()
+
+    assert widget.current_target_page_key() == "import_dedup"
+
+
 def test_meta_dedup_to_screening_buttons_call_services_and_write_artifacts(qt_app, tmp_path: Path) -> None:
     summary = create_meta_analysis_project("UIShell Dedup Screening Adapter", tmp_path)
     widget = MetaAnalysisWorkspaceWidget()

@@ -234,3 +234,23 @@ def test_data_source_button_generates_request_artifact_when_project_open(data_so
     assert any("TCGA+GTEx" in warning for warning in request_payload["warnings"])
     index_path = tmp_path / "manifests" / "data_source_requests.json"
     assert index_path.exists()
+
+
+def test_data_source_tcga_and_gtex_adapter_controls_are_isolated(data_source_widget, tmp_path) -> None:
+    data_source_widget.refresh_project(tmp_path)
+    buttons = {
+        button.property("sourceKey"): button
+        for button in data_source_widget.findChildren(QPushButton, "bioinformaticsDataSourceSelectPreviewButton")
+    }
+
+    buttons["tcga"].click()
+    tcga_controls = data_source_widget.findChild(QFrame, "bioinformaticsTcgaAdapterControls")
+    gtex_controls = data_source_widget.findChild(QFrame, "bioinformaticsGtexAdapterControls")
+    assert tcga_controls is not None
+    assert gtex_controls is not None
+    assert not tcga_controls.isHidden()
+    assert gtex_controls.isHidden()
+
+    buttons["gtex"].click()
+    assert tcga_controls.isHidden()
+    assert not gtex_controls.isHidden()

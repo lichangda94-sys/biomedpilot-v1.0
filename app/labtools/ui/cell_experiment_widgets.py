@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from pathlib import Path
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -60,6 +61,93 @@ def _cell_record_button_behavior(object_name: str) -> str:
     return "cell_experiment_record_action"
 
 
+CELL_RECORD_FIELD_LABELS: dict[str, str] = {
+    "thaw_date": "复苏日期 / thaw_date",
+    "cryovial_id": "冻存管 ID / cryovial_id",
+    "cryovial_code": "冻存管编号 / cryovial_code",
+    "freezing_batch_id": "冻存批次 ID / freezing_batch_id",
+    "freezing_passage": "冻存时 passage / freezing_passage",
+    "freezing_date": "冻存日期 / freezing_date",
+    "freezing_location": "冻存位置 / freezing_location",
+    "passage_after_thaw": "复苏后 passage / passage_after_thaw",
+    "water_bath_temperature": "水浴温度 / water_bath_temperature",
+    "thawing_time": "复苏时间 / thawing_time",
+    "recovery_medium": "复苏培养基 / recovery_medium",
+    "remove_dmso": "是否去除 DMSO / remove_dmso",
+    "seeding_vessel": "接种容器 / seeding_vessel",
+    "attachment_or_growth_status": "贴壁/生长状态 / attachment_or_growth_status",
+    "contamination_observation": "污染观察 / contamination_observation",
+    "passage_date": "传代日期 / passage_date",
+    "passage_before": "传代前 passage / passage_before",
+    "passage_after": "传代后 passage / passage_after",
+    "confluence_before_passage": "传代前汇合度 / confluence_before_passage",
+    "cell_status": "细胞状态 / cell_status",
+    "culture_vessel": "培养容器 / culture_vessel",
+    "dissociation_reagent": "消化/解离试剂 / dissociation_reagent",
+    "split_ratio": "传代比例 / split_ratio",
+    "new_vessel": "新培养容器 / new_vessel",
+    "final_culture_volume": "最终培养体积 / final_culture_volume",
+    "update_profile_passage": "同步更新档案 passage / update_profile_passage",
+    "seeding_date": "接种日期 / seeding_date",
+    "current_cell_concentration": "当前细胞浓度 / current_cell_concentration",
+    "cell_concentration_unit": "浓度单位 / cell_concentration_unit",
+    "target_cells_per_well": "每孔目标细胞数 / target_cells_per_well",
+    "volume_per_well": "每孔体积 / volume_per_well",
+    "well_count": "孔数 / well_count",
+    "extra_percent": "额外配制比例 / extra_percent",
+    "group_name": "分组名称 / group_name",
+    "replicate_count": "重复数 / replicate_count",
+    "plate_layout_notes": "孔板布局备注 / plate_layout_notes",
+    "freezing_date": "冻存日期 / freezing_date",
+    "passage": "当前 passage / passage",
+    "confluence_before_freezing": "冻存前汇合度 / confluence_before_freezing",
+    "cell_concentration": "细胞浓度 / cell_concentration",
+    "viability_percent": "活率 % / viability_percent",
+    "cryovial_count": "冻存管数量 / cryovial_count",
+    "cells_per_vial": "每管细胞数 / cells_per_vial",
+    "volume_per_vial": "每管体积 / volume_per_vial",
+    "freezing_medium_formula": "冻存液配方 / freezing_medium_formula",
+    "dmso_percent": "DMSO % / dmso_percent",
+    "serum_percent": "血清 % / serum_percent",
+    "cooling_method": "降温方式 / cooling_method",
+    "liquid_nitrogen_tank": "液氮罐 / liquid_nitrogen_tank",
+    "rack": "架 / rack",
+    "box": "盒 / box",
+    "start_box_position": "起始盒位 / start_box_position",
+    "treatment_date": "处理日期 / treatment_date",
+    "treatment_type": "处理类型 / treatment_type",
+    "treatment_name": "处理名称 / treatment_name",
+    "working_concentration": "工作浓度 / working_concentration",
+    "solvent_or_vehicle": "溶剂/载体 / solvent_or_vehicle",
+    "treatment_duration": "处理时长 / treatment_duration",
+    "dose": "剂量 / dose",
+    "time_point": "时间点 / time_point",
+    "observation_result": "观察结果 / observation_result",
+    "transfection_date": "转染日期 / transfection_date",
+    "transfection_type": "转染类型 / transfection_type",
+    "transfection_method": "转染方法 / transfection_method",
+    "transfection_reagent_name": "转染试剂 / transfection_reagent_name",
+    "dna_or_rna_name": "DNA/RNA 名称 / dna_or_rna_name",
+    "dna_or_rna_amount_per_well": "每孔核酸量 / dna_or_rna_amount_per_well",
+    "reagent_volume": "试剂体积 / reagent_volume",
+    "detection_time_point": "检测时间点 / detection_time_point",
+    "transfection_efficiency_method": "转染效率检测方法 / transfection_efficiency_method",
+    "toxicity_observation": "毒性观察 / toxicity_observation",
+    "operation_date": "操作日期 / operation_date",
+    "operation_type": "操作类型 / operation_type",
+    "operation_purpose": "操作目的 / operation_purpose",
+    "key_reagents": "关键试剂 / key_reagents",
+    "operation_steps": "操作步骤 / operation_steps",
+    "duration": "持续时间 / duration",
+    "temperature_or_culture_condition": "温度/培养条件 / temperature_or_culture_condition",
+    "group_design": "分组设计 / group_design",
+}
+
+
+def _cell_record_field_label(field_name: str) -> str:
+    return CELL_RECORD_FIELD_LABELS.get(field_name, f"{field_name.replace('_', ' ')} / {field_name}")
+
+
 class LabToolsCellExperimentPage(QWidget):
     def __init__(
         self,
@@ -72,6 +160,8 @@ class LabToolsCellExperimentPage(QWidget):
         self._profile_store = profile_store or CellProfileStore()
         self._inventory_store = inventory_store or FreezingInventoryStore()
         self._record_store = record_store or CellExperimentRecordStore(profile_store=self._profile_store, inventory_store=self._inventory_store)
+        self._record_template_widgets: list[RecordTemplateWidget] = []
+        self._profile_summary_labels: dict[str, QLabel] = {}
         self.setObjectName("labToolsCellExperimentPage")
         self.setStyleSheet(_stylesheet())
 
@@ -158,14 +248,20 @@ class LabToolsCellExperimentPage(QWidget):
         panel = _panel("细胞信息 / Cell Profile")
         layout = panel.layout()
         assert isinstance(layout, QVBoxLayout)
-        for label, value in (
-            ("细胞名称", "A549"),
-            ("来源", "Human / lung"),
-            ("模型", "carcinoma model"),
-            ("当前 passage", "P12"),
-            ("培养条件", "DMEM + 10% FBS, 37 C, 5% CO2"),
+        for label, key in (
+            ("细胞名称", "cell_name"),
+            ("来源", "source"),
+            ("模型", "cell_type"),
+            ("当前 passage", "current_passage"),
+            ("培养条件", "culture_condition"),
         ):
-            layout.addLayout(_row(label, value))
+            row = QHBoxLayout()
+            row.addWidget(QLabel(label))
+            value_label = QLabel("")
+            value_label.setObjectName(f"cellProfileSummary_{key}")
+            row.addWidget(value_label, 1)
+            layout.addLayout(row)
+            self._profile_summary_labels[key] = value_label
         state_row = QHBoxLayout()
         state_row.addWidget(QLabel("当前状态"))
         for label, state in (("培养中", "available"), ("冻存", "muted"), ("复苏", "muted"), ("传代后", "muted"), ("待处理", "muted")):
@@ -183,8 +279,35 @@ class LabToolsCellExperimentPage(QWidget):
             ("汇合度", "待人工记录", "planned"),
         ):
             layout.addLayout(_row(label, value, state))
-        layout.addWidget(_note("细胞状态由实验记录更新；当前首屏为 adapter-needed 状态。"))
+        layout.addWidget(_note("未选择或未保存细胞档案时，本区只显示模板字段，不展示虚假细胞信息。"))
+        self._refresh_profile_summary_panel()
         return panel
+
+    def _refresh_profile_summary_panel(self) -> None:
+        labels = getattr(self, "_profile_summary_labels", {})
+        if not labels:
+            return
+        profiles = list(self._profile_store.load())
+        if not profiles:
+            values = {
+                "cell_name": "未选择细胞档案",
+                "source": "模板字段",
+                "cell_type": "模板字段",
+                "current_passage": "未记录",
+                "culture_condition": "保存细胞档案后显示真实培养条件",
+            }
+        else:
+            profile = profiles[0]
+            values = {
+                "cell_name": profile.cell_name,
+                "source": profile.source or "未记录",
+                "cell_type": profile.cell_type or "未记录",
+                "current_passage": profile.current_passage or "未记录",
+                "culture_condition": ", ".join(part for part in (profile.basal_medium, profile.serum_type, profile.culture_temperature, f"{profile.co2_percent}% CO2" if profile.co2_percent else "") if part) or "未记录",
+            }
+        for key, value in values.items():
+            if key in labels:
+                labels[key].setText(value)
 
     def _record_templates_summary_panel(self) -> QFrame:
         panel = _panel("细胞实验记录 / Experiment Record Templates")
@@ -269,10 +392,19 @@ class LabToolsCellExperimentPage(QWidget):
     def _records_tab(self) -> QWidget:
         tabs = QTabWidget()
         tabs.setObjectName("cellExperimentRecordTabs")
-        tabs.addTab(CellProfileWidget(self._profile_store, self._inventory_store, self._record_store), "细胞档案")
+        profile_widget = CellProfileWidget(self._profile_store, self._inventory_store, self._record_store)
+        profile_widget.profiles_changed.connect(self._refresh_record_profile_selectors)
+        tabs.addTab(profile_widget, "细胞档案")
         for record_type, label in CELL_EXPERIMENT_RECORD_TYPES[1:]:
-            tabs.addTab(RecordTemplateWidget(record_type, label, self._profile_store, self._record_store, self._inventory_store), label)
+            record_widget = RecordTemplateWidget(record_type, label, self._profile_store, self._record_store, self._inventory_store)
+            self._record_template_widgets.append(record_widget)
+            tabs.addTab(record_widget, label)
         return tabs
+
+    def _refresh_record_profile_selectors(self) -> None:
+        for record_widget in self._record_template_widgets:
+            record_widget.refresh_profiles()
+        self._refresh_profile_summary_panel()
 
     def _image_analysis_tab(self) -> QWidget:
         page = QWidget()
@@ -293,6 +425,8 @@ class LabToolsCellExperimentPage(QWidget):
 
 
 class CellProfileWidget(QWidget):
+    profiles_changed = Signal()
+
     def __init__(self, profile_store: CellProfileStore, inventory_store: FreezingInventoryStore, record_store: CellExperimentRecordStore) -> None:
         super().__init__()
         self._profile_store = profile_store
@@ -448,6 +582,7 @@ class CellProfileWidget(QWidget):
         self._refresh_profiles()
         self._refresh_cryovials()
         self._status.setText(f"已保存细胞档案：{profile.cell_name}")
+        self.profiles_changed.emit()
 
     def _copy_profile(self) -> None:
         if not self._current_profile_id:
@@ -458,6 +593,7 @@ class CellProfileWidget(QWidget):
         self._fill_profile(copied)
         self._refresh_profiles()
         self._status.setText(f"已复制细胞档案：{copied.cell_name}")
+        self.profiles_changed.emit()
 
     def _export_profile(self) -> None:
         if not self._current_profile_id:
@@ -577,7 +713,7 @@ class RecordTemplateWidget(QWidget):
             edit = QLineEdit()
             edit.setObjectName(f"cellRecordField_{record_type}_{field_name}")
             self._fields[field_name] = edit
-            grid.addWidget(QLabel(field_name), index // 2, (index % 2) * 2)
+            grid.addWidget(QLabel(_cell_record_field_label(field_name)), index // 2, (index % 2) * 2)
             grid.addWidget(edit, index // 2, (index % 2) * 2 + 1)
         root.addLayout(grid)
 
@@ -586,10 +722,10 @@ class RecordTemplateWidget(QWidget):
 
         self._sop = QTextEdit()
         self._sop.setObjectName(f"cellRecordFreeSop_{record_type}")
-        self._sop.setPlaceholderText("free_text_sop")
+        self._sop.setPlaceholderText("SOP / 自由文本")
         self._notes = QTextEdit()
         self._notes.setObjectName(f"cellRecordNotes_{record_type}")
-        self._notes.setPlaceholderText("notes")
+        self._notes.setPlaceholderText("备注 / notes")
         root.addWidget(self._sop)
         root.addWidget(self._notes)
 

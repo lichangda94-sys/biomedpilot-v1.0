@@ -107,7 +107,8 @@ def test_settings_external_capabilities_are_detect_first(settings_window) -> Non
     assert detect_buttons[0].property("lastDetectionStatus")
     assert detect_buttons[0].toolTip() == detect_buttons[0].property("lastDetectionStatus")
     assert install_buttons
-    assert all(not button.isEnabled() for button in install_buttons)
+    assert all(button.isEnabled() for button in install_buttons)
+    assert all(button.property("userTriggeredInstallAllowed") is True for button in install_buttons)
     assert all(button.property("moduleKey") == ModuleKey.SETTINGS.value for button in install_buttons)
     assert cloud_buttons
     assert all(not button.isEnabled() for button in cloud_buttons)
@@ -184,4 +185,21 @@ def test_settings_developer_diagnostics_are_collapsed_by_default(settings_window
 
     assert not panel.isHidden()
     labels = "\n".join(label.text() for label in panel.findChildren(QLabel))
-    assert "不会安装、下载、更新或连接云端" in labels
+    assert "不会自动安装、下载、更新或连接云端" in labels
+
+
+def test_settings_general_preferences_and_quick_actions_are_clickable(settings_window) -> None:
+    general_button = settings_window.findChild(QPushButton, "settingsGeneralAction_language")
+    quick_button = settings_window.findChild(QPushButton, "settingsQuickActionButton_updates")
+
+    assert general_button is not None
+    assert general_button.isEnabled()
+    assert general_button.property("buttonBehavior") == "opens_settings_general_language_panel"
+    general_button.click()
+    assert general_button.property("lastActionStatus")
+
+    assert quick_button is not None
+    assert quick_button.isEnabled()
+    assert quick_button.property("buttonBehavior") == "runs_settings_quick_action_updates"
+    quick_button.click()
+    assert quick_button.property("lastActionStatus")

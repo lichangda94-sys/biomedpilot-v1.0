@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
 from app.app_identity import APP_NAME, load_app_icon
 from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
 from app.labtools.workspace import LabToolsWorkspaceWidget
+from app.meta_analysis.project_workspace import create_meta_analysis_project as create_meta_project_workspace
+from app.meta_analysis.project_workspace import open_meta_analysis_project
 from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.centers_page import build_centers_page
 from app.shell.dashboard import DashboardModel, build_dashboard_model
@@ -28,6 +30,7 @@ from app.shell.settings_page import build_settings_page
 from app.shell.sidebar import SidebarWidget
 from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
+from app.shared.storage import default_storage_root
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
 from app.shared.ui import card_title_qss, page_title_qss, surface_card_qss
 
@@ -147,6 +150,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("BioMedPilot / 生信分析")
 
     def show_meta_analysis(self) -> None:
+        self._ensure_meta_project_bound()
         self._stack.setCurrentWidget(self._meta_analysis_page)
         self._set_sidebar_active("meta_analysis")
         self.setWindowTitle("BioMedPilot / Meta 分析")
@@ -378,11 +382,49 @@ class MainWindow(QMainWindow):
         project_name, accepted = QInputDialog.getText(self, "新建项目", "项目名称：", text=default_name)
         if not accepted or not project_name.strip():
             return
+        if project_type == "meta_analysis":
+            summary = create_meta_project_workspace(project_name.strip(), default_storage_root() / "projects", allow_existing_nonempty=True)
+            record = self._project_center.create_project(
+                project_id=summary.project_id,
+                project_name=summary.project_name,
+                project_type="meta_analysis",
+                project_dir=str(summary.project_root),
+                current_stage=summary.workflow_stage,
+                status=summary.status,
+            )
+            self.open_project_record(record)
+            return
         record = self._project_center.create_project(
             project_name=project_name.strip(),
             project_type=project_type,  # type: ignore[arg-type]
         )
         self.open_project_record(record)
+
+    def _ensure_meta_project_bound(self) -> None:
+        if self._meta_analysis_page.current_project_dir() is not None:
+            return
+        for record in self._project_center.recent_projects(limit=20):
+            if record.project_type != "meta_analysis":
+                continue
+            validation = open_meta_analysis_project(record.project_dir)
+            if validation.is_valid:
+                self._meta_analysis_page.set_project_record(record)
+                return
+        summary = create_meta_project_workspace(
+            "Meta 联网测试项目",
+            default_storage_root() / "projects",
+            research_topic="甲状腺癌与脂联素水平",
+            allow_existing_nonempty=True,
+        )
+        record = self._project_center.create_project(
+            project_id=summary.project_id,
+            project_name=summary.project_name,
+            project_type="meta_analysis",
+            project_dir=str(summary.project_root),
+            current_stage=summary.workflow_stage,
+            status=summary.status,
+        )
+        self._meta_analysis_page.set_project_record(record)
 
     def generate_testing_feedback_template(self) -> None:
         path = generate_feedback_template()

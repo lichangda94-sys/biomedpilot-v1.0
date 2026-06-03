@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 try:
+    import html
     from pathlib import Path
 
     from PySide6.QtWidgets import (
@@ -882,13 +883,21 @@ if QWidget is not None:
                 self._preview.setText("尚未选择图片。第一版显示文件路径和 ROI / lane / mask / cell count overlay 占位，不提供通用图片编辑器。")
                 return
             current = Path(self._image_paths[0])
-            self._preview.setText(
+            image_uri = current.resolve().as_uri() if current.exists() else ""
+            escaped_name = html.escape(current.name)
+            escaped_path = html.escape(str(current))
+            image_html = (
+                f'<img src="{image_uri}" style="max-width:100%; max-height:260px; border:1px solid #D8E1EC; border-radius:8px;" />'
+                if image_uri
+                else "<p><b>图片文件不存在，无法显示缩略图。</b></p>"
+            )
+            self._preview.setHtml(
                 "\n".join(
                     [
-                        f"当前图片：{current.name}",
-                        f"原始路径：{current}",
-                        "",
-                        "预览占位：后续显示缩略图、ROI、lane、mask 或 cell count overlay。",
+                        f"<p><b>当前图片：</b>{escaped_name}</p>",
+                        f"<p><b>原始路径：</b>{escaped_path}</p>",
+                        image_html,
+                        "<p><b>标注状态：</b>已进入预览；ROI / lane / mask / cell count overlay 将由下方“生成分析任务”写入 RunRequest，真实测量仍需外部引擎或人工复核。</p>",
                     ]
                 )
             )

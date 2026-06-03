@@ -7,9 +7,10 @@ from collections.abc import Callable, Sequence
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget
 
 from app.app_identity import SETTINGS_RESOURCE_ICON_PATHS, icon_asset_statuses, icon_asset_summary, load_settings_resource_pixmap
+from app.shared.storage import default_storage_root
 from app.shared.semantic_keys import ModuleKey, PageKey
 from app.shared.settings import SettingsProfile
 from app.shared.ui_components import (
@@ -160,17 +161,17 @@ def _settings_preferences_card(profile: SettingsProfile) -> QFrame:
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(0)
     layout.addWidget(_settings_panel_header("通用偏好", "General"))
-    for title, body, value, icon_text, status_key in (
-        ("界面与语言", "设置界面语言、主题和字体大小", f"{profile.language}   浅色主题", "A", "available"),
-        ("数据与存储", "设置默认路径、缓存与临时文件", "管理路径", "D", "testing"),
-        ("行为与启动", "设置启动行为、更新与通知偏好", "", "B", "planned"),
-        ("隐私与安全", "日志级别、数据匿名化与隐私选项", "日志级别：信息", "S", "available"),
+    for action_key, title, body, value, icon_text, status_key in (
+        ("language", "界面与语言", "设置界面语言、主题和字体大小", f"{profile.language}   浅色主题", "A", "available"),
+        ("storage", "数据与存储", "设置默认路径、缓存与临时文件", "管理路径", "D", "testing"),
+        ("startup", "行为与启动", "设置启动行为、更新与通知偏好", "本地启动", "B", "testing"),
+        ("privacy", "隐私与安全", "日志级别、数据匿名化与隐私选项", "日志级别：信息", "S", "available"),
     ):
-        layout.addWidget(_settings_row(title, body, value, icon_text=icon_text, status_key=status_key))
+        layout.addWidget(_settings_row(action_key, title, body, value, icon_text=icon_text, status_key=status_key))
     return card
 
 
-def _settings_row(title: str, body: str, value: str, *, icon_text: str, status_key: str) -> QFrame:
+def _settings_row(action_key: str, title: str, body: str, value: str, *, icon_text: str, status_key: str) -> QFrame:
     row = QFrame()
     row.setObjectName("settingsPreferenceRow")
     row.setProperty("uiPrimitive", "settings_row")
@@ -210,11 +211,28 @@ def _settings_row(title: str, body: str, value: str, *, icon_text: str, status_k
             f"border: 1px solid {SETTINGS_CENTER_TOKENS['divider']}; border-radius: 8px; padding: 3px 8px; font-size: 11px;"
         )
         layout.addWidget(value_label, 0)
-    chevron = QLabel(">")
-    chevron.setObjectName("settingsRowChevron")
-    chevron.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['faint']}; font-size: 14px;")
-    layout.addWidget(chevron, 0)
+    action = make_action_button("打开", role="ghost", size="small", action_key=f"settings_general_{action_key}", semantic_state="testing")
+    action.setObjectName(f"settingsGeneralAction_{action_key}")
+    action.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+    action.setProperty("semanticKey", PageKey.SETTINGS_GENERAL.value)
+    action.setProperty("buttonBehavior", f"opens_settings_general_{action_key}_panel")
+    action.clicked.connect(lambda _checked=False, button=action, key=action_key: _run_general_preference_action(button, key))
+    layout.addWidget(action, 0)
     return row
+
+
+def _run_general_preference_action(button: QPushButton, action_key: str) -> None:
+    messages = {
+        "language": "界面与语言已接入设置中心：当前 zh-CN / 浅色主题；后续由用户切换后广播到 LabTools 字段标签。",
+        "storage": f"默认存储根目录：{default_storage_root()}；可通过快速操作选择路径并写入本地测试 manifest。",
+        "startup": "行为与启动已开放为测试入口：当前保持本地启动、无自动更新、无后台联网。",
+        "privacy": "隐私与安全已开放为测试入口：日志级别=信息；外部模型和云端配置仍需单独确认。",
+    }
+    message = messages.get(action_key, "设置入口已打开。")
+    button.setText("已打开")
+    button.setToolTip(message)
+    button.setAccessibleDescription(message)
+    button.setProperty("lastActionStatus", message)
 
 
 def _settings_external_capability_overview_card() -> QFrame:
@@ -340,22 +358,22 @@ def _settings_quick_actions_panel() -> QFrame:
     row = QHBoxLayout()
     row.setContentsMargins(14, 14, 14, 14)
     row.setSpacing(10)
-    for title, body, status_key, icon_text, icon_bg in (
-        ("管理默认路径", "设置数据、结果与缓存路径", "testing", "P", SETTINGS_CENTER_TOKENS["blue_soft"]),
-        ("检查更新", "当前已是最新版本 0.1.0", "planned", "U", SETTINGS_CENTER_TOKENS["green_soft"]),
-        ("清理缓存", "释放临时文件与缓存空间", "planned", "C", SETTINGS_CENTER_TOKENS["yellow_soft"]),
-        ("导出日志", "导出系统与运行日志", "planned", "L", SETTINGS_CENTER_TOKENS["purple_soft"]),
+    for action_key, title, body, status_key, icon_text, icon_bg in (
+        ("paths", "管理默认路径", "设置数据、结果与缓存路径", "testing", "P", SETTINGS_CENTER_TOKENS["blue_soft"]),
+        ("updates", "检查更新", "当前已是最新版本 0.1.0", "testing", "U", SETTINGS_CENTER_TOKENS["green_soft"]),
+        ("cache", "清理缓存", "释放临时文件与缓存空间", "testing", "C", SETTINGS_CENTER_TOKENS["yellow_soft"]),
+        ("logs", "导出日志", "导出系统与运行日志", "testing", "L", SETTINGS_CENTER_TOKENS["purple_soft"]),
     ):
-        row.addWidget(_quick_action_card(title, body, status_key=status_key, icon_text=icon_text, icon_bg=icon_bg), 1)
+        row.addWidget(_quick_action_card(action_key, title, body, status_key=status_key, icon_text=icon_text, icon_bg=icon_bg), 1)
     layout.addLayout(row)
     return panel
 
 
-def _quick_action_card(title: str, body: str, *, status_key: str, icon_text: str, icon_bg: str) -> QFrame:
+def _quick_action_card(action_key: str, title: str, body: str, *, status_key: str, icon_text: str, icon_bg: str) -> QFrame:
     card = QFrame()
     card.setObjectName("settingsQuickActionCard")
     card.setProperty("statusKey", status_key)
-    card.setProperty("actionAllowed", False)
+    card.setProperty("actionAllowed", True)
     card.setStyleSheet(
         f"QFrame#settingsQuickActionCard {{ background: {SETTINGS_CENTER_TOKENS['surface_subtle']}; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 11px; }}"
     )
@@ -380,11 +398,33 @@ def _quick_action_card(title: str, body: str, *, status_key: str, icon_text: str
     text_col.addWidget(title_label)
     text_col.addWidget(body_label)
     layout.addLayout(text_col, 1)
-    chevron = QLabel(">")
-    chevron.setObjectName("settingsQuickActionChevron")
-    chevron.setStyleSheet(f"color: {SETTINGS_CENTER_TOKENS['faint']}; font-size: 14px;")
-    layout.addWidget(chevron, 0)
+    action = make_action_button("执行", role="ghost", size="small", action_key=f"settings_quick_{action_key}", semantic_state="testing")
+    action.setObjectName(f"settingsQuickActionButton_{action_key}")
+    action.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+    action.setProperty("semanticKey", PageKey.SETTINGS_GENERAL.value)
+    action.setProperty("buttonBehavior", f"runs_settings_quick_action_{action_key}")
+    action.clicked.connect(lambda _checked=False, button=action, key=action_key: _run_settings_quick_action(button, key))
+    layout.addWidget(action, 0)
     return card
+
+
+def _run_settings_quick_action(button: QPushButton, action_key: str) -> None:
+    if action_key == "paths":
+        directory = QFileDialog.getExistingDirectory(button, "选择默认项目路径", str(default_storage_root()))
+        message = f"已选择默认路径：{directory}" if directory else "已取消路径选择；未修改设置。"
+    elif action_key == "updates":
+        message = "更新检查已接入测试入口：当前版本 0.1.0 Developer Preview；不会自动下载或覆盖应用。"
+    elif action_key == "cache":
+        cache_root = default_storage_root() / "cache"
+        message = f"缓存清理测试入口已打开：目标目录 {cache_root}；本次不自动删除文件。"
+    elif action_key == "logs":
+        message = f"日志导出测试入口已打开：建议输出到 {default_storage_root() / 'logs'}；本次只记录入口状态。"
+    else:
+        message = "快速操作已触发。"
+    button.setText("已执行")
+    button.setToolTip(message)
+    button.setAccessibleDescription(message)
+    button.setProperty("lastActionStatus", message)
 
 
 def _settings_center_panel(object_name: str, *, width: int | None = None) -> QFrame:
@@ -432,7 +472,7 @@ def _build_settings_external_capabilities_page(_profile: SettingsProfile, pixmap
         semantic_key=PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
     )
     root = page.layout()
-    root.addWidget(make_info_banner("检测优先：仅显示本机状态；不会自动安装、下载、更新、连接云端或执行外部引擎。", title="Detect-first", severity="info"))
+    root.addWidget(make_info_banner("检测优先：仅显示本机状态；安装/更新只允许用户在本页显式点击后进入测试门禁，不自动连接云端或执行分析引擎。", title="Detect-first", severity="info"))
     root.addWidget(
         make_external_engine_status_panel(
             title="外部能力状态",
@@ -710,7 +750,7 @@ def _build_settings_developer_diagnostics_page(_profile: SettingsProfile, pixmap
     panel_layout = QVBoxLayout(panel)
     panel_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
     panel_layout.setSpacing(SPACING["md"])
-    panel_layout.addWidget(make_info_banner("不会安装、下载、更新或连接云端。", title="诊断信息", severity="draft", semantic_state="developer_preview"))
+    panel_layout.addWidget(make_info_banner("不会自动安装、下载、更新或连接云端；安装/更新必须由用户在对应资源卡显式触发。", title="诊断信息", severity="draft", semantic_state="developer_preview"))
     panel_layout.addWidget(
         _settings_capability_card(
             "Settings resource diagnostics",
@@ -741,8 +781,8 @@ def _settings_capability_card(
     frame.setProperty("statusKey", status_key)
     frame.setProperty("resourceKeys", tuple(resource_keys))
     frame.setProperty("detectOnly", True)
-    frame.setProperty("installAllowed", False)
-    frame.setProperty("downloadAllowed", False)
+    frame.setProperty("installAllowed", True)
+    frame.setProperty("downloadAllowed", True)
     frame.setProperty("cloudConfigAllowed", False)
     frame.setProperty("engineExecutionAllowed", False)
     layout = QVBoxLayout(frame)
@@ -789,15 +829,17 @@ def _settings_capability_card(
     install_button = make_action_button(
         "安装 / 更新（检测后由用户触发）",
         role="ghost",
-        semantic_state="disabled",
+        semantic_state="testing",
         action_key="install_settings_resource",
-        enabled=False,
-        disabled_reason="UI-D2 does not install, download, update, or configure resources.",
+        enabled=True,
     )
     install_button.setObjectName("settingsInstallButton")
     install_button.setProperty("moduleKey", ModuleKey.SETTINGS.value)
     install_button.setProperty("statusKey", status_key)
     install_button.setProperty("semanticKey", _semantic_key_for_resources(resource_keys))
+    install_button.setProperty("buttonBehavior", "runs_user_triggered_settings_install_or_update_test_gate")
+    install_button.setProperty("userTriggeredInstallAllowed", True)
+    install_button.clicked.connect(lambda _checked=False, button=install_button, keys=tuple(resource_keys): _run_settings_install_update_action(button, keys))
     cloud_button = make_action_button(
         "云端配置（未开放）",
         role="ghost",
@@ -839,6 +881,30 @@ def _run_settings_resource_detection(button: QPushButton, resource_keys: Sequenc
     button.setToolTip(summary)
     button.setAccessibleDescription(summary)
     button.setText("检测状态已更新")
+
+
+def _run_settings_install_update_action(button: QPushButton, resource_keys: Sequence[str]) -> None:
+    if "resource_imagej_fiji" in resource_keys:
+        try:
+            from app.shared.local_engines import prepare_imagej_fiji_runtime
+
+            result = prepare_imagej_fiji_runtime(allow_network_download=True, replace_existing=False, run_smoke_test=True)
+        except Exception as exc:
+            summary = f"ImageJ/Fiji 用户触发安装测试未完成：{exc}"
+        else:
+            summary = f"ImageJ/Fiji 用户触发安装测试完成：{result.executable_path}"
+    elif "resource_r" in resource_keys:
+        summary = "R 环境安装/更新需要系统包管理器或 Bioconductor 交互；当前开放测试入口并保留手动执行边界。"
+    elif "resource_python" in resource_keys:
+        summary = f"Python 包管理测试入口已打开：{sys.executable}；当前不从设置中心批量 pip install。"
+    elif "resource_local_model" in resource_keys:
+        summary = "本地模型配置测试入口已打开：请在模型与引擎页检测 provider；不会自动拉取模型。"
+    else:
+        summary = "安装/更新测试入口已触发；该资源暂无自动 installer，保留用户手动配置。"
+    button.setText("安装/更新已触发")
+    button.setToolTip(summary)
+    button.setAccessibleDescription(summary)
+    button.setProperty("lastInstallUpdateStatus", summary)
 
 
 def _settings_resource_icon_label(resource_key: str, *, status_key: str, pixmap_loader: SettingsPixmapLoader, size: int = 28) -> QLabel:
@@ -889,7 +955,7 @@ def _icon_asset_status_panel() -> QFrame:
 def _diagnostic_entries() -> tuple[AuditLogEntry, ...]:
     return (
         AuditLogEntry("UI-D2", "Settings", "INFO", "Diagnostics are collapsed by default.", "developer_preview"),
-        AuditLogEntry("UI-D2", "Settings", "INFO", "Install, cloud, download, upload, and engine execution actions remain disabled.", "blocked"),
+        AuditLogEntry("UI-D2", "Settings", "INFO", "User-triggered install/update test gates are open; cloud upload and engine execution remain gated.", "testing"),
     )
 
 
