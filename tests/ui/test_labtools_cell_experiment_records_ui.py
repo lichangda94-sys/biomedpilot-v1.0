@@ -21,7 +21,7 @@ def _tab_labels(tabs):
 
 
 def test_cell_experiment_page_shows_record_and_image_analysis_areas(qapp) -> None:
-    from PySide6.QtWidgets import QTabWidget
+    from PySide6.QtWidgets import QPushButton, QTabWidget
 
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
@@ -44,6 +44,14 @@ def test_cell_experiment_page_shows_record_and_image_analysis_areas(qapp) -> Non
         "其他处理记录",
     ]
     assert _tab_labels(image_tabs) == ["划痕实验图像分析", "Transwell 图像分析", "荧光 / 染色图像分析"]
+    passage_entry = page.findChild(QPushButton, "cellExperimentOpenRecordButton_passage")
+    seeding_entry = page.findChild(QPushButton, "cellExperimentSeedingHelperButton")
+    assert passage_entry is not None and passage_entry.isEnabled()
+    assert passage_entry.property("buttonBehavior") == "opens_cell_record_backend_passage"
+    passage_entry.click()
+    assert record_tabs.currentWidget().objectName() == "cellRecordTemplate_passage"
+    seeding_entry.click()
+    assert record_tabs.currentWidget().objectName() == "cellRecordTemplate_seeding"
 
 
 def test_cell_profile_page_can_save_profile_and_create_inventory(qapp, tmp_path) -> None:
@@ -125,15 +133,30 @@ def test_saved_cell_profiles_refresh_record_selectors(qapp, tmp_path) -> None:
 
     selector = page.findChild(QComboBox, "cellRecordProfileSelector_passage")
     assert selector is not None
-    assert selector.count() == 0
-
-    page.findChild(QLineEdit, "cellProfileField_cell_name").setText("BCPAP")
-    page.findChild(QLineEdit, "cellProfileField_current_passage").setText("P3")
-    page.findChild(QPushButton, "cellProfileSaveButton").click()
-    qapp.processEvents()
-
     assert selector.count() == 1
-    assert "BCPAP" in selector.itemText(0)
+    assert not selector.isEnabled()
+    assert "no saved cell profile" in selector.itemText(0)
+
+    for name, passage in (("BCPAP", "P3"), ("TPC-1", "P7"), ("K1", "P12")):
+        page.findChild(QPushButton, "cellProfileNewButton").click()
+        page.findChild(QLineEdit, "cellProfileField_cell_name").setText(name)
+        page.findChild(QLineEdit, "cellProfileField_current_passage").setText(passage)
+        page.findChild(QPushButton, "cellProfileSaveButton").click()
+        qapp.processEvents()
+
+    assert selector.isEnabled()
+    assert selector.count() == 3
+    assert {selector.itemText(index).split(" ")[0] for index in range(selector.count())} == {"BCPAP", "TPC-1", "K1"}
+    for object_name in (
+        "cellRecordProfileSelector_thaw",
+        "cellRecordProfileSelector_seeding",
+        "cellRecordProfileSelector_freezing",
+        "cellRecordProfileSelector_treatment",
+        "cellRecordProfileSelector_transfection",
+    ):
+        other = page.findChild(QComboBox, object_name)
+        assert other is not None
+        assert other.count() == 3
 
 
 def test_cell_image_analysis_previews_image_and_generates_run_request(qapp, tmp_path) -> None:

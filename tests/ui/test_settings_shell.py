@@ -193,12 +193,28 @@ def test_settings_developer_diagnostics_are_collapsed_by_default(settings_window
 def test_settings_general_preferences_and_quick_actions_are_clickable(settings_window) -> None:
     general_button = settings_window.findChild(QPushButton, "settingsGeneralAction_language")
     quick_button = settings_window.findChild(QPushButton, "settingsQuickActionButton_updates")
+    detail_panel = settings_window.findChild(QPlainTextEdit, "settingsGeneralDetailPanel")
+    copy_button = settings_window.findChild(QPushButton, "settingsCopySystemInfoButton")
+    overview_log = settings_window.findChild(QPushButton, "settingsOverviewLogButton")
+    overview_config = settings_window.findChildren(QPushButton, "settingsCapabilityConfigureButton")[0]
 
     assert general_button is not None
     assert general_button.isEnabled()
     assert general_button.property("buttonBehavior") == "opens_settings_general_language_panel"
     general_button.click()
     assert general_button.property("lastActionStatus")
+    assert detail_panel is not None
+    assert "Settings > 通用偏好 > 界面与语言" in detail_panel.toPlainText()
+
+    assert copy_button is not None and copy_button.isEnabled()
+    copy_button.click()
+    assert copy_button.property("lastActionStatus")
+    assert overview_log is not None and overview_log.isEnabled()
+    overview_log.click()
+    assert overview_log.property("lastActionStatus")
+    assert overview_config.isEnabled()
+    overview_config.click()
+    assert overview_config.property("lastActionStatus")
 
     assert quick_button is not None
     assert quick_button.isEnabled()

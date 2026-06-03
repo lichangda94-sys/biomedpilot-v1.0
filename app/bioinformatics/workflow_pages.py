@@ -2437,11 +2437,15 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_adapter_expression_button = _button("TCGA 构建矩阵", "secondaryButton", self._adapter_build_tcga_expression)
         self._tcga_adapter_expression_button.setObjectName("bioinformaticsTcgaBuildExpressionButton")
         self._tcga_adapter_expression_button.setProperty("buttonBehavior", "builds_tcga_expression_matrix_artifacts")
+        self._tcga_adapter_local_folder_button = _button("登记本地 TCGA 文件夹", "secondaryButton", self._adapter_choose_local_tcga_folder)
+        self._tcga_adapter_local_folder_button.setObjectName("bioinformaticsTcgaLocalFolderButton")
+        self._tcga_adapter_local_folder_button.setProperty("buttonBehavior", "registers_local_tcga_folder_without_gtex_merge")
         for button in (
             self._tcga_adapter_preview_button,
             self._tcga_adapter_plan_button,
             self._tcga_adapter_download_button,
             self._tcga_adapter_expression_button,
+            self._tcga_adapter_local_folder_button,
         ):
             tcga_row.addWidget(button)
         tcga_row.addStretch(1)
@@ -2464,11 +2468,15 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gtex_adapter_expression_button = _button("GTEx 构建矩阵", "secondaryButton", self._adapter_build_gtex_expression)
         self._gtex_adapter_expression_button.setObjectName("bioinformaticsGtexBuildExpressionButton")
         self._gtex_adapter_expression_button.setProperty("buttonBehavior", "builds_gtex_expression_matrix_artifacts")
+        self._gtex_adapter_local_folder_button = _button("登记本地 GTEx 文件夹", "secondaryButton", self._adapter_choose_local_gtex_folder)
+        self._gtex_adapter_local_folder_button.setObjectName("bioinformaticsGtexLocalFolderButton")
+        self._gtex_adapter_local_folder_button.setProperty("buttonBehavior", "registers_local_gtex_folder_without_tcga_merge")
         for button in (
             self._gtex_adapter_preview_button,
             self._gtex_adapter_plan_button,
             self._gtex_adapter_download_button,
             self._gtex_adapter_expression_button,
+            self._gtex_adapter_local_folder_button,
         ):
             gtex_row.addWidget(button)
         gtex_row.addStretch(1)
@@ -2634,6 +2642,32 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_external_data_adapter_state()
         return result
 
+    def _adapter_choose_local_tcga_folder(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        directory = QFileDialog.getExistingDirectory(self, "选择本地 TCGA 文件夹", str(self._project_root))
+        if not directory:
+            self._external_data_adapter_status.setPlainText("已取消本地 TCGA 文件夹登记。")
+            return None
+        return self.register_local_tcga_folder(directory)
+
+    def register_local_tcga_folder(self, directory: str | Path) -> AcquisitionSummary | None:
+        summary = self.register_local_paths(
+            [directory],
+            source_type="tcga_local_folder",
+            source_label="本地 TCGA 数据文件夹",
+            strategy="reference",
+            metadata={"source": "tcga", "ui_source": "tcga_adapter_local_folder", "tcga_gtex_merge_enabled": False},
+            selected_kind="folder",
+            summary_key="tcga",
+            data_type_label="TCGA 本地数据",
+        )
+        if summary is not None:
+            self._external_data_adapter_status.setPlainText(f"本地 TCGA 文件夹已登记：{directory}；GTEx 不会自动混入。")
+            self._refresh_external_data_adapter_state()
+        return summary
+
     def _adapter_preview_gtex(self) -> GTExPreviewSummary | None:
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
@@ -2693,6 +2727,32 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_external_data_adapter_state()
         return result
 
+    def _adapter_choose_local_gtex_folder(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        directory = QFileDialog.getExistingDirectory(self, "选择本地 GTEx 文件夹", str(self._project_root))
+        if not directory:
+            self._external_data_adapter_status.setPlainText("已取消本地 GTEx 文件夹登记。")
+            return None
+        return self.register_local_gtex_folder(directory)
+
+    def register_local_gtex_folder(self, directory: str | Path) -> AcquisitionSummary | None:
+        summary = self.register_local_paths(
+            [directory],
+            source_type="gtex_local_folder",
+            source_label="本地 GTEx 数据文件夹",
+            strategy="reference",
+            metadata={"source": "gtex", "ui_source": "gtex_adapter_local_folder", "tcga_gtex_merge_enabled": False},
+            selected_kind="folder",
+            summary_key="gtex",
+            data_type_label="GTEx 本地数据",
+        )
+        if summary is not None:
+            self._external_data_adapter_status.setPlainText(f"本地 GTEx 文件夹已登记：{directory}；TCGA 不会自动混入。")
+            self._refresh_external_data_adapter_state()
+        return summary
+
     def _refresh_external_data_adapter_state(self) -> None:
         if not hasattr(self, "_tcga_adapter_preview_button"):
             return
@@ -2713,10 +2773,12 @@ class BioinformaticsDataSourceWidget(QWidget):
             (self._tcga_adapter_plan_button, has_project and self._tcga_preview_summary is not None and self._tcga_preview_summary.is_download_plan_available, "requires_tcga_metadata_preview_artifact"),
             (self._tcga_adapter_download_button, has_project and tcga_plan is not None and download_gate, "requires_tcga_download_plan_and_light_validation_gate"),
             (self._tcga_adapter_expression_button, has_project and tcga_raw is not None, "requires_tcga_raw_download_receipt"),
+            (self._tcga_adapter_local_folder_button, has_project and active_source == "tcga", "disabled_until_tcga_source_selected"),
             (self._gtex_adapter_preview_button, active_source == "gtex", "disabled_until_gtex_source_selected"),
             (self._gtex_adapter_plan_button, has_project and self._gtex_preview_summary is not None and self._gtex_preview_summary.is_download_plan_available, "requires_gtex_metadata_preview_artifact"),
             (self._gtex_adapter_download_button, has_project and gtex_plan is not None and download_gate, "requires_gtex_download_plan_and_light_validation_gate"),
             (self._gtex_adapter_expression_button, has_project and gtex_raw is not None, "requires_gtex_raw_download_receipt"),
+            (self._gtex_adapter_local_folder_button, has_project and active_source == "gtex", "disabled_until_gtex_source_selected"),
         )
         for button, enabled, reason in states:
             button.setEnabled(enabled)

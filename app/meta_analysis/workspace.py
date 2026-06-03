@@ -191,9 +191,9 @@ def meta_target_ia_pages() -> tuple[MetaTargetIAPage, ...]:
         MetaTargetIAPage("fulltext_extraction", "Full-text & Extraction / 全文与数据提取", "testing", "按 Meta 类型加载不同数据提取结构；需要人工复核。", "main_flow", 6),
         MetaTargetIAPage("quality_assessment", "Quality Assessment / 质量评价", "planned", "按 Meta 类型选择评价工具；当前仅目标 IA 壳层。", "main_flow", 7),
         MetaTargetIAPage("analysis_tasks", "Meta Analysis Tasks / 统计分析", "planned", "显示类型专属统计任务边界；不启用 Network Meta。", "main_flow", 8),
-        MetaTargetIAPage("result_report", "Result & Report / 结果与报告", "shell_only", "仅展示测试边界，不生成生产级结果或投稿级系统综述。", "main_flow", 9),
-        MetaTargetIAPage("report_export", "Report Export / 报告导出", "shell_only", "报告草稿边界；不声明投稿级输出。", "main_flow", 10),
-        MetaTargetIAPage("meta_settings", "Meta Settings / Meta 设置", "shell_only", "Meta 偏好、日志和外部资源检测入口。", "auxiliary", 1),
+        MetaTargetIAPage("result_report", "Result & Report / 结果与报告", "testing", "测试结果审阅 gate；生成 report-ready blocker artifact，不伪装生产级结果。", "main_flow", 9),
+        MetaTargetIAPage("report_export", "Report Export / 报告导出", "testing", "报告导出 gate；生成 export blocker artifact，不声明投稿级输出。", "main_flow", 10),
+        MetaTargetIAPage("meta_settings", "Meta Settings / Meta 设置", "testing", "Meta 偏好、日志和外部资源检测入口。", "auxiliary", 1),
     )
 
 
@@ -868,6 +868,8 @@ if QWidget is not None:
                 "quality_assessment": "ui_runtime/meta_quality_assessment_adapter.json",
                 "analysis_plan": "ui_runtime/meta_analysis_plan_adapter.json",
                 "analysis_preflight": "ui_runtime/meta_analysis_preflight_adapter.json",
+                "result_report_gate": "ui_runtime/meta_result_report_gate.json",
+                "report_export_gate": "ui_runtime/meta_report_export_gate.json",
             }
             services: dict[str, dict[str, object]] = {}
             completed_count = 0
@@ -4993,13 +4995,13 @@ if QWidget is not None:
             frame.setObjectName("metaResultReviewRuntimePanel")
             frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
             frame.setProperty("pageKey", "result_report")
-            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("runtimeStatus", "testing")
             frame.setProperty("resultSemanticKey", "testing_summary_only")
             frame.setProperty("formalResultSemanticKey", "no_formal_result")
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("reportReadyState", "blocked")
             frame.setProperty("exportGate", "disabled_empty_result")
-            frame.setProperty("fileWriteAllowed", False)
+            frame.setProperty("fileWriteAllowed", True)
             frame.setProperty("formalActionEnabled", False)
             frame.setStyleSheet(
                 """
@@ -5211,12 +5213,13 @@ if QWidget is not None:
             blockers.setMinimumHeight(162)
             blockers.setVisible(False)
 
-            generate = QPushButton("Generate Report disabled")
-            generate.setObjectName("metaGenerateReportDisabledButton")
-            generate.setProperty("actionSemantic", "disabled_report_gate")
+            generate = QPushButton("生成 Report-ready Gate 审计")
+            generate.setObjectName("metaGenerateReportGateAuditButton")
+            generate.setProperty("actionSemantic", "writes_report_ready_gate_audit")
             generate.setProperty("formalActionEnabled", False)
-            generate.setProperty("fileWriteAllowed", False)
-            generate.setEnabled(False)
+            generate.setProperty("fileWriteAllowed", True)
+            generate.setProperty("buttonBehavior", "writes_meta_result_report_gate_artifact")
+            generate.clicked.connect(self._write_meta_result_report_gate)
             generate.setMinimumHeight(34)
 
             main = QHBoxLayout()
@@ -5472,12 +5475,12 @@ if QWidget is not None:
             frame.setObjectName("metaReportExportGateRuntimePanel")
             frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
             frame.setProperty("pageKey", "report_export")
-            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("runtimeStatus", "testing")
             frame.setProperty("resultSemanticKey", "no_formal_result")
             frame.setProperty("reportStatusKey", "report.status.draft")
             frame.setProperty("reportReadyState", "blocked")
             frame.setProperty("exportGate", "disabled_empty_result")
-            frame.setProperty("fileWriteAllowed", False)
+            frame.setProperty("fileWriteAllowed", True)
             frame.setProperty("formalActionEnabled", False)
             frame.setStyleSheet("QFrame#metaReportExportGateRuntimePanel { border: 1px solid #D6E0EA; border-radius: 8px; background: #FFFFFF; }")
             layout = QVBoxLayout(frame)
@@ -5534,12 +5537,62 @@ if QWidget is not None:
                 format_row.addWidget(button)
             layout.addLayout(format_row)
 
+            audit = QPushButton("生成 Export Gate 审计")
+            audit.setObjectName("metaReportExportGateAuditButton")
+            audit.setProperty("actionSemantic", "writes_report_export_gate_audit")
+            audit.setProperty("formalActionEnabled", False)
+            audit.setProperty("fileWriteAllowed", True)
+            audit.setProperty("buttonBehavior", "writes_meta_report_export_gate_artifact")
+            audit.clicked.connect(self._write_meta_report_export_gate)
+            audit.setMinimumHeight(34)
+            layout.addWidget(audit)
+
             future = QLabel("Export will be enabled after gate.")
             future.setObjectName("metaExportAfterGateNotice")
             future.setProperty("exportGate", "disabled_empty_result")
             future.setWordWrap(True)
             layout.addWidget(future)
             return frame
+
+        def _write_meta_result_report_gate(self) -> Path | None:
+            return self._write_gate_artifact(
+                "ui_runtime/meta_result_report_gate.json",
+                {
+                    "page_key": "result_report",
+                    "service": "MetaAnalysisWorkspaceWidget.result_report_gate",
+                    "report_ready": False,
+                    "formal_result_available": False,
+                    "plot_available": False,
+                    "report_draft_available": False,
+                    "blockers": [
+                        "formal_pairwise_result_missing",
+                        "effect_schema_not_final",
+                        "risk_of_bias_not_final",
+                        "report_ready_package_missing",
+                    ],
+                    "disabled_reason": "Result review is testing-only until formal synthesis result, plots, and report-ready package are validated.",
+                    "formal_action_enabled": False,
+                },
+            )
+
+        def _write_meta_report_export_gate(self) -> Path | None:
+            return self._write_gate_artifact(
+                "ui_runtime/meta_report_export_gate.json",
+                {
+                    "page_key": "report_export",
+                    "service": "MetaAnalysisWorkspaceWidget.report_export_gate",
+                    "export_ready": False,
+                    "export_formats": ["DOCX", "HTML", "PDF", "CSV", "XLSX", "ZIP"],
+                    "blocked_formats": ["DOCX", "HTML", "PDF", "CSV", "XLSX", "ZIP"],
+                    "blockers": [
+                        "report_ready_gate_failed",
+                        "formal_result_missing",
+                        "export_adapter_not_enabled",
+                    ],
+                    "disabled_reason": "Export buttons remain disabled until report-ready gate passes; this action only writes the gate audit artifact.",
+                    "formal_action_enabled": False,
+                },
+            )
 
         def _select_fulltext_extraction_tab(self, tab_key: str) -> None:
             for key, button in getattr(self, "_fulltext_extraction_tabs", {}).items():

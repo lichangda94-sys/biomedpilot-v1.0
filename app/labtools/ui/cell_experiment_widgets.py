@@ -316,15 +316,15 @@ class LabToolsCellExperimentPage(QWidget):
         grid = QGridLayout()
         grid.setSpacing(SPACING["sm"])
         templates = (
-            ("传代", "记录传代比例、消化时间、接种密度", "仅壳层"),
-            ("复苏", "记录复苏批次、复苏时间、培养条件", "仅壳层"),
-            ("冻存", "记录冻存批次、冻存管、冻存液", "仅壳层"),
-            ("接种", "记录接种密度、孔板格式、体积", "计算辅助可用"),
-            ("给药 / 处理", "记录处理条件、剂量、时间点", "仅壳层"),
-            ("转染", "记录转染试剂、核酸量、时间点", "仅壳层"),
+            ("passage", "传代", "记录传代比例、消化时间、接种密度", "记录保存已接入"),
+            ("thaw", "复苏", "记录复苏批次、复苏时间、培养条件", "记录保存已接入"),
+            ("freezing", "冻存", "记录冻存批次、冻存管、冻存液", "记录保存已接入"),
+            ("seeding", "接种", "记录接种密度、孔板格式、体积", "计算辅助可用"),
+            ("treatment", "给药 / 处理", "记录处理条件、剂量、时间点", "记录保存已接入"),
+            ("transfection", "转染", "记录转染试剂、核酸量、时间点", "记录保存已接入"),
         )
-        for index, (title, text, status) in enumerate(templates):
-            grid.addWidget(_template_card(title, text, status, index == 3, self._open_records_backend), index // 2, index % 2)
+        for index, (record_type, title, text, status) in enumerate(templates):
+            grid.addWidget(_template_card(record_type, title, text, status, record_type == "seeding", self._open_records_backend), index // 2, index % 2)
         layout.addLayout(grid)
 
         from_last = QFrame()
@@ -338,7 +338,7 @@ class LabToolsCellExperimentPage(QWidget):
         create.setEnabled(False)
         from_last_layout.addWidget(create)
         layout.addWidget(from_last)
-        layout.addWidget(_note("当前项目暂无保存的细胞实验记录；记录保存需要后续 CellExperimentRecordStore 适配检查。"))
+        layout.addWidget(_note("前台模板入口会跳转到下方后端接线区；保存记录会写入 cell_profile_id 和 cell_profile_snapshot。"))
         return panel
 
     def _result_processing_panel(self) -> QFrame:
@@ -346,9 +346,9 @@ class LabToolsCellExperimentPage(QWidget):
         layout = panel.layout()
         assert isinstance(layout, QVBoxLayout)
         for title, text in (
-            ("划痕实验", "可设计图像标注与复核流程；不执行自动 ROI。"),
-            ("Transwell 实验", "可设计计数复核界面；不执行自动细胞计数。"),
-            ("荧光 / 染色图像", "可设计图像预览与人工标注；不执行自动分割。"),
+            ("划痕实验", "导入图片后显示缩略图；识别/测量按钮生成 RunRequest 和 action manifest。"),
+            ("Transwell 实验", "细胞区域/计数按钮生成待外部引擎执行的 RunRequest。"),
+            ("荧光 / 染色图像", "ROI/荧光强度按钮生成测量任务请求；正式结果需人工复核。"),
         ):
             layout.addWidget(_result_entry(title, text))
         engine = QFrame()
@@ -358,7 +358,7 @@ class LabToolsCellExperimentPage(QWidget):
         for label, value in (
             ("检测状态", "未在此页检测"),
             ("配置入口", "设置中心 > 外部能力"),
-            ("运行状态", "暂不执行图像分析"),
+            ("运行状态", "本页生成任务请求，不静默执行外部引擎"),
         ):
             engine_layout.addLayout(_row(label, value))
         settings = QPushButton("前往设置中心 - 需路由")
@@ -372,7 +372,7 @@ class LabToolsCellExperimentPage(QWidget):
         actions.addWidget(run)
         engine_layout.addLayout(actions)
         layout.addWidget(engine)
-        layout.addWidget(_note("ImageJ/Fiji 仅作为外部引擎接入；当前不执行 macro、不提供自动 ROI、自动计数或结果解析。"))
+        layout.addWidget(_note("ImageJ/Fiji 仅作为外部引擎接入；当前按钮生成 RunRequest / action manifest，真实测量执行仍需外部引擎配置和人工复核。"))
         return panel
 
     def _timeline_panel(self) -> QFrame:
@@ -382,11 +382,19 @@ class LabToolsCellExperimentPage(QWidget):
         layout.addWidget(_note("暂无可读取的细胞实验记录。接入记录模型后，这里将显示传代、复苏、冻存、接种、处理和转染事件。"))
         return panel
 
-    def _open_records_backend(self) -> None:
+    def _open_records_backend(self, record_type: str = "") -> None:
         tabs = getattr(self, "_backend_tabs", None)
         if tabs is None:
             return
         tabs.setCurrentIndex(0)
+        record_tabs = self.findChild(QTabWidget, "cellExperimentRecordTabs")
+        if record_tabs is not None and record_type:
+            target_name = f"cellRecordTemplate_{record_type}"
+            for index in range(record_tabs.count()):
+                widget = record_tabs.widget(index)
+                if widget is not None and widget.objectName() == target_name:
+                    record_tabs.setCurrentIndex(index)
+                    break
         self._scroll_area.ensureWidgetVisible(tabs)
 
     def _records_tab(self) -> QWidget:
@@ -687,6 +695,7 @@ class RecordTemplateWidget(QWidget):
         selectors = QHBoxLayout()
         self._profile_combo = QComboBox()
         self._profile_combo.setObjectName(f"cellRecordProfileSelector_{record_type}")
+        self._profile_combo.setToolTip("选择已保存的细胞档案；记录保存时会写入 cell_profile_id 和 cell_profile_snapshot。")
         self._profile_combo.currentIndexChanged.connect(self._refresh_thaw_cryovials)
         selectors.addWidget(QLabel("细胞档案"))
         selectors.addWidget(self._profile_combo, 1)
@@ -750,7 +759,13 @@ class RecordTemplateWidget(QWidget):
 
     def refresh_profiles(self) -> None:
         self._profile_combo.clear()
-        for profile in self._profile_store.load():
+        profiles = list(self._profile_store.load())
+        if not profiles:
+            self._profile_combo.addItem("请先保存细胞档案 / no saved cell profile", "")
+            self._profile_combo.setEnabled(False)
+        else:
+            self._profile_combo.setEnabled(True)
+        for profile in profiles:
             self._profile_combo.addItem(f"{profile.cell_name} ({profile.current_passage})", profile.cell_profile_id)
         self._refresh_thaw_cryovials()
 
@@ -941,7 +956,7 @@ def _row(label: str, value: str, state: str | None = None) -> QHBoxLayout:
     return row
 
 
-def _template_card(title: str, text: str, status: str, active_helper: bool, callback) -> QFrame:
+def _template_card(record_type: str, title: str, text: str, status: str, active_helper: bool, callback) -> QFrame:
     frame = QFrame()
     frame.setObjectName("cellExperimentTemplateCard")
     layout = QVBoxLayout(frame)
@@ -953,13 +968,11 @@ def _template_card(title: str, text: str, status: str, active_helper: bool, call
     desc.setWordWrap(True)
     layout.addWidget(heading)
     layout.addWidget(desc)
-    layout.addWidget(_chip(status, "available" if active_helper else "muted"))
-    action = QPushButton("打开接种计算辅助" if active_helper else "新建记录 - 需适配")
-    action.setObjectName("cellExperimentSeedingHelperButton" if active_helper else f"cellExperimentDisabledRecordButton_{title}")
-    if active_helper:
-        action.clicked.connect(callback)
-    else:
-        action.setEnabled(False)
+    layout.addWidget(_chip(status, "available"))
+    action = QPushButton("打开接种计算辅助" if active_helper else "新建记录")
+    action.setObjectName("cellExperimentSeedingHelperButton" if active_helper else f"cellExperimentOpenRecordButton_{record_type}")
+    action.setProperty("buttonBehavior", f"opens_cell_record_backend_{record_type}")
+    action.clicked.connect(lambda _checked=False, key=record_type: callback(key))
     layout.addWidget(action)
     return frame
 

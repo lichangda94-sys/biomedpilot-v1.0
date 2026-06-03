@@ -8,7 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget
 
 from app.app_identity import SETTINGS_RESOURCE_ICON_PATHS, icon_asset_statuses, icon_asset_summary, load_settings_resource_pixmap
 from app.shared.storage import default_storage_root
@@ -138,24 +138,43 @@ def _build_settings_general_page(profile: SettingsProfile, _pixmap_loader: Setti
     page = _base_page(object_name="settingsGeneralPage", page_key="general", semantic_key=PageKey.SETTINGS_GENERAL.value)
     root = page.layout()
     root.setSpacing(14)
+    detail_panel = _settings_general_detail_panel()
     content_row = QHBoxLayout()
     content_row.setContentsMargins(0, 0, 0, 0)
     content_row.setSpacing(14)
     left_col = QVBoxLayout()
     left_col.setContentsMargins(0, 0, 0, 0)
     left_col.setSpacing(14)
-    left_col.addWidget(_settings_preferences_card(profile))
+    left_col.addWidget(_settings_preferences_card(profile, detail_panel))
     left_col.addWidget(_settings_system_info_card(profile))
     left_col.addStretch(1)
     content_row.addLayout(left_col, 0)
     content_row.addWidget(_settings_external_capability_overview_card(), 1)
     root.addLayout(content_row)
+    root.addWidget(detail_panel)
     root.addWidget(_settings_quick_actions_panel())
     root.addStretch(1)
     return page
 
 
-def _settings_preferences_card(profile: SettingsProfile) -> QFrame:
+def _settings_general_detail_panel() -> QPlainTextEdit:
+    detail = QPlainTextEdit()
+    detail.setObjectName("settingsGeneralDetailPanel")
+    detail.setReadOnly(True)
+    detail.setMinimumHeight(118)
+    detail.setPlainText(
+        "\n".join(
+            (
+                "通用偏好详情面板 / General preference details",
+                "点击上方语言、路径、启动行为或隐私日志后，本面板显示当前接线目录、写入 artifact 和后续接入边界。",
+                "当前不会自动下载安装、不会静默修改外部环境。",
+            )
+        )
+    )
+    return detail
+
+
+def _settings_preferences_card(profile: SettingsProfile, detail_panel: QPlainTextEdit) -> QFrame:
     card = _settings_center_panel("settingsGeneralPreferencesPanel", width=360)
     card.setProperty("uiPrimitive", "settings_preferences_card")
     layout = QVBoxLayout(card)
@@ -168,11 +187,11 @@ def _settings_preferences_card(profile: SettingsProfile) -> QFrame:
         ("startup", "行为与启动", "设置启动行为、更新与通知偏好", "本地启动", "B", "testing"),
         ("privacy", "隐私与安全", "日志级别、数据匿名化与隐私选项", "日志级别：信息", "S", "available"),
     ):
-        layout.addWidget(_settings_row(action_key, title, body, value, icon_text=icon_text, status_key=status_key))
+        layout.addWidget(_settings_row(action_key, title, body, value, icon_text=icon_text, status_key=status_key, detail_panel=detail_panel))
     return card
 
 
-def _settings_row(action_key: str, title: str, body: str, value: str, *, icon_text: str, status_key: str) -> QFrame:
+def _settings_row(action_key: str, title: str, body: str, value: str, *, icon_text: str, status_key: str, detail_panel: QPlainTextEdit) -> QFrame:
     row = QFrame()
     row.setObjectName("settingsPreferenceRow")
     row.setProperty("uiPrimitive", "settings_row")
@@ -217,12 +236,12 @@ def _settings_row(action_key: str, title: str, body: str, value: str, *, icon_te
     action.setProperty("moduleKey", ModuleKey.SETTINGS.value)
     action.setProperty("semanticKey", PageKey.SETTINGS_GENERAL.value)
     action.setProperty("buttonBehavior", f"opens_settings_general_{action_key}_panel")
-    action.clicked.connect(lambda _checked=False, button=action, key=action_key: _run_general_preference_action(button, key))
+    action.clicked.connect(lambda _checked=False, button=action, key=action_key, detail=detail_panel: _run_general_preference_action(button, key, detail))
     layout.addWidget(action, 0)
     return row
 
 
-def _run_general_preference_action(button: QPushButton, action_key: str) -> None:
+def _run_general_preference_action(button: QPushButton, action_key: str, detail_panel: QPlainTextEdit | None = None) -> None:
     messages = {
         "language": "界面与语言已接入设置中心：当前 zh-CN / 浅色主题；后续由用户切换后广播到 LabTools 字段标签。",
         "storage": f"默认存储根目录：{default_storage_root()}；可通过快速操作选择路径并写入本地测试 manifest。",
@@ -234,7 +253,38 @@ def _run_general_preference_action(button: QPushButton, action_key: str) -> None
     button.setToolTip(message)
     button.setAccessibleDescription(message)
     button.setProperty("lastActionStatus", message)
-    _write_settings_runtime_manifest("general_preference", {"action_key": action_key, "status": "opened", "message": message})
+    panel_lines = _settings_general_detail_lines(action_key, message)
+    if detail_panel is not None:
+        detail_panel.setPlainText("\n".join(panel_lines))
+    _write_settings_runtime_manifest("general_preference", {"action_key": action_key, "status": "opened", "message": message, "detail_lines": panel_lines})
+
+
+def _settings_general_detail_lines(action_key: str, message: str) -> list[str]:
+    catalog = {
+        "language": (
+            "目录：Settings > 通用偏好 > 界面与语言",
+            "已接入：当前语言 zh-CN、浅色主题、字体大小摘要。",
+            "下游：LabTools 记录字段使用中文优先双语标签；后续可由语言偏好广播。",
+            "artifact：project_storage/settings/settings_runtime_manifest.json",
+        ),
+        "storage": (
+            "目录：Settings > 通用偏好 > 数据与存储",
+            f"当前 storage root：{default_storage_root()}",
+            "已接入：路径选择测试入口、缓存/日志目录提示、运行期 manifest。",
+            "边界：不移动既有项目、不触碰 project_storage 之外的原始文件。",
+        ),
+        "startup": (
+            "目录：Settings > 通用偏好 > 行为与启动",
+            "已接入：本地启动、无自动更新、无后台联网策略展示。",
+            "边界：更新检查只记录入口状态，不自动覆盖 app。",
+        ),
+        "privacy": (
+            "目录：Settings > 通用偏好 > 隐私与安全",
+            "已接入：日志级别、匿名化和云端配置边界说明。",
+            "边界：外部模型、云端 key 和上传动作必须独立确认。",
+        ),
+    }
+    return [message, *catalog.get(action_key, ("目录：Settings > 通用偏好", "该入口已记录到运行期 manifest。"))]
 
 
 def _settings_external_capability_overview_card() -> QFrame:
@@ -264,8 +314,10 @@ def _settings_external_capability_overview_card() -> QFrame:
     for label, key in (("可用：可正常使用", "available"), ("可选：可配置使用", "not_configured"), ("不可用：未检测到", "blocked")):
         footer.addWidget(make_status_chip(label, status_key=key), 0)
     footer.addStretch(1)
-    log = make_action_button("查看详细日志", role="ghost", size="small", enabled=False, semantic_state="disabled", disabled_reason="日志查看入口保留，当前不执行导出。")
+    log = make_action_button("查看详细日志", role="ghost", size="small", semantic_state="testing", action_key="settings_overview_log")
     log.setObjectName("settingsOverviewLogButton")
+    log.setProperty("buttonBehavior", "writes_settings_overview_log_manifest")
+    log.clicked.connect(lambda _checked=False, button=log: _run_settings_overview_log_action(button))
     footer.addWidget(log, 0)
     layout.addLayout(footer)
     return card
@@ -304,8 +356,10 @@ def _capability_overview_row(name: str, english: str, status_key: str, detail: s
     layout.addLayout(text_col, 2)
     layout.addWidget(make_status_chip(status_key=status_key), 0)
     layout.addWidget(desc, 1)
-    configure = make_action_button("配置", role="ghost", size="small", enabled=False, semantic_state="disabled", disabled_reason="配置入口保留，当前不执行外部能力配置。")
+    configure = make_action_button("配置", role="ghost", size="small", semantic_state="testing", action_key="settings_overview_configure")
     configure.setObjectName("settingsCapabilityConfigureButton")
+    configure.setProperty("buttonBehavior", "opens_settings_capability_overview_config_test_gate")
+    configure.clicked.connect(lambda _checked=False, button=configure, title=name, status=status_key: _run_capability_overview_configure(button, title, status))
     layout.addWidget(configure, 0)
     chevron = QLabel(">")
     chevron.setObjectName("settingsCapabilityChevron")
@@ -340,14 +394,69 @@ def _settings_system_info_card(profile: SettingsProfile) -> QFrame:
         row.addWidget(key)
         row.addWidget(val, 1)
         layout.addLayout(row)
-    copy = make_action_button("复制系统信息", role="secondary", size="small", enabled=False, semantic_state="disabled", disabled_reason="复制动作后续开放；当前只展示系统信息布局。")
+    copy = make_action_button("复制系统信息", role="secondary", size="small", semantic_state="testing", action_key="copy_settings_system_info")
     copy.setObjectName("settingsCopySystemInfoButton")
+    copy.setProperty("buttonBehavior", "copies_system_info_and_writes_settings_manifest")
+    copy.clicked.connect(lambda _checked=False, button=copy: _copy_settings_system_info(button))
     copy_row = QHBoxLayout()
     copy_row.setContentsMargins(14, 8, 14, 14)
     copy_row.addWidget(copy, 0)
     copy_row.addStretch(1)
     layout.addLayout(copy_row)
     return card
+
+
+def _run_settings_overview_log_action(button: QPushButton) -> None:
+    manifest = _write_settings_runtime_manifest(
+        "overview_log",
+        {
+            "status": "opened",
+            "log_manifest": str(default_storage_root() / "settings" / "settings_runtime_manifest.json"),
+            "exported_files": False,
+        },
+    )
+    message = f"详细日志入口已打开；本次写入 manifest：{manifest}"
+    button.setText("日志已记录")
+    button.setToolTip(message)
+    button.setAccessibleDescription(message)
+    button.setProperty("lastActionStatus", message)
+
+
+def _run_capability_overview_configure(button: QPushButton, title: str, status_key: str) -> None:
+    manifest = _write_settings_runtime_manifest(
+        "capability_overview_config",
+        {
+            "capability": title,
+            "status_key": status_key,
+            "config_panel": "overview_test_gate",
+            "automatic_install_or_update": False,
+        },
+    )
+    message = f"{title} 配置测试入口已打开；不会自动安装或更新；manifest={manifest}"
+    button.setText("已打开")
+    button.setToolTip(message)
+    button.setAccessibleDescription(message)
+    button.setProperty("lastActionStatus", message)
+
+
+def _copy_settings_system_info(button: QPushButton) -> None:
+    payload = {
+        "app_version": "0.1.0 Developer Preview",
+        "mode": "local",
+        "storage_root": str(default_storage_root()),
+        "python": sys.executable,
+        "automatic_install_or_update": False,
+    }
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    clipboard = QApplication.clipboard() if QApplication.instance() is not None else None
+    if clipboard is not None:
+        clipboard.setText(text)
+    manifest = _write_settings_runtime_manifest("copy_system_info", payload)
+    message = f"系统信息已复制并记录：{manifest}"
+    button.setText("已复制")
+    button.setToolTip(message)
+    button.setAccessibleDescription(message)
+    button.setProperty("lastActionStatus", message)
 
 
 def _settings_quick_actions_panel() -> QFrame:

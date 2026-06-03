@@ -246,14 +246,31 @@ def test_data_source_tcga_and_gtex_adapter_controls_are_isolated(data_source_wid
     buttons["tcga"].click()
     tcga_controls = data_source_widget.findChild(QFrame, "bioinformaticsTcgaAdapterControls")
     gtex_controls = data_source_widget.findChild(QFrame, "bioinformaticsGtexAdapterControls")
+    tcga_local = data_source_widget.findChild(QPushButton, "bioinformaticsTcgaLocalFolderButton")
+    gtex_local = data_source_widget.findChild(QPushButton, "bioinformaticsGtexLocalFolderButton")
     assert tcga_controls is not None
     assert gtex_controls is not None
     assert not tcga_controls.isHidden()
     assert gtex_controls.isHidden()
+    assert tcga_local is not None and tcga_local.isEnabled()
+    assert tcga_local.property("buttonBehavior") == "registers_local_tcga_folder_without_gtex_merge"
 
     buttons["gtex"].click()
     assert tcga_controls.isHidden()
     assert not gtex_controls.isHidden()
+    assert gtex_local is not None and gtex_local.isEnabled()
+    assert gtex_local.property("buttonBehavior") == "registers_local_gtex_folder_without_tcga_merge"
+
+    tcga_folder = tmp_path / "tcga_folder"
+    gtex_folder = tmp_path / "gtex_folder"
+    tcga_folder.mkdir()
+    gtex_folder.mkdir()
+    data_source_widget.register_local_tcga_folder(tcga_folder)
+    data_source_widget.register_local_gtex_folder(gtex_folder)
+    entries = (tmp_path / "acquisition" / "records").glob("*.json")
+    payloads = [json.loads(path.read_text(encoding="utf-8")) for path in entries if path.name != "latest_record.json"]
+    assert any(payload["source_type"] == "tcga_local_folder" and payload["metadata"]["source"] == "tcga" for payload in payloads)
+    assert any(payload["source_type"] == "gtex_local_folder" and payload["metadata"]["source"] == "gtex" for payload in payloads)
 
 
 def test_data_source_continue_runs_recognition_readiness_and_writes_manifest(data_source_widget, tmp_path) -> None:

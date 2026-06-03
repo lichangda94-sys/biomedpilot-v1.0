@@ -392,9 +392,32 @@ def test_meta_later_stage_buttons_write_gate_artifacts_without_enabling_formal_a
     assert (summary.project_root / "analysis" / "applicability_warnings.json").exists()
 
     widget.show_target_ia_page("result_report")
-    report_button = _button(widget, "metaGenerateReportDisabledButton")
-    assert not report_button.isEnabled()
-    assert report_button.property("disabledReason")
+    report_panel = widget.findChild(QFrame, "metaResultReviewRuntimePanel")
+    assert report_panel is not None
+    assert report_panel.property("runtimeStatus") == "testing"
+    report_button = _button(widget, "metaGenerateReportGateAuditButton")
+    assert report_button.isEnabled()
+    report_button.click()
+    qt_app.processEvents()
+    report_gate = summary.project_root / "ui_runtime" / "meta_result_report_gate.json"
+    assert report_gate.exists()
+    report_payload = json.loads(report_gate.read_text(encoding="utf-8"))
+    assert report_payload["report_ready"] is False
+    assert "formal_pairwise_result_missing" in report_payload["blockers"]
+
+    widget.show_target_ia_page("report_export")
+    export_panel = widget.findChild(QFrame, "metaReportExportGateRuntimePanel")
+    assert export_panel is not None
+    assert export_panel.property("runtimeStatus") == "testing"
+    export_button = _button(widget, "metaReportExportGateAuditButton")
+    assert export_button.isEnabled()
+    export_button.click()
+    qt_app.processEvents()
+    export_gate = summary.project_root / "ui_runtime" / "meta_report_export_gate.json"
+    assert export_gate.exists()
+    export_payload = json.loads(export_gate.read_text(encoding="utf-8"))
+    assert export_payload["export_ready"] is False
+    assert "report_ready_gate_failed" in export_payload["blockers"]
 
 
 class _FakePubMedSearchService:
