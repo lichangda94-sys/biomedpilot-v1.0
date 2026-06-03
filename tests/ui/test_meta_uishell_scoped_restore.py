@@ -9,7 +9,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLineEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QFrame, QLineEdit, QPushButton
 
     from app.meta_analysis.project_workspace import create_meta_analysis_project
     from app.meta_analysis.search.pubmed_search_service import PubMedSearchExecution, PubMedSearchResult
@@ -145,6 +145,9 @@ def test_meta_pubmed_adapter_buttons_call_services_and_write_artifacts(qt_app, t
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_dir(summary.project_root)
     widget.set_pubmed_search_service_factory(lambda: _FakePubMedSearchService())
+    project_home = widget.findChild(QFrame, "metaProjectHomeRuntimePanel")
+    assert project_home is not None
+    assert project_home.property("runtimeStatus") == "testing"
 
     widget.show_target_ia_page("search_strategy")
     _button(widget, "metaRunPubMedSearchButton").click()
@@ -181,6 +184,12 @@ def test_meta_pubmed_adapter_buttons_call_services_and_write_artifacts(qt_app, t
     assert handoff_payload["auto_screened"] is False
     assert (summary.project_root / handoff_payload["literature_records_path"]).exists()
     assert (summary.project_root / handoff_payload["dedup_queue_path"]).exists()
+    manifest = summary.project_root / "ui_runtime" / "meta_minimal_workflow_manifest.json"
+    assert manifest.exists()
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert manifest_payload["workflow_status"] == "testing_minimal_online_path"
+    assert manifest_payload["service_artifacts"]["pubmed_search"]["exists"] is True
+    assert manifest_payload["service_artifacts"]["literature_import"]["exists"] is True
     assert not list((summary.project_root / "screening").glob("*.json"))
     assert not (summary.project_root / "reports" / "prisma_flow_summary.json").exists()
 

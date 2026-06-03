@@ -1751,8 +1751,124 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("请先下载或导入至少一个实际数据文件。", error=True)
             return
         selected_entries = [entry for entry in self._dataset_list_panel.selected_entries() if entry.ready_for_recognition]
+        all_ready_entries = [entry for entry in _current_project_dataset_entries(self._project_root) if entry.ready_for_recognition]
+        if not selected_entries:
+            selected_entries = all_ready_entries
+        if not selected_entries:
+            self._write_data_source_to_check_manifest(
+                trigger="continue_to_recognition",
+                entries=[],
+                selected_paths=[],
+                recognition_report={},
+                readiness={},
+                disabled_reason="no_ready_source_files_for_recognition",
+            )
+            self._set_status("已登记来源仍未形成可识别文件；请先下载 GEO 资产或使用本地导入。", error=True)
+            return
         _save_pending_recognition_selection(self._project_root, selected_entries)
+        selected_paths = _recognition_paths_for_dataset_entries(selected_entries)
+        recognition_report: dict[str, object] = {}
+        readiness: dict[str, object] = {}
+        if selected_paths:
+            self._set_status("正在执行数据识别和 readiness 预检，请稍候。")
+            QApplication.processEvents()
+            recognition_report = run_project_recognition_for_paths(
+                self._project_root,
+                selected_paths,
+                skipped_unselected_count=max(0, len(all_ready_entries) - len(selected_entries)),
+            )
+            readiness = run_project_readiness(self._project_root)
+            self._write_data_source_to_check_manifest(
+                trigger="continue_to_recognition",
+                entries=selected_entries,
+                selected_paths=selected_paths,
+                recognition_report=recognition_report,
+                readiness=readiness,
+            )
+            self._set_status(f"已完成数据识别预检：{len(selected_paths)} 个文件；进入 Data Check & Preparation。")
+        else:
+            self._write_data_source_to_check_manifest(
+                trigger="continue_to_recognition",
+                entries=selected_entries,
+                selected_paths=[],
+                recognition_report={},
+                readiness={},
+                disabled_reason="selected_sources_have_no_recognition_paths",
+            )
+            self._set_status("所选来源没有可识别文件；请先下载候选资产或导入本地文件。", error=True)
+            return
         self.continue_requested.emit(self._project_root)
+
+    def _write_data_source_to_check_manifest(
+        self,
+        *,
+        trigger: str,
+        entries: list[DatasetListEntry],
+        selected_paths: list[str],
+        recognition_report: dict[str, object],
+        readiness: dict[str, object],
+        disabled_reason: str = "",
+    ) -> Path | None:
+        if self._project_root is None:
+            return None
+        payload = {
+            "schema_version": "biomedpilot.bio_data_source_to_data_check_manifest.v1",
+            "updated_at": _utc_now_iso(),
+            "trigger": trigger,
+            "visual_baseline": "UIShell mature Bio 7-step gated page",
+            "selected_source_count": len(entries),
+            "selected_file_count": len(selected_paths),
+            "selected_sources": [
+                {
+                    "key": entry.key,
+                    "name": entry.name,
+                    "source_type": entry.source_type_key,
+                    "source_files": list(entry.source_files),
+                    "ready_for_recognition": entry.ready_for_recognition,
+                }
+                for entry in entries
+            ],
+            "selected_paths": selected_paths,
+            "recognition_report_path": "logs/recognition/recognition_report.json" if recognition_report else "",
+            "readiness_report_path": "logs/readiness/readiness_report.json" if readiness else "",
+            "analysis_capability_matrix_path": "manifests/analysis_capability_matrix.json" if readiness else "",
+            "recognition_file_count": len(recognition_report.get("files", []) or []) if isinstance(recognition_report, dict) else 0,
+            "readiness_status": str(
+                (readiness.get("readiness_report") or {}).get("overall_status")
+                or (readiness.get("readiness_report") or {}).get("status")
+                or ""
+            )
+            if isinstance(readiness.get("readiness_report"), dict)
+            else "",
+            "formal_analysis_enabled": False,
+            "disabled_reason": disabled_reason,
+        }
+        path = self._project_root / "ui_runtime" / "bio_data_source_to_data_check_manifest.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return path
+
+    def _write_geo_acquisition_runtime_manifest(self, *, trigger: str, accession: str, result: object | None) -> Path | None:
+        if self._project_root is None:
+            return None
+        downloaded_files = list(getattr(result, "downloaded_files", ()) or getattr(result, "files", ()) or ())
+        payload = {
+            "schema_version": "biomedpilot.bio_geo_acquisition_runtime_manifest.v1",
+            "updated_at": _utc_now_iso(),
+            "trigger": trigger,
+            "accession": accession,
+            "success": bool(getattr(result, "success", False)) if result is not None else False,
+            "message": str(getattr(result, "message", "") if result is not None else ""),
+            "downloaded_files": [str(path) for path in downloaded_files],
+            "pending_geo_assets": _candidate_has_pending_geo_assets(self._project_root, accession),
+            "ready_registered_source_count": _ready_registered_source_count(self._project_root),
+            "next_gate": "Data Check & Preparation / 数据识别与 readiness 预检",
+            "formal_analysis_enabled": False,
+        }
+        path = self._project_root / "ui_runtime" / "bio_geo_acquisition_runtime_manifest.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return path
 
     def continue_to_acquisition_status(self) -> None:
         self.continue_to_recognition()
@@ -4031,6 +4147,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_geo_download_list()
         self._show_gse_geo_detail(candidate)
         self._set_status(result.message if result.success else (result.message or "GEO 下载未完成，请稍后重试。"), error=not result.success)
+        self._write_geo_acquisition_runtime_manifest(trigger="download_geo_metadata", accession=accession, result=result)
         return result
 
     def _download_gse_geo_assets(self, accession: str) -> object | None:
@@ -4046,6 +4163,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_geo_download_list()
         self._show_gse_geo_detail_by_accession(accession)
         self._set_status(result.message if result.success else (result.message or "未下载到补充文件，请检查 manifest。"), error=not result.success)
+        self._write_geo_acquisition_runtime_manifest(trigger="download_geo_assets", accession=accession, result=result)
         return result
 
     def _refresh_registered_sources(self) -> None:
@@ -12459,6 +12577,13 @@ def _recognition_paths_for_rows(project_root: Path, rows: list[RegisteredSourceR
         if not payload:
             continue
         paths.extend(_recognition_source_files_from_payload(payload))
+    return list(dict.fromkeys(paths))
+
+
+def _recognition_paths_for_dataset_entries(entries: list[DatasetListEntry]) -> list[str]:
+    paths: list[str] = []
+    for entry in entries:
+        paths.extend(str(path) for path in entry.source_files if str(path))
     return list(dict.fromkeys(paths))
 
 

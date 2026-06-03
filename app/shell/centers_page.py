@@ -83,10 +83,12 @@ def _project_center_page(project_center: ProjectCenter) -> QWidget:
     refresh = _center_button("刷新项目列表", "centersRefreshProjectsButton", "calls_project_center_recent_projects")
     create = _center_button("创建 Bio 测试项目", "centersCreateProjectRecordButton", "calls_project_center_create_bio_project_and_writes_projects_index")
     create_meta = _center_button("创建 Meta 测试项目", "centersCreateMetaProjectButton", "calls_meta_project_workspace_create_and_project_center_index")
+    open_recent = _center_button("打开最近项目", "centersOpenRecentProjectButton", "opens_recent_project_record_summary_and_writes_review_artifact")
     export = _center_button("导出项目索引", "centersExportProjectIndexButton", "writes_project_center_index_summary_artifact")
     row.addWidget(refresh)
     row.addWidget(create)
     row.addWidget(create_meta)
+    row.addWidget(open_recent)
     row.addWidget(export)
     row.addStretch(1)
     page.layout().addLayout(row)
@@ -118,9 +120,28 @@ def _project_center_page(project_center: ProjectCenter) -> QWidget:
         _write_json(path, {"project_count": len(records), "projects": [asdict(record) for record in records]})
         output.setPlainText(f"project_center_index_summary={path}\nproject_count={len(records)}")
 
+    def open_recent_project() -> None:
+        records = project_center.recent_projects(limit=1)
+        path = _center_artifact_root(project_center) / "project_center_recent_project_review.json"
+        if not records:
+            payload = {"status": "empty", "disabled_reason": "no_recent_project_record"}
+            _write_json(path, payload)
+            output.setPlainText(json.dumps({"recent_project_review": str(path), **payload}, ensure_ascii=False, indent=2))
+            return
+        record = records[0]
+        payload = {
+            "status": "opened_record_summary",
+            "project": asdict(record),
+            "project_dir_exists": bool(record.project_dir and Path(record.project_dir).expanduser().exists()),
+            "navigation_boundary": "Centers opens and reviews project records only; workspace navigation remains in shell routes.",
+        }
+        _write_json(path, payload)
+        output.setPlainText(json.dumps({"recent_project_review": str(path), **payload}, ensure_ascii=False, indent=2))
+
     refresh.clicked.connect(render)
     create.clicked.connect(create_record)
     create_meta.clicked.connect(create_meta_record)
+    open_recent.clicked.connect(open_recent_project)
     export.clicked.connect(export_index)
     render()
     return page

@@ -68,6 +68,10 @@ def test_shell_centers_buttons_click_services_or_write_artifacts(qt_app, tmp_pat
     _button(page, "centersCreateProjectRecordButton").click()
     assert project_center.storage_path.exists()
     assert project_center.list_projects(limit=None)
+    _button(page, "centersOpenRecentProjectButton").click()
+    recent_review = tmp_path / "centers" / "project_center_recent_project_review.json"
+    assert recent_review.exists()
+    assert json.loads(recent_review.read_text(encoding="utf-8"))["status"] == "opened_record_summary"
 
     _button(page, "centersExportDataIndexButton").click()
     data_index = tmp_path / "centers" / "data_center_index_summary.json"

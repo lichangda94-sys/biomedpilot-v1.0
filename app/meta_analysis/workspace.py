@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 from typing import Callable
@@ -775,6 +776,7 @@ if QWidget is not None:
                 if validation.is_valid and validation.summary is not None:
                     self._current_meta_project = validation.summary
             self._refresh_summary()
+            self._refresh_meta_minimal_workflow_manifest(trigger="set_project_dir")
 
         def open_meta_project_folder(self, path: str | Path) -> bool:
             validation = open_meta_analysis_project(path)
@@ -784,6 +786,7 @@ if QWidget is not None:
             self._current_project_dir = validation.summary.project_root
             self._current_meta_project = validation.summary
             self._refresh_summary()
+            self._refresh_meta_minimal_workflow_manifest(trigger="open_meta_project_folder")
             return True
 
         def set_new_project_form(self, *, project_name: str = "", research_topic: str = "", save_location: str | Path | None = None) -> None:
@@ -811,6 +814,7 @@ if QWidget is not None:
             self._current_project_dir = summary.project_root
             self._current_meta_project = summary
             self._refresh_summary()
+            self._refresh_meta_minimal_workflow_manifest(trigger="create_meta_project_from_form")
             self._set_status(f"Meta 项目已创建：{summary.project_root}")
             return summary
 
@@ -842,6 +846,62 @@ if QWidget is not None:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             self._set_status(f"已生成 gate artifact：{path.relative_to(self._current_project_dir)}")
+            if relative_path != "ui_runtime/meta_minimal_workflow_manifest.json":
+                self._refresh_meta_minimal_workflow_manifest(trigger=relative_path)
+            return path
+
+        def _refresh_meta_minimal_workflow_manifest(self, *, trigger: str) -> Path | None:
+            if self._current_project_dir is None:
+                return None
+            project_root = self._current_project_dir
+            artifact_paths = {
+                "pubmed_search": "ui_runtime/meta_pubmed_search_adapter.json",
+                "pubmed_preview": "ui_runtime/meta_pubmed_preview_adapter.json",
+                "literature_import": "ui_runtime/meta_pubmed_handoff_adapter.json",
+                "dedup_review_queue": "ui_runtime/meta_dedup_review_queue_adapter.json",
+                "deduplicated_set": "ui_runtime/meta_deduplicated_set_adapter.json",
+                "screening_queue": "ui_runtime/meta_dedup_to_screening_queue_adapter.json",
+                "screening_decisions": "ui_runtime/meta_screening_decisions_adapter.json",
+                "fulltext_registry": "ui_runtime/meta_fulltext_registry_adapter.json",
+                "extraction_schema": "ui_runtime/meta_extraction_schema_adapter.json",
+                "extraction_effect_rows": "ui_runtime/meta_extraction_effect_rows_adapter.json",
+                "quality_assessment": "ui_runtime/meta_quality_assessment_adapter.json",
+                "analysis_plan": "ui_runtime/meta_analysis_plan_adapter.json",
+                "analysis_preflight": "ui_runtime/meta_analysis_preflight_adapter.json",
+            }
+            services: dict[str, dict[str, object]] = {}
+            completed_count = 0
+            for key, relative in artifact_paths.items():
+                path = project_root / relative
+                payload = _load_json_object(path)
+                exists = path.exists()
+                if exists:
+                    completed_count += 1
+                services[key] = {
+                    "artifact": relative,
+                    "exists": exists,
+                    "service": str(payload.get("service") or payload.get("service_checked") or ""),
+                    "success": payload.get("success"),
+                    "disabled_reason": str(payload.get("disabled_reason") or ""),
+                    "formal_action_enabled": bool(payload.get("formal_action_enabled", False)),
+                }
+            manifest = {
+                "schema_version": "biomedpilot.meta_minimal_workflow_manifest.v1",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "trigger": trigger,
+                "project_dir": str(project_root),
+                "visual_baseline": "UIShell mature Meta 12-step gated page",
+                "testing_query_zh": "甲状腺癌与脂联素水平",
+                "workflow_status": "testing_minimal_online_path",
+                "completed_service_artifact_count": completed_count,
+                "service_artifacts": services,
+                "formal_statistics_enabled": False,
+                "formal_export_enabled": False,
+                "disabled_reason": "Formal statistics/report export remain gated until effect schema, analysis result schema, and report-ready package are validated.",
+            }
+            path = project_root / "ui_runtime" / "meta_minimal_workflow_manifest.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             return path
 
         def _ensure_protocol_draft(self) -> Path | None:
@@ -2318,7 +2378,7 @@ if QWidget is not None:
             frame.setObjectName("metaProjectHomeRuntimePanel")
             frame.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
             frame.setProperty("pageKey", "project_home")
-            frame.setProperty("runtimeStatus", "shell_only")
+            frame.setProperty("runtimeStatus", "testing")
             frame.setProperty("processingMode", "english_first")
             frame.setProperty("aiBoundary", "advisory_only")
             frame.setProperty("resultSemanticKey", "no_formal_result")

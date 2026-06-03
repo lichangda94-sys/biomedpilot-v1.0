@@ -4,6 +4,7 @@ import json
 import shutil
 import sys
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
@@ -233,6 +234,7 @@ def _run_general_preference_action(button: QPushButton, action_key: str) -> None
     button.setToolTip(message)
     button.setAccessibleDescription(message)
     button.setProperty("lastActionStatus", message)
+    _write_settings_runtime_manifest("general_preference", {"action_key": action_key, "status": "opened", "message": message})
 
 
 def _settings_external_capability_overview_card() -> QFrame:
@@ -412,19 +414,52 @@ def _run_settings_quick_action(button: QPushButton, action_key: str) -> None:
     if action_key == "paths":
         directory = QFileDialog.getExistingDirectory(button, "选择默认项目路径", str(default_storage_root()))
         message = f"已选择默认路径：{directory}" if directory else "已取消路径选择；未修改设置。"
+        payload = {"selected_directory": directory or "", "modified_settings": bool(directory)}
     elif action_key == "updates":
         message = "更新检查已接入测试入口：当前版本 0.1.0 Developer Preview；不会自动下载或覆盖应用。"
+        payload = {"update_check": "developer_preview_current", "auto_download": False}
     elif action_key == "cache":
         cache_root = default_storage_root() / "cache"
         message = f"缓存清理测试入口已打开：目标目录 {cache_root}；本次不自动删除文件。"
+        payload = {"cache_root": str(cache_root), "deleted_files": False}
     elif action_key == "logs":
         message = f"日志导出测试入口已打开：建议输出到 {default_storage_root() / 'logs'}；本次只记录入口状态。"
+        payload = {"suggested_log_root": str(default_storage_root() / "logs"), "exported_files": False}
     else:
         message = "快速操作已触发。"
+        payload = {}
     button.setText("已执行")
     button.setToolTip(message)
     button.setAccessibleDescription(message)
     button.setProperty("lastActionStatus", message)
+    _write_settings_runtime_manifest("quick_action", {"action_key": action_key, "status": "triggered", "message": message, **payload})
+
+
+def _write_settings_runtime_manifest(action_type: str, payload: dict[str, object]) -> Path:
+    path = default_storage_root() / "settings" / "settings_runtime_manifest.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except (OSError, json.JSONDecodeError):
+        previous = {}
+    actions = previous.get("actions") if isinstance(previous, dict) else []
+    if not isinstance(actions, list):
+        actions = []
+    entry = {
+        "action_type": action_type,
+        "payload": payload,
+        "install_or_update_requires_user_click": True,
+        "automatic_install_or_update": False,
+    }
+    actions.append(entry)
+    manifest = {
+        "schema_version": "biomedpilot.settings_runtime_manifest.v1",
+        "storage_root": str(default_storage_root()),
+        "last_action": entry,
+        "actions": actions[-40:],
+    }
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
 
 
 def _settings_center_panel(object_name: str, *, width: int | None = None) -> QFrame:
@@ -697,6 +732,16 @@ def _run_r_enrichment_backend_detection(result_text: QPlainTextEdit) -> None:
     lines.append(f"gsea_preranked_clusterprofiler={capabilities.get('gsea_preranked_clusterprofiler')}")
     lines.append("blockers=" + (json.dumps(blockers, ensure_ascii=False) if blockers else "none"))
     result_text.setPlainText("\n".join(lines))
+    _write_settings_runtime_manifest(
+        "r_enrichment_backend_detection",
+        {
+            "status": status,
+            "rscript": rscript,
+            "packages": packages,
+            "capabilities": capabilities,
+            "install_action": "none_detect_first_only",
+        },
+    )
 
 
 def _build_settings_model_engine_page(profile: SettingsProfile, pixmap_loader: SettingsPixmapLoader) -> QWidget:
@@ -881,6 +926,10 @@ def _run_settings_resource_detection(button: QPushButton, resource_keys: Sequenc
     button.setToolTip(summary)
     button.setAccessibleDescription(summary)
     button.setText("检测状态已更新")
+    _write_settings_runtime_manifest(
+        "resource_detection",
+        {"resource_keys": list(resource_keys), "summary": summary, "detect_only": True},
+    )
 
 
 def _run_settings_install_update_action(button: QPushButton, resource_keys: Sequence[str]) -> None:
@@ -905,6 +954,10 @@ def _run_settings_install_update_action(button: QPushButton, resource_keys: Sequ
     button.setToolTip(summary)
     button.setAccessibleDescription(summary)
     button.setProperty("lastInstallUpdateStatus", summary)
+    _write_settings_runtime_manifest(
+        "user_triggered_install_update",
+        {"resource_keys": list(resource_keys), "summary": summary, "user_triggered": True, "automatic_install_or_update": False},
+    )
 
 
 def _settings_resource_icon_label(resource_key: str, *, status_key: str, pixmap_loader: SettingsPixmapLoader, size: int = 28) -> QLabel:

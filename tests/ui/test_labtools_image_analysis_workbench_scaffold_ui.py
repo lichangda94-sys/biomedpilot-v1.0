@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -115,6 +116,11 @@ def test_workbench_generates_run_request_without_running_engine(qapp, tmp_path) 
 
     assert workspace is not None
     assert workspace.run_request_path.exists()
+    action_manifest = workspace.task_dir / "review" / "image_action_manifest.json"
+    assert action_manifest.exists()
+    action_payload = json.loads(action_manifest.read_text(encoding="utf-8"))
+    assert action_payload["requested_action"] == "识别细胞区域"
+    assert action_payload["external_engine_execution_enabled"] is False
     assert workspace.task.status == "run_request_created"
     text = _visible_text(widget)
     assert "RunRequest 已生成" in text

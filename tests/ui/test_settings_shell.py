@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -12,6 +13,7 @@ try:
 
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import ModuleKey, PageKey
+    from app.shared.storage import default_storage_root
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     Qt = None  # type: ignore[assignment]
@@ -203,3 +205,8 @@ def test_settings_general_preferences_and_quick_actions_are_clickable(settings_w
     assert quick_button.property("buttonBehavior") == "runs_settings_quick_action_updates"
     quick_button.click()
     assert quick_button.property("lastActionStatus")
+    manifest = default_storage_root() / "settings" / "settings_runtime_manifest.json"
+    assert manifest.exists()
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert payload["last_action"]["action_type"] == "quick_action"
+    assert any(action["action_type"] == "general_preference" for action in payload["actions"])

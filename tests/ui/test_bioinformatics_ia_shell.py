@@ -254,3 +254,21 @@ def test_data_source_tcga_and_gtex_adapter_controls_are_isolated(data_source_wid
     buttons["gtex"].click()
     assert tcga_controls.isHidden()
     assert not gtex_controls.isHidden()
+
+
+def test_data_source_continue_runs_recognition_readiness_and_writes_manifest(data_source_widget, tmp_path) -> None:
+    expression = tmp_path / "expression_matrix.tsv"
+    expression.write_text("gene\tcase_1\tcontrol_1\nTP53\t5\t2\n", encoding="utf-8")
+    data_source_widget.refresh_project(tmp_path)
+    data_source_widget.register_local_paths([expression], strategy="reference", selected_kind="file", summary_key="local_import")
+
+    data_source_widget.continue_to_recognition()
+
+    manifest = tmp_path / "ui_runtime" / "bio_data_source_to_data_check_manifest.json"
+    assert manifest.exists()
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert payload["selected_file_count"] == 1
+    assert payload["recognition_report_path"] == "logs/recognition/recognition_report.json"
+    assert payload["readiness_report_path"] == "logs/readiness/readiness_report.json"
+    assert (tmp_path / payload["recognition_report_path"]).exists()
+    assert (tmp_path / payload["analysis_capability_matrix_path"]).exists()

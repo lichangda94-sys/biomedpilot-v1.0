@@ -2,6 +2,7 @@ from __future__ import annotations
 
 try:
     import html
+    import json
     from pathlib import Path
 
     from PySide6.QtWidgets import (
@@ -933,14 +934,42 @@ if QWidget is not None:
                     parameters=self._collect_parameters(action_text),
                 )
                 workspace = self._task_store.create_run_request(workspace)
+                action_manifest = self._write_image_action_manifest(workspace, action_text)
             except ImageAnalysisError as exc:
                 self._result_panel.setText(str(exc))
                 return
             self._latest_workspace = workspace
-            self._result_panel.setText(self._workspace_result_text(workspace))
+            self._result_panel.setText(self._workspace_result_text(workspace, action_manifest))
             self._diagnostics.setText(self._diagnostic_text(workspace.macro_template, workspace))
 
-        def _workspace_result_text(self, workspace: ImageAnalysisTaskWorkspace) -> str:
+        def _write_image_action_manifest(self, workspace: ImageAnalysisTaskWorkspace, action_text: str) -> Path:
+            overlay_hint = "cell_count_overlay" if "细胞" in action_text or "count" in self._analysis_type else "roi_or_measurement_overlay"
+            if "lane" in action_text.lower() or "Lane" in action_text:
+                overlay_hint = "lane_overlay"
+            elif "Band" in action_text or "灰度" in action_text:
+                overlay_hint = "band_intensity_overlay"
+            elif "划痕" in action_text:
+                overlay_hint = "scratch_area_mask"
+            elif "荧光" in action_text or "ROI" in action_text:
+                overlay_hint = "fluorescence_roi_overlay"
+            payload = {
+                "schema_version": "biomedpilot.labtools.image_action_manifest.v1",
+                "experiment_module": self._experiment_module,
+                "analysis_type": self._analysis_type,
+                "requested_action": action_text,
+                "image_paths": list(self._image_paths),
+                "run_request_path": str(workspace.run_request_path),
+                "expected_overlay": overlay_hint,
+                "external_engine_execution_enabled": False,
+                "disabled_reason": "ImageJ/Fiji or analysis macro execution is not run from this preview action; RunRequest is ready for external engine wiring.",
+                "manual_review_required": True,
+            }
+            path = workspace.task_dir / "review" / "image_action_manifest.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            return path
+
+        def _workspace_result_text(self, workspace: ImageAnalysisTaskWorkspace, action_manifest: Path | None = None) -> str:
             return "\n".join(
                 [
                     "RunRequest 已生成",
@@ -948,6 +977,7 @@ if QWidget is not None:
                     f"任务目录：{workspace.task_dir}",
                     f"输出目录：{workspace.output_dir}",
                     f"RunRequest：{workspace.run_request_path}",
+                    f"Action manifest：{action_manifest}" if action_manifest else "Action manifest：未生成",
                     "",
                     "预期结果文件",
                     "- outputs/results.csv",
