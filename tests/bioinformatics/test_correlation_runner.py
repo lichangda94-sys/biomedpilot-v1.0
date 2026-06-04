@@ -4,6 +4,7 @@ import csv
 import json
 from pathlib import Path
 
+from app.analysis_runtime import build_standard_analysis_package_catalog, validate_standard_result_package
 from app.bioinformatics.services.correlation_runner import run_expression_correlation
 
 
@@ -32,6 +33,30 @@ def test_expression_correlation_runs_against_target_gene(tmp_path: Path) -> None
     assert abs(float(rows[0]["pearson_r"])) == 1.0
     payload = json.loads(Path(str(summary["summary_path"])).read_text(encoding="utf-8"))
     assert payload["target_gene"] == "TP53"
+    standard_package_dir = Path(str(summary["standard_result_package_dir"]))
+    assert standard_package_dir.is_dir()
+    validation = validate_standard_result_package(
+        standard_package_dir,
+        expected_module_id="correlation",
+        expected_task_id=str(summary["task_run_id"]),
+        expected_mode="lite",
+    )
+    assert validation["status"] == "passed"
+    index = json.loads((tmp_path / "results" / "summaries" / "result_index.json").read_text(encoding="utf-8"))
+    entry = next(item for item in index["results"] if item["result_id"] == summary["result_id"])
+    assert entry["result_semantics"] == "testing_level"
+    assert entry["report_ready_eligible"] is False
+    assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = next(item for item in catalog["rows"] if item["result_id"] == summary["result_id"])
+    assert row["module_id"] == "correlation"
+    assert row["mode"] == "lite"
+    assert row["result_semantics"] == "testing_level"
+    assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert row["artifact_counts"]["tables"] == 1
+    assert row["artifact_counts"]["reports"] == 1
+    assert row["artifact_manifest"]["tables"][0]["exists"] is True
+    assert "clinical_conclusion_not_generated" in row["warnings"]
 
 
 def test_expression_correlation_reads_geo_series_matrix_table_block(tmp_path: Path) -> None:

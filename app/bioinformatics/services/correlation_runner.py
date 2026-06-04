@@ -9,6 +9,12 @@ import math
 from datetime import datetime, timezone
 from itertools import chain
 from pathlib import Path
+from uuid import uuid4
+
+from app.bioinformatics.results.models import ResultIndexEntry
+from app.bioinformatics.results.registry import register_result
+
+from .correlation_standard_package import write_correlation_standard_result_package
 
 
 CORRELATION_RESULTS_FILENAME = "correlation_results.csv"
@@ -22,6 +28,7 @@ def run_expression_correlation(
     output_dir: str | Path,
     dataset_id: str = "",
     max_results: int = 200,
+    project_root: str | Path | None = None,
 ) -> dict[str, object]:
     """Compute Pearson correlation against a target gene across sample columns."""
 
@@ -69,11 +76,14 @@ def run_expression_correlation(
     limited = results[: max(1, int(max_results or 200))]
     target_dir = Path(output_dir).expanduser().resolve()
     target_dir.mkdir(parents=True, exist_ok=True)
+    result_id = f"correlation_{uuid4().hex[:10]}"
     result_path = target_dir / CORRELATION_RESULTS_FILENAME
     summary_path = target_dir / CORRELATION_SUMMARY_FILENAME
     _write_rows(result_path, limited)
     summary = {
         "schema_version": "biomedpilot.correlation_results.v1",
+        "result_id": result_id,
+        "task_run_id": result_id,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "dataset_id": dataset_id or _dataset_id_from_path(source),
         "source_expression_path": str(source),
@@ -89,7 +99,59 @@ def run_expression_correlation(
         "returned_result_count": len(limited),
     }
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    root = Path(project_root).expanduser().resolve() if project_root is not None else target_dir.parent
+    standard_package_dir = write_correlation_standard_result_package(
+        root,
+        result_id=result_id,
+        result_path=result_path,
+        summary_path=summary_path,
+        summary=summary,
+    )
+    summary["standard_result_package_dir"] = str(standard_package_dir)
+    _register_standard_correlation_result(root, summary, result_path, summary_path, standard_package_dir)
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
+
+
+def _register_standard_correlation_result(root: Path, summary: dict[str, object], result_path: Path, summary_path: Path, standard_package_dir: Path) -> None:
+    result_id = str(summary.get("result_id") or "")
+    now = str(summary.get("generated_at") or datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    entry = ResultIndexEntry(
+        result_id=result_id,
+        task_run_id=str(summary.get("task_run_id") or result_id),
+        task_type="analysis:correlation",
+        result_semantics="testing_level",
+        input_package_id=str(summary.get("dataset_id") or ""),
+        source_dataset_id=str(summary.get("dataset_id") or ""),
+        source_repository_manifest=str(summary.get("source_expression_path") or ""),
+        parameters_manifest={
+            "schema_version": "biomedpilot.correlation_parameter_manifest.v1",
+            "dataset_id": summary.get("dataset_id") or "",
+            "target_gene": summary.get("target_gene") or "",
+            "method": summary.get("method") or "pearson",
+            "max_results_returned": summary.get("returned_result_count") or 0,
+        },
+        engine_name="biomedpilot_local_pearson_correlation",
+        engine_version="1",
+        dependency_snapshot={"mode": "lite", "runtime": "python_standard_library", "heavy_r_dependencies": "not_used"},
+        output_artifacts=(
+            {"artifact_type": "correlation_result_table", "path": _relative_or_absolute(root, result_path), "schema": "biomedpilot.correlation_result_table.v1"},
+            {"artifact_type": "correlation_summary", "path": _relative_or_absolute(root, summary_path), "schema": "biomedpilot.correlation_results.v1"},
+            {"artifact_type": "standard_result_package", "path": _relative_or_absolute(root, standard_package_dir), "schema": "biomedpilot.analysis.result_package.v1"},
+        ),
+        plot_artifacts=(),
+        report_artifacts=(),
+        validation_status="passed",
+        warnings=("testing_level_local_pearson_correlation", "clinical_conclusion_not_generated"),
+        blockers=(),
+        log_artifacts=({"artifact_type": "correlation_summary", "path": _relative_or_absolute(root, summary_path)},),
+        failure_reason="",
+        created_at=now,
+        updated_at=now,
+        report_ready_eligible=False,
+        migration_status="legacy_service_adapter_sidecar",
+    )
+    register_result(root, entry)
 
 
 def _read_matrix(path: Path) -> tuple[list[str], list[list[str]]]:
@@ -183,6 +245,13 @@ def _dataset_id_from_path(path: Path) -> str:
         if part.upper().startswith("GSE"):
             return part.upper()
     return path.stem
+
+
+def _relative_or_absolute(root: Path, path: Path) -> str:
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
 
 
 __all__ = ["run_expression_correlation"]
