@@ -10,7 +10,7 @@ BioMedPilot-LabTools 是 **BioMedPilot / 医研智析** 的开源实验工具模
 
 Developer Preview / 开发预览版。
 
-当前代码已经作为独立公开包整理，支持本地安装、测试、smoke test，以及面向细胞图片实验的 ImageJ/Fiji macro 生成与调用封装。
+当前代码已经作为独立公开包整理，支持本地安装、测试、smoke test，以及面向细胞图片实验和蛋白图像实验的 ImageJ/Fiji macro 生成与调用封装。
 
 当前验证状态：
 
@@ -22,7 +22,7 @@ python -m labtools --smoke-test
 最近公开包验证结果：
 
 ```text
-python3 -m pytest: 217 passed
+python3 -m pytest: 224 passed
 python3 -m labtools --smoke-test: passed
 ```
 
@@ -44,18 +44,22 @@ python3 -m labtools --smoke-test: passed
 - SDS-PAGE gel template helper
 - qPCR mix calculator
 - Cell seeding calculator
-- 细胞实验图片处理 ImageJ/Fiji macro 工作流（划痕实验、Transwell 实验、迁移 / 划痕 ROI、免疫组化 / IHC-DAB）
+- 细胞实验图片处理 ImageJ/Fiji macro 工作流（划痕实验、Transwell 实验、通用颗粒识别、ROI 强度测量、迁移 / 划痕 ROI、细胞骨架形态、免疫组化 / IHC-DAB）
+- 蛋白图像 ImageJ/Fiji macro 工作流（Dot blot 固定网格强度测量）
 - 单位换算工具
 - package smoke test
 - 测试用例
 
 ## 细胞实验图片处理 / ImageJ-Fiji
 
-当前 `labtools.cell_culture` 已开放四类 ImageJ/Fiji macro 工作流：
+当前 `labtools.cell_culture` 已开放七类 ImageJ/Fiji macro 工作流：
 
 - `wound_scratch`：划痕实验图片批量估算划痕空白区域面积和比例。
 - `transwell`：Transwell 染色图片批量统计颗粒数量和颗粒面积。
+- `generic_particle_analysis`：通用颗粒 / 细胞信号批量识别，输出颗粒数、面积、圆度和 Feret 直径摘要。
+- `roi_intensity_batch`：导入 ROI zip 后逐图测量 ROI 面积、平均灰度、积分强度和背景校正强度。
 - `migration_streak_roi`：迁移 / 划痕图像批量识别大面积 streak ROI，并估算 ROI 内信号颗粒面积和残余空白面积。
+- `cell_skeleton_morphology`：批量生成二值骨架并调用 Fiji Analyze Skeleton，导出 summary / branch CSV 路径。
 - `immunohistochemistry`：免疫组化 / IHC-DAB 图片批量估算阳性染色面积比例和平均灰度。
 
 只导出 macro：
@@ -78,6 +82,22 @@ python3 -m labtools cell-imagej run transwell \
 ```
 
 这些工作流用于科研图片处理辅助。阈值、ROI、批量结果和 CSV 输出必须由实验人员结合显微镜设置、染色条件、实验室 SOP 和原始图片人工复核。
+
+## 蛋白图像处理 / ImageJ-Fiji
+
+当前 `labtools.western_blot` 已开放：
+
+- `dot_blot_grid`：对 Dot blot / protein array 图片按固定点阵生成圆形 ROI，批量测量平均灰度和积分强度。
+
+只导出 macro：
+
+```bash
+python3 -m labtools protein-imagej macro dot_blot_grid \
+  --input-dir ./dot-blot-images \
+  --output-dir ./imagej-output \
+  --param rows=8 \
+  --param columns=12
+```
 
 ## 安装与开发
 

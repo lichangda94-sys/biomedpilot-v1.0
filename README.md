@@ -20,11 +20,12 @@ The current package includes:
 - Calculation record serialization helpers
 - qPCR mix calculator
 - Cell seeding calculator
-- Cell experiment ImageJ/Fiji macro workflows for wound scratch, Transwell, migration/scratch ROI, and immunohistochemistry / IHC-DAB image batches
+- Cell experiment ImageJ/Fiji macro workflows for wound scratch, Transwell, generic particles, ROI intensity, migration/scratch ROI, skeleton morphology, and immunohistochemistry / IHC-DAB image batches
 - Reagent template models, validation, preparation calculator, and local JSON store
 - Western Blot loading calculator
 - Western Blot protein loading helpers
 - Western Blot loading record export helpers
+- Protein assay ImageJ/Fiji dot blot fixed-grid intensity workflow
 - BCA assay helper for plate parsing, annotations, curve fitting, and review warnings
 - SDS-PAGE gel template helper for user-defined gel templates and batch calculations
 - Package-level smoke test via `python -m labtools --smoke-test`
@@ -33,11 +34,14 @@ The package is intended for reusable calculation and model logic first. UI code 
 
 ## Cell ImageJ/Fiji Workflows
 
-LabTools can generate ImageJ/Fiji macros for four cell experiment image workflows:
+LabTools can generate ImageJ/Fiji macros for seven cell experiment image workflows:
 
 - `wound_scratch`: batch wound/scratch gap area and fraction estimation.
 - `transwell`: batch particle counting and particle-area summary for stained Transwell images.
+- `generic_particle_analysis`: batch particle count, area, circularity, and Feret summary.
+- `roi_intensity_batch`: batch ROI zip intensity measurement with optional background correction.
 - `migration_streak_roi`: batch large streak ROI detection with signal-particle area and residual open-area summary.
+- `cell_skeleton_morphology`: batch binary skeleton generation and Fiji Analyze Skeleton output export.
 - `immunohistochemistry`: batch positive-area fraction and mean-gray summary for IHC/DAB images.
 
 Generate a macro only:
@@ -60,6 +64,20 @@ python3 -m labtools cell-imagej run transwell \
 ```
 
 Generated image-analysis CSV files require human review against the original images, microscope settings, staining conditions, and laboratory SOPs before scientific use.
+
+## Protein ImageJ/Fiji Workflows
+
+LabTools also exposes protein assay image workflows through `protein-imagej`:
+
+- `dot_blot_grid`: fixed-grid circular ROI measurement for dot blot / protein array images.
+
+```bash
+python3 -m labtools protein-imagej macro dot_blot_grid \
+  --input-dir ./dot-blot-images \
+  --output-dir ./imagej-output \
+  --param rows=8 \
+  --param columns=12
+```
 
 ## Safety Boundaries
 
@@ -93,7 +111,7 @@ python -m labtools --smoke-test
 Current known validation status:
 
 ```text
-python3 -m pytest: 217 passed
+python3 -m pytest: 224 passed
 python3 -m labtools --smoke-test: passed
 ```
 

@@ -19,9 +19,20 @@ from labtools.cell_culture import (
 def test_cell_imagej_experiment_catalog_exposes_requested_workflows() -> None:
     experiment_ids = {spec.experiment_id for spec in list_cell_imagej_experiments()}
 
-    assert experiment_ids == {"wound_scratch", "transwell", "migration_streak_roi", "immunohistochemistry"}
+    assert experiment_ids == {
+        "wound_scratch",
+        "transwell",
+        "generic_particle_analysis",
+        "roi_intensity_batch",
+        "migration_streak_roi",
+        "cell_skeleton_morphology",
+        "immunohistochemistry",
+    }
     assert get_cell_imagej_experiment("划痕实验").experiment_id == "wound_scratch"
+    assert get_cell_imagej_experiment("颗粒识别").experiment_id == "generic_particle_analysis"
+    assert get_cell_imagej_experiment("roi强度").experiment_id == "roi_intensity_batch"
     assert get_cell_imagej_experiment("划痕roi").experiment_id == "migration_streak_roi"
+    assert get_cell_imagej_experiment("骨架分析").experiment_id == "cell_skeleton_morphology"
     assert get_cell_imagej_experiment("ihc").experiment_id == "immunohistochemistry"
 
 
@@ -67,6 +78,53 @@ def test_migration_streak_roi_macro_is_software_driven_and_resets_roi_state(tmp_
     assert "no_streak_roi" in bundle.macro_text
     assert "residual_streak_area_px,residual_fraction" in bundle.macro_text
     assert "signal_max_area_px = 9000;" in bundle.macro_text
+
+
+def test_generic_particle_macro_summarizes_particle_shape_metrics(tmp_path: Path) -> None:
+    bundle = render_cell_imagej_macro(
+        "generic_particle_analysis",
+        tmp_path / "images",
+        tmp_path / "out",
+        parameters={"background_rolling_px": 50, "max_circularity": 0.9},
+    )
+
+    assert bundle.output_csv_path == tmp_path / "out" / "generic_particle_results.csv"
+    assert "particle_count,total_area_px,mean_area_px,mean_circularity,mean_feret_px" in bundle.macro_text
+    assert "run(\"Subtract Background...\", \"rolling=\" + background_rolling_px);" in bundle.macro_text
+    assert "circularity=\" + min_circularity + \"-\" + max_circularity" in bundle.macro_text
+    assert "max_circularity = 0.9;" in bundle.macro_text
+
+
+def test_roi_intensity_macro_uses_software_roi_zip_and_background_correction(tmp_path: Path) -> None:
+    roi_zip = tmp_path / "roi sets" / "ROIs.zip"
+    bundle = render_cell_imagej_macro(
+        "roi_intensity_batch",
+        tmp_path / "images",
+        tmp_path / "out",
+        parameters={"roi_zip_path": str(roi_zip), "background_roi_index": 2},
+    )
+
+    assert bundle.output_csv_path == tmp_path / "out" / "roi_intensity_results.csv"
+    assert "getDirectory(" not in bundle.macro_text
+    assert "roiManager(\"Open\", roiZip);" in bundle.macro_text
+    assert "background_roi_index = 2;" in bundle.macro_text
+    assert "corrected_integrated_density" in bundle.macro_text
+    assert "missing_roi_zip" in bundle.macro_text
+
+
+def test_cell_skeleton_macro_exports_plugin_outputs_without_gpl_source(tmp_path: Path) -> None:
+    bundle = render_cell_imagej_macro(
+        "cell_skeleton_morphology",
+        tmp_path / "images",
+        tmp_path / "out",
+        parameters={"prune_method": "none", "save_skeleton_image": False},
+    )
+
+    assert bundle.output_csv_path == tmp_path / "out" / "cell_skeleton_morphology_results.csv"
+    assert "run(\"Skeletonize (2D/3D)\");" in bundle.macro_text
+    assert "run(\"Analyze Skeleton (2D/3D)\", \"prune=\" + prune_method + \" show\");" in bundle.macro_text
+    assert "summary_csv,branch_csv" in bundle.macro_text
+    assert "save_skeleton_image = \"false\";" in bundle.macro_text
 
 
 def test_write_cell_imagej_macro_creates_default_macro_path(tmp_path: Path) -> None:

@@ -2,7 +2,7 @@
 
 日期：2026-05-22
 
-范围：评估当前 LabTools 后端相对于 BioMedPilot 桌面 UI mockup 和 integration 的缺口。2026-06-04 更新：细胞图片实验 ImageJ/Fiji macro adapter 已补入，并加入迁移 / 划痕 ROI 自有模板。
+范围：评估当前 LabTools 后端相对于 BioMedPilot 桌面 UI mockup 和 integration 的缺口。2026-06-04 更新：ImageJ/Fiji macro adapter 已补入，包含细胞图片实验、ROI 强度、骨架形态和蛋白 Dot blot 固定网格模板。
 
 ## 1. 功能状态矩阵
 
@@ -15,14 +15,14 @@
 | 溶液配制 | `solve_solution_preparation_formula`, `calculate_solution_preparation` | `active_backend_ready` | 新 UI 使用 solver，旧 API 不做主入口。 |
 | 试剂模板 | models + `ReagentTemplateStore` + validation | `active_backend_ready` + `ui_adapter_needed` | P0 做列表和编辑 side panel。 |
 | 配制记录 | `PreparationRecord`, `PreparationRecordStore` | `active_backend_ready` + `ui_adapter_needed` | P0 本次配制保存，P1 历史列表。 |
-| WB loading calculator | `calculate_wb_loading`, records, store, Markdown/CSV export | `active_backend_ready` + `ui_adapter_needed` | P0 完整计算页，P1 历史页。 |
+| WB loading calculator | `calculate_wb_loading`, records, store, Markdown/CSV export；`dot_blot_grid` ImageJ macro adapter | `active_backend_ready` + `ui_adapter_needed` | P0 完整计算页，P1 历史页；蛋白图像入口可先接 Dot blot 固定网格测量。 |
 | SDS-PAGE gel helper | template model, batch calculation, JSON/XLSX export | `active_backend_ready` + `ui_adapter_needed` | P0 配胶页；需要持久化 adapter。 |
 | BCA helper | OD parser, annotation, linear fit, warnings | `mockup_only` to `ui_adapter_needed` | P0 mockup 可做；正式保存前补 record store。 |
 | qPCR mix | `QpcrMixInput`, `calculate_qpcr_mix_v1` | `active_backend_ready` | 当前只保留 mix calculator。 |
 | cell plating | `CellSeedingInput`, `calculate_cell_seeding_v1` | `active_backend_ready` | P1 独立页，P0 可在快速计算出现。 |
-| 细胞实验记录 | no record model/store；细胞图片实验已有 ImageJ/Fiji macro adapter | `image_processing_backend_ready` + `record_store_blocked` | 可开放划痕 / Transwell / 迁移 ROI / 免疫组化图片处理入口；记录保存仍需补 store。 |
+| 细胞实验记录 | no record model/store；细胞图片实验已有 ImageJ/Fiji macro adapter | `image_processing_backend_ready` + `record_store_blocked` | 可开放划痕 / Transwell / 通用颗粒 / ROI 强度 / 迁移 ROI / 骨架形态 / 免疫组化图片处理入口；记录保存仍需补 store。 |
 | ELISA / 吸光度 | `labtools.elisa` empty | `blocked_until_backend` | 需要先做 MVP，不能接真实 ELISA 页面。 |
-| ImageJ/Fiji 图像分析入口 | executable discovery、macro generator、macro writer、headless runner wrapper | `adapter_ready_for_cell_image_workflows` | 可接四类细胞实验图片处理；UI 必须暴露阈值参数和人工复核提示。 |
+| ImageJ/Fiji 图像分析入口 | executable discovery、macro generator、macro writer、headless runner wrapper | `adapter_ready_for_image_workflows` | 可接七类细胞实验图片处理和一类蛋白 Dot blot 图片处理；UI 必须暴露阈值参数和人工复核提示。 |
 
 ## 2. 缺口评估
 
@@ -72,18 +72,27 @@
 当前 LabTools 已有：
 
 - `CELL_IMAGEJ_EXPERIMENTS`
+- `PROTEIN_IMAGEJ_WORKFLOWS`
 - `render_cell_imagej_macro()`
 - `write_cell_imagej_macro()`
+- `render_protein_imagej_macro()`
+- `write_protein_imagej_macro()`
 - `resolve_imagej_executable()`
 - `run_cell_imagej_macro()`
+- `run_protein_imagej_macro()`
 - CLI：`python3 -m labtools cell-imagej list|macro|run`
+- CLI：`python3 -m labtools protein-imagej list|macro|run`
 
 已开放的图片处理范围：
 
 - 划痕实验：批量估算 gap area / gap fraction。
 - Transwell：批量 particle count / particle area。
+- 通用颗粒识别：批量输出 particle count、area、circularity 和 Feret 摘要。
+- ROI 强度测量：导入 ROI zip，逐图输出 mean gray、integrated density 和背景校正值。
 - 迁移 / 划痕 ROI：批量识别大面积 streak ROI，输出 signal particle area、residual streak area 和 residual fraction。
+- 细胞骨架形态：批量二值化、Skeletonize、Analyze Skeleton，并输出 summary / branch CSV 路径。
 - 免疫组化 / IHC-DAB：批量 positive area fraction / mean gray。
+- Dot blot 固定网格：按 rows / columns / spacing / spot diameter 生成圆形 ROI，输出 mean gray 和 integrated density。
 
 仍不应做：
 
@@ -116,7 +125,7 @@
 1. P0 必须保存：试剂模板、本次试剂配制、WB loading。
 2. P1 保存：通用快速计算、动态公式求解、SDS-PAGE 模板/计算、BCA/OD。
 3. blocked：ELISA、细胞实验记录保存。
-4. adapter ready：ImageJ/Fiji 细胞图片实验 macro 工作流。
+4. adapter ready：ImageJ/Fiji 细胞图片实验和蛋白 Dot blot macro 工作流。
 
 当前最大缺口是通用 `CalculationRecordStore` 不存在。`CalculationResult.to_record()` 可以生成记录，但没有统一本地 store。
 
@@ -174,4 +183,4 @@ LABTOOLS_STORAGE_ROOT 或 ~/.labtools
 3. 在真实桌面接入前补 BioMedPilot storage root adapter。
 4. P0 页面先接 active backend：快速计算、公式求解、试剂模板、本次配制、WB loading、SDS-PAGE。
 5. BCA/OD 先做 mockup 和 adapter spike，确认 record store 后再进入正式保存。
-6. 细胞图片实验可接 ImageJ/Fiji macro adapter，但 UI 必须保留参数编辑、外部引擎路径配置和人工复核提示。
+6. 细胞图片实验和蛋白 Dot blot 图像可接 ImageJ/Fiji macro adapter，但 UI 必须保留参数编辑、外部引擎路径配置和人工复核提示。

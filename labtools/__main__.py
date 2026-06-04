@@ -9,6 +9,11 @@ from labtools.cell_culture import (
     run_cell_imagej_macro,
     write_cell_imagej_macro,
 )
+from labtools.western_blot import (
+    list_protein_imagej_workflows,
+    run_protein_imagej_macro,
+    write_protein_imagej_macro,
+)
 
 
 def main() -> int:
@@ -31,6 +36,21 @@ def main() -> int:
     run_parser.add_argument("--macro-path", help="Optional macro output path. Defaults to <output-dir>/macros/<experiment>.ijm.")
     run_parser.add_argument("--timeout-seconds", type=int, default=600, help="ImageJ/Fiji process timeout in seconds.")
 
+    protein_imagej_parser = subparsers.add_parser("protein-imagej", help="Generate or run ImageJ/Fiji macros for protein assay images.")
+    protein_imagej_subparsers = protein_imagej_parser.add_subparsers(dest="protein_imagej_command", required=True)
+
+    protein_imagej_subparsers.add_parser("list", help="List supported protein assay image workflows.")
+
+    protein_macro_parser = protein_imagej_subparsers.add_parser("macro", help="Write an ImageJ macro without running ImageJ/Fiji.")
+    _add_protein_imagej_common_args(protein_macro_parser)
+    protein_macro_parser.add_argument("--macro-path", help="Optional macro output path. Defaults to <output-dir>/macros/<workflow>.ijm.")
+
+    protein_run_parser = protein_imagej_subparsers.add_parser("run", help="Write and run an ImageJ/Fiji macro.")
+    _add_protein_imagej_common_args(protein_run_parser)
+    protein_run_parser.add_argument("--imagej", help="Path to ImageJ/Fiji executable or Fiji.app.")
+    protein_run_parser.add_argument("--macro-path", help="Optional macro output path. Defaults to <output-dir>/macros/<workflow>.ijm.")
+    protein_run_parser.add_argument("--timeout-seconds", type=int, default=600, help="ImageJ/Fiji process timeout in seconds.")
+
     args = parser.parse_args()
 
     if args.smoke_test:
@@ -45,6 +65,9 @@ def main() -> int:
     if args.command == "cell-imagej":
         return _handle_cell_imagej_command(args)
 
+    if args.command == "protein-imagej":
+        return _handle_protein_imagej_command(args)
+
     parser.print_help()
     return 0
 
@@ -54,6 +77,17 @@ def _add_cell_imagej_common_args(parser: argparse.ArgumentParser) -> None:
         "experiment",
         choices=[spec.experiment_id for spec in list_cell_imagej_experiments()],
         help="Cell experiment image workflow.",
+    )
+    parser.add_argument("--input-dir", required=True, help="Input image directory.")
+    parser.add_argument("--output-dir", required=True, help="Output directory for CSV results and generated macros.")
+    parser.add_argument("--param", action="append", default=None, metavar="KEY=VALUE", help="Override ImageJ macro parameters.")
+
+
+def _add_protein_imagej_common_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "workflow",
+        choices=[spec.workflow_id for spec in list_protein_imagej_workflows()],
+        help="Protein assay image workflow.",
     )
     parser.add_argument("--input-dir", required=True, help="Input image directory.")
     parser.add_argument("--output-dir", required=True, help="Output directory for CSV results and generated macros.")
@@ -104,6 +138,52 @@ def _handle_cell_imagej_command(args: argparse.Namespace) -> int:
         return result.returncode
 
     raise AssertionError(f"Unhandled cell-imagej command: {args.imagej_command}")
+
+
+def _handle_protein_imagej_command(args: argparse.Namespace) -> int:
+    if args.protein_imagej_command == "list":
+        for spec in list_protein_imagej_workflows():
+            aliases = f" aliases={','.join(spec.aliases)}" if spec.aliases else ""
+            print(f"{spec.workflow_id}: {spec.title}{aliases}")
+            print(f"  {spec.description}")
+        return 0
+
+    if args.protein_imagej_command == "macro":
+        bundle = write_protein_imagej_macro(
+            args.workflow,
+            args.input_dir,
+            args.output_dir,
+            macro_path=args.macro_path,
+            parameters=_parse_macro_parameters(args.param),
+        )
+        print(f"macro: {bundle.macro_path}")
+        print(f"expected_csv: {bundle.output_csv_path}")
+        return 0
+
+    if args.protein_imagej_command == "run":
+        try:
+            result = run_protein_imagej_macro(
+                args.workflow,
+                args.input_dir,
+                args.output_dir,
+                imagej_executable=args.imagej,
+                macro_path=args.macro_path,
+                parameters=_parse_macro_parameters(args.param),
+                timeout_seconds=args.timeout_seconds,
+            )
+        except ImageJError as exc:
+            print(f"ImageJ/Fiji 调用失败：{exc}")
+            return 2
+        print(f"macro: {result.macro_path}")
+        print(f"expected_csv: {result.output_csv_path}")
+        print(f"returncode: {result.returncode}")
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
+        return result.returncode
+
+    raise AssertionError(f"Unhandled protein-imagej command: {args.protein_imagej_command}")
 
 
 def _parse_macro_parameters(raw_values: list[str] | None) -> dict[str, str | int | float | bool]:

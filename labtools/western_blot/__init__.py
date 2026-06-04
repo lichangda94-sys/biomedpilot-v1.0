@@ -56,6 +56,17 @@ from labtools.western_blot.exporter import (
     wb_loading_record_csv,
     wb_loading_record_markdown,
 )
+from labtools.western_blot.imagej import (
+    PROTEIN_IMAGEJ_WORKFLOWS,
+    ProteinImageJMacroBundle,
+    ProteinImageJRunResult,
+    ProteinImageJWorkflowSpec,
+    get_protein_imagej_workflow,
+    list_protein_imagej_workflows,
+    render_protein_imagej_macro,
+    run_protein_imagej_macro,
+    write_protein_imagej_macro,
+)
 from labtools.western_blot.models import (
     WB_LOADING_REVIEW_NOTICE,
     WB_LOADING_RECORD_SCHEMA_VERSION,
@@ -124,6 +135,15 @@ __all__ = [
     "export_wb_loading_record_markdown",
     "wb_loading_record_csv",
     "wb_loading_record_markdown",
+    "PROTEIN_IMAGEJ_WORKFLOWS",
+    "ProteinImageJMacroBundle",
+    "ProteinImageJRunResult",
+    "ProteinImageJWorkflowSpec",
+    "get_protein_imagej_workflow",
+    "list_protein_imagej_workflows",
+    "render_protein_imagej_macro",
+    "run_protein_imagej_macro",
+    "write_protein_imagej_macro",
     "WB_LOADING_REVIEW_NOTICE",
     "WB_LOADING_RECORD_SCHEMA_VERSION",
     "WBLoadingCalculatorError",
