@@ -2,7 +2,7 @@
 
 Date: 2026-06-04
 
-Baseline: `dev/bioinformatics` at `a471a25a9153b23c224ea7a96e425c44de92ee5e`
+Baseline: `dev/bioinformatics` at `ccf7967609a283cddfbb83bdf6d68ceb7bc12b63`
 
 ## Rule
 
@@ -12,7 +12,7 @@ The current UI is the only mainline. A branch feature is not available merely be
 
 | Current UI area / button family | Current files | Current behavior/evidence | Related old branches / legacy | Coverage status | Migration action |
 | --- | --- | --- | --- | --- | --- |
-| Module entry / Bio project home | `project_home.py`, `workflow_pages.py`, `tests/ui/test_bioinformatics_project_home.py` | Current UI exists; project workspace validation and page navigation tested by UI inventory | Early wizard branches | Covered current | Reuse current |
+| Module entry / Bio project home | `app/bioinformatics/project_home.py`, `workflow_pages.py`, `tests/ui/test_bioinformatics_project_home.py` | Current UI exists; project workspace validation and page navigation tests exist by inventory | Early wizard branches | Covered current | Reuse current |
 | Data source search / GEO / TCGA / GTEx cards | `workflow_pages.py`, `search_center/**`, `data_sources/**`, `download/**` | Current services and UI tests exist; some searches/downloads are gated/testing-level | `codex/bio-geo-real-download-test`, bio search UI branches, legacy GEO/TCGA/GTEx | Partly covered current | Adapter only for selected helpers |
 | Recognition / readiness / standardization | `project_recognition.py`, `project_readiness.py`, `project_standardization.py`, `analysis_inputs/**`, `workflow_pages.py` | Current contract layer exists; used by downstream gates | Legacy GEO detector, asset contracts | Covered current | Reuse current; do not bypass resolver |
 | Analysis Center / DEG gates | `analysis_ui/**`, `deg_ready/**`, `deg_engine/**`, `workflow_pages.py` | Current gate state exists; formal DEG/multifactor DEG paths are gated | ReleaseBuild DEG branches, `stable/mainline` | Covered but gated | Reuse/adapt branch engine pieces only through gates |
@@ -24,7 +24,7 @@ The current UI is the only mainline. A branch feature is not available merely be
 | Survival / Cox | `survival_clinical/**`, `plots/survival.py`, `plots/cox.py` | Controlled statistical paths exist; clinical report-ready remains restricted | survival clinical carry-over branch | Covered but strictly gated | Reuse with clinical boundary |
 | Risk score / nomogram / calibration / DCA | mixed current/branch evidence | Not production-current; clinical interpretation restricted | ReleaseBuild/internal-test branches | Not fully covered | Rewrite only after selected scope |
 | Immune infiltration | `immune_infiltration/**`, `analysis/modules/immune_infiltration/**` | Current scoring and lite worker scaffold exist; proof not rerun here | ReleaseBuild/current branches | Partly covered | Reuse with focused proof |
-| Standard analysis worker/package catalog | `app/analysis_runtime/**`, `analysis/**` | Current mock/lite scaffolds and package catalog exist | Not old-branch driven | Scaffold covered | Keep labeled testing/lite until selected proof |
+| Standard analysis worker/package catalog | `app/analysis_runtime/**`, `analysis/**` | Current mock/lite scaffolds, external R command boundary, package catalog, and docking lite command-manifest contract exist | Not old-branch driven | Scaffold covered | Keep labeled testing/lite until selected proof |
 | Legacy GEO check/settings | `workflow_pages.py`, legacy adapters | UI can expose environment/status style checks, but legacy execution cannot become formal analysis | `app/bioinformatics/legacy/**` | Quarantined | Deprecated/adapter only |
 
 ## Meta Analysis UI Coverage
@@ -46,8 +46,8 @@ The current UI is the only mainline. A branch feature is not available merely be
 
 | Branch/source | UI features that map to current pages | Output evidence classification | Coverage decision |
 | --- | --- | --- | --- |
-| `dev/bioinformatics` | Bio project flow, Analysis Center, Results Browser, report/export gates, Meta pages | Current implementation evidence; not all rerun in this audit | Mainline |
-| `dev/release-internal-test` | DEG/enrichment/survival/risk/report candidates map conceptually to current Bio pages | Branch-only evidence; current layout diverges | Candidate library |
+| `dev/bioinformatics` | Bio project flow, Analysis Center, Results Browser, report/export gates, Meta pages, standard analysis package catalog | Current implementation evidence; not all rerun in this audit | Mainline |
+| `dev/release-internal-test` | DEG/enrichment/survival/risk/report candidates map conceptually to current Bio pages | Branch-only evidence; current layout diverges and would delete current scaffold paths | Candidate library |
 | `codex/releasebuild-formal-deg-carryover` | DEG/runtime/report gates map to Analysis Center/Results Browser | Branch-only; older contracts | Candidate library |
 | `codex/mainline-survival-clinical-carryover` | Survival/Cox rows map to current survival clinical UI | Branch-only | Candidate library |
 | `stable/mainline` | Formal DEG baseline maps to current DEG area | Historical | Baseline reference |
@@ -56,6 +56,7 @@ The current UI is the only mainline. A branch feature is not available merely be
 | `dev/ui-shell` / integration UI branches | Design and shell material maps broadly to UI shell | Visual/design only | UI reference |
 | `app/bioinformatics/legacy/**` | GEO/TCGA/GTEx/literature ideas map conceptually to current data/search pages | Legacy-only | Deprecated or adapter |
 | `app/meta_analysis/legacy/**` | Old Meta workbench maps conceptually but not structurally | Legacy-only | Deprecated/reference |
+| `archive/legacy_sources/**` | Mirrors older Bio/Meta source trees | Archive-only | Reference/deprecated |
 
 ## Matrix Conclusion
 

@@ -662,6 +662,101 @@ No migration candidate is approved for direct carry-over. Future work must selec
 
 Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
 
+## Phase 2.5 Refresh: Full Branch Inventory at `ccf7967`
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the branch inventory reports against the current `dev/bioinformatics` HEAD:
+
+```text
+ccf7967609a283cddfbb83bdf6d68ceb7bc12b63
+```
+
+The task remained audit-only:
+
+- No old branch was checked out.
+- No branch was merged.
+- No cherry-pick was performed.
+- No UI code was changed.
+- No analysis algorithm was changed.
+- No legacy code was migrated.
+- No mock, placeholder, testing-level, branch-only, or legacy-only output was promoted to completed functionality.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Current Worktree State
+
+The refresh observed and preserved pre-existing unrelated changes:
+
+```text
+ M analysis/modules/molecular_dynamics/module.json
+ M analysis/registry/analysis_modules.json
+ M analysis/runners/run_module.R
+ M tests/test_analysis_runtime_task_bridge.py
+ M tests/test_r_analysis_architecture_contract.py
+?? analysis/fixtures/inputs/molecular_dynamics/lite_coordinates.gro
+?? analysis/fixtures/inputs/molecular_dynamics/lite_mdp.mdp
+?? analysis/fixtures/inputs/molecular_dynamics/lite_topology.top
+?? analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+These files were not treated as Phase 2.5 migration outputs.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,260p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short` | Passed |
+| `git branch --show-current` | Passed, `dev/bioinformatics` |
+| `git rev-parse HEAD` | Passed, `ccf7967609a283cddfbb83bdf6d68ceb7bc12b63` |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads` | Passed |
+| `git log --oneline --decorate --max-count=60 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches |
+| `git diff --name-status HEAD..<branch> -- ...` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f` | Passed |
+| `find app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui -maxdepth 3 -type f` | Passed |
+| `rg -n "QPushButton\|setText\|plot\|report\|DEG\|ORA\|GSEA\|survival\|Cox\|Meta" app/bioinformatics app/meta_analysis -g '*.py'` | Passed |
+
+No functional tests were run for this refresh because it was documentation-only and audit-only. Functional tests would not prove old-branch runtime availability.
+
+### Findings
+
+The current line now includes standard analysis runtime scaffolding, an external R command boundary, and docking lite command-manifest contract material. These are current-code scaffolds, not evidence that every analysis module has a full production real loop.
+
+High-relevance branch deltas remain large:
+
+- `dev/release-internal-test`: 2097 files in audited paths.
+- `codex/releasebuild-formal-deg-carryover`: 1072 files.
+- `codex/mainline-survival-clinical-carryover`: 711 files.
+- `dev/meta-analysis`: 592 files.
+- `dev/ui-shell`: 2103 files, with rename-detection warning.
+
+No old branch is safe to merge wholesale. Legacy directories and `archive/legacy_sources/**` remain quarantined material libraries only.
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one candidate feature and one current UI entry, then adapt or rewrite against current contracts with real output proof.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
+
 ## Phase 2.5 Refresh: Full Branch Inventory at `a471a25`
 
 Date: 2026-06-04
