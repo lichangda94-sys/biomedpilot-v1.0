@@ -269,6 +269,19 @@ def test_standard_analysis_package_catalog_maps_bio_task_type_to_expected_module
     assert any("provenance_module_id_mismatch" in item for item in catalog["blockers"])
 
 
+def test_standard_analysis_package_catalog_blocks_unregistered_analysis_task_type(tmp_path: Path) -> None:
+    run_analysis_module_task(tmp_path, module_input(tmp_path))
+    registry = load_registry(tmp_path)
+    entry = registry["results"][0]
+    entry["task_type"] = "analysis:not_registered"
+    save_registry(tmp_path, [entry])
+
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+
+    assert catalog["status"] == "blocked"
+    assert any("result_index_task_type_not_registered:analysis:not_registered" in item for item in catalog["blockers"])
+
+
 def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(tmp_path: Path) -> None:
     result = run_analysis_module_task(tmp_path, module_input(tmp_path))
     package_dir = Path(result["result_package_dir"])

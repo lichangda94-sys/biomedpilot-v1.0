@@ -24,9 +24,10 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
     for entry in [item for item in registry.get("results", []) if isinstance(item, dict)]:
         for artifact in _standard_package_artifacts(entry):
             package_dir = _resolve_artifact_path(root, artifact.get("path"))
+            expected_module_id = _module_id_from_entry(entry)
             validation = validate_standard_result_package(
                 package_dir,
-                expected_module_id=_module_id_from_entry(entry),
+                expected_module_id=expected_module_id,
                 expected_task_id=str(entry.get("task_run_id") or ""),
                 expected_mode=str((entry.get("dependency_snapshot") or {}).get("mode") or ""),
             )
@@ -34,6 +35,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             provenance_payload = _read_json(package_dir / "provenance.json")
             invocation_payload = _read_json(package_dir / "logs" / "worker_invocation.json")
             result_index_log_blockers = _result_index_worker_invocation_blockers(entry, root, package_dir)
+            result_index_module_blockers = _result_index_module_resolution_blockers(entry, expected_module_id)
             detail = build_standard_analysis_package_detail(
                 package_dir,
                 project_root=root,
@@ -79,7 +81,16 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                         "logs": len(detail["artifact_manifest"]["logs"]),
                     },
                     "artifact_manifest": detail["artifact_manifest"],
-                    "blockers": list(dict.fromkeys([*validation.get("blockers", []), *result_payload.get("blockers", []), *result_index_log_blockers])),
+                    "blockers": list(
+                        dict.fromkeys(
+                            [
+                                *validation.get("blockers", []),
+                                *result_payload.get("blockers", []),
+                                *result_index_log_blockers,
+                                *result_index_module_blockers,
+                            ]
+                        )
+                    ),
                     "warnings": list(dict.fromkeys([*validation.get("warnings", []), *result_payload.get("warnings", [])])),
                 }
             )
@@ -198,10 +209,19 @@ def _resolve_artifact_path(root: Path, value: object) -> Path:
 
 def _module_id_from_entry(entry: dict[str, Any]) -> str:
     task_type = str(entry.get("task_type") or "")
+    task_type_map = build_result_index_task_type_module_map()
     if task_type.startswith("analysis:"):
-        return task_type.split(":", 1)[1]
+        module_id = task_type.split(":", 1)[1].lower()
+        return task_type_map.get(module_id, "")
     task_type_normalized = task_type.lower()
-    return build_result_index_task_type_module_map().get(task_type_normalized, "")
+    return task_type_map.get(task_type_normalized, "")
+
+
+def _result_index_module_resolution_blockers(entry: dict[str, Any], module_id: str) -> list[str]:
+    if module_id:
+        return []
+    task_type = str(entry.get("task_type") or "missing")
+    return [f"result_index_task_type_not_registered:{task_type}"]
 
 
 def _default_worker_boundary_type(provenance: dict[str, Any]) -> str:
