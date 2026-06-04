@@ -99,6 +99,9 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "univariate" && mode == "lite" && table_file == "lite_univariate_association.tsv") {
     return("lite_univariate_clinical_association_table")
   }
+  if (module_id == "multivariate" && mode == "lite" && table_file == "lite_multivariate_association.tsv") {
+    return("lite_multivariate_clinical_association_table")
+  }
   "analysis_table"
 }
 
@@ -415,6 +418,78 @@ run_lite_univariate_association <- function() {
   quit(status = 0)
 }
 
+run_lite_multivariate_association <- function() {
+  clinical_table_path <- resolve_input_path(read_string_field(input_text, "clinical_table_path", ""))
+  blockers <- character(0)
+  if (clinical_table_path == "" || !file.exists(clinical_table_path)) {
+    blockers <- c(blockers, "lite_multivariate_clinical_table_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite multivariate association blocked because required fixture input is missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  clinical <- read.delim(clinical_table_path, stringsAsFactors = FALSE)
+  required_columns <- c("sample_id", "group", "biomarker", "age", "batch")
+  if (!all(required_columns %in% colnames(clinical))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_multivariate_clinical_table_schema_invalid"), c(), "Lite multivariate association blocked because clinical table columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "multivariate_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  clinical$biomarker <- as.numeric(clinical$biomarker)
+  clinical$age <- as.numeric(clinical$age)
+  clinical$group <- factor(clinical$group)
+  clinical$batch <- factor(clinical$batch)
+  if (any(is.na(clinical$biomarker)) || any(is.na(clinical$age))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_multivariate_non_numeric_values"), c(), "Lite multivariate association blocked because numeric fixture columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "multivariate_non_numeric"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  if (length(unique(clinical$group)) < 2 || length(unique(clinical$batch)) < 2) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_multivariate_requires_group_and_batch_variation"), c(), "Lite multivariate association blocked because group and batch variation are required.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "multivariate_variation_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  fit <- lm(biomarker ~ group + age + batch, data = clinical)
+  coefficients <- as.data.frame(summary(fit)$coefficients)
+  coefficients$term <- rownames(coefficients)
+  rownames(coefficients) <- NULL
+  rows <- data.frame(
+    term = coefficients$term,
+    estimate = coefficients$Estimate,
+    std_error = coefficients$`Std. Error`,
+    statistic = coefficients$`t value`,
+    p_value = coefficients$`Pr(>|t|)`,
+    model_formula = "biomarker ~ group + age + batch",
+    method = "base_r_lm_fixture",
+    clinical_conclusion = "not_generated",
+    stringsAsFactors = FALSE
+  )
+  write.table(rows, file = file.path(output_dir, "tables", "lite_multivariate_association.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  writeLines(c(
+    "# Lite multivariate limitations",
+    "",
+    "This is a lightweight fixture multivariate association result for worker and package-contract validation.",
+    "It is not a clinical conclusion, diagnosis, prognosis, treatment recommendation, or report-ready clinical analysis."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "clinical_conclusion_not_generated", "base_r_fixture_only_no_heavy_resources"),
+    "Lite multivariate clinical association completed with base R fixture data."
+  )
+  write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "clinical_conclusion=not_generated"), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
 write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version) {
   seed <- read_integer_field(input_text, "random_seed")
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
@@ -470,6 +545,10 @@ if (mode == "lite" && module_id == "survival") {
 
 if (mode == "lite" && module_id == "univariate") {
   run_lite_univariate_association()
+}
+
+if (mode == "lite" && module_id == "multivariate") {
+  run_lite_multivariate_association()
 }
 
 if (mode != "mock") {

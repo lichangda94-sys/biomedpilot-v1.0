@@ -65,6 +65,19 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
             "clinical_conclusion_policy": "not_generated",
         }
         payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
+    if module_id == "multivariate" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-multivariate-lite-input",
+            "source_dataset_id": "fixture-multivariate-lite-dataset",
+            "clinical_table_path": "analysis/fixtures/inputs/multivariate/lite_clinical.tsv",
+        }
+        payload["parameters"] = {
+            "analysis_family": "multivariate_clinical_association",
+            "method": "base_r_lm_fixture",
+            "model_formula": "biomarker ~ group + age + batch",
+            "clinical_conclusion_policy": "not_generated",
+        }
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
     return payload
 
 
@@ -291,6 +304,40 @@ def test_univariate_lite_mode_runs_through_standard_r_worker_without_clinical_up
     assert registry["results"][0]["result_semantics"] == "testing_level"
     assert registry["results"][0]["report_ready_eligible"] is False
     assert catalog["rows"][0]["module_id"] == "univariate"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+
+
+def test_multivariate_lite_mode_runs_through_standard_r_worker_without_clinical_upgrade(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite", module_id="multivariate"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    table = (package_dir / "tables" / "lite_multivariate_association.tsv").read_text(encoding="utf-8")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    assert result["status"] == "passed"
+    assert result_json["module_id"] == "multivariate"
+    assert result_json["mode"] == "lite"
+    assert result_json["result_semantics"] == "testing_level"
+    assert result_json["summary"]["clinical_conclusion_status"] == "not_generated"  # type: ignore[index]
+    assert "clinical_conclusion_not_generated" in result_json["warnings"]
+    assert "model_formula" in table.splitlines()[0]
+    assert "not_generated" in table
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["report_ready_eligible"] is False
+    assert catalog["rows"][0]["module_id"] == "multivariate"
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
 

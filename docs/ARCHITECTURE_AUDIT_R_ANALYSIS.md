@@ -77,9 +77,11 @@ The first lightweight worker paths are now available:
 - `analysis/runners/run_module.R` supports `module_id=enrichment`, `mode=lite` using base R hypergeometric ORA and fixed repository TERM2GENE fixtures.
 - `analysis/runners/run_module.R` supports `module_id=survival`, `mode=lite` using base R KM/log-rank calculations and fixed repository survival fixture data.
 - `analysis/runners/run_module.R` supports `module_id=univariate`, `mode=lite` using base R univariate clinical association calculations and fixed repository clinical fixture data.
+- `analysis/runners/run_module.R` supports `module_id=multivariate`, `mode=lite` using base R linear model calculations and fixed repository clinical fixture data.
 - The enrichment lite path writes a standard result package with `tables/lite_ora_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - The survival lite path writes a standard result package with `tables/lite_km_curve.tsv`, `tables/lite_logrank_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - The univariate lite path writes a standard result package with `tables/lite_univariate_association.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
+- The multivariate lite path writes a standard result package with `tables/lite_multivariate_association.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - These lite packages are `testing_level`; full enrichment, Reactome/MSigDB resources, full survival/clinical packages, plot/report-ready export, prognosis, diagnosis, treatment guidance, and clinical interpretation remain disabled.
 
 A first environment isolation scaffold now also exists:
@@ -105,13 +107,13 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | --- | --- | --- |
 | Unified analysis module directory | WARN | Added `analysis/` and `analysis/modules/<module_id>/module.json`; existing algorithms still live under `app/bioinformatics/**`. |
 | Module registry | PASS | Added `analysis/registry/analysis_modules.json`. |
-| Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock, enrichment/survival/univariate lite standard packages, and blocked unsupported/full standard packages; existing formal real modules do not call it yet. |
-| Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; enrichment, survival, and univariate have base R lite fixtures; other lite modes and full modes remain blocked pending migration. |
+| Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock, enrichment/survival/univariate/multivariate lite standard packages, and blocked unsupported/full standard packages; existing formal real modules do not call it yet. |
+| Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; enrichment, survival, univariate, and multivariate have base R lite fixtures; other lite modes and full modes remain blocked pending migration. |
 | Unified input/output schema | PASS | Added input and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts; existing detailed result views still consume module-specific result indexes and service payloads. |
-| Main backend task-system invocation | WARN | A mock/lite bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock, enrichment-lite, survival-lite, and univariate-lite packages. Existing analysis calls still include direct service calls. |
+| Main backend task-system invocation | WARN | A mock/lite bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock, enrichment-lite, survival-lite, univariate-lite, and multivariate-lite packages. Existing analysis calls still include direct service calls. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
 | Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
@@ -125,7 +127,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 ## 3. Top 5 Architecture Risks
 
-1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a standard bridge exists for mock, enrichment lite, survival lite, and univariate lite, but most existing algorithms are not migrated yet.
+1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a standard bridge exists for mock, enrichment lite, survival lite, univariate lite, and multivariate lite, but most existing algorithms are not migrated yet.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, but they still need real version, source, hash, license, and cache-path locks.
@@ -145,7 +147,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 | Issue | Evidence | Status after this audit |
 | --- | --- | --- |
-| No lite/full environment split | No `docker/` or `renv` split existed before scaffold | Partially fixed with scaffold plus enrichment, survival, and univariate base R lite fixtures; real package locks and builds pending. |
+| No lite/full environment split | No `docker/` or `renv` split existed before scaffold | Partially fixed with scaffold plus enrichment, survival, univariate, and multivariate base R lite fixtures; real package locks and builds pending. |
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
 | No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; real locks pending. |
 | Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
@@ -155,9 +157,9 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 | Issue | Evidence |
 | --- | --- |
-| Tests do not yet prove all lite/full modules through one interface | Static tests and bridge tests now prove all registered modules can run mock through one interface, and enrichment/survival/univariate can run lite fixtures through the same R worker; other lite/full modules remain blocked. |
+| Tests do not yet prove all lite/full modules through one interface | Static tests and bridge tests now prove all registered modules can run mock through one interface, and enrichment/survival/univariate/multivariate can run lite fixtures through the same R worker; other lite/full modules remain blocked. |
 | Logs/provenance differ by module | Existing modules have custom log artifacts and result indexes. |
-| Example data is incomplete for every declared module | Generic and per-module mock fixtures exist for all registered modules; lite fixtures exist for enrichment, survival, and univariate only. |
+| Example data is incomplete for every declared module | Generic and per-module mock fixtures exist for all registered modules; lite fixtures exist for enrichment, survival, univariate, and multivariate only. |
 
 ### P3
 
@@ -224,7 +226,7 @@ New architecture boundary files:
 1. Keep existing algorithms stable.
 2. Add standard result package schema, registry, mock runner, and fixtures. **Completed in this audit.**
 3. Wrap one existing R-native module behind the standard worker in mock mode first. **Started with `app/analysis_runtime/task_bridge.py` and `app/analysis_runtime/r_worker.py`.**
-4. Add lite mode for selected modules with lightweight fixture data and no large downloads. **Started with enrichment, survival, and univariate fixtures.**
+4. Add lite mode for selected modules with lightweight fixture data and no large downloads. **Started with enrichment, survival, univariate, and multivariate fixtures.**
 5. Move full mode to an isolated `renv`/Docker environment.
 6. Repeat module by module: survival, univariate, multivariate, enrichment, immune infiltration, then spatial/chem.
 
@@ -248,7 +250,7 @@ New architecture boundary files:
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
-- Added the first standard worker lite paths: enrichment base R ORA, survival base R KM/log-rank, and univariate base R clinical association fixtures producing testing-level standard result packages.
+- Added the first standard worker lite paths: enrichment base R ORA, survival base R KM/log-rank, univariate base R clinical association, and multivariate base R linear model fixtures producing testing-level standard result packages.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.

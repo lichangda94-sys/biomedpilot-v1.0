@@ -1,0 +1,9 @@
+sample_id	group	biomarker	age	batch
+S1	case	8.1	61	B1
+S2	case	7.4	58	B1
+S3	case	7.9	63	B2
+S4	case	8.5	66	B2
+S5	control	4.2	55	B1
+S6	control	4.8	57	B1
+S7	control	5.1	59	B2
+S8	control	4.6	56	B2

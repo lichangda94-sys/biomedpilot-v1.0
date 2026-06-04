@@ -1,0 +1,23 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "multivariate",
+  "mode": "lite",
+  "task_id": "multivariate-lite-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-multivariate-lite-input",
+    "source_dataset_id": "fixture-multivariate-lite-dataset",
+    "clinical_table_path": "analysis/fixtures/inputs/multivariate/lite_clinical.tsv"
+  },
+  "parameters": {
+    "analysis_family": "multivariate_clinical_association",
+    "method": "base_r_lm_fixture",
+    "outcome_column": "biomarker",
+    "model_formula": "biomarker ~ group + age + batch",
+    "clinical_conclusion_policy": "not_generated"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-bio-core-lite"
+  }
+}

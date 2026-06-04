@@ -78,7 +78,7 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
         assert modes["mock"]["supported"] is True
         assert (ROOT / modes["mock"]["fixture_input"]).is_file()
         assert (ROOT / modes["mock"]["fixture_output_package"]).is_dir()
-        if module_id in {"enrichment", "survival", "univariate"}:
+        if module_id in {"enrichment", "survival", "univariate", "multivariate"}:
             assert modes["lite"]["supported"] is True
             assert modes["lite"]["worker_backend"] == "rscript"
             assert (ROOT / modes["lite"]["fixture_input"]).is_file()
@@ -353,6 +353,36 @@ def test_standard_r_runner_univariate_lite_mode_writes_real_fixture_association_
     assert result["result_semantics"] == "testing_level"
     assert "clinical_conclusion_not_generated" in result["warnings"]
     assert "lite_univariate_clinical_association_table" in str(result["tables"])
+    assert "p_value" in table.splitlines()[0]
+    assert "not_generated" in table
+    assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
+    assert provenance["runtime"]["bioconductor_version"] == "not_required_for_lite_base_r"  # type: ignore[index]
+    assert (output_dir / "reports" / "README_lite.md").is_file()
+
+
+def test_standard_r_runner_multivariate_lite_mode_writes_real_fixture_association_package(tmp_path: Path) -> None:
+    rscript = rscript_path()
+    output_dir = tmp_path / "r-runner-multivariate-lite-output"
+    input_json = ROOT / "analysis" / "fixtures" / "inputs" / "multivariate" / "module_input_lite.json"
+
+    completed = subprocess.run(
+        [rscript, str(ROOT / "analysis" / "runners" / "run_module.R"), str(input_json), str(output_dir), "lite"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    result = read_json(output_dir / "result.json")
+    provenance = read_json(output_dir / "provenance.json")
+    table = (output_dir / "tables" / "lite_multivariate_association.tsv").read_text(encoding="utf-8")
+    assert result["module_id"] == "multivariate"
+    assert result["mode"] == "lite"
+    assert result["status"] == "passed"
+    assert result["result_semantics"] == "testing_level"
+    assert "clinical_conclusion_not_generated" in result["warnings"]
+    assert "lite_multivariate_clinical_association_table" in str(result["tables"])
+    assert "model_formula" in table.splitlines()[0]
     assert "p_value" in table.splitlines()[0]
     assert "not_generated" in table
     assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
