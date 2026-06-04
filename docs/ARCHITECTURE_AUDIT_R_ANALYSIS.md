@@ -101,6 +101,7 @@ Standard package discovery is now available to the UI state layer:
 - The catalog now includes a standard `artifact_manifest` for declared `tables`, `plots`, `reports`, and package `logs`; this gives UI/detail surfaces a contract-safe path list without scanning module-private output folders.
 - `validate_standard_result_package()` now blocks passed full/formal packages if they are missing required provenance fields, runtime/package/tool version containers, command, hashes, random seed field, engine metadata, or worker-boundary metadata for non-standard-worker sidecars.
 - `validate_standard_result_package()` now blocks every passed standard package if it is missing reproducibility provenance: input hash, parameter hash, random seed field, command, engine name/version, R version, Bioconductor version, R package-version container, or external-tool-version container.
+- `validate_standard_result_package()` now blocks `result.json` or `provenance.json` schema-version drift from `biomedpilot.analysis.result.v1` and `biomedpilot.analysis.provenance.v1`.
 - `validate_standard_result_package()` now blocks result-declared `tables`, `plots`, and `reports` artifacts when the declared item is malformed, missing a path, absolute, outside its standard package group, or missing on disk. This prevents current or future UI consumers from treating module-private paths or stale artifact declarations as valid standard package output.
 - Testing-level mock packages remain testing-level and do not become formal/report-ready results.
 

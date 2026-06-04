@@ -135,6 +135,8 @@ Update: passed standard result packages now require reproducibility provenance. 
 
 Update: content-level schemas now exist for `result.json` and `provenance.json` under `analysis/schemas/output/result.schema.json` and `analysis/schemas/output/provenance.schema.json`. These schemas mirror the core validator contract for result semantics, artifact declarations, reproducibility hashes, runtime version containers, engine metadata, seed, and command provenance.
 
+Update: standard package validation now blocks `result.json` and `provenance.json` schema-version drift. Packages must use `biomedpilot.analysis.result.v1` and `biomedpilot.analysis.provenance.v1`.
+
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.

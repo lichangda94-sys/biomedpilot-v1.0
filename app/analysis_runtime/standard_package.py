@@ -97,6 +97,10 @@ def validate_standard_result_package(
     provenance = _load_json(root / "provenance.json") if (root / "provenance.json").is_file() else {}
     invocation_path = root / "logs" / "worker_invocation.json"
     invocation = _load_json(invocation_path) if invocation_path.is_file() else {}
+    if result.get("schema_version") != "biomedpilot.analysis.result.v1":
+        blockers.append("result_schema_version_mismatch")
+    if provenance.get("schema_version") != "biomedpilot.analysis.provenance.v1":
+        blockers.append("provenance_schema_version_mismatch")
     for payload_name, payload in (("result", result), ("provenance", provenance)):
         if expected_module_id and payload.get("module_id") != expected_module_id:
             blockers.append(f"{payload_name}_module_id_mismatch")
