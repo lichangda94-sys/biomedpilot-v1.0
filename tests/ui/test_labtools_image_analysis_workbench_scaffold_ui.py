@@ -98,6 +98,7 @@ def test_cell_experiment_page_has_three_image_analysis_entries(qapp) -> None:
     assert "测量荧光强度" in text
     assert "ImageJ 本地后端状态" in text
     assert "ImageJ macro 准备区" in text
+    assert "载入内置 macro 模板" in text
     for index, analysis_type in enumerate(("scratch_area", "transwell_count", "fluorescence_intensity")):
         page = tabs.widget(index)
         assert page.property("uiPrimitive") == "labtools_c2_gated_workbench"
@@ -157,7 +158,7 @@ def test_workbench_generates_run_request_without_running_engine(qapp, tmp_path) 
 
 
 def test_cell_workbench_writes_and_runs_macro_draft_through_configured_imagej(qapp, tmp_path) -> None:
-    from PySide6.QtWidgets import QPushButton, QTextEdit
+    from PySide6.QtWidgets import QComboBox, QPushButton, QTextEdit
 
     from app.labtools.image_analysis import ImageAnalysisTaskStore
     from app.labtools.ui.image_analysis_widgets import ImageAnalysisWorkbenchWidget
@@ -181,6 +182,15 @@ def test_cell_workbench_writes_and_runs_macro_draft_through_configured_imagej(qa
     editor = widget.findChild(QTextEdit, "cellImageJMacroEditor")
     assert editor is not None
     assert "not a formal cell-recognition macro" in editor.toPlainText()
+    selector = widget.findChild(QComboBox, "cellImageJMacroTemplateSelector")
+    assert selector is not None
+    assert selector.count() >= 7
+    load_button = widget.findChild(QPushButton, "cellImageJLoadBuiltinMacroButton")
+    assert load_button is not None
+    assert load_button.property("buttonBehavior") == "loads_review_gated_builtin_cell_imagej_macro_into_editor"
+    load_button.click()
+    assert "transwell_results.csv" in editor.toPlainText()
+    assert "dev/labtools@0bd04b2 + @f77bfe4" in editor.toPlainText()
     write_button = widget.findChild(QPushButton, "cellImageJWriteMacroDraftButton")
     run_button = widget.findChild(QPushButton, "cellImageJRunMacroDraftButton")
     write_button.click()

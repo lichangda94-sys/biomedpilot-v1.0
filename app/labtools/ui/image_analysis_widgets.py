@@ -35,6 +35,8 @@ try:
         default_macro_for_analysis,
         export_fluorescence_analysis_package,
         export_wound_healing_analysis_package,
+        list_cell_imagej_experiments,
+        render_cell_imagej_macro,
     )
     from app.labtools.image_analysis.analysis_task import ImageAnalysisTask, create_analysis_task
     from app.labtools.image_analysis.fluorescence import (
@@ -687,6 +689,7 @@ if QWidget is not None:
             self._latest_workspace: ImageAnalysisTaskWorkspace | None = None
             self._latest_macro_draft_path: Path | None = None
             self._macro_template = default_macro_for_analysis(experiment_module, analysis_type)
+            self._macro_template_selector: QComboBox | None = None
             self._parameter_widgets: dict[str, QLineEdit | QCheckBox | QComboBox] = {}
             self._build_ui()
 
@@ -868,9 +871,26 @@ if QWidget is not None:
             layout.setSpacing(SPACING["sm"])
             heading = QLabel("ImageJ macro 准备区")
             heading.setObjectName("imageCardTitle")
-            note = QLabel("本区用于检测、下载/配置后的 ImageJ 调用验证和 macro 草稿写入准备；当前不内置具体细胞识别 macro，不生成正式测量结论。")
+            note = QLabel("本区用于检测、下载/配置后的 ImageJ 调用验证和 macro 草稿写入准备；可载入内置细胞图像识别模板，但正式结论仍受外部引擎、ROI/阈值和人工复核 gate 控制。")
             note.setObjectName("imageTaskStatus")
             note.setWordWrap(True)
+            template_row = QHBoxLayout()
+            template_label = QLabel("内置模板")
+            self._macro_template_selector = QComboBox()
+            self._macro_template_selector.setObjectName("cellImageJMacroTemplateSelector")
+            self._macro_template_selector.setProperty("buttonBehavior", "selects_builtin_cell_imagej_macro_template")
+            for spec in list_cell_imagej_experiments():
+                self._macro_template_selector.addItem(f"{spec.title} / {spec.analysis_type}", spec.experiment_id)
+                if spec.analysis_type == self._analysis_type:
+                    self._macro_template_selector.setCurrentIndex(self._macro_template_selector.count() - 1)
+            load_button = QPushButton("载入内置 macro 模板")
+            load_button.setObjectName("cellImageJLoadBuiltinMacroButton")
+            load_button.setProperty("buttonBehavior", "loads_review_gated_builtin_cell_imagej_macro_into_editor")
+            load_button.setProperty("formalActionEnabled", False)
+            load_button.clicked.connect(self._handle_load_builtin_macro_template)
+            template_row.addWidget(template_label)
+            template_row.addWidget(self._macro_template_selector, 1)
+            template_row.addWidget(load_button)
             self._macro_editor = QTextEdit()
             self._macro_editor.setObjectName("cellImageJMacroEditor")
             self._macro_editor.setMinimumHeight(150)
@@ -891,6 +911,7 @@ if QWidget is not None:
             actions.addStretch(1)
             layout.addWidget(heading)
             layout.addWidget(note)
+            layout.addLayout(template_row)
             layout.addWidget(self._macro_editor)
             layout.addLayout(actions)
             return frame
@@ -952,6 +973,40 @@ if QWidget is not None:
                         f"<p><b>原始路径：</b>{escaped_path}</p>",
                         image_html,
                         "<p><b>标注状态：</b>已进入预览；ROI / lane / mask / cell count overlay 将由下方“生成分析任务”写入 RunRequest，真实测量仍需外部引擎或人工复核。</p>",
+                    ]
+                )
+            )
+
+        def _handle_load_builtin_macro_template(self) -> None:
+            if self._macro_template_selector is None:
+                return
+            if not self._image_paths:
+                self._result_panel.setText("请先导入图片或文件夹，再载入需要固定输入/输出目录的内置 ImageJ macro 模板。")
+                return
+            experiment_id = str(self._macro_template_selector.currentData() or "")
+            if not experiment_id:
+                self._result_panel.setText("未选择内置 ImageJ macro 模板。")
+                return
+            output_dir = self._latest_workspace.output_dir if self._latest_workspace is not None else self._task_store.root / "macro_template_preview"
+            try:
+                bundle = render_cell_imagej_macro(
+                    experiment_id,
+                    Path(self._image_paths[0]).expanduser().parent,
+                    output_dir,
+                    parameters=self._collect_parameters("load_builtin_macro_template"),
+                )
+            except ImageAnalysisError as exc:
+                self._result_panel.setText(str(exc))
+                return
+            self._macro_editor.setPlainText(bundle.macro_text)
+            self._result_panel.setText(
+                "\n".join(
+                    [
+                        "已载入内置 ImageJ macro 模板",
+                        f"实验类型：{bundle.experiment.title}",
+                        f"输出 CSV：{bundle.output_csv_path}",
+                        "来源：dev/labtools@f77bfe4 / @2fa005d，经 Integration 运行结构适配。",
+                        "边界：模板需要 ImageJ/Fiji、阈值/ROI 参数和人工复核；当前不会声明正式测量结论。",
                     ]
                 )
             )
@@ -1099,6 +1154,7 @@ if QWidget is not None:
                 "analysis_type": self._analysis_type,
                 "image_paths": list(self._image_paths),
                 "macro_path": str(macro_path),
+                "selected_builtin_macro_template": self._macro_template_selector.currentData() if self._macro_template_selector is not None else "",
                 "run_request_path": str(workspace.run_request_path),
                 "output_dir": str(workspace.output_dir),
                 "external_engine_execution_enabled": execution_result is not None,
@@ -1255,7 +1311,7 @@ if QWidget is not None:
                 padding: 8px 12px;
                 font-weight: 700;
             }}
-            QPushButton#imageWorkbenchImportFilesButton, QPushButton#imageWorkbenchImportFolderButton, QPushButton#imageWorkbenchRemoveImageButton, QPushButton#imageWorkbenchExportPlaceholderButton, QPushButton#cellImageJWriteMacroDraftButton, QPushButton#cellImageJRunMacroDraftButton {{
+            QPushButton#imageWorkbenchImportFilesButton, QPushButton#imageWorkbenchImportFolderButton, QPushButton#imageWorkbenchRemoveImageButton, QPushButton#imageWorkbenchExportPlaceholderButton, QPushButton#cellImageJLoadBuiltinMacroButton, QPushButton#cellImageJWriteMacroDraftButton, QPushButton#cellImageJRunMacroDraftButton {{
                 color: {COLORS["bio"]};
                 background: {COLORS["bio_soft"]};
                 border: 1px solid {COLORS["border"]};
