@@ -55,6 +55,58 @@ read_integer_field <- function(text, field) {
   NA_integer_
 }
 
+hash_string <- function(value) {
+  path <- tempfile("biomedpilot_hash_")
+  writeLines(value, path, useBytes = TRUE)
+  digest <- as.character(tools::md5sum(path))
+  unlink(path)
+  digest
+}
+
+read_object_field_text <- function(text, field, default = "{}") {
+  field_pattern <- paste0('"', field, '"[[:space:]]*:')
+  field_match <- regexpr(field_pattern, text)
+  if (field_match[[1]] < 0) {
+    return(default)
+  }
+  search_start <- field_match[[1]] + attr(field_match, "match.length")
+  tail_text <- substring(text, search_start)
+  open_offset <- regexpr("\\{", tail_text)
+  if (open_offset[[1]] < 0) {
+    return(default)
+  }
+  object_start <- search_start + open_offset[[1]] - 1
+  chars <- strsplit(substring(text, object_start), "", fixed = TRUE)[[1]]
+  depth <- 0
+  in_string <- FALSE
+  escaped <- FALSE
+  for (index in seq_along(chars)) {
+    char <- chars[[index]]
+    if (escaped) {
+      escaped <- FALSE
+      next
+    }
+    if (char == "\\") {
+      escaped <- TRUE
+      next
+    }
+    if (char == '"') {
+      in_string <- !in_string
+      next
+    }
+    if (!in_string && char == "{") {
+      depth <- depth + 1
+    }
+    if (!in_string && char == "}") {
+      depth <- depth - 1
+      if (depth == 0) {
+        return(substring(text, object_start, object_start + index - 1))
+      }
+    }
+  }
+  default
+}
+
 resolve_input_path <- function(value) {
   if (value == "") {
     return("")
@@ -768,6 +820,7 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
   seed <- read_integer_field(input_text, "random_seed")
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
   input_hash <- as.character(tools::md5sum(input_json))
+  parameter_hash <- hash_string(read_object_field_text(input_text, "parameters", "{}"))
   provenance <- paste0(
     "{\n",
     '  "schema_version": "biomedpilot.analysis.provenance.v1",\n',
@@ -777,7 +830,7 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
     '  "created_at": ', json_string(timestamp), ",\n",
     '  "input_path": ', json_string(input_json), ",\n",
     '  "input_hash": ', json_string(input_hash), ",\n",
-    '  "parameter_hash": ', json_string(input_hash), ",\n",
+    '  "parameter_hash": ', json_string(parameter_hash), ",\n",
     '  "random_seed": ', seed_value, ",\n",
     '  "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},\n',
     '  "runtime": {"r_version": ', json_string(r_version), ', "bioconductor_version": ', json_string(bioc_version), ', "package_versions": {}, "external_tool_versions": {}},\n',

@@ -139,7 +139,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; real resource locks are incomplete. |
-| Provenance captures versions/hashes/seed/command | WARN | Some Bio result packages capture provenance; universal schema now requires it, migration incomplete. |
+| Provenance captures versions/hashes/seed/command | WARN | The standard R worker now records separate input and parameter hashes plus seed and command; package/tool version capture is still incomplete for formal/full module migrations. |
 | DEG/survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, and first R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, and immune infiltration; formal/full migration remains pending. |
 | Docking/MD external tool adapters | FAIL | Target registry only; no adapters. |
 | Default dev can start without full analysis deps | PASS | Current source smoke historically works without requiring full R environments; scaffold test does not require R. |
@@ -269,6 +269,7 @@ New architecture boundary files:
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
+- Split standard R worker provenance hashing so `input_hash` tracks the full input manifest and `parameter_hash` tracks the `parameters` object separately.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
 - Added the first standard worker lite paths: DEG base R two-group fixture, enrichment base R ORA, survival base R KM/log-rank, univariate base R clinical association, multivariate base R linear model, and immune infiltration base R signature mean heatmap fixtures producing testing-level standard result packages.

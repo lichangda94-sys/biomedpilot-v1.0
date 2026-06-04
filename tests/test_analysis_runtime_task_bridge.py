@@ -300,6 +300,7 @@ def test_deg_lite_mode_runs_through_standard_r_worker_without_formal_upgrade(tmp
     assert "adjusted_p_value" in table_text
     assert "significance_label" in table_text
     assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert provenance["parameter_hash"] != provenance["input_hash"]
     assert registry["results"][0]["result_semantics"] == "testing_level"
     assert registry["results"][0]["engine_name"] == "biomedpilot_standard_r_worker"
     assert catalog["rows"][0]["module_id"] == "deg"

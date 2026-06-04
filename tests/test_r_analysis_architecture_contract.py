@@ -243,6 +243,8 @@ def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Pat
     assert provenance["runtime"]["r_version"] != "not_required_for_mock"  # type: ignore[index]
     assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
     assert provenance["input_hash"] != "fixture"
+    assert provenance["parameter_hash"] != "fixture"
+    assert provenance["parameter_hash"] != provenance["input_hash"]
     assert "analysis/runners/run_module.R" in provenance["command"]
 
 
@@ -269,6 +271,7 @@ def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_pa
     assert result["status"] == "blocked"
     assert "standard_worker_mode_not_enabled:full" in result["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
+    assert provenance["parameter_hash"] != provenance["input_hash"]
     assert (output_dir / "logs" / "worker.log").is_file()
 
 
@@ -298,6 +301,7 @@ def test_standard_r_runner_enrichment_lite_mode_writes_real_fixture_ora_package(
     assert "p.adjust" in table.splitlines()[0]
     assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
     assert provenance["runtime"]["bioconductor_version"] == "not_required_for_lite_base_r"  # type: ignore[index]
+    assert provenance["parameter_hash"] != provenance["input_hash"]
     assert (output_dir / "reports" / "README_lite.md").is_file()
 
 

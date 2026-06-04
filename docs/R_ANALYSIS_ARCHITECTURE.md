@@ -152,6 +152,8 @@ logs/
 
 `provenance.json` must record engine version, R version, package versions, external tool versions, input hash, parameter hash, random seed, and command.
 
+The standard R worker hashes the complete input manifest separately from the `parameters` object. This preserves distinct `input_hash` and `parameter_hash` values for mock, lite, blocked, and future full-mode standard packages without adding an R package dependency.
+
 ## Current Implementation Status
 
 | Layer | Status |
