@@ -269,3 +269,78 @@ The report/export artifact remains Developer Preview / testing-level and explici
 ### Stop Point
 
 Phase 4 stops after the current Meta Analysis UI single-point L3 proof. It does not start old feature migration, OCR/fulltext work, full module completion, or production/clinical claims.
+
+## Phase 2.5 Refresh: Full Branch Inventory and Migration Candidate Audit
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh is audit-only. No branch was checked out, merged, or cherry-picked. No UI code, analysis algorithm, legacy runtime path, or current analysis task implementation was changed.
+
+### Current Baseline
+
+```text
+branch: dev/bioinformatics
+HEAD: 4e699cf961e97306e7ab3c4628c3fc9d05d54967
+subject: add analysis runtime mock task bridge
+```
+
+The worktree already contained unrelated changes before this Phase 2.5 refresh:
+
+```text
+ M analysis/registry/analysis_modules.json
+?? analysis/modules/
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+These files were preserved and were not treated as Phase 2.5 migration work.
+
+### Reports Refreshed
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Findings
+
+The branch inventory now includes the newer current-line commits through the analysis runtime mock bridge and the newer UI/integration branches. The highest-value historical sources remain candidate libraries only:
+
+- `dev/release-internal-test`
+- `codex/releasebuild-formal-deg-carryover`
+- `codex/mainline-survival-clinical-carryover`
+- `dev/meta-analysis`
+- `dev/ui-shell` and related `integration/*ui*` branches for design material only
+
+Legacy directories remain quarantined:
+
+- `app/bioinformatics/legacy/**`
+- `app/meta_analysis/legacy/**`
+- `archive/legacy_sources/**`
+
+### Decision
+
+No old branch is safe to merge wholesale. Any future migration must select one candidate feature and one current UI path, then use `adapter` or `rewrite` against the current contracts. Mock, placeholder, no-op, fake preflight, testing-level export, and branch-only artifacts remain excluded from current completion claims.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `git status --short && git branch --show-current && git rev-parse HEAD` | Passed |
+| `git branch --all --format='%(refname:short)'` | Passed |
+| `git branch --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname` | Passed |
+| `git log --oneline --decorate --max-count=30 -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts app/analysis_runtime analysis` | Passed |
+| `git ls-tree -r --name-only <branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs scripts` | Passed for sampled high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive archive/legacy_sources -maxdepth 3 -type f` | Passed |
+| `find app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui -path '*/__pycache__' -prune -o -type f -print` | Passed |
+| `rg -n "QPushButton\|report\|plot\|DEG\|ORA\|GSEA\|survival\|Cox\|Meta" app/bioinformatics app/meta_analysis -g '*.py'` | Passed |
+
+### Stop Point
+
+Stop after audit documents. Do not begin migration, branch convergence, UI replacement, or algorithm work until the next explicit instruction selects a candidate.

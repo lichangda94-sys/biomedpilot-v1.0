@@ -1,92 +1,98 @@
 # Branch Inventory
 
-Date: 2026-05-29
+Date: 2026-06-04
 
 Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `5c435a8aa75650dded37b7f6ad7da83a9c5e422d`
+Current HEAD: `4e699cf961e97306e7ab3c4628c3fc9d05d54967`
 
 ## Audit Boundary
 
-This is Phase 2.5 audit-only work. No legacy branch was checked out, merged, or cherry-picked. The current UI remains the only mainline. Old branches and `legacy/` directories are treated only as a material library.
+This is Phase 2.5 audit-only work. No legacy branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. The current UI remains the only mainline. Old branches, `legacy/` directories, and `archive/legacy_sources/**` are treated only as material libraries.
 
-Current unrelated untracked files were preserved:
+Current unrelated worktree state was preserved and was not included as a migration action:
 
 ```text
-docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
-project_storage/bioinformatics/
+ M analysis/registry/analysis_modules.json
+?? analysis/modules/
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
 ```
+
+The modified `analysis/registry/analysis_modules.json` and untracked `analysis/modules/**` existed before this Phase 2.5 audit pass and were not edited here.
 
 ## Commands Used
 
 | Command | Purpose |
 | --- | --- |
-| `git status --short && git branch --show-current && git rev-parse HEAD` | Baseline current worktree. |
-| `git branch --format='%(refname:short)|%(objectname:short)|%(committerdate:short)|%(subject)' --sort=refname` | List local branches and commit subjects. |
-| `git branch -r --format='%(refname:short)|%(objectname:short)|%(committerdate:short)|%(subject)' --sort=refname` | Check remote branch inventory; no remote branches were listed. |
-| `git diff --name-status HEAD..<branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics scripts` | Read-only file-difference sampling for relevant branches. |
-| `git log --oneline --max-count=8 <branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs scripts` | Read-only branch commit evidence. |
-| `rg --files app | rg '(^|/)legacy(/|_)|legacy'` | Legacy file inventory. |
-| `find app/bioinformatics/legacy app/meta_analysis/legacy -maxdepth 2 -type d` | Legacy module directory inventory. |
+| `git status --short && git branch --show-current && git rev-parse HEAD` | Baseline current worktree and HEAD. |
+| `git branch --all --format='%(refname:short)'` | Enumerate all local and remote refs available in this worktree. |
+| `git branch --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname` | Capture local branch tips and subjects. |
+| `git log --oneline --decorate --max-count=30 -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts app/analysis_runtime analysis` | Capture current-line recent feature history. |
+| `git ls-tree -r --name-only <branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs scripts` | Read-only branch file inventory for high-relevance branches. |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive archive/legacy_sources -maxdepth 3 -type f` | Legacy directory inventory. |
+| `find app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui -path '*/__pycache__' -prune -o -type f -print` | Current active source and test inventory. |
+| `rg -n "QPushButton\|report\|plot\|DEG\|ORA\|GSEA\|survival\|Cox\|Meta" app/bioinformatics app/meta_analysis -g '*.py'` | UI/action text and analysis surface sampling. |
 
 ## Local Branch Inventory
 
-| Branch | HEAD | Date | Subject | Ahead/behind current | Bio/Meta relevance | Audit disposition |
-| --- | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `5c435a8` | 2026-05-29 | unify Meta analysis result contract | `0/0` | Current mainline for this audit | Source of truth |
-| `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | `614/82` | High: ReleaseBuild candidate for Bio DEG/enrichment/report/UI gates | Migration source, not directly usable |
-| `stable/mainline` | `be8c924` | 2026-05-21 | carry over Bioinformatics formal DEG MVP to MainLine | `92/65` | High: older MainLine Bio formal DEG carry-over | Historical baseline |
-| `dev/meta-analysis` | `3aad58a` | 2026-05-18 | Handle LaunchServices psn arguments | `78/133` | High for Meta OCR/fulltext/package history, but diverges from current Bio tree | Selective reference only |
-| `dev/integration` | `ea57a49` | 2026-05-22 | Restore bioinformatics task plan import surface | `338/82` | Medium/high: integration registry and UI rebuild work | Reference for integration contracts |
-| `dev/labtools` | `93b79a9` | 2026-05-26 | test(labtools): add simulated LAN interop coverage | `130/133` | Low for Bio/Meta analysis | Ignore for this phase |
-| `dev/shared-vocabulary` | `b0b938d` | 2026-05-20 | docs(medical-terms): close governance phase | `96/133` | Low/medium shared vocabulary | Shared material only |
-| `dev/ui-shell` | `8a92120` | 2026-05-28 | Simplify about screen copy | `211/133` | Medium UI shell only | UI reference, not analysis migration |
-| `dev/ai-gateway` | `c9a1acc` | 2026-05-14 | docs(ai): align local model ux boundaries | `60/133` | Low/medium shared AI routing | Ignore unless AI surfaces are revisited |
-| `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | `431/82` | High Bio candidate branch | Candidate ledger source |
-| `codex/mainline-survival-clinical-carryover` | `74775fe` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | `103/65` | High Bio enrichment/survival convergence evidence | Candidate ledger source |
-| `codex/meta-workflow-ui` | `8b6d0b6` | 2026-05-10 | feat(meta): connect workflow ui later stages | `1/142` | Medium Meta UI history | Mostly superseded by current Meta pages |
-| `codex/meta-analysis-refresh` | `e9c17c2` | 2026-05-11 | Refine Meta project home UI | `43/133` | Medium Meta project home UI | UI reference only |
-| `codex/bio-geo-real-download-test` | `a90a2a1` | 2026-05-06 | feat(bio): harden GEO asset recognition and DEG runner | `1/182` | Medium Bio GEO/GSE legacy recognition | Reference only |
-| `codex/stage-3.6-deg-preflight` | `750f076` | 2026-05-12 | feat(bioinformatics): add DEG executor preflight | `59/133` | Medium old DEG preflight path | Superseded by current B8/B9 contracts |
-| `codex/bio-search-ui-main` | `26a33be` | 2026-05-10 | fix(bio): simplify GEO Chinese summary panel | `30/208` | Medium old GEO search UI | Reference only |
-| `codex/bio-ui-download-integration` | `db9ad70` | 2026-05-10 | fix(bio): simplify GEO Chinese summary panel | `0/148` | Medium old Bio/Meta integration | Reference only |
-| `codex/bioinformatics-safe-stage2` | `75fe3c3` | 2026-04-30 | feat(bio): add Chinese project wizard UI | `61/275` | Low/medium old Bio wizard | UI material only |
-| `codex/biomedpilot-root` | `5e0627f` | 2026-04-30 | feat(meta-ui): add chinese analysis reporting UI | `0/227` | Low/medium old root UI | UI material only |
-| `codex/bio-search-ui-integrate-main` | `9bfc88b` | 2026-05-03 | feat(bio): improve GEO disease-aware search UI | `0/223` | Low/medium old Bio search UI | Reference only |
-| `codex/bio-search-ui-main-legacy` | `65f1be9` | 2026-05-03 | feat(bio): improve GEO disease-aware search UI | `1/226` | Low/medium old Bio search UI | Reference only |
-| `codex/meta-search-ui-main` | `b026f9d` | 2026-05-04 | feat(meta): execute confirmed PubMed search | `2/208` | Medium old PubMed search execution | Current Meta search has newer services |
-| `codex/meta-search-main` / `codex/meta-search-main-v2` | `4e0ca45` | 2026-05-03 | feat(shared): migrate medical vocabulary index into BioMedPilot | `0/226` | Low shared vocabulary | Ignore for analysis migration |
-| `codex/shared-vocabulary-refresh` | `cfed80e` | 2026-05-11 | feat(shared): add cardiovascular medical vocabulary | `48/133` | Low shared vocabulary | Ignore for this phase |
-| `codex/medical-vocabulary-main` | `393b3e8` | 2026-05-03 | feat(shared): expand systematic medical vocabulary coverage | `0/224` | Low shared vocabulary | Ignore for this phase |
-| `codex/migrate-medical-vocabulary-stage2` | `4e0ca45` | 2026-05-03 | feat(shared): migrate medical vocabulary index into BioMedPilot | `0/226` | Low shared vocabulary | Ignore for this phase |
-| `codex/vocab-line-stabilization` | `b778543` | 2026-05-04 | docs(shared): isolate medical vocabulary worktree | `1/211` | Low shared vocabulary | Ignore for this phase |
-| `codex/merge-latest-app-content` | `f87a5f6` | 2026-05-03 | fix(app): keep desktop theme light | `0/221` | Low app shell | Ignore for this phase |
-| `codex/restore-ui01-login-baseline` | `ba837a7` | 2026-05-03 | fix(app): include restored runtime dirs in desktop package | `0/219` | Low app shell/package | Ignore for this phase |
-| `codex/ai-gateway-call-isolation-audit` | `2fea2a6` | 2026-05-10 | Revert "Revert "Revert "feat(meta): integrate early workflow workspace UI""" | `1/143` | Low shared AI/meta UI conflict history | Ignore unless AI integration is reopened |
-| `codex/ai-gateway-ollama-provider` | `a44144b` | 2026-05-10 | docs(repo): add branch consolidation plan | `1/137` | Low AI provider planning | Ignore for this phase |
-| `codex/integration-meta-ocr-labtools-carryover` | `8d83bb6` | 2026-05-18 | feat(bioinformatics): route AI drafts through role-based gateway | `113/133` | Medium shared integration/OCR context | Reference only |
-| `codex/integration-labtools-ui-c2-carryover` | `9d4edf3` | 2026-05-29 | Wire release UI gate buttons | `513/82` | Low for Bio/Meta analysis; high for LabTools | Exclude from Bio/Meta migration |
+| Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Audit disposition |
+| --- | --- | --- | --- | --- | --- |
+| `dev/bioinformatics` | `4e699cf` | 2026-06-04 | add analysis runtime mock task bridge | Current source of truth for this worktree; contains Bio and Meta current services plus new analysis runtime mock bridge | Source of truth; current dirty analysis scaffold not audited as completion |
+| `feature/meta-l3-ui-loop` | `5f6150a` | 2026-05-29 | feat(meta): prove current UI L3 result loop | Meta Phase 4 focused UI L3 proof branch, now largely reachable from current history | Reference; current branch already contains related commits |
+| `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | High Bio ReleaseBuild candidate: structured R DEG, enrichment, GSEA, survival, risk, reports, renderer policy | Candidate library only; no wholesale carry-over |
+| `stable/mainline` | `be8c924` | 2026-05-21 | carry over Bioinformatics formal DEG MVP to MainLine | Older MainLine formal DEG baseline | Historical baseline; superseded by current Bio history |
+| `dev/meta-analysis` | `3aad58a` | 2026-05-18 | Handle LaunchServices psn arguments | Meta OCR/fulltext/package history, older desktop packaging fixes | Reference only; current Meta UI is source of truth |
+| `dev/integration` | `056a1f3` | 2026-05-29 | docs(integration): add Phase 4 scoped integration audit | Integration scoped audit branch | Reference only |
+| `dev/ui-shell` | `6d5dca5` | 2026-06-01 | docs(project-control): add high fidelity UI integration handoff | UI shell, screenshots, icon production, result/report export shell material | UI design reference only; not analysis capability |
+| `dev/labtools` | `0bd04b2` | 2026-06-04 | Add cell image ImageJ workflows | LabTools feature work | Out of Bio/Meta migration scope |
+| `dev/shared-vocabulary` | `b0b938d` | 2026-05-20 | docs(medical-terms): close governance phase | Shared vocabulary resources | Resource reference only |
+| `dev/ai-gateway` | `c9a1acc` | 2026-05-14 | docs(ai): align local model ux boundaries | Shared AI routing | Out of analysis migration scope unless AI surfaces are reopened |
+| `mainline/phase4-meta-l3-scoped-pick` | `41e02bb` | 2026-05-29 | docs(project-control): add constitution v2 for UI baseline governance | MainLine scoped Meta L3 governance | Reference only |
+| `integration/phase4-meta-l3-scoped-pick` | `3771eb3` | 2026-05-29 | feat(meta): scope Phase 4 L3 UI proof into integration | Integration receive branch for Meta Phase 4 | Reference only |
+| `integration/release-bio-c1-ui-shell` | `c5728d3` | 2026-06-03 | fix(release): close stage AD wiring gaps | Release UI shell wiring | UI reference only, not analysis migration |
+| `integration/release-labtools-c1-module-nav` | `ef526dc` | 2026-06-01 | feat(ui): gate bio report exports | Cross-module UI gate material | UI reference; must not replace current UI |
+| `integration/release-ui-shell-scoped-migration` | `610cc20` | 2026-05-31 | feat(ui): restore scoped UI shell baseline | UI shell baseline and icon/status surfaces | UI design reference only |
+| `integration/software-remediation-control` | `ec3f274` | 2026-05-31 | docs(project-control): sync UI shell migration evidence | Governance/control docs | Reference only |
+| `audit/integration-bioinformatics-merge-plan` | `d6a5914` | 2026-05-29 | docs(integration): add bioinformatics merge plan audit | Audit branch for integration merge planning | Reference only |
+| `audit/mainline-phase4-meta-l3-scope-plan` | `be8c924` | 2026-05-21 | carry over Bioinformatics formal DEG MVP to MainLine | Audit pointer to MainLine baseline | Historical |
+| `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | High Bio candidate: DEG/risk/report gates and ReleaseBuild test gate history | Candidate library only |
+| `codex/mainline-survival-clinical-carryover` | `74775fe` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Bio survival/enrichment convergence docs and files | Candidate library only |
+| `codex/meta-workflow-ui` | `8b6d0b6` | 2026-05-10 | feat(meta): connect workflow ui later stages | Old Meta workflow UI | Mostly superseded; UI reference only |
+| `codex/meta-analysis-refresh` | `e9c17c2` | 2026-05-11 | Refine Meta project home UI | Old Meta project home/UI refinements | UI reference only |
+| `codex/meta-search-ui-main` | `b026f9d` | 2026-05-04 | feat(meta): execute confirmed PubMed search | Older PubMed search execution | Current Meta search services supersede it |
+| `codex/bio-geo-real-download-test` | `a90a2a1` | 2026-05-06 | feat(bio): harden GEO asset recognition and DEG runner | Older GEO download/recognition/DEG runner hardening | Adapter/reference only; pre-current contracts |
+| `codex/stage-3.6-deg-preflight` | `750f076` | 2026-05-12 | feat(bioinformatics): add DEG executor preflight | Old DEG preflight path | Superseded by current B8/B9+ gates |
+| `codex/bio-search-ui-main` | `26a33be` | 2026-05-10 | fix(bio): simplify GEO Chinese summary panel | Older Bio GEO search UI | Reference only |
+| `codex/bio-ui-download-integration` | `db9ad70` | 2026-05-10 | fix(bio): simplify GEO Chinese summary panel | Older Bio/Meta search/download integration | Reference only |
+| `codex/bio-search-ui-integrate-main` | `9bfc88b` | 2026-05-03 | feat(bio): improve GEO disease-aware search UI | Older Bio search UI | Reference only |
+| `codex/bio-search-ui-main-legacy` | `65f1be9` | 2026-05-03 | feat(bio): improve GEO disease-aware search UI | Older Bio search UI | Reference only |
+| `codex/bioinformatics-safe-stage2` | `75fe3c3` | 2026-04-30 | feat(bio): add Chinese project wizard UI | Early Bio wizard UI | UI material only |
+| `codex/biomedpilot-root` | `5e0627f` | 2026-04-30 | feat(meta-ui): add chinese analysis reporting UI | Early root UI | UI material only |
+| `codex/bio-chinese-dataset-search-page` | `dcb07cc` | 2026-05-06 | feat(meta): add pico workspace v2 | Mixed early search/UI branch | Reference only |
+| `codex/integration-meta-ocr-labtools-carryover` | `8d83bb6` | 2026-05-18 | feat(bioinformatics): route AI drafts through role-based gateway | Integration/OCR/AI gateway context | Reference only |
+| `codex/integration-labtools-ui-c2-carryover` | `9d4edf3` | 2026-05-29 | Wire release UI gate buttons | LabTools/UI gate branch | Out of Bio/Meta analysis migration scope |
+| `codex/meta-search-main`, `codex/meta-search-main-v2`, `codex/medical-vocabulary-main`, `codex/migrate-medical-vocabulary-stage2`, `codex/shared-vocabulary-refresh`, `codex/vocab-line-stabilization` | various | 2026-05-03 to 2026-05-11 | shared vocabulary commits | Shared terminology resources | Ignore for Phase 2.5 analysis feature migration |
+| `codex/merge-latest-app-content`, `codex/restore-ui01-login-baseline`, `codex/ai-gateway-call-isolation-audit`, `codex/ai-gateway-ollama-provider` | various | 2026-05-03 to 2026-05-10 | app shell / AI / consolidation commits | Low direct Bio/Meta analysis relevance | Ignore unless shell/AI work is selected |
 
 ## High-Relevance Branch Findings
 
 | Branch | Files/areas observed | Developed material observed | Current availability | Main risk |
 | --- | --- | --- | --- | --- |
-| `dev/release-internal-test` | `app/bioinformatics/enrichment/`, `app/bioinformatics/gsea/`, `app/bioinformatics/deg_engine/r_*`, `app/bioinformatics/reports/integrated.py`, `app/bioinformatics/plots/real_svg.py`, `analysis_ui/capability_map.py` | ReleaseBuild-oriented Bio DEG R backends, enrichment production gates, report renderer/runtime policies, real SVG plot split, capability map | Not current UI source of truth; current branch has many equivalent older flat modules but not all ReleaseBuild restructuring | Large divergent tree; direct carry-over would overwrite current contracts |
-| `stable/mainline` | Bio formal DEG MVP, analysis UI gates, result/report/plot files | Older MainLine formal DEG MVP | Superseded by current branch for Bio DEG L3 proof | Older than current B52+ and Meta Phase 3 |
-| `codex/releasebuild-formal-deg-carryover` | Risk score, report-ready, calibration/DCA plot gates, internal test gate | Risk score / nomogram / ReleaseBuild internal gates | Not current; must not be called production clinical | Clinical-overclaim risk and dependency on ReleaseBuild state |
-| `codex/mainline-survival-clinical-carryover` | Enrichment gates, R adapter, enrichment plot/report gates | ORA/GSEA convergence and UI wiring | Current branch has enrichment flat modules and tests; branch may contain convergence docs not current | Needs mapping before reuse |
-| `dev/meta-analysis` | Meta OCR worker, PaddleOCR subprocess, LaunchServices package fixes | OCR/fulltext integration history and package handling | Not current; current Meta has fulltext services but not necessarily OCR package chain | External OCR dependency and app-bundle divergence |
-| `codex/meta-workflow-ui` | Workflow UI later stages, dedup page, early workspace UI | Early Meta workflow UI | Mostly superseded by current `app/meta_analysis/pages/**` | Current UI should not be replaced |
-| `codex/bio-geo-real-download-test` | GEO recognition, DEG runner, PubMed candidate handoff, governance | Old GEO recognition/download and DEG runner hardening | Current branch has newer recognition/standardization/resolver contracts | Legacy path bypass risk |
-| `codex/stage-3.6-deg-preflight` | DEG executor preflight, result index to report manifest | Old DEG preflight and report draft links | Current branch has stronger DEG formal gates | Pre-B8 contract semantics |
+| `dev/bioinformatics` | `app/bioinformatics/deg_engine/**`, flat `enrichment_*`, `survival_clinical/**`, `plots/**`, `reports/**`, `app/meta_analysis/services/**`, `analysis_runtime/**` | Current Bio DEG/enrichment/survival/report/plot code, current Meta result contract bridge, and a new mock-only analysis runtime bridge | Current source of truth; dirty analysis scaffold must not be treated as completed architecture | Current branch includes mock/runtime scaffold that is not full analysis execution |
+| `feature/meta-l3-ui-loop` | `app/meta_analysis/pages/analysis_page.py`, `tests/ui/test_meta_analysis_l3_loop.py`, `docs/reports/META_L3_*` | Focused Meta current UI single-point L3 proof | Already represented by current recent history | Must not be generalized to full Meta production readiness |
+| `dev/release-internal-test` | packaged `enrichment/**`, `gsea/**`, R DEG adapters, `plots/real_svg.py`, report renderer policy, survival/risk modules | Rich Bio ReleaseBuild candidate material across DEG, ORA/GSEA, KM/Cox, risk, plots, reports, renderer gates | Not current UI source of truth; current branch has different flat/module layout | Direct merge would overwrite current contracts and possibly elevate testing/report gates |
+| `codex/releasebuild-formal-deg-carryover` | R DEG adapters, risk score, calibration/DCA, report-ready, ReleaseBuild gate script | Risk/nomogram and ReleaseBuild gate history | Branch evidence only for several clinical/risk pieces | Clinical overclaim and ReleaseBuild-state dependency |
+| `codex/mainline-survival-clinical-carryover` | enrichment/survival convergence docs and files | ORA/GSEA and survival convergence material | Candidate only | Needs adapter to current flat modules and current UI |
+| `dev/meta-analysis` | OCR workers, PaddleOCR subprocess runner, fulltext services, package/LaunchServices fixes | Meta OCR/fulltext/package history | Current Meta has fulltext services; OCR branch evidence is not current-proven | External dependency and packaging divergence |
+| `dev/ui-shell` and `integration/release-ui-shell-scoped-migration` | UI shell docs, screenshots, icon production, result/report export shell | Design/system UI material | UI reference only | Replacing current UI would violate Phase 2.5 |
 
 ## Remote Branches
 
-`git branch -r` returned no remote branch entries in this worktree. This audit is therefore based on local branch refs and current legacy directories only.
+`git branch --all` in this worktree listed local refs only. No remote branch refs were available for this audit.
 
 ## Audit Conclusion
 
-There are many historical implementations, but no old branch is safe to merge wholesale. The highest-value migration sources are narrow pieces from `dev/release-internal-test`, `codex/releasebuild-formal-deg-carryover`, `codex/mainline-survival-clinical-carryover`, and `dev/meta-analysis`; all must be reintroduced only through adapters or rewrites against the current UI and contract layers.
-
+The repository contains substantial historical implementations for UI, Bioinformatics, Meta Analysis, plots, reports, exports, tests, and helper functions. No old branch is safe to merge wholesale. The only safe next step after this audit is selecting one candidate feature and one current UI path, then adapting or rewriting against the current contracts with focused tests.

@@ -1,38 +1,43 @@
 # Deprecated Legacy Register
 
-Date: 2026-05-29
+Date: 2026-06-04
 
 ## Purpose
 
-This register identifies legacy paths that must not be migrated directly or counted as current completion evidence. They may be useful for requirements archaeology, fixtures, or UI inspiration, but they are not current runtime sources.
+This register identifies legacy paths that must not be migrated directly or counted as current completion evidence. They may be useful for requirements archaeology, fixtures, resource review, or UI inspiration, but they are not current runtime sources.
 
 ## Deprecated / Quarantined Items
 
 | Item | Source | Why deprecated | Current replacement / allowed use | Migration status |
 | --- | --- | --- | --- | --- |
-| Standalone Bio GEO GUI | `app/bioinformatics/legacy/geo_tool/main.py`, `run_geo_tool.py` | Separate historical app, old contracts and launchers | Current Bio UI pages and current search/recognition/standardization services | Do not import; reference only |
-| Bio legacy GEO workflow | `app/bioinformatics/legacy/geo_tool/geo_workflow.py`, `geo_pipeline/**` | Old GEO mainline, duplicate surfaces, compatibility wrappers | Current B8/B9 resolver and standardized asset contracts | Deprecated/direct-use forbidden |
-| Bio literature utilities | `app/bioinformatics/legacy/literature_cli.py`, `literature_gui.py` | README explicitly says Bio does not own PubMed/PICO/literature workflows | Current Meta literature workflow | Deprecated for Bio |
+| Standalone Bio GEO GUI | `app/bioinformatics/legacy/geo_tool/main.py`, `run_geo_tool.py`, archive copy | Separate historical app with old contracts and launchers | Current Bio UI pages plus search/recognition/standardization services | Do not import; reference only |
+| Bio legacy GEO workflow | `legacy/geo_tool/geo_workflow.py`, `geo_pipeline/**`, `geo_processing/**` | Old GEO mainline, duplicate surfaces, compatibility wrappers | Current resolver and standardized asset contracts | Deprecated/direct-use forbidden |
+| Bio literature utilities | `app/bioinformatics/legacy/literature_cli.py`, `literature_gui.py` | Bio no longer owns PubMed/PICO/literature workflows | Current Meta literature workflow | Deprecated for Bio |
 | Legacy download scripts | `download_geo_full_only.py`, `process_geo_family_soft.py`, `download_supplement_and_sra.py` | Compatibility scripts outside current UI/task contracts | Current downloader/search/recognition services | Deprecated |
 | Legacy TCGA/GTEx facade | `app/bioinformatics/legacy/tcga_gtex/**` | Old optional runtime/facade and mockable locator contracts | Current `data_sources`, `tcga`, `standard_assets` after audit | Rewrite only |
-| Meta old workbench shell | `app/meta_analysis/legacy/app/**`, `app_meta/**` | Separate UI shell; current UI is the only mainline | Current `app/meta_analysis/pages/**` | Deprecated as runtime |
-| Meta fake GEO readiness | `app/meta_analysis/legacy/geo_readiness/**`, `legacy/analysis/deg_ready_matrix.py` | Belongs to old snapshot and Bio boundary; README labels fake preflight/no real analysis | Current Bio recognition/resolver/DEG gates | Deprecated for Meta |
+| Archive duplicate Bio source | `archive/legacy_sources/bioinformatics_project/**` | Archived duplicate of old Bio source | File archaeology only | Deprecated as runtime |
+| Meta old workbench shell | `app/meta_analysis/legacy/app/**`, `app_meta/**`, archive `model9/app/**` | Separate UI shell; current UI is the only mainline | Current `app/meta_analysis/pages/**` | Deprecated as runtime |
+| Meta fake GEO readiness | `app/meta_analysis/legacy/geo_readiness/**`, `legacy/analysis/deg_ready_matrix.py` | Belongs to old snapshot and Bio boundary; metadata/fake preflight risk | Current Bio recognition/resolver/DEG gates | Deprecated for Meta |
 | Meta task mock/no-op runner | `app/meta_analysis/legacy/core/task_runner_adapters.py`, task runner docs | Historical dry-run/no-op contract; not real analysis output | Current task/result contracts only if reimplemented | Do not count as real run |
-| Meta legacy reporting placeholders | `app/meta_analysis/legacy/reporting/**` and old docs | Historical report summaries, not tied to current canonical result contract | Current `formal_report_service`, `publication_export_service`, Meta result contract bridge | Adapter/rewrite only |
-| Legacy package scripts | `app/meta_analysis/legacy/packaging/**`, `scripts/check_packaging_readiness.py` | Standalone package flow, not current app bundle source | Current root `scripts/package_app.py` | Deprecated |
+| Meta legacy reporting placeholders | `app/meta_analysis/legacy/reporting/**`, old reporting docs, archive copy | Historical report summaries, not tied to current canonical result contract | Current `formal_report_service`, `publication_export_service`, Meta result contract bridge | Adapter/rewrite only |
+| Legacy package scripts | `app/meta_analysis/legacy/packaging/**`, `legacy/scripts/check_packaging_readiness.py` | Standalone package flow, not current app bundle source | Current root `scripts/package_app.py` | Deprecated |
 | Legacy icons/contact sheets | `app/meta_analysis/legacy/assets/**` | Visual assets only, not functionality | May be reviewed by UI design | Ignore for analysis capability |
-| Old pre-B8 DEG preflight | `codex/stage-3.6-deg-preflight`, old `deg_executor_preflight.py` variants | Predates current B8/B9 result/input contracts | Current DEG formal gates | Superseded |
-| Old GEO search UI branches | `codex/bio-search-ui-main*`, `codex/bio-ui-download-integration` | Older UI copy/search logic and partial recognition | Current Bio search/recognition pages | Reference only |
-| Old Meta workflow UI branch | `codex/meta-workflow-ui` | Early UI integration, superseded by current pages | Current Meta pages/workflow dashboard | Reference only |
+| Old pre-B8 DEG preflight | `codex/stage-3.6-deg-preflight`, old `deg_executor_preflight.py` variants | Predates current B8/B9+ result/input contracts | Current DEG formal gates | Superseded |
+| Old GEO search UI branches | `codex/bio-search-ui-main*`, `codex/bio-ui-download-integration`, `codex/bio-geo-real-download-test` | Older UI copy/search logic and partial recognition | Current Bio search/recognition pages | Reference only |
+| Old Meta workflow UI branch | `codex/meta-workflow-ui`, `codex/meta-analysis-refresh` | Early UI integration, superseded by current pages | Current Meta pages/workflow dashboard | Reference only |
+| Old UI shell branches | `dev/ui-shell`, `integration/release-ui-shell-scoped-migration` | UI shell/design branch state is not the current Bio/Meta runtime | Current UI only; UI owner may select scoped assets later | Design reference only |
+| Branch-only risk/nomogram clinical claims | `codex/releasebuild-formal-deg-carryover`, `dev/release-internal-test` risk artifacts | High risk of overclaiming clinical prediction/prognosis | Only gated, non-clinical research outputs if reimplemented | Do not migrate as clinical feature |
 
-## Non-Deprecation Clarification
+## Not Deprecated, But Not A Production Claim
 
-The following are not deprecated but still require current proof before release claims:
+The following are current or current-adjacent, but still require focused proof before release or production claims:
 
 - Current Bio controlled formal DEG.
+- Current Bio controlled ORA/GSEA.
+- Current Bio controlled KM/log-rank and Cox.
+- Current Bio risk score candidate gates.
 - Current Meta v2 statistics engine.
 - Current Meta result contract bridge.
-- Current Bio controlled ORA/GSEA/KM/Cox/risk/report gates.
+- Current analysis runtime mock bridge.
 
-These remain current code paths, but they must not be described as clinical, production-grade, or public-release ready unless a later phase proves that standard.
-
+None of these should be described as clinical-grade, public-release ready, or full production analysis unless a later phase proves that standard with current UI, current contracts, real outputs, and tests.
