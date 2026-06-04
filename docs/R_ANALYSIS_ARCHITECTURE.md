@@ -90,6 +90,8 @@ Resource governance is centralized in `analysis/resources/manifest.json` and val
 
 Existing controlled enrichment ORA/GSEA R adapters now also write a standard result package sidecar and register it as a `standard_result_package` output artifact in the current result index. This is a result-package migration step only: it does not change the ORA/GSEA algorithms, enable plot/report-ready output, or prove that all formal R execution already runs through the isolated standard worker.
 
+Existing controlled multi-factor DEG R adapters for limma, DESeq2, and edgeR now also write standard result package sidecars for successful fixture-proven formal results. The sidecar preserves the result table, task log, parameter manifest, dependency snapshot, formula, contrast, covariates, batch variables, hashes, R/package versions, and command provenance. It is registered in result index v2 as a `standard_result_package` output artifact. This is a package-contract migration step only: it does not enable new DEG execution, plot artifacts, report-ready output, clinical interpretation, or complete migration into the isolated standard worker.
+
 The first `lite` worker paths are enrichment ORA, survival KM/log-rank, univariate clinical association, multivariate clinical association, and immune infiltration signature scoring. `analysis/runners/run_module.R` can run these modules in `mode=lite` using base R and fixed repository fixtures. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`; immune infiltration also writes a real fixture SVG heatmap without relying on an R graphics device. They remain `testing_level`; they do not enable full resources, GSVA/CellChat/Seurat, plot/report-ready export, prognosis, treatment guidance, diagnosis, or clinical interpretation.
 
 ## Module Manifests
@@ -164,6 +166,7 @@ logs/
 | Immune infiltration lite worker | Present for base R signature mean score fixture plus real SVG heatmap; testing-level standard package with no clinical interpretation. |
 | Standard package catalog | Present; Analysis Center state exposes result-index-derived package summaries. |
 | Controlled enrichment standard package sidecar | Present for ORA/GSEA R fixture results; does not enable plot/report-ready output or complete isolated worker migration. |
+| Controlled multi-factor DEG R standard package sidecar | Present for successful limma/DESeq2/edgeR fixture results; does not enable new execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration. |
 | Other lite workers | Not enabled. |
 | Full worker | Not enabled. |
 | Docker/renv split | Scaffolded only; not build/restoration proven. |

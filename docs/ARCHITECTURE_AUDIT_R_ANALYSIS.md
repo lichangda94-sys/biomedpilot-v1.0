@@ -79,6 +79,14 @@ Existing controlled enrichment ORA/GSEA R adapters now write a standard result p
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
 - This is a package-contract migration step, not a claim that all formal R algorithms already run through the isolated standard worker.
 
+Existing controlled multi-factor DEG R adapters now write a standard result package sidecar:
+
+- `app/bioinformatics/deg_engine/multifactor_r_runner.py` mirrors successful limma, DESeq2, and edgeR fixture-proven formal result tables into `analysis/standard_packages/<result_id>/`.
+- The sidecar includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
+- The sidecar preserves the parameter manifest, dependency snapshot, formula, contrast, covariates, batch variables, input/parameter/table hashes, R/package versions, and Rscript command provenance.
+- The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
+- This is a package-contract migration step, not a claim that multi-factor DEG has been fully migrated into the isolated standard worker.
+
 The first lightweight worker paths are now available:
 
 - `analysis/runners/run_module.R` supports `module_id=enrichment`, `mode=lite` using base R hypergeometric ORA and fixed repository TERM2GENE fixtures.
@@ -119,7 +127,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock, enrichment/survival/univariate/multivariate/immune lite standard packages, and blocked unsupported/full standard packages; existing formal real modules do not call it yet. |
 | Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; enrichment, survival, univariate, multivariate, and immune infiltration have base R lite fixtures; other lite modes and full modes remain blocked pending migration. |
 | Unified input/output schema | PASS | Added input and result package schemas. |
-| Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA now write standard sidecar packages; other existing real algorithms still use varied structures. |
+| Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts; existing detailed result views still consume module-specific result indexes and service payloads. |
 | Main backend task-system invocation | WARN | A mock/lite bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock, enrichment-lite, survival-lite, univariate-lite, multivariate-lite, and immune-lite packages. Existing analysis calls still include direct service calls. |
@@ -138,7 +146,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a standard bridge exists for mock, enrichment lite, survival lite, univariate lite, multivariate lite, and immune lite, but most existing formal algorithms are not migrated yet.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
-3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA are now partially remediated with sidecar packages.
+3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results are now partially remediated with sidecar packages.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, but they still need real version, source, hash, license, and cache-path locks.
 5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state has a standard package catalog, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
 
@@ -150,7 +158,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | --- | --- | --- |
 | No unified mock-mode analysis module framework | No top-level `analysis/registry` before this audit | Partially fixed with registry, mock fixture, and mock runner. |
 | No standard result package contract | Existing modules emit varied outputs | Partially fixed at schema and mock task bridge level; algorithm migration pending. |
-| R analysis logic scattered in main backend services | `app/bioinformatics/enrichment_r_adapter.py`, `app/bioinformatics/deg_engine/multifactor_r_runner.py` | Partially fixed for enrichment output packaging only; staged worker migration still pending. |
+| R analysis logic scattered in main backend services | `app/bioinformatics/enrichment_r_adapter.py`, `app/bioinformatics/deg_engine/multifactor_r_runner.py` | Partially fixed for enrichment and controlled multi-factor DEG output packaging only; staged worker migration still pending. |
 
 ### P1
 
@@ -261,6 +269,7 @@ New architecture boundary files:
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
 - Added the first standard worker lite paths: enrichment base R ORA, survival base R KM/log-rank, univariate base R clinical association, multivariate base R linear model, and immune infiltration base R signature mean heatmap fixtures producing testing-level standard result packages.
 - Added controlled enrichment ORA/GSEA standard result package sidecars registered in result index v2.
+- Added controlled multi-factor DEG R standard result package sidecars for successful limma/DESeq2/edgeR fixture results, registered in result index v2 without enabling new execution, plot/report-ready output, or clinical interpretation.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.

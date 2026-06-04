@@ -65,6 +65,8 @@ Update: enrichment now has the first `lite` standard worker path. `run_module.R`
 
 Update: controlled ORA/GSEA R adapters now mirror successful formal enrichment fixture results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This does not change the algorithms, does not enable plot/report-ready output, and does not complete isolated worker migration.
 
+Update: controlled multi-factor DEG R adapters now mirror successful limma/DESeq2/edgeR fixture-proven formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result table, task log, parameter manifest, dependency snapshot, formula/contrast provenance, hashes, package versions, and command provenance. This does not enable new DEG execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration.
+
 Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
 
 Update: univariate clinical association now has a `lite` standard worker path. `run_module.R` can execute base R Welch t-test and Pearson correlation calculations on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
@@ -159,6 +161,21 @@ Acceptance:
 
 - No Python service embeds long-running R execution as a UI request side effect.
 - All outputs have standard package metadata.
+
+Status: started with result-package sidecar alignment.
+
+Completed:
+
+- Successful controlled limma multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
+- Successful controlled DESeq2 multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
+- Successful controlled edgeR multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
+- Blocked incompatible non-count DESeq2/edgeR requests still stop before result index registration.
+
+Remaining:
+
+- Move long-running limma/DESeq2/edgeR Rscript execution behind the standard task worker instead of service-level subprocess calls.
+- Add isolated full worker environment proof before claiming complete DEG R worker migration.
+- Keep plot/report-ready output and clinical interpretation disabled unless their existing gates pass.
 
 ## Phase R5: Environment Split
 

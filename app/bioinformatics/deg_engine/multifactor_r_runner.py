@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import shutil
 import subprocess
@@ -103,6 +104,21 @@ def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[s
 
     output_path = _write_deg_table(root, result_id, rows)
     log_path = _write_run_log(root, result_id, task_run_id, bundle, run_log)
+    parameter_manifest_path = _write_parameter_manifest(root, result_id, parameter_manifest)
+    standard_package_dir = _write_standard_multifactor_deg_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        method="limma",
+        result_path=output_path,
+        parameter_manifest_path=parameter_manifest_path,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency,
+        engine_name="r_limma_multifactor",
+        engine_version=_package_version(dependency, "limma"),
+        command=run_log.get("command") if isinstance(run_log.get("command"), list) else [],
+    )
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     entry = ResultIndexEntry(
         result_id=result_id,
@@ -116,7 +132,11 @@ def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[s
         engine_name="r_limma_multifactor",
         engine_version=_package_version(dependency, "limma"),
         dependency_snapshot=dependency,
-        output_artifacts=({"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},),
+        output_artifacts=(
+            {"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},
+            {"artifact_type": "multifactor_deg_parameter_manifest", "path": str(parameter_manifest_path.relative_to(root)), "schema": "biomedpilot.multifactor_deg_parameters.v1"},
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+        ),
         plot_artifacts=(),
         report_artifacts=(),
         validation_status="passed",
@@ -141,6 +161,8 @@ def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[s
         "result_entry": registered,
         "result_table_path": str(output_path),
         "task_run_log_path": str(log_path),
+        "parameter_manifest_path": str(parameter_manifest_path),
+        "standard_result_package_dir": str(standard_package_dir),
         "parameter_manifest": parameter_manifest,
         "dependency_snapshot": dependency,
         "warnings": list(registered.get("warnings", []) or []),
@@ -198,6 +220,21 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
 
     output_path = _write_deg_table(root, result_id, rows)
     log_path = _write_run_log(root, result_id, task_run_id, bundle, run_log)
+    parameter_manifest_path = _write_parameter_manifest(root, result_id, parameter_manifest)
+    standard_package_dir = _write_standard_multifactor_deg_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        method="DESeq2",
+        result_path=output_path,
+        parameter_manifest_path=parameter_manifest_path,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency,
+        engine_name="r_deseq2_multifactor",
+        engine_version=_package_version(dependency, "DESeq2"),
+        command=run_log.get("command") if isinstance(run_log.get("command"), list) else [],
+    )
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     entry = ResultIndexEntry(
         result_id=result_id,
@@ -211,7 +248,11 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
         engine_name="r_deseq2_multifactor",
         engine_version=_package_version(dependency, "DESeq2"),
         dependency_snapshot=dependency,
-        output_artifacts=({"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},),
+        output_artifacts=(
+            {"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},
+            {"artifact_type": "multifactor_deg_parameter_manifest", "path": str(parameter_manifest_path.relative_to(root)), "schema": "biomedpilot.multifactor_deg_parameters.v1"},
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+        ),
         plot_artifacts=(),
         report_artifacts=(),
         validation_status="passed",
@@ -236,6 +277,8 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
         "result_entry": registered,
         "result_table_path": str(output_path),
         "task_run_log_path": str(log_path),
+        "parameter_manifest_path": str(parameter_manifest_path),
+        "standard_result_package_dir": str(standard_package_dir),
         "parameter_manifest": parameter_manifest,
         "dependency_snapshot": dependency,
         "warnings": list(registered.get("warnings", []) or []),
@@ -293,6 +336,21 @@ def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_
 
     output_path = _write_deg_table(root, result_id, rows)
     log_path = _write_run_log(root, result_id, task_run_id, bundle, run_log)
+    parameter_manifest_path = _write_parameter_manifest(root, result_id, parameter_manifest)
+    standard_package_dir = _write_standard_multifactor_deg_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        method="edgeR",
+        result_path=output_path,
+        parameter_manifest_path=parameter_manifest_path,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency,
+        engine_name="r_edger_multifactor",
+        engine_version=_package_version(dependency, "edgeR"),
+        command=run_log.get("command") if isinstance(run_log.get("command"), list) else [],
+    )
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     entry = ResultIndexEntry(
         result_id=result_id,
@@ -306,7 +364,11 @@ def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_
         engine_name="r_edger_multifactor",
         engine_version=_package_version(dependency, "edgeR"),
         dependency_snapshot=dependency,
-        output_artifacts=({"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},),
+        output_artifacts=(
+            {"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},
+            {"artifact_type": "multifactor_deg_parameter_manifest", "path": str(parameter_manifest_path.relative_to(root)), "schema": "biomedpilot.multifactor_deg_parameters.v1"},
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+        ),
         plot_artifacts=(),
         report_artifacts=(),
         validation_status="passed",
@@ -331,6 +393,8 @@ def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_
         "result_entry": registered,
         "result_table_path": str(output_path),
         "task_run_log_path": str(log_path),
+        "parameter_manifest_path": str(parameter_manifest_path),
+        "standard_result_package_dir": str(standard_package_dir),
         "parameter_manifest": parameter_manifest,
         "dependency_snapshot": dependency,
         "warnings": list(registered.get("warnings", []) or []),
@@ -357,9 +421,10 @@ result <- topTable(fit, coef="groupcase", number=Inf, sort.by="none")
 result$feature_id <- rownames(result)
 write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
 """
-    proc = subprocess.run([rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+    command = [rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)]
+    proc = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
     blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"limma_rscript_failed:{proc.returncode}"]
-    return {"status": "blocked" if blockers else "passed", "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
+    return {"status": "blocked" if blockers else "passed", "command": command, "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
 
 
 def _run_deseq2_rscript(rscript: str, matrix_path: Path, metadata_path: Path, output_path: Path) -> dict[str, Any]:
@@ -383,9 +448,10 @@ result <- as.data.frame(results(dds, name="group_case_vs_control"))
 result$feature_id <- rownames(result)
 write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
 """
-    proc = subprocess.run([rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
+    command = [rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)]
+    proc = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
     blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"deseq2_rscript_failed:{proc.returncode}"]
-    return {"status": "blocked" if blockers else "passed", "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
+    return {"status": "blocked" if blockers else "passed", "command": command, "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
 
 
 def _run_edger_rscript(rscript: str, matrix_path: Path, metadata_path: Path, output_path: Path) -> dict[str, Any]:
@@ -410,9 +476,10 @@ result <- topTags(test, n=Inf, sort.by="none")$table
 result$feature_id <- rownames(result)
 write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
 """
-    proc = subprocess.run([rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
+    command = [rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)]
+    proc = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
     blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"edger_rscript_failed:{proc.returncode}"]
-    return {"status": "blocked" if blockers else "passed", "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
+    return {"status": "blocked" if blockers else "passed", "command": command, "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
 
 
 def _detect_r_package(rscript: str, package: str) -> dict[str, Any]:
@@ -602,6 +669,13 @@ def _write_deg_table(root: Path, result_id: str, rows: list[dict[str, str]]) -> 
     return path
 
 
+def _write_parameter_manifest(root: Path, result_id: str, manifest: dict[str, Any]) -> Path:
+    path = root / "manifests" / "multifactor_deg" / f"{result_id}_parameters.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
 def _write_run_log(root: Path, result_id: str, task_run_id: str, bundle: dict[str, Any], rscript_log: dict[str, Any]) -> Path:
     path = root / "analysis" / "formal_deg" / f"{result_id}_run_log.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -618,6 +692,97 @@ def _write_run_log(root: Path, result_id: str, task_run_id: str, bundle: dict[st
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
+
+
+def _write_standard_multifactor_deg_result_package(
+    root: Path,
+    *,
+    result_id: str,
+    task_run_id: str,
+    method: str,
+    result_path: Path,
+    parameter_manifest_path: Path,
+    log_path: Path,
+    parameter_manifest: dict[str, Any],
+    dependency_snapshot: dict[str, Any],
+    engine_name: str,
+    engine_version: str,
+    command: list[Any],
+) -> Path:
+    package_dir = root / "analysis" / "standard_packages" / result_id
+    for dirname in ("tables", "plots", "reports", "logs"):
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+    table_name = result_path.name
+    (package_dir / "tables" / table_name).write_text(result_path.read_text(encoding="utf-8"), encoding="utf-8")
+    (package_dir / "logs" / log_path.name).write_text(log_path.read_text(encoding="utf-8"), encoding="utf-8")
+    (package_dir / "reports" / "README_limitations.md").write_text(
+        "\n".join(
+            [
+                "# Controlled multifactor DEG standard package",
+                "",
+                "This standard result package mirrors the controlled multifactor DEG result table for package-contract validation.",
+                "It preserves formula, contrast, batch/covariate design, dependency snapshot, and task log provenance.",
+                "It does not create plot artifacts, report-ready output, clinical interpretation, diagnosis, prognosis, or treatment recommendations.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    result_payload = {
+        "schema_version": "biomedpilot.analysis.result.v1",
+        "module_id": "deg",
+        "mode": "full",
+        "task_id": task_run_id,
+        "status": "passed",
+        "result_semantics": "formal_computed_result",
+        "summary": {
+            "message": f"Controlled multifactor DEG {method} R result mirrored into a standard result package.",
+            "clinical_conclusion_status": "not_generated",
+            "analysis_type": "multifactor_deg",
+            "method": method,
+            "source_result_id": result_id,
+            "design_formula": str(parameter_manifest.get("design_formula") or ""),
+            "contrast": parameter_manifest.get("contrast") if isinstance(parameter_manifest.get("contrast"), dict) else {},
+            "batch_variables": list(parameter_manifest.get("batch_variables", []) or []),
+            "covariates": list(parameter_manifest.get("covariates", []) or []),
+        },
+        "tables": [{"artifact_type": "deg_result_table", "path": f"tables/{table_name}"}],
+        "plots": [],
+        "reports": [{"artifact_type": "standard_package_limitations_report", "path": "reports/README_limitations.md"}],
+        "blockers": [],
+        "warnings": [
+            "standard_package_sidecar_for_existing_controlled_multifactor_deg_adapter",
+            "report_ready_not_enabled_by_standard_package",
+        ],
+        "created_at": now,
+    }
+    provenance_payload = {
+        "schema_version": "biomedpilot.analysis.provenance.v1",
+        "module_id": "deg",
+        "mode": "full",
+        "task_id": task_run_id,
+        "created_at": now,
+        "input_path": str(parameter_manifest_path),
+        "input_hash": _sha256_file(parameter_manifest_path),
+        "parameter_hash": _sha256_json(parameter_manifest),
+        "random_seed": None,
+        "engine": {"name": engine_name, "version": engine_version},
+        "runtime": {
+            "r_version": str(((dependency_snapshot.get("rscript") or {}) if isinstance(dependency_snapshot.get("rscript"), dict) else {}).get("version") or ""),
+            "bioconductor_version": str(dependency_snapshot.get("bioconductor_version") or ""),
+            "package_versions": _package_versions(dependency_snapshot),
+            "external_tool_versions": {},
+        },
+        "command": " ".join(str(item) for item in command),
+        "source_result_id": result_id,
+        "source_result_table_hash": _sha256_file(result_path),
+        "design_formula": str(parameter_manifest.get("design_formula") or ""),
+        "contrast": parameter_manifest.get("contrast") if isinstance(parameter_manifest.get("contrast"), dict) else {},
+    }
+    (package_dir / "result.json").write_text(json.dumps(result_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    (package_dir / "provenance.json").write_text(json.dumps(provenance_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return package_dir
 
 
 def _significance(logfc: float, fdr: float) -> str:
@@ -642,6 +807,29 @@ def _package_version(dependency: dict[str, Any], package: str) -> str:
     packages = dependency.get("r_backend", {}).get("packages", {}) if isinstance(dependency.get("r_backend"), dict) else {}
     status = packages.get(package, {}) if isinstance(packages, dict) else {}
     return str(status.get("version") or "unknown") if isinstance(status, dict) else "unknown"
+
+
+def _package_versions(dependency: dict[str, Any]) -> dict[str, str]:
+    packages = dependency.get("r_backend", {}).get("packages", {}) if isinstance(dependency.get("r_backend"), dict) else {}
+    versions: dict[str, str] = {}
+    if isinstance(packages, dict):
+        for name, status in packages.items():
+            if isinstance(status, dict) and status.get("version"):
+                versions[str(name)] = str(status.get("version"))
+    return versions
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _sha256_json(payload: dict[str, Any]) -> str:
+    normalized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(normalized).hexdigest()
 
 
 def _blocked(*blockers: str, **payload: Any) -> dict[str, Any]:
