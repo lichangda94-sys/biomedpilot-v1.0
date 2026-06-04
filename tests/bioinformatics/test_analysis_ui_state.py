@@ -166,6 +166,10 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert state["developer_diagnostics"]["standard_package_gate_rows"] == state["standard_package_gate_rows"]
     result_row = next(item for item in state["result_rows"] if item["result_id"] == "analysis-package-enrichment-mock-task")
     assert result_row["semantics"] == "testing level"
+    assert result_row["standard_package_status"] == "registered"
+    assert result_row["standard_package_validation_status"] == "passed"
+    assert result_row["standard_package_path"] == "analysis_results/enrichment-mock-task"
+    assert result_row["standard_package_artifacts"] == "tables=1; plots=0; reports=1; logs=2"
     assert _action(state, "report_ready_export")["enabled"] is False
     assert _file_set(tmp_path) == before
 
@@ -186,6 +190,27 @@ def test_analysis_center_state_surfaces_standard_package_artifact_gate_blockers(
     assert rows["Standard package artifact manifest"]["status"] == "blocked"
     assert "declared_artifact_tables_0_file_missing" in rows["Standard package artifact manifest"]["blockers"]
     assert any("declared_artifact_tables_0_file_missing" in item for item in state["top_blockers"])
+
+
+def test_result_rows_show_missing_standard_package_for_non_package_results(tmp_path: Path) -> None:
+    register_result(
+        tmp_path,
+        ResultIndexEntry(
+            result_id="legacy-result",
+            task_run_id="task",
+            task_type="deg",
+            result_semantics="testing_level",
+            validation_status="passed",
+        ),
+    )
+
+    state = build_analysis_center_state(tmp_path)
+    result_row = next(item for item in state["result_rows"] if item["result_id"] == "legacy-result")
+
+    assert result_row["standard_package_status"] == "missing_standard_result_package"
+    assert result_row["standard_package_validation_status"] == "missing"
+    assert result_row["standard_package_path"] == ""
+    assert result_row["standard_package_artifacts"] == "None"
 
 
 def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:

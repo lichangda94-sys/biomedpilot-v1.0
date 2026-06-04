@@ -103,7 +103,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         legacy_asset_pipeline=legacy_pipeline,
         enrichment_gate_state=enrichment_gates,
     )
-    result_rows = build_result_gate_rows(result_entries)
+    result_rows = build_result_gate_rows(result_entries, standard_package_catalog=standard_package_catalog)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
     standard_package_gate_rows = build_standard_package_gate_rows(standard_package_catalog)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency, enrichment_backend_gate=enrichment_backend_gate)
@@ -934,7 +934,8 @@ def _formal_deg_gate_row(gate: str, status: object, blockers: object, warnings: 
     }
 
 
-def build_result_gate_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_result_gate_rows(entries: list[dict[str, Any]], *, standard_package_catalog: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    standard_package_rows = _standard_package_rows_by_result_id(standard_package_catalog or {})
     if not entries:
         return [
             {
@@ -946,6 +947,10 @@ def build_result_gate_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]
                 "validation_status": "not_validated",
                 "plot_status": "blocked: no source result",
                 "report_status": "blocked: result_index_missing_or_empty",
+                "standard_package_status": "missing",
+                "standard_package_validation_status": "not_applicable",
+                "standard_package_path": "",
+                "standard_package_artifacts": "None",
                 "blockers": "result_index_missing_or_empty",
                 "warnings": "None",
             }
@@ -957,9 +962,12 @@ def build_result_gate_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]
         warnings = _list(entry.get("warnings"))
         plot_status = _plot_status(entry, semantics)
         report_status = "candidate only" if entry.get("report_ready_eligible") else "draft only / not report-ready"
+        result_id = str(entry.get("result_id") or entry.get("result_name") or "")
+        standard_package = standard_package_rows.get(result_id, {})
+        artifact_counts = standard_package.get("artifact_counts") if isinstance(standard_package.get("artifact_counts"), dict) else {}
         rows.append(
             {
-                "result_id": str(entry.get("result_id") or entry.get("result_name") or ""),
+                "result_id": result_id,
                 "semantics": label_semantics(semantics),
                 "input_package_id": str(entry.get("input_package_id") or ""),
                 "engine": _engine_text(entry),
@@ -967,11 +975,28 @@ def build_result_gate_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]
                 "validation_status": str(entry.get("validation_status") or "not_validated"),
                 "plot_status": plot_status,
                 "report_status": report_status,
+                "standard_package_status": "registered" if standard_package else "missing_standard_result_package",
+                "standard_package_validation_status": str(standard_package.get("validation_status") or "missing"),
+                "standard_package_path": str(standard_package.get("package_path_relative") or ""),
+                "standard_package_artifacts": _standard_package_artifact_count_text(artifact_counts),
                 "blockers": compact_list(blockers),
                 "warnings": compact_list(warnings),
             }
         )
     return rows
+
+
+def _standard_package_rows_by_result_id(catalog: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    rows = catalog.get("rows")
+    if not isinstance(rows, list | tuple):
+        return {}
+    return {str(row.get("result_id") or ""): row for row in rows if isinstance(row, dict) and row.get("result_id")}
+
+
+def _standard_package_artifact_count_text(counts: dict[str, Any]) -> str:
+    if not counts:
+        return "None"
+    return "; ".join(f"{key}={counts.get(key, 0)}" for key in ("tables", "plots", "reports", "logs"))
 
 
 def build_standard_package_gate_rows(catalog: dict[str, Any]) -> list[dict[str, Any]]:

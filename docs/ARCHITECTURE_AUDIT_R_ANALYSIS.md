@@ -88,6 +88,7 @@ Standard package discovery is now available to the UI state layer:
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
 - `build_analysis_center_state()` now also exposes `standard_package_gate_rows`, giving the UI direct gate rows for catalog source policy, package validation status, and artifact-manifest validity without inspecting module-private output folders.
+- `build_result_gate_rows()` now joins result-index rows with the standard package catalog by `result_id`, so Analysis Center result rows can show standard package registration status, validation status, package path, and artifact counts without reading module-specific R outputs.
 - The catalog now exposes `worker_boundary_type` and `worker_migration_status`, so standard R worker packages can be distinguished from legacy service-adapter sidecars.
 - The catalog also exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`, so Analysis Center diagnostics can use standard package audit metadata rather than module-private R outputs.
 - The catalog now includes a standard `artifact_manifest` for declared `tables`, `plots`, `reports`, and package `logs`; this gives UI/detail surfaces a contract-safe path list without scanning module-private output folders.
@@ -217,7 +218,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, exploratory immune/TME scoring, and local correlation results are now partially remediated with sidecar packages that are explicitly labeled as legacy service-adapter sidecars.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, fake `locked` entries with placeholder values are rejected, and Reactome/GO/KEGG runtime downloads are blocked by default, but resources still need real version, source, hash, license, and cache-path locks.
-5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state has a standard package catalog, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
+5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state now exposes standard package catalog gates and per-result standard package status, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
 
 ## 4. P0/P1/P2/P3 Issues
 

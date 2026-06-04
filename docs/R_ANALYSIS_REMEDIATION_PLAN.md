@@ -135,6 +135,8 @@ Update: standard package validation now blocks malformed, missing, absolute, pac
 
 Update: Analysis Center state now exposes `standard_package_gate_rows` for standard package catalog source, package validation, and artifact-manifest validity. The UI can display package-contract blockers without reading module-private R outputs.
 
+Update: Analysis Center result rows now join current result-index entries with the standard package catalog by `result_id`, showing standard package registration status, validation status, package path, and artifact counts. Missing standard packages remain visible as `missing_standard_result_package` instead of being silently treated as valid result output.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -155,6 +157,7 @@ Acceptance:
 - Analysis Center can read declared standard-package artifact paths for tables, plots, reports, and logs without module-private output coupling. **Completed for catalog artifact manifest.**
 - Standard package validation blocks declared table/plot/report artifacts that are missing or outside their standard package directories. **Completed for artifact declaration gate.**
 - Analysis Center exposes standard package validation/artifact blockers as gate rows. **Completed for UI gate preview.**
+- Analysis Center result rows expose per-result standard package registration, validation, path, and artifact-count status. **Completed for result-row package preview.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
