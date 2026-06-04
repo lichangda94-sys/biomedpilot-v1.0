@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +23,13 @@ REQUIRED_MODULES = {
 
 def read_json(path: Path) -> dict[str, object]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def rscript_path() -> str:
+    path = shutil.which("Rscript")
+    if path is None:
+        pytest.skip("Rscript is not available in this environment")
+    return path
 
 
 def test_analysis_registry_declares_standard_modules_modes_and_package_contract() -> None:
@@ -180,6 +191,95 @@ def test_default_source_tree_does_not_install_r_packages_in_request_flow() -> No
                 if needle in text:
                     offenders.append(f"{path.relative_to(ROOT)}:{needle}")
     assert offenders == []
+
+
+def test_standard_r_runner_has_no_runtime_package_installer_or_library_imports() -> None:
+    runner = (ROOT / "analysis" / "runners" / "run_module.R").read_text(encoding="utf-8")
+
+    assert "install.packages" not in runner
+    assert "BiocManager::install" not in runner
+    assert "pak::pkg_install" not in runner
+    assert "remotes::install_github" not in runner
+    assert "library(" not in runner
+    assert "require(" not in runner
+    assert "run_module.R <input_json> <output_dir> <mode>" in runner
+    assert "result.json" in runner
+    assert "provenance.json" in runner
+
+
+def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Path) -> None:
+    rscript = rscript_path()
+    output_dir = tmp_path / "r-runner-output"
+    input_json = ROOT / "analysis" / "fixtures" / "inputs" / "enrichment" / "module_input.json"
+
+    completed = subprocess.run(
+        [rscript, str(ROOT / "analysis" / "runners" / "run_module.R"), str(input_json), str(output_dir), "mock"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    result = read_json(output_dir / "result.json")
+    provenance = read_json(output_dir / "provenance.json")
+    assert result["module_id"] == "enrichment"
+    assert result["task_id"] == "enrichment-mock-fixture"
+    assert result["status"] == "passed"
+    assert result["result_semantics"] == "testing_level"
+    assert "mock_result_not_scientific_output" in result["warnings"]
+    assert (output_dir / "tables" / "mock_summary.tsv").is_file()
+    assert (output_dir / "reports" / "README_mock.md").is_file()
+    assert (output_dir / "logs" / "worker.log").is_file()
+    assert provenance["module_id"] == "enrichment"
+    assert provenance["task_id"] == "enrichment-mock-fixture"
+    assert provenance["runtime"]["r_version"] != "not_required_for_mock"  # type: ignore[index]
+    assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
+    assert provenance["input_hash"] != "fixture"
+    assert "analysis/runners/run_module.R" in provenance["command"]
+
+
+def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_path: Path) -> None:
+    rscript = rscript_path()
+    output_dir = tmp_path / "r-runner-full-output"
+    payload = read_json(ROOT / "analysis" / "fixtures" / "inputs" / "enrichment" / "module_input.json")
+    payload["mode"] = "full"
+    input_json = tmp_path / "full_input.json"
+    input_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    completed = subprocess.run(
+        [rscript, str(ROOT / "analysis" / "runners" / "run_module.R"), str(input_json), str(output_dir), "full"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    result = read_json(output_dir / "result.json")
+    provenance = read_json(output_dir / "provenance.json")
+    assert result["module_id"] == "enrichment"
+    assert result["mode"] == "full"
+    assert result["status"] == "blocked"
+    assert "standard_worker_mode_not_enabled:full" in result["blockers"]
+    assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
+    assert (output_dir / "logs" / "worker.log").is_file()
+
+
+def test_standard_r_runner_blocks_input_manifest_mode_mismatch(tmp_path: Path) -> None:
+    rscript = rscript_path()
+    output_dir = tmp_path / "r-runner-mismatch-output"
+    input_json = ROOT / "analysis" / "fixtures" / "inputs" / "enrichment" / "module_input.json"
+
+    completed = subprocess.run(
+        [rscript, str(ROOT / "analysis" / "runners" / "run_module.R"), str(input_json), str(output_dir), "full"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 2
+    result = read_json(output_dir / "result.json")
+    assert result["status"] == "blocked"
+    assert "module_input_mode_arg_mismatch:input=mock,arg=full" in result["blockers"]
 
 
 def test_app_dev_dockerfile_excludes_heavy_analysis_dependency_names() -> None:

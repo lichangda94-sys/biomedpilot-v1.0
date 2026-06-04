@@ -45,6 +45,15 @@ Mock mode now has fixed per-module inputs and fixed per-module standard result p
 
 The task bridge copies the module fixture package for `mock` mode and stamps current task metadata. Lite/full modes remain blocked.
 
+The R-side standard entrypoint has also been hardened:
+
+- `analysis/runners/run_module.R <input_json> <output_dir> <mode>`
+- `mock` mode copies the module fixture package and writes fresh result/provenance/log metadata.
+- `lite` and `full` write blocked standard result packages with provenance instead of executing.
+- CLI mode and input manifest mode mismatches are blocked.
+- Paths containing spaces are supported.
+- No R package install/download or `library(...)` import is used.
+
 A first environment isolation scaffold now also exists:
 
 - `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
@@ -68,7 +77,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | --- | --- | --- |
 | Unified analysis module directory | WARN | Added `analysis/` and `analysis/modules/<module_id>/module.json`; existing algorithms still live under `app/bioinformatics/**`. |
 | Module registry | PASS | Added `analysis/registry/analysis_modules.json`. |
-| Unified entrypoint | WARN | Added `analysis/runners/run_module.R` for mock boundary; existing modules do not call it yet. |
+| Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock and blocked lite/full standard packages; existing real modules do not call it yet. |
 | Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; lite/full remain blocked pending migration. |
 | Unified input/output schema | PASS | Added input and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; existing real algorithms still use varied structures. |
@@ -202,7 +211,7 @@ New architecture boundary files:
 ## 8. Completed Changes in This Audit
 
 - Established `analysis/` registry and schema scaffold.
-- Added base R mock runner without package installation.
+- Added base R standard runner without package installation; mock writes standard packages and lite/full writes blocked standard packages.
 - Added generic mock input and standard mock result package.
 - Added per-module fixed mock inputs and fixed standard result package fixtures for all registered modules.
 - Added resource manifest skeleton with blocked full resources.

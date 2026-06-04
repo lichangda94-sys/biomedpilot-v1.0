@@ -50,6 +50,8 @@ Remaining:
 
 Update: the first result package validator and mock-mode backend adapter now exist under `app/analysis_runtime/`. All registered modules now have fixed mock input and standard result package fixtures.
 
+Update: the R-side standard runner now accepts `<input_json> <output_dir> <mode>`, copies module-specific mock packages in `mock` mode, writes blocked standard packages for `lite` and `full`, and blocks CLI/input mode mismatches. It remains a contract runner only; no real R algorithms are activated.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -61,6 +63,7 @@ Scope:
 Acceptance:
 
 - Every registered module can run `mock` mode through the task system using its fixed fixture package. **Completed for mock mode.**
+- The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 

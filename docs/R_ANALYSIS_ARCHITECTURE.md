@@ -58,7 +58,13 @@ renv/
   renv.chem-full.lock
 ```
 
-`analysis/runners/run_module.R` is a base R mock-mode boundary runner. It does not install packages and does not enable full analysis. Existing Bioinformatics algorithms still need staged migration into this contract.
+`analysis/runners/run_module.R` is a base R boundary runner. It accepts:
+
+```text
+Rscript analysis/runners/run_module.R <input_json> <output_dir> <mode>
+```
+
+In `mock` mode it copies the module-specific fixed standard result package declared by the registry, then writes fresh `result.json`, `provenance.json`, and `logs/worker.log` metadata for the current task. For `lite` and `full` it writes a blocked standard package with provenance instead of executing analysis. The runner does not install packages and does not enable full analysis. Existing Bioinformatics algorithms still need staged migration into this contract.
 
 The main-backend side has a narrow mock-mode bridge:
 
@@ -136,6 +142,7 @@ logs/
 | --- | --- |
 | Registry/schema | Present. |
 | Per-module mock result packages | Present for all registered modules. |
+| Standard R runner | Present for mock mode and blocked lite/full standard packages; no scientific execution enabled. |
 | Mock task bridge | Present; copies module-specific fixture packages and registers result-index entries. |
 | Lite worker | Not enabled. |
 | Full worker | Not enabled. |
