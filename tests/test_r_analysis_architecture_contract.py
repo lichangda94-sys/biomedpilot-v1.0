@@ -632,3 +632,37 @@ def test_app_dev_dockerfile_excludes_heavy_analysis_dependency_names() -> None:
 
     offenders = [name for name in heavy_dependency_names if name in app_dev]
     assert offenders == []
+
+
+def test_default_app_dependency_manifests_exclude_heavy_r_and_external_tool_dependencies() -> None:
+    heavy_dependency_names = (
+        "ReactomePA",
+        "reactome.db",
+        "Seurat",
+        "CellChat",
+        "GSVA",
+        "AutoDock",
+        "AutoDock Vina",
+        "GROMACS",
+        "survminer",
+        "clusterProfiler",
+        "DESeq2",
+        "edgeR",
+        "limma",
+        "fgsea",
+        "msigdbr",
+    )
+    default_dependency_files = (
+        ROOT / "requirements.txt",
+        ROOT / "pyproject.toml",
+        ROOT / "docker" / "Dockerfile.app-dev",
+        ROOT / "renv" / "renv.app.lock",
+    )
+    offenders: list[str] = []
+    for path in default_dependency_files:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for name in heavy_dependency_names:
+            if name in text:
+                offenders.append(f"{path.relative_to(ROOT)}:{name}")
+
+    assert offenders == []
