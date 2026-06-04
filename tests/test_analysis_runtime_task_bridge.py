@@ -877,6 +877,7 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         task_center = TaskCenter(project_root / "tasks" / "tasks.json")
         payload = module_input(tmp_path, mode="full", module_id=module_id)
         module = next(item for item in registry["modules"] if item["module_id"] == module_id)
+        module_manifest = read_json(Path(module["module_manifest"]))
         full_mode_blocker = str(module["modes"]["full"].get("blocker") or f"analysis_mode_not_enabled:full")
         expected_resource_blockers = full_mode_resource_blockers(module_id)
 
@@ -915,6 +916,17 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert provenance["runtime"]["bioconductor_version"] == "not_executed"  # type: ignore[index]
         assert provenance["runtime"]["package_versions"] == {}  # type: ignore[index]
         assert provenance["runtime"]["external_tool_versions"] == {}  # type: ignore[index]
+        environment = provenance["analysis_environment"]
+        assert environment["schema_version"] == "biomedpilot.analysis_environment_snapshot.v1"  # type: ignore[index]
+        assert environment["mode"] == "full"  # type: ignore[index]
+        assert environment["module_id"] == module_id  # type: ignore[index]
+        assert environment["environment_id"] == module["full_environment"]  # type: ignore[index]
+        assert environment["dockerfile"] == module_manifest["dockerfile"]  # type: ignore[index]
+        assert environment["renv_lock"] == module_manifest["environment_lock"]  # type: ignore[index]
+        assert environment["full_mode_requires_isolated_environment"] is True  # type: ignore[index]
+        assert environment["runtime_package_install"] == "forbidden"  # type: ignore[index]
+        assert environment["runtime_resource_download"] == "forbidden"  # type: ignore[index]
+        assert environment["resource_lock_status"]["blockers"] == expected_resource_blockers  # type: ignore[index]
         assert provenance["command"] == "analysis_task_bridge_mode_gate"
         assert invocation["module_id"] == module_id
         assert invocation["mode"] == "full"
@@ -927,6 +939,10 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert task_center.list_tasks()[0].status == TaskStatus.FAILED
         assert result_index["results"][0]["result_semantics"] == "blocked"
         assert result_index["results"][0]["validation_status"] == "blocked"
+        dependency_environment = result_index["results"][0]["dependency_snapshot"]["analysis_environment"]
+        assert dependency_environment["environment_id"] == module["full_environment"]
+        assert dependency_environment["dockerfile"] == module_manifest["dockerfile"]
+        assert dependency_environment["renv_lock"] == module_manifest["environment_lock"]
         assert result_index["results"][0]["report_ready_eligible"] is False
         assert result_index["results"][0]["log_artifacts"][1]["artifact_type"] == "analysis_worker_invocation_manifest"
         assert catalog["status"] == "blocked"
@@ -949,8 +965,14 @@ def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execu
     assert "analysis_resource_not_locked:reactome_full" in result_json["blockers"]
     assert "analysis_resource_not_locked:msigdb_full" in result_json["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
+    assert provenance["analysis_environment"]["environment_id"] == "r-bio-full"  # type: ignore[index]
+    assert provenance["analysis_environment"]["dockerfile"] == "docker/Dockerfile.r-bio-full"  # type: ignore[index]
+    assert provenance["analysis_environment"]["renv_lock"] == "renv/renv.bio-full.lock"  # type: ignore[index]
+    assert provenance["analysis_environment"]["status"] == "blocked_full_mode_resource_or_tool_lock"  # type: ignore[index]
+    assert "analysis_resource_not_locked:reactome_full" in provenance["analysis_environment"]["resource_lock_status"]["blockers"]  # type: ignore[index]
     assert task_center.list_tasks()[0].status == TaskStatus.FAILED
     assert registry["results"][0]["result_semantics"] == "blocked"
+    assert registry["results"][0]["dependency_snapshot"]["analysis_environment"]["environment_id"] == "r-bio-full"
     assert registry["results"][0]["report_ready_eligible"] is False
 
 

@@ -86,6 +86,8 @@ Lite support is registry-gated. Any module that declares `modes.lite.supported=t
 
 Full mode is also registry-gated, but currently as a blocking contract rather than an activation contract. Any module that declares `modes.full` is covered by a focused task-bridge test that requests `mode=full` with `worker_backend="rscript"` and verifies the bridge stops before worker execution, writes a blocked standard package, registers a blocked result-index entry, exposes the package in the standard catalog, and records non-executed R/Bioconductor/package/tool provenance.
 
+For blocked `full` requests, `provenance.json` also records an `analysis_environment` snapshot. The same snapshot is copied into the result-index dependency snapshot. It records the target isolated environment id, Dockerfile, renv lock, heavy-dependency policy, resource-lock requirement, external-tool-lock requirement, authoritative environment-registry flags, no runtime-install/resource-download policies, module manifest path, required resource ids, and current resource/tool lock blockers. This is audit metadata only; it does not activate full-mode execution.
+
 In default mock mode, the bridge copies the module-specific fixed standard result package declared by the registry, then stamps the current `task_id`, hashes, timestamp, and worker log. This keeps UI/API/task-flow development deterministic without requiring R.
 
 For worker-boundary validation, the bridge also supports an explicit `worker_backend="rscript"` path. That path writes `module_input.json`, invokes `analysis/runners/run_module.R`, validates the resulting standard package, and registers the package using the worker provenance. If `Rscript` is unavailable, it writes a blocked standard package instead of raising a traceback or installing R.
@@ -192,6 +194,7 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Registered lite bridge acceptance | Present; all registry-declared lite modules are exercised through the same task bridge, standard R worker, standard result package validator, result index, and catalog path. |
 | Registered full bridge block gate | Present; all registry-declared full modules are blocked before worker execution and still emit standard package, result-index, catalog, and non-executed provenance records. |
+| Full-mode environment snapshot | Present for bridge-blocked full requests; `provenance.json` and result-index dependency snapshots record target Dockerfile, renv lock, resource/tool lock policy, and blockers without enabling execution. |
 | Worker invocation manifest | Present for all standard task-bridge outcomes; stored as `logs/worker_invocation.json` and registered in result index log artifacts. |
 | Worker invocation validation | Present for task-bridge and standard-worker packages; missing or invalid invocation manifests block standard package validation. |
 | Shared external R command boundary | Present for transitional controlled adapters; reduces scattered subprocess handling but does not complete isolated standard-worker migration. |
