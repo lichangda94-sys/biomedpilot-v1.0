@@ -27,6 +27,7 @@ Completed in this audit:
 - `analysis/fixtures/inputs/<module_id>/module_input.json`
 - `analysis/fixtures/outputs/<module_id>/mock_result_package/**`
 - `analysis/resources/manifest.json`
+- `app/analysis_runtime/package_catalog.py`
 - `app/analysis_runtime/registry.py`
 - `app/analysis_runtime/r_worker.py`
 - `app/analysis_runtime/resources.py`
@@ -58,6 +59,8 @@ Update: the main-backend task bridge now has an explicit `worker_backend="rscrip
 
 Update: the resource manifest now declares required full-mode resources for enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics. `app/analysis_runtime/resources.py` validates the manifest and adds module-specific full-mode blockers until real locks exist.
 
+Update: the standard package catalog now reads result-index `standard_result_package` artifacts and is exposed in Analysis Center state as `standard_analysis_packages`. This is a read-only UI bridge; detailed module result views still need migration.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -71,6 +74,7 @@ Acceptance:
 - Every registered module can run `mock` mode through the task system using its fixed fixture package. **Completed for mock mode.**
 - The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
 - The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
+- Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 

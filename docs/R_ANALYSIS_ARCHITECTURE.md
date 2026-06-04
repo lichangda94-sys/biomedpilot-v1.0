@@ -70,6 +70,7 @@ The main-backend side has a narrow mock-mode bridge:
 
 ```text
 app/analysis_runtime/
+  package_catalog.py
   registry.py
   r_worker.py
   resources.py
@@ -84,6 +85,8 @@ In default mock mode, the bridge copies the module-specific fixed standard resul
 For worker-boundary validation, the bridge also supports an explicit `worker_backend="rscript"` path. That path writes `module_input.json`, invokes `analysis/runners/run_module.R`, validates the resulting standard package, and registers the package using the worker provenance. If `Rscript` is unavailable, it writes a blocked standard package instead of raising a traceback or installing R.
 
 Resource governance is centralized in `analysis/resources/manifest.json` and validated by `app/analysis_runtime/resources.py`. The manifest records mock fixtures plus blocked full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and molecular dynamics templates. These entries are not installations and do not enable full mode; they are explicit cache/version/hash/license requirements that must be satisfied before future full workers can run.
+
+`app/analysis_runtime/package_catalog.py` builds a read-only catalog from result-index `standard_result_package` artifacts. `build_analysis_center_state()` exposes this catalog as `standard_analysis_packages`, so Analysis Center can discover standard packages without reading R package internals or scanning arbitrary output folders. Existing module-specific result views still need staged migration.
 
 ## Module Manifests
 
@@ -150,6 +153,7 @@ logs/
 | Per-module mock result packages | Present for all registered modules. |
 | Standard R runner | Present for mock mode and blocked lite/full standard packages; no scientific execution enabled. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
+| Standard package catalog | Present; Analysis Center state exposes result-index-derived package summaries. |
 | Lite worker | Not enabled. |
 | Full worker | Not enabled. |
 | Docker/renv split | Scaffolded only; not build/restoration proven. |

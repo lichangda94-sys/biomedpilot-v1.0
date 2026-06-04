@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.analysis_runtime import run_analysis_module_task, validate_standard_result_package
+from app.analysis_runtime import build_standard_analysis_package_catalog, run_analysis_module_task, validate_standard_result_package
 from app.analysis_runtime.registry import load_analysis_module_registry
 from app.bioinformatics.results.registry import load_registry
 from app.shared.task_center.service import TaskCenter, TaskStatus
@@ -61,6 +61,25 @@ def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index
     assert registry["results"][0]["result_id"] == "analysis-package-enrichment-mock-task"
     assert registry["results"][0]["result_semantics"] == "testing_level"
     assert registry["results"][0]["output_artifacts"][0]["artifact_type"] == "standard_result_package"
+
+
+def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path: Path) -> None:
+    run_analysis_module_task(tmp_path, module_input(tmp_path))
+
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = catalog["rows"][0]
+
+    assert catalog["status"] == "passed"
+    assert catalog["source_policy"] == "result_index_standard_result_package_artifacts_only"
+    assert catalog["package_count"] == 1
+    assert row["result_id"] == "analysis-package-enrichment-mock-task"
+    assert row["module_id"] == "enrichment"
+    assert row["mode"] == "mock"
+    assert row["status"] == "passed"
+    assert row["validation_status"] == "passed"
+    assert row["engine_name"] == "biomedpilot_analysis_task_bridge"
+    assert row["package_path_relative"] == "analysis_results/enrichment-mock-task"
+    assert "mock_result_not_scientific_output" in row["warnings"]
 
 
 def test_all_registered_modules_run_mock_bridge_with_standard_package(tmp_path: Path) -> None:

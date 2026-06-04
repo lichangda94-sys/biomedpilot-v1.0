@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.analysis_runtime import run_analysis_module_task
 from app.bioinformatics.analysis_ui.state import build_analysis_center_state, build_dependency_rows
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
@@ -129,6 +130,28 @@ def test_result_plot_and_report_gate_preview_preserves_non_formal_semantics(tmp_
     assert result_row["report_status"] == "draft only / not report-ready"
     assert _action(state, "report_ready_export")["enabled"] is False
     assert "unverified_testing_exploratory_or_imported_results_present" in _action(state, "report_ready_export")["disabled_reason"]
+
+
+def test_analysis_center_state_exposes_standard_analysis_package_catalog_without_formal_upgrade(tmp_path: Path) -> None:
+    run_analysis_module_task(tmp_path, _module_input(tmp_path))
+    before = _file_set(tmp_path)
+
+    state = build_analysis_center_state(tmp_path)
+
+    catalog = state["standard_analysis_packages"]
+    row = catalog["rows"][0]
+    assert catalog["source_policy"] == "result_index_standard_result_package_artifacts_only"
+    assert catalog["package_count"] == 1
+    assert row["module_id"] == "enrichment"
+    assert row["mode"] == "mock"
+    assert row["result_semantics"] == "testing_level"
+    assert row["validation_status"] == "passed"
+    assert row["artifact_counts"]["tables"] == 1
+    assert state["developer_diagnostics"]["standard_analysis_package_catalog"]["package_count"] == 1
+    result_row = next(item for item in state["result_rows"] if item["result_id"] == "analysis-package-enrichment-mock-task")
+    assert result_row["semantics"] == "testing level"
+    assert _action(state, "report_ready_export")["enabled"] is False
+    assert _file_set(tmp_path) == before
 
 
 def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
@@ -258,6 +281,22 @@ def _asset(asset_id: str, asset_type: str, repository: str, path: Path, *, value
         "analysis_ready": True,
         "expression_value_type": value_type,
         "gene_id_type": gene_id_type,
+    }
+
+
+def _module_input(tmp_path: Path, *, module_id: str = "enrichment") -> dict[str, object]:
+    return {
+        "schema_version": "biomedpilot.analysis.module_input.v1",
+        "module_id": module_id,
+        "mode": "mock",
+        "task_id": f"{module_id}-mock-task",
+        "project_id": tmp_path.name,
+        "inputs": {
+            "input_package_id": "input-package-001",
+            "source_dataset_id": "dataset-001",
+        },
+        "parameters": {"comparison": "case_vs_control"},
+        "runtime": {"random_seed": 7, "requested_environment": "app-dev"},
     }
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from app.analysis_runtime.package_catalog import build_standard_analysis_package_catalog
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.acquisition_adapters.legacy_contract import LEGACY_ADAPTER_MANIFEST_DIR
 from app.bioinformatics.acquisition_adapters.materialization import LEGACY_MATERIALIZATION_MANIFEST_PATH
@@ -64,6 +65,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     records = load_task_records(root)
     result_index = load_result_index(root)
     result_entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
+    standard_package_catalog = build_standard_analysis_package_catalog(root)
     deg_dependency = check_deg_backend_dependencies()
     survival_dependency = check_survival_backend_dependencies()
     enrichment_backend_gate = build_enrichment_backend_gate(root, analysis_type="ora")
@@ -105,8 +107,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency, enrichment_backend_gate=enrichment_backend_gate)
     survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency, km_gate_state=survival_gates)
-    blockers = _dedupe([*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]])
-    warnings = _dedupe([*resolver.get("warnings", [])] + [item for row in package_rows for item in row["raw_warnings"]] + [item for row in dependency_rows for item in row["raw_warnings"]])
+    blockers = _dedupe([*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]] + _list(standard_package_catalog.get("blockers")))
+    warnings = _dedupe([*resolver.get("warnings", [])] + [item for row in package_rows for item in row["raw_warnings"]] + [item for row in dependency_rows for item in row["raw_warnings"]] + _list(standard_package_catalog.get("warnings")))
     return {
         "schema_version": "biomedpilot.analysis_center_ui_state.v1",
         "project_root": str(root),
@@ -124,6 +126,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "multifactor_deg_gate_rows": multifactor_deg_gates["gate_rows"],
         "legacy_asset_pipeline": legacy_pipeline,
         "result_rows": result_rows,
+        "standard_analysis_packages": standard_package_catalog,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
         "enrichment_gate_rows": enrichment_gates["gate_rows"],
@@ -133,6 +136,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "analysis_task_center": center,
             "task_records": records,
             "result_index": result_index,
+            "standard_analysis_package_catalog": standard_package_catalog,
             "analysis_input_resolver": resolver,
             "deg_dependency_snapshot": deg_dependency,
             "formal_deg_gate_state": deg_gates,

@@ -66,6 +66,12 @@ Resource governance now has a programmatic gate:
 - `app/analysis_runtime/resources.py` validates required fields, forbids runtime downloads, and reports module-specific full-mode blockers.
 - Full mode remains blocked until these resources have real version, hash, license, and cache-path locks.
 
+Standard package discovery is now available to the UI state layer:
+
+- `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
+- `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
+- Testing-level mock packages remain testing-level and do not become formal/report-ready results.
+
 A first environment isolation scaffold now also exists:
 
 - `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
@@ -94,7 +100,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified input/output schema | PASS | Added input and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
-| Frontend consumes standard package only | FAIL | Current UI still consumes module-specific result indexes and service payloads. |
+| Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts; existing detailed result views still consume module-specific result indexes and service payloads. |
 | Main backend task-system invocation | WARN | A mock-mode bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock packages. Existing analysis calls still include direct service calls. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
@@ -113,7 +119,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, but they still need real version, source, hash, license, and cache-path locks.
-5. **P2/P3: UI and backend are still aware of module-specific payloads.** Current UI should eventually consume standard result package metadata rather than individual R package output shapes.
+5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state has a standard package catalog, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
 
 ## 4. P0/P1/P2/P3 Issues
 
@@ -133,7 +139,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
 | No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; real locks pending. |
 | Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
-| UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge only; current UI algorithms not migrated. |
+| UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge and standard package catalog; current UI algorithms not migrated. |
 
 ### P2
 
@@ -231,6 +237,7 @@ New architecture boundary files:
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
+- Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.
