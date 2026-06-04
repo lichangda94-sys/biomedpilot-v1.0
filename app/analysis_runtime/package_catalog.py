@@ -32,6 +32,14 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             result_payload = _read_json(package_dir / "result.json")
             provenance_payload = _read_json(package_dir / "provenance.json")
             invocation_payload = _read_json(package_dir / "logs" / "worker_invocation.json")
+            detail = build_standard_analysis_package_detail(
+                package_dir,
+                project_root=root,
+                validation=validation,
+                result_payload=result_payload,
+                provenance_payload=provenance_payload,
+                invocation_payload=invocation_payload,
+            )
             provenance_boundary = provenance_payload.get("worker_boundary") if isinstance(provenance_payload.get("worker_boundary"), dict) else {}
             invocation_boundary = invocation_payload.get("worker_boundary") if isinstance(invocation_payload.get("worker_boundary"), dict) else {}
             worker_boundary = invocation_boundary or provenance_boundary
@@ -62,7 +70,9 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                         "tables": len(result_payload.get("tables") or []),
                         "plots": len(result_payload.get("plots") or []),
                         "reports": len(result_payload.get("reports") or []),
+                        "logs": len(detail["artifact_manifest"]["logs"]),
                     },
+                    "artifact_manifest": detail["artifact_manifest"],
                     "blockers": list(dict.fromkeys([*validation.get("blockers", []), *result_payload.get("blockers", [])])),
                     "warnings": list(dict.fromkeys([*validation.get("warnings", []), *result_payload.get("warnings", [])])),
                 }
@@ -77,6 +87,67 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
         "rows": rows,
         "blockers": blockers,
         "warnings": [item for row in rows for item in row["warnings"]],
+    }
+
+
+def build_standard_analysis_package_detail(
+    package_dir: str | Path,
+    *,
+    project_root: str | Path | None = None,
+    validation: dict[str, Any] | None = None,
+    result_payload: dict[str, Any] | None = None,
+    provenance_payload: dict[str, Any] | None = None,
+    invocation_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Read a standard package as a UI-safe artifact manifest.
+
+    The detail view is constrained to the standard result package directory. It
+    does not inspect module-private output folders or infer artifacts from R
+    package-specific naming conventions.
+    """
+
+    package = Path(package_dir).expanduser().resolve()
+    root = Path(project_root).expanduser().resolve() if project_root else package
+    result = result_payload if result_payload is not None else _read_json(package / "result.json")
+    provenance = provenance_payload if provenance_payload is not None else _read_json(package / "provenance.json")
+    invocation = invocation_payload if invocation_payload is not None else _read_json(package / "logs" / "worker_invocation.json")
+    package_validation = validation or validate_standard_result_package(package)
+    artifact_manifest = {
+        "schema_version": "biomedpilot.analysis.standard_package_artifact_manifest.v1",
+        "source_policy": "standard_result_package_declared_artifacts_and_logs_only",
+        "tables": _declared_artifacts(package, root, result, "tables"),
+        "plots": _declared_artifacts(package, root, result, "plots"),
+        "reports": _declared_artifacts(package, root, result, "reports"),
+        "logs": _log_artifacts(package, root),
+    }
+    return {
+        "schema_version": "biomedpilot.analysis.standard_package_detail.v1",
+        "package_path": str(package),
+        "package_path_relative": _relative_or_absolute(root, package),
+        "validation_status": str(package_validation.get("status") or "blocked"),
+        "result": {
+            "schema_version": str(result.get("schema_version") or ""),
+            "module_id": str(result.get("module_id") or ""),
+            "mode": str(result.get("mode") or ""),
+            "task_id": str(result.get("task_id") or ""),
+            "status": str(result.get("status") or ""),
+            "result_semantics": str(result.get("result_semantics") or ""),
+            "summary": result.get("summary") if isinstance(result.get("summary"), dict) else {},
+            "warnings": _list(result.get("warnings")),
+            "blockers": _list(result.get("blockers")),
+        },
+        "provenance": {
+            "schema_version": str(provenance.get("schema_version") or ""),
+            "engine": provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {},
+            "runtime": provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {},
+            "input_hash": str(provenance.get("input_hash") or ""),
+            "parameter_hash": str(provenance.get("parameter_hash") or ""),
+            "command": str(provenance.get("command") or ""),
+        },
+        "worker_invocation": invocation,
+        "artifact_manifest": artifact_manifest,
+        "blockers": list(package_validation.get("blockers", [])),
+        "warnings": list(package_validation.get("warnings", [])),
     }
 
 
@@ -111,6 +182,73 @@ def _relative_or_absolute(root: Path, path: Path) -> str:
         return str(path.relative_to(root))
     except ValueError:
         return str(path)
+
+
+def _declared_artifacts(package: Path, root: Path, result: dict[str, Any], group: str) -> list[dict[str, Any]]:
+    artifacts = result.get(group)
+    if not isinstance(artifacts, list | tuple):
+        return []
+    rows: list[dict[str, Any]] = []
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        rows.append(_artifact_row(package, root, artifact, group=group))
+    return rows
+
+
+def _log_artifacts(package: Path, root: Path) -> list[dict[str, Any]]:
+    logs_dir = package / "logs"
+    if not logs_dir.is_dir():
+        return []
+    rows = []
+    for path in sorted(item for item in logs_dir.iterdir() if item.is_file()):
+        rows.append(
+            _artifact_row(
+                package,
+                root,
+                {"artifact_type": _log_artifact_type(path.name), "path": f"logs/{path.name}"},
+                group="logs",
+            )
+        )
+    return rows
+
+
+def _artifact_row(package: Path, root: Path, artifact: dict[str, Any], *, group: str) -> dict[str, Any]:
+    declared_path = str(artifact.get("path") or "")
+    path = (package / declared_path).resolve()
+    inside_package = _is_relative_to(path, package)
+    return {
+        "artifact_type": str(artifact.get("artifact_type") or artifact.get("type") or ""),
+        "group": group,
+        "declared_path": declared_path,
+        "path": str(path),
+        "path_relative": _relative_or_absolute(root, path),
+        "package_relative_path": _relative_or_absolute(package, path) if inside_package else declared_path,
+        "exists": path.is_file() if inside_package else False,
+        "size_bytes": path.stat().st_size if inside_package and path.is_file() else 0,
+        "within_standard_package": inside_package,
+        "source_policy": "standard_result_package_only",
+    }
+
+
+def _log_artifact_type(filename: str) -> str:
+    if filename == "worker_invocation.json":
+        return "analysis_worker_invocation_manifest"
+    if filename == "worker.log":
+        return "analysis_worker_log"
+    return "analysis_log"
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _list(value: object) -> list[Any]:
+    return list(value) if isinstance(value, list | tuple) else []
 
 
 def _read_json(path: Path) -> dict[str, Any]:

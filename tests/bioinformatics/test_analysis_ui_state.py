@@ -152,6 +152,11 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
     assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
     assert row["artifact_counts"]["tables"] == 1
+    assert row["artifact_counts"]["logs"] == 2
+    assert row["artifact_manifest"]["tables"][0]["package_relative_path"] == "tables/mock_summary.tsv"
+    assert row["artifact_manifest"]["tables"][0]["exists"] is True
+    assert row["artifact_manifest"]["reports"][0]["package_relative_path"] == "reports/README_mock.md"
+    assert {item["artifact_type"] for item in row["artifact_manifest"]["logs"]} == {"analysis_worker_log", "analysis_worker_invocation_manifest"}
     assert state["developer_diagnostics"]["standard_analysis_package_catalog"]["package_count"] == 1
     result_row = next(item for item in state["result_rows"] if item["result_id"] == "analysis-package-enrichment-mock-task")
     assert result_row["semantics"] == "testing level"

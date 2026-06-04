@@ -85,6 +85,7 @@ Standard package discovery is now available to the UI state layer:
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
 - The catalog now exposes `worker_boundary_type` and `worker_migration_status`, so standard R worker packages can be distinguished from legacy service-adapter sidecars.
 - The catalog also exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`, so Analysis Center diagnostics can use standard package audit metadata rather than module-private R outputs.
+- The catalog now includes a standard `artifact_manifest` for declared `tables`, `plots`, `reports`, and package `logs`; this gives UI/detail surfaces a contract-safe path list without scanning module-private output folders.
 - `validate_standard_result_package()` now blocks passed full/formal packages if they are missing required provenance fields, runtime/package/tool version containers, command, hashes, random seed field, engine metadata, or worker-boundary metadata for non-standard-worker sidecars.
 - Testing-level mock packages remain testing-level and do not become formal/report-ready results.
 
@@ -158,7 +159,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified input/output schema | PASS | Added input and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
-| Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts, worker invocation diagnostics, and worker-boundary metadata; existing detailed result views still consume module-specific result indexes and service payloads. |
+| Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts, worker invocation diagnostics, worker-boundary metadata, and a standard artifact manifest; existing detailed result views still consume module-specific result indexes and service payloads. |
 | Main backend task-system invocation | WARN | A mock/lite/full-blocking bridge now creates `TaskCenter` entries and result-index entries; registry-declared lite modules are covered through the standard R runner, result package validator, result index, and catalog, while registry-declared full modules are blocked before worker execution with standard package provenance. Existing controlled enrichment and multi-factor DEG sidecars are now labeled as legacy service-adapter sidecars; direct service subprocess calls still remain. |
 | Worker invocation audit trail | WARN | All standard task-bridge outcomes now persist `logs/worker_invocation.json` and register it as `analysis_worker_invocation_manifest`; legacy service-adapter sidecars still have their own log shapes. |
 | Worker invocation schema validation | PASS | Added `analysis/schemas/output/worker_invocation.schema.json`; standard package validation blocks missing or invalid invocation manifests for task-bridge and standard-worker packages while preserving legacy sidecar compatibility. |
@@ -199,7 +200,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
 | No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; fake locked resources with placeholder values are blocked; real locks pending. |
 | Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
-| UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge, standard package catalog, and controlled enrichment sidecar output; current UI algorithms not fully migrated. |
+| UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge, standard package catalog/artifact manifest, and controlled enrichment sidecar output; current UI algorithms not fully migrated. |
 
 ### P2
 
@@ -306,6 +307,7 @@ New architecture boundary files:
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
 - Exposed worker invocation diagnostics in the standard package catalog and Analysis Center state.
+- Added standard package artifact manifests for declared tables/plots/reports plus package logs, exposed through the catalog for UI-safe result browsing.
 - Added the first standard worker lite paths: DEG base R two-group fixture, enrichment base R ORA, survival base R KM/log-rank, univariate base R clinical association, multivariate base R linear model, immune infiltration base R signature mean heatmap, and spatial transcriptomics base R spot QC/coordinate SVG fixtures producing testing-level standard result packages.
 - Added docking and molecular dynamics lite external-tool adapter contract fixtures that produce standard command-manifest packages without executing AutoDock Vina/GROMACS or generating scientific docking/MD results.
 - Added controlled enrichment ORA/GSEA standard result package sidecars registered in result index v2.

@@ -109,6 +109,8 @@ Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the 
 
 Update: the standard package catalog now exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`. Analysis Center can display these diagnostics from the standard package catalog instead of reading module-private R outputs.
 
+Update: `build_standard_analysis_package_detail()` now exposes a UI-safe `artifact_manifest` for declared standard-package tables, plots, reports, and package logs. Catalog rows include this manifest so Analysis Center can discover artifact paths from the standard package contract instead of module-private output conventions.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -125,6 +127,7 @@ Acceptance:
 - Transitional controlled R adapters route Rscript commands through the shared analysis runtime boundary instead of owning direct R subprocess calls. **Completed for enrichment and multi-factor DEG adapters.**
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
 - Analysis Center can read worker invocation diagnostics from the standard package catalog. **Completed for task-bridge standard packages.**
+- Analysis Center can read declared standard-package artifact paths for tables, plots, reports, and logs without module-private output coupling. **Completed for catalog artifact manifest.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**

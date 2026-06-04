@@ -9,6 +9,7 @@ import pytest
 
 from app.analysis_runtime import (
     build_standard_analysis_package_catalog,
+    build_standard_analysis_package_detail,
     full_mode_resource_blockers,
     run_analysis_module_task,
     run_external_r_command,
@@ -226,7 +227,34 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["worker_migration_status"] == "mock_fixture_contract"
     assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
     assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
+    assert row["artifact_counts"] == {"tables": 1, "plots": 0, "reports": 1, "logs": 2}
+    manifest = row["artifact_manifest"]
+    assert manifest["source_policy"] == "standard_result_package_declared_artifacts_and_logs_only"
+    assert manifest["tables"][0]["package_relative_path"] == "tables/mock_summary.tsv"
+    assert manifest["tables"][0]["exists"] is True
+    assert manifest["tables"][0]["within_standard_package"] is True
+    assert manifest["reports"][0]["package_relative_path"] == "reports/README_mock.md"
+    assert {item["artifact_type"] for item in manifest["logs"]} == {"analysis_worker_log", "analysis_worker_invocation_manifest"}
+    assert all(item["source_policy"] == "standard_result_package_only" for group in ("tables", "reports", "logs") for item in manifest[group])
     assert "mock_result_not_scientific_output" in row["warnings"]
+
+
+def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+
+    detail = build_standard_analysis_package_detail(package_dir, project_root=tmp_path)
+
+    assert detail["schema_version"] == "biomedpilot.analysis.standard_package_detail.v1"
+    assert detail["validation_status"] == "passed"
+    assert detail["result"]["module_id"] == "enrichment"
+    assert detail["result"]["result_semantics"] == "testing_level"
+    assert detail["provenance"]["engine"]["name"] == "biomedpilot_analysis_task_bridge"  # type: ignore[index]
+    assert detail["worker_invocation"]["worker_backend"] == "python_fixture"
+    assert detail["artifact_manifest"]["tables"][0]["path_relative"] == "analysis_results/enrichment-mock-task/tables/mock_summary.tsv"
+    assert detail["artifact_manifest"]["tables"][0]["size_bytes"] > 0
+    assert detail["artifact_manifest"]["plots"] == []
+    assert len(detail["artifact_manifest"]["logs"]) == 2
 
 
 def test_task_bridge_standard_package_validation_requires_worker_invocation_manifest(tmp_path: Path) -> None:
