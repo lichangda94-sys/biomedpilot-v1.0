@@ -18,6 +18,16 @@ runtime:
   r:
     required_for_report_v1: false
     required_for_real_analysis: true
+    dependency_policy: detect-first; no automatic installation from Settings, Analysis Center, task bridge, or standard R worker.
+    runtime_install_allowed: false
+    default_app_dependency: false
+    packaging_impact: R/Bioconductor packages remain external worker/environment capabilities and are not bundled into the default app-dev runtime.
+
+r_packages_policy:
+  purpose: capability and dependency detection inventory only; not an install manifest.
+  runtime_install_allowed: false
+  default_app_dependency: false
+  download_allowed: false
 
 r_packages:
   core_analysis:

@@ -712,3 +712,29 @@ def test_default_app_dependency_manifests_exclude_heavy_r_and_external_tool_depe
                 offenders.append(f"{path.relative_to(ROOT)}:{name}")
 
     assert offenders == []
+
+
+def test_bioinformatics_package_requirements_config_is_detect_first_not_install_manifest() -> None:
+    config = ROOT / "config" / "bioinformatics" / "package_requirements.yaml"
+    text = config.read_text(encoding="utf-8", errors="ignore")
+    forbidden_install_markers = (
+        "install.packages",
+        "BiocManager::install",
+        "pak::pkg_install",
+        "remotes::install_github",
+        "runtime_install_allowed: true",
+        "default_app_dependency: true",
+        "download_allowed: true",
+    )
+    required_policy_markers = (
+        "dependency_policy: detect-first; no automatic installation",
+        "runtime_install_allowed: false",
+        "default_app_dependency: false",
+        "purpose: capability and dependency detection inventory only; not an install manifest.",
+    )
+
+    offenders = [marker for marker in forbidden_install_markers if marker in text]
+    missing_policy = [marker for marker in required_policy_markers if marker not in text]
+
+    assert offenders == []
+    assert missing_policy == []

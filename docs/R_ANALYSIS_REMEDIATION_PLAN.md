@@ -143,6 +143,8 @@ Update: standard package catalog rows now expose `input_hash`, `parameter_hash`,
 
 Update: the current Bioinformatics Results Browser now displays a standard package artifact manifest table for declared `tables`, `plots`, `reports`, and package `logs`. The table is derived from the standard package catalog and uses package-relative paths only.
 
+Update: `config/bioinformatics/package_requirements.yaml` now records R/Bioconductor packages as a detect-first capability inventory only. It explicitly forbids runtime install/download and default app dependency use, and an architecture test guards it against becoming an install manifest.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -167,6 +169,7 @@ Acceptance:
 - Results Browser displays per-result standard package registration, validation, path, and artifact-count status in the user-visible result table. **Completed for current results table preview.**
 - Results Browser displays standard package provenance and worker-boundary rows including runtime, engine, command, hashes, seed, worker backend, invocation status, boundary type, and migration status. **Completed for current provenance/worker preview.**
 - Results Browser displays standard package artifact manifest rows for declared tables, plots, reports, and logs without scanning module-private output folders. **Completed for current artifact manifest preview.**
+- Bioinformatics R package requirement config remains a detect-first capability inventory, not a runtime install manifest or default app dependency source. **Completed for dependency policy guard.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
