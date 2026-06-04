@@ -117,10 +117,17 @@ def test_cell_imagej_workflows_from_latest_labtools_commit_are_registered(tmp_pa
     assert "circularity=" in generic.macro_text
     assert roi_intensity.output_csv_path == tmp_path / "out" / "roi_intensity_results.csv"
     assert "missing_roi_zip" in roi_intensity.macro_text
+    assert "roi_original_name" in roi_intensity.macro_text
+    assert "getRoiOriginalName(roiIndex)" in roi_intensity.macro_text
+    assert 'ROI_" + (roiIndex + 1)' in roi_intensity.macro_text
     assert "corrected_integrated_density" in roi_intensity.macro_text
     assert streak.output_csv_path == tmp_path / "out" / "migration_streak_roi_results.csv"
     assert "residual_streak_area_px,residual_fraction" in streak.macro_text
     assert 'roiManager("reset")' in streak.macro_text
+    assert 'streak_polarity = "bright";' in streak.macro_text
+    assert "streak_blur_sigma = 2.0;" in streak.macro_text
+    assert "streak_min_area_px = 500;" in streak.macro_text
+    assert 'signal_max_area_px = "Infinity";' in streak.macro_text
     assert skeleton.output_csv_path == tmp_path / "out" / "cell_skeleton_morphology_results.csv"
     assert 'run("Analyze Skeleton (2D/3D)"' in skeleton.macro_text
     assert 'save_skeleton_image = "false";' in skeleton.macro_text

@@ -10,6 +10,7 @@ from app.labtools.image_analysis.audit_models import ImageAnalysisAuditRecord
 from app.labtools.image_analysis.cell_imagej_workflows import (
     CellImageJExperimentSpec,
     CellImageJMacroBundle,
+    CellImageJNotFoundError,
     CellImageJRunResult,
     build_imagej_run_command,
     get_cell_imagej_experiment,
@@ -91,6 +92,7 @@ __all__ = [
     "FluorescenceROI",
     "CellImageJExperimentSpec",
     "CellImageJMacroBundle",
+    "CellImageJNotFoundError",
     "CellImageJRunResult",
     "analyze_fluorescence_roi",
     "WoundHealingMetrics",

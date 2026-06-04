@@ -126,14 +126,14 @@ CELL_IMAGEJ_EXPERIMENTS: tuple[CellImageJExperimentSpec, ...] = (
         result_csv_name="migration_streak_roi_results.csv",
         macro_file_name="migration_streak_roi_analysis.ijm",
         default_parameters={
-            "streak_threshold_method": "Minimum",
-            "streak_polarity": "dark",
-            "streak_blur_sigma": 10.0,
-            "streak_min_area_px": 10000,
+            "streak_threshold_method": "Default",
+            "streak_polarity": "bright",
+            "streak_blur_sigma": 2.0,
+            "streak_min_area_px": 500,
             "signal_threshold_method": "Default",
             "signal_polarity": "dark",
-            "signal_min_area_px": 3000,
-            "signal_max_area_px": 8000,
+            "signal_min_area_px": 30,
+            "signal_max_area_px": "Infinity",
         },
     ),
     CellImageJExperimentSpec(
@@ -254,6 +254,14 @@ def resolve_imagej_executable(explicit_path: str | Path | None = None) -> Path:
         env_value = os.environ.get(env_name)
         if env_value:
             candidates.append(env_value)
+    candidates.extend(
+        (
+            Path("/Applications/Fiji.app"),
+            Path("/Applications/ImageJ.app"),
+            Path.home() / "Applications" / "Fiji.app",
+            Path.home() / "Applications" / "ImageJ.app",
+        )
+    )
 
     for candidate in candidates:
         resolved = _resolve_imagej_candidate(Path(candidate).expanduser())
@@ -486,7 +494,7 @@ def _render_roi_intensity_macro(input_dir: Path, output_dir: Path, parameters: M
 roiZip = roi_zip_path;
 if (roiZip == "")
     roiZip = inputDir + "ROIs.zip";
-File.saveString("image,status,roi_index,roi_name,area_px,mean_gray,integrated_density,background_mean,corrected_mean,corrected_integrated_density\\n", outputCsv);
+File.saveString("image,status,roi_index,roi_original_name,area_px,mean_gray,integrated_density,background_mean,corrected_mean,corrected_integrated_density\\n", outputCsv);
 if (!File.exists(roiZip)) {
     File.append("\\\"__config__\\\",missing_roi_zip,-1,\\\"\\\",0,0,0,0,0,0\\n", outputCsv);
 } else {
@@ -508,7 +516,7 @@ if (!File.exists(roiZip)) {
         }
         for (roiIndex = 0; roiIndex < roiCount; roiIndex++) {
             roiManager("select", roiIndex);
-            roiName = "roi_" + roiIndex;
+            roiName = getRoiOriginalName(roiIndex);
             getStatistics(area, meanGray);
             integratedDensity = area * meanGray;
             correctedMean = meanGray - backgroundMean;
@@ -685,6 +693,17 @@ def _macro_header(input_dir: Path, output_dir: Path, result_csv_name: str, param
             "function csvEscape(value) {",
             '    escaped = replace(value, "\\\"", "\\\"\\\"");',
             '    return "\\"" + escaped + "\\"";',
+            "}",
+            "",
+            "function getRoiOriginalName(roiIndex) {",
+            '    roiName = call("ij.plugin.frame.RoiManager.getName", roiIndex);',
+            '    if (roiName == "" || roiName == "null") {',
+            '        roiManager("select", roiIndex);',
+            "        roiName = Roi.getName();",
+            "    }",
+            '    if (roiName == "" || roiName == "null")',
+            '        roiName = "ROI_" + (roiIndex + 1);',
+            "    return roiName;",
             "}",
             "",
             "function safeFileStem(name) {",

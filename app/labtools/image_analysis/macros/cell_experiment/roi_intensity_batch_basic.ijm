@@ -10,7 +10,7 @@ outputCsv = outputDir + "roi_intensity_results.csv";
 roi_zip_path = "";
 background_roi_index = -1;
 measurement_channel = 1;
-File.saveString("image,status,roi_index,roi_name,area_px,mean_gray,integrated_density,background_mean,corrected_mean,corrected_integrated_density\n", outputCsv);
+File.saveString("image,status,roi_index,roi_original_name,area_px,mean_gray,integrated_density,background_mean,corrected_mean,corrected_integrated_density\n", outputCsv);
 if (roi_zip_path == "")
     File.append("\"__config__\",missing_roi_zip,-1,\"\",0,0,0,0,0,0\n", outputCsv);
 print("Use BioMedPilot runtime generation after selecting an ROI zip.");

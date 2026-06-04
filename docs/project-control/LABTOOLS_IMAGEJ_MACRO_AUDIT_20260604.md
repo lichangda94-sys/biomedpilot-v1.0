@@ -8,6 +8,7 @@ Source commits:
 
 - `2fa005d Add migration streak ROI ImageJ workflow`
 - `f77bfe4 Add planned ImageJ image workflows`
+- `c418eba Fix gated cell ImageJ macro integration scope`
 
 Target runtime: Integration `app/labtools/image_analysis/**` and LabTools cell image analysis UI.
 
@@ -21,6 +22,7 @@ This audit intentionally does not merge or copy the standalone `labtools/` packa
 | `migration_streak_roi` | Included as ImageJ gated workflow and macro template | Fits migration/scratch ROI analysis. Included with manual review requirement because threshold strategy still needs real-image validation. |
 | `roi_intensity_batch` | Included as gated workflow and macro template | Useful for ROI intensity workflows. If no ROI zip is selected, macro writes `missing_roi_zip` blocker instead of a formal result. |
 | `cell_skeleton_morphology` | Included as Fiji-required gated workflow and macro template | Requires Fiji Skeletonize / Analyze Skeleton capability. Registered with `fiji` minimum engine requirement. |
+| `c418eba` gated scope correction | Included as scoped runtime patch | Removes WB/CLI expansion from the accepted scope, updates migration-streak defaults, adds ImageJ/Fiji app path discovery, preserves ROI names with fallback, and adds a real-sample Fiji gate test. |
 
 Integration changes:
 
@@ -30,6 +32,7 @@ Integration changes:
 - Added static built-in macro templates under `app/labtools/image_analysis/macros/cell_experiment/`.
 - Added UI template selector and load action to the cell ImageJ macro preparation panel.
 - Added tests for registry, renderer output, run-request generation, and UI template loading.
+- Added synthetic skeleton sample validation that runs only when a local Fiji/ImageJ executable is available.
 
 ## Deferred Or Returned To Neptors
 
@@ -38,9 +41,8 @@ Integration changes:
 | `dot_blot_grid` / `labtools/western_blot/imagej.py` | Not included in this cell-image batch | Move to a separate WB/protein-image remediation batch with WB UI wiring and sample validation. |
 | `labtools/__main__.py` CLI additions | Not included | Current Integration app does not use the standalone package CLI. Provide an Integration-specific CLI or app action plan if needed. |
 | Standalone README/docs deltas | Not included | Rewrite against Integration app paths and UI gates before adding docs. |
-| ROI name preservation in ROI intensity macro | Needs improvement | Current Integration-safe renderer uses deterministic `roi_<index>` names. Neptors should validate a reliable ImageJ ROI Manager name retrieval method before requiring original ROI labels. |
-| `migration_streak_roi` threshold defaults | Needs sample validation | Validate on representative scratch/migration images and provide recommended threshold presets per staining/background type. |
-| `cell_skeleton_morphology` Fiji plugin dependency | Needs engine validation | Provide a Fiji sample-run checklist proving Skeletonize / Analyze Skeleton commands are present and output CSVs are stable. |
+| Representative migration/scratch threshold presets | Needs sample validation | `c418eba` conservative defaults are integrated, but Neptors should still validate presets by staining/background type on real images. |
+| Fiji skeleton output stability on real user images | Needs engine validation | Synthetic sample gate is integrated; Neptors should provide real-image fixtures and expected CSV tolerances for production confidence. |
 
 ## Current Gate Statement
 
