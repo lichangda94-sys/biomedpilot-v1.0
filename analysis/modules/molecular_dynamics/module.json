@@ -27,6 +27,8 @@
     "default_app_dependency": false
   },
   "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+  "result_payload_schema": "analysis/schemas/output/result.schema.json",
+  "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json",
   "result_package_required": ["result.json", "provenance.json", "tables", "plots", "reports", "logs"],
   "external_tool_policy": "R_adapter_calls_GROMACS_in_chem_gpu_environment_only"
 }

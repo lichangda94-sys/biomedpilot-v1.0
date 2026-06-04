@@ -26,6 +26,8 @@ REQUIRED_MODULES = {
     "docking",
     "molecular_dynamics",
 }
+RESULT_PAYLOAD_SCHEMA = "analysis/schemas/output/result.schema.json"
+PROVENANCE_PAYLOAD_SCHEMA = "analysis/schemas/output/provenance.schema.json"
 
 
 def read_json(path: Path) -> dict[str, object]:
@@ -44,9 +46,12 @@ def test_analysis_registry_declares_standard_modules_modes_and_package_contract(
 
     assert registry["schema_version"] == "biomedpilot.analysis_modules.v1"
     assert registry["standard_entrypoint"] == "analysis/runners/run_module.R"
-    assert registry["standard_result_package"] == {
-        "required_files": ["result.json", "provenance.json"],
-        "required_directories": ["tables", "plots", "reports", "logs"],
+    standard_package = registry["standard_result_package"]
+    assert standard_package["required_files"] == ["result.json", "provenance.json"]
+    assert standard_package["required_directories"] == ["tables", "plots", "reports", "logs"]
+    assert standard_package["payload_schemas"] == {
+        "result.json": RESULT_PAYLOAD_SCHEMA,
+        "provenance.json": PROVENANCE_PAYLOAD_SCHEMA,
     }
     modules = {item["module_id"]: item for item in registry["modules"]}  # type: ignore[index]
     assert REQUIRED_MODULES <= set(modules)
@@ -58,6 +63,10 @@ def test_analysis_registry_declares_standard_modules_modes_and_package_contract(
         assert "lite" in modes
         assert "full" in modes
         assert module["result_package_contract"] == "analysis/schemas/output/result_package.schema.json"
+        assert module["result_payload_schema"] == RESULT_PAYLOAD_SCHEMA
+        assert module["provenance_payload_schema"] == PROVENANCE_PAYLOAD_SCHEMA
+        assert (ROOT / module["result_payload_schema"]).is_file()
+        assert (ROOT / module["provenance_payload_schema"]).is_file()
         assert module["analysis_environment"]
         assert (ROOT / module["module_manifest"]).exists()
 
@@ -97,6 +106,10 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
         assert manifest["input_schema"] == "analysis/schemas/input/module_input.schema.json"
         assert manifest["output_schema"] == "analysis/schemas/output/result_package.schema.json"
         assert manifest["result_package_contract"] == "analysis/schemas/output/result_package.schema.json"
+        assert manifest["result_payload_schema"] == RESULT_PAYLOAD_SCHEMA
+        assert manifest["provenance_payload_schema"] == PROVENANCE_PAYLOAD_SCHEMA
+        assert manifest["result_payload_schema"] == module["result_payload_schema"]
+        assert manifest["provenance_payload_schema"] == module["provenance_payload_schema"]
         assert manifest["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
         assert modes["mock"]["supported"] is True
         assert (ROOT / modes["mock"]["fixture_input"]).is_file()

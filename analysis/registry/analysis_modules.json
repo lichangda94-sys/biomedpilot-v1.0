@@ -1,185 +1,425 @@
 {
-  "schema_version": "biomedpilot.analysis_modules.v1",
-  "policy": {
-    "frontend_boundary": "submit_tasks_and_consume_standard_result_packages_only",
-    "main_backend_boundary": "task_queue_status_file_management_result_index_only",
-    "analysis_worker_boundary": "R_and_external_scientific_tools_run_only_in_dedicated_analysis_environments",
-    "runtime_install_policy": "forbidden_in_user_request_flow",
-    "default_development_policy": "app_dev_must_start_without_full_analysis_dependencies"
-  },
-  "standard_entrypoint": "analysis/runners/run_module.R",
-  "standard_result_package": {
-    "required_files": [
-      "result.json",
-      "provenance.json"
-    ],
-    "required_directories": [
-      "tables",
-      "plots",
-      "reports",
-      "logs"
+    "schema_version": "biomedpilot.analysis_modules.v1",
+    "policy": {
+        "frontend_boundary": "submit_tasks_and_consume_standard_result_packages_only",
+        "main_backend_boundary": "task_queue_status_file_management_result_index_only",
+        "analysis_worker_boundary": "R_and_external_scientific_tools_run_only_in_dedicated_analysis_environments",
+        "runtime_install_policy": "forbidden_in_user_request_flow",
+        "default_development_policy": "app_dev_must_start_without_full_analysis_dependencies"
+    },
+    "standard_entrypoint": "analysis/runners/run_module.R",
+    "standard_result_package": {
+        "required_files": [
+            "result.json",
+            "provenance.json"
+        ],
+        "payload_schemas": {
+            "result.json": "analysis/schemas/output/result.schema.json",
+            "provenance.json": "analysis/schemas/output/provenance.schema.json"
+        },
+        "required_directories": [
+            "tables",
+            "plots",
+            "reports",
+            "logs"
+        ]
+    },
+    "modules": [
+        {
+            "module_id": "deg",
+            "title": "Differential expression analysis",
+            "current_adapter_status": "existing_controlled_python_and_r_contracts_pending_standard_worker_migration",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/deg/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/deg/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/deg/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-bio-core",
+                    "result_semantics": "testing_level",
+                    "capability": "base_r_two_group_deg_fixture",
+                    "clinical_conclusion_policy": "not_generated"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "full_r_worker_container_not_available"
+                }
+            },
+            "analysis_environment": "r-bio-core",
+            "full_environment": "r-bio-full",
+            "module_manifest": "analysis/modules/deg/module.json",
+            "result_index_task_types": [
+                "deg",
+                "recomputed_deg",
+                "differential_expression"
+            ],
+            "heavy_dependencies": [
+                "limma",
+                "DESeq2",
+                "edgeR",
+                "statsmodels",
+                "scipy"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "survival",
+            "title": "Survival analysis",
+            "current_adapter_status": "existing_python_contracts_pending_r_worker_migration",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/survival/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/survival/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/survival/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-bio-core",
+                    "result_semantics": "testing_level",
+                    "capability": "base_r_km_logrank_fixture",
+                    "clinical_conclusion_policy": "not_generated"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "full_r_worker_container_not_available"
+                }
+            },
+            "analysis_environment": "r-bio-core",
+            "full_environment": "r-bio-full",
+            "module_manifest": "analysis/modules/survival/module.json",
+            "result_index_task_types": [
+                "survival",
+                "survival_km_logrank",
+                "cox_univariate"
+            ],
+            "heavy_dependencies": [
+                "survival",
+                "survminer"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "univariate",
+            "title": "Univariate clinical association",
+            "current_adapter_status": "contract_required_before_formal_r_worker",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/univariate/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/univariate/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/univariate/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-bio-core",
+                    "result_semantics": "testing_level",
+                    "capability": "base_r_univariate_clinical_association_fixture",
+                    "clinical_conclusion_policy": "not_generated"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "full_r_worker_container_not_available"
+                }
+            },
+            "analysis_environment": "r-bio-core",
+            "full_environment": "r-bio-full",
+            "module_manifest": "analysis/modules/univariate/module.json",
+            "result_index_task_types": [
+                "univariate",
+                "clinical_association"
+            ],
+            "heavy_dependencies": [
+                "survival"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "multivariate",
+            "title": "Multivariate clinical association",
+            "current_adapter_status": "contract_required_before_formal_r_worker",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/multivariate/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/multivariate/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/multivariate/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-bio-core",
+                    "result_semantics": "testing_level",
+                    "capability": "base_r_multivariate_lm_fixture",
+                    "clinical_conclusion_policy": "not_generated"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "full_r_worker_container_not_available"
+                }
+            },
+            "analysis_environment": "r-bio-core",
+            "full_environment": "r-bio-full",
+            "module_manifest": "analysis/modules/multivariate/module.json",
+            "result_index_task_types": [
+                "multivariate"
+            ],
+            "heavy_dependencies": [
+                "survival",
+                "glmnet"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "enrichment",
+            "title": "ORA and preranked GSEA enrichment",
+            "current_adapter_status": "existing_controlled_adapters_pending_standard_worker_wrapper",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/enrichment/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/enrichment/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/enrichment/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-bio-core",
+                    "result_semantics": "testing_level",
+                    "capability": "base_r_hypergeometric_ora_fixture",
+                    "full_resource_policy": "not_used_in_lite_mode"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "full_resource_manifest_and_container_not_available"
+                }
+            },
+            "analysis_environment": "r-bio-core",
+            "full_environment": "r-bio-full",
+            "module_manifest": "analysis/modules/enrichment/module.json",
+            "result_index_task_types": [
+                "enrichment",
+                "ora",
+                "gsea",
+                "gsea_preranked"
+            ],
+            "heavy_dependencies": [
+                "clusterProfiler",
+                "fgsea",
+                "ReactomePA",
+                "reactome.db",
+                "msigdbr"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "immune_infiltration",
+            "title": "Immune infiltration heatmap",
+            "current_adapter_status": "python_contracts_exist_for_scoring_pending_r_worker_boundary",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/immune_infiltration/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-bio-core",
+                    "result_semantics": "testing_level",
+                    "capability": "base_r_signature_mean_heatmap_fixture",
+                    "clinical_conclusion_policy": "not_generated",
+                    "full_resource_policy": "not_used_in_lite_mode"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "full_r_worker_container_not_available"
+                }
+            },
+            "analysis_environment": "r-bio-core",
+            "full_environment": "r-bio-full",
+            "module_manifest": "analysis/modules/immune_infiltration/module.json",
+            "result_index_task_types": [
+                "immune_infiltration",
+                "immune_tme_scoring"
+            ],
+            "heavy_dependencies": [
+                "GSVA",
+                "GSEABase",
+                "limma"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "correlation",
+            "title": "Expression correlation analysis",
+            "current_adapter_status": "existing_python_testing_level_sidecar_pending_standard_worker_migration",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/correlation/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/correlation/mock_result_package"
+                },
+                "lite": {
+                    "supported": false,
+                    "blocker": "correlation_lite_standard_r_worker_not_enabled"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "full_r_worker_container_not_available"
+                }
+            },
+            "analysis_environment": "r-bio-core",
+            "full_environment": "r-bio-full",
+            "module_manifest": "analysis/modules/correlation/module.json",
+            "result_index_task_types": [
+                "correlation"
+            ],
+            "heavy_dependencies": [],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "spatial_transcriptomics",
+            "title": "Spatial transcriptomics",
+            "current_adapter_status": "planned_not_current_runtime",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/spatial_transcriptomics/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-spatial-full",
+                    "result_semantics": "testing_level",
+                    "capability": "base_r_spatial_spot_qc_fixture_no_heavy_spatial_packages",
+                    "heavy_spatial_packages": "not_used_in_lite_mode"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "r_spatial_full_container_not_available"
+                }
+            },
+            "analysis_environment": "r-spatial-full",
+            "full_environment": "r-spatial-full",
+            "module_manifest": "analysis/modules/spatial_transcriptomics/module.json",
+            "result_index_task_types": [
+                "spatial_transcriptomics"
+            ],
+            "heavy_dependencies": [
+                "Seurat",
+                "CellChat",
+                "spacexr"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "docking",
+            "title": "Molecular docking",
+            "current_adapter_status": "planned_external_tool_adapter_only",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/docking/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/docking/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/docking/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-chem-full",
+                    "result_semantics": "testing_level",
+                    "capability": "autodock_vina_command_manifest_fixture_no_execution",
+                    "external_tool_execution": "not_executed_in_lite_mode"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "r_chem_full_container_not_available"
+                }
+            },
+            "analysis_environment": "r-chem-full",
+            "full_environment": "r-chem-full",
+            "module_manifest": "analysis/modules/docking/module.json",
+            "result_index_task_types": [
+                "docking"
+            ],
+            "external_tools": [
+                "AutoDock Vina"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        },
+        {
+            "module_id": "molecular_dynamics",
+            "title": "Molecular dynamics",
+            "current_adapter_status": "planned_external_tool_adapter_only",
+            "modes": {
+                "mock": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input.json",
+                    "fixture_output_package": "analysis/fixtures/outputs/molecular_dynamics/mock_result_package"
+                },
+                "lite": {
+                    "supported": true,
+                    "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json",
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-chem-gpu",
+                    "result_semantics": "testing_level",
+                    "capability": "gromacs_command_manifest_fixture_no_execution",
+                    "external_tool_execution": "not_executed_in_lite_mode"
+                },
+                "full": {
+                    "supported": false,
+                    "blocker": "r_chem_gpu_container_not_available"
+                }
+            },
+            "analysis_environment": "r-chem-gpu",
+            "full_environment": "r-chem-gpu",
+            "module_manifest": "analysis/modules/molecular_dynamics/module.json",
+            "result_index_task_types": [
+                "molecular_dynamics"
+            ],
+            "external_tools": [
+                "GROMACS"
+            ],
+            "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+            "result_payload_schema": "analysis/schemas/output/result.schema.json",
+            "provenance_payload_schema": "analysis/schemas/output/provenance.schema.json"
+        }
     ]
-  },
-  "modules": [
-    {
-      "module_id": "deg",
-      "title": "Differential expression analysis",
-      "current_adapter_status": "existing_controlled_python_and_r_contracts_pending_standard_worker_migration",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/deg/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/deg/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/deg/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_two_group_deg_fixture", "clinical_conclusion_policy": "not_generated"},
-        "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
-      },
-      "analysis_environment": "r-bio-core",
-      "full_environment": "r-bio-full",
-      "module_manifest": "analysis/modules/deg/module.json",
-      "result_index_task_types": ["deg", "recomputed_deg", "differential_expression"],
-      "heavy_dependencies": ["limma", "DESeq2", "edgeR", "statsmodels", "scipy"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "survival",
-      "title": "Survival analysis",
-      "current_adapter_status": "existing_python_contracts_pending_r_worker_migration",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/survival/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/survival/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/survival/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_km_logrank_fixture", "clinical_conclusion_policy": "not_generated"},
-        "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
-      },
-      "analysis_environment": "r-bio-core",
-      "full_environment": "r-bio-full",
-      "module_manifest": "analysis/modules/survival/module.json",
-      "result_index_task_types": ["survival", "survival_km_logrank", "cox_univariate"],
-      "heavy_dependencies": ["survival", "survminer"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "univariate",
-      "title": "Univariate clinical association",
-      "current_adapter_status": "contract_required_before_formal_r_worker",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/univariate/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/univariate/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/univariate/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_univariate_clinical_association_fixture", "clinical_conclusion_policy": "not_generated"},
-        "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
-      },
-      "analysis_environment": "r-bio-core",
-      "full_environment": "r-bio-full",
-      "module_manifest": "analysis/modules/univariate/module.json",
-      "result_index_task_types": ["univariate", "clinical_association"],
-      "heavy_dependencies": ["survival"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "multivariate",
-      "title": "Multivariate clinical association",
-      "current_adapter_status": "contract_required_before_formal_r_worker",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/multivariate/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/multivariate/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/multivariate/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_multivariate_lm_fixture", "clinical_conclusion_policy": "not_generated"},
-        "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
-      },
-      "analysis_environment": "r-bio-core",
-      "full_environment": "r-bio-full",
-      "module_manifest": "analysis/modules/multivariate/module.json",
-      "result_index_task_types": ["multivariate"],
-      "heavy_dependencies": ["survival", "glmnet"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "enrichment",
-      "title": "ORA and preranked GSEA enrichment",
-      "current_adapter_status": "existing_controlled_adapters_pending_standard_worker_wrapper",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/enrichment/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/enrichment/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/enrichment/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_hypergeometric_ora_fixture", "full_resource_policy": "not_used_in_lite_mode"},
-        "full": {"supported": false, "blocker": "full_resource_manifest_and_container_not_available"}
-      },
-      "analysis_environment": "r-bio-core",
-      "full_environment": "r-bio-full",
-      "module_manifest": "analysis/modules/enrichment/module.json",
-      "result_index_task_types": ["enrichment", "ora", "gsea", "gsea_preranked"],
-      "heavy_dependencies": ["clusterProfiler", "fgsea", "ReactomePA", "reactome.db", "msigdbr"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "immune_infiltration",
-      "title": "Immune infiltration heatmap",
-      "current_adapter_status": "python_contracts_exist_for_scoring_pending_r_worker_boundary",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/immune_infiltration/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_signature_mean_heatmap_fixture", "clinical_conclusion_policy": "not_generated", "full_resource_policy": "not_used_in_lite_mode"},
-        "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
-      },
-      "analysis_environment": "r-bio-core",
-      "full_environment": "r-bio-full",
-      "module_manifest": "analysis/modules/immune_infiltration/module.json",
-      "result_index_task_types": ["immune_infiltration", "immune_tme_scoring"],
-      "heavy_dependencies": ["GSVA", "GSEABase", "limma"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "correlation",
-      "title": "Expression correlation analysis",
-      "current_adapter_status": "existing_python_testing_level_sidecar_pending_standard_worker_migration",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/correlation/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/correlation/mock_result_package"},
-        "lite": {"supported": false, "blocker": "correlation_lite_standard_r_worker_not_enabled"},
-        "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
-      },
-      "analysis_environment": "r-bio-core",
-      "full_environment": "r-bio-full",
-      "module_manifest": "analysis/modules/correlation/module.json",
-      "result_index_task_types": ["correlation"],
-      "heavy_dependencies": [],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "spatial_transcriptomics",
-      "title": "Spatial transcriptomics",
-      "current_adapter_status": "planned_not_current_runtime",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/spatial_transcriptomics/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-spatial-full", "result_semantics": "testing_level", "capability": "base_r_spatial_spot_qc_fixture_no_heavy_spatial_packages", "heavy_spatial_packages": "not_used_in_lite_mode"},
-        "full": {"supported": false, "blocker": "r_spatial_full_container_not_available"}
-      },
-      "analysis_environment": "r-spatial-full",
-      "full_environment": "r-spatial-full",
-      "module_manifest": "analysis/modules/spatial_transcriptomics/module.json",
-      "result_index_task_types": ["spatial_transcriptomics"],
-      "heavy_dependencies": ["Seurat", "CellChat", "spacexr"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "docking",
-      "title": "Molecular docking",
-      "current_adapter_status": "planned_external_tool_adapter_only",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/docking/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/docking/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/docking/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-chem-full", "result_semantics": "testing_level", "capability": "autodock_vina_command_manifest_fixture_no_execution", "external_tool_execution": "not_executed_in_lite_mode"},
-        "full": {"supported": false, "blocker": "r_chem_full_container_not_available"}
-      },
-      "analysis_environment": "r-chem-full",
-      "full_environment": "r-chem-full",
-      "module_manifest": "analysis/modules/docking/module.json",
-      "result_index_task_types": ["docking"],
-      "external_tools": ["AutoDock Vina"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    },
-    {
-      "module_id": "molecular_dynamics",
-      "title": "Molecular dynamics",
-      "current_adapter_status": "planned_external_tool_adapter_only",
-      "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/molecular_dynamics/mock_result_package"},
-        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-chem-gpu", "result_semantics": "testing_level", "capability": "gromacs_command_manifest_fixture_no_execution", "external_tool_execution": "not_executed_in_lite_mode"},
-        "full": {"supported": false, "blocker": "r_chem_gpu_container_not_available"}
-      },
-      "analysis_environment": "r-chem-gpu",
-      "full_environment": "r-chem-gpu",
-      "module_manifest": "analysis/modules/molecular_dynamics/module.json",
-      "result_index_task_types": ["molecular_dynamics"],
-      "external_tools": ["GROMACS"],
-      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
-    }
-  ]
 }
