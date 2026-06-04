@@ -87,7 +87,7 @@
       "current_adapter_status": "python_contracts_exist_for_scoring_pending_r_worker_boundary",
       "modes": {
         "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/immune_infiltration/mock_result_package"},
-        "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
+        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_signature_mean_heatmap_fixture", "clinical_conclusion_policy": "not_generated", "full_resource_policy": "not_used_in_lite_mode"},
         "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
       },
       "analysis_environment": "r-bio-core",

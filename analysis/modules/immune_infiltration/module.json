@@ -6,9 +6,26 @@
   "input_schema": "analysis/schemas/input/module_input.schema.json",
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
-    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/immune_infiltration/mock_result_package"},
-    "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
-    "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
+    "mock": {
+      "supported": true,
+      "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input.json",
+      "fixture_output_package": "analysis/fixtures/outputs/immune_infiltration/mock_result_package"
+    },
+    "lite": {
+      "supported": true,
+      "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input_lite.json",
+      "runner": "analysis/runners/run_module.R",
+      "worker_backend": "rscript",
+      "environment": "r-bio-core",
+      "result_semantics": "testing_level",
+      "capability": "base_r_signature_mean_heatmap_fixture",
+      "clinical_conclusion_policy": "not_generated",
+      "full_resource_policy": "not_used_in_lite_mode"
+    },
+    "full": {
+      "supported": false,
+      "blocker": "full_r_worker_container_not_available"
+    }
   },
   "environment": {
     "app_dev": "docker/Dockerfile.app-dev",

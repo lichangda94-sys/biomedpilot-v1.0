@@ -24,7 +24,7 @@ R and external tools are not default frontend or main-backend runtime dependenci
 | Mode | Purpose | Dependency policy |
 | --- | --- | --- |
 | `mock` | Frontend, API, task-flow, and result-display development | No heavy R packages; fixed fixture input/output. |
-| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. Enrichment, survival, univariate, and multivariate clinical association now have base R fixtures through the standard runner. |
+| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. Enrichment, survival, univariate, multivariate clinical association, and immune infiltration now have base R fixtures through the standard runner. |
 | `full` | Formal analysis and full integration testing | Dedicated analysis container, renv lock, or isolated analysis environment. |
 
 ## Repository Contract
@@ -88,7 +88,7 @@ Resource governance is centralized in `analysis/resources/manifest.json` and val
 
 `app/analysis_runtime/package_catalog.py` builds a read-only catalog from result-index `standard_result_package` artifacts. `build_analysis_center_state()` exposes this catalog as `standard_analysis_packages`, so Analysis Center can discover standard packages without reading R package internals or scanning arbitrary output folders. Existing module-specific result views still need staged migration.
 
-The first `lite` worker paths are enrichment ORA, survival KM/log-rank, univariate clinical association, and multivariate clinical association. `analysis/runners/run_module.R` can run these modules in `mode=lite` using base R and fixed repository fixtures. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`. They remain `testing_level`; they do not enable full resources, plot/report-ready export, prognosis, treatment guidance, diagnosis, or clinical interpretation.
+The first `lite` worker paths are enrichment ORA, survival KM/log-rank, univariate clinical association, multivariate clinical association, and immune infiltration signature scoring. `analysis/runners/run_module.R` can run these modules in `mode=lite` using base R and fixed repository fixtures. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`; immune infiltration also writes a real fixture SVG heatmap without relying on an R graphics device. They remain `testing_level`; they do not enable full resources, GSVA/CellChat/Seurat, plot/report-ready export, prognosis, treatment guidance, diagnosis, or clinical interpretation.
 
 ## Module Manifests
 
@@ -153,12 +153,13 @@ logs/
 | --- | --- |
 | Registry/schema | Present. |
 | Per-module mock result packages | Present for all registered modules. |
-| Standard R runner | Present for mock mode, enrichment/survival/univariate/multivariate lite fixtures, and blocked full standard packages. |
+| Standard R runner | Present for mock mode, enrichment/survival/univariate/multivariate/immune lite fixtures, and blocked full standard packages. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
 | Survival lite worker | Present for base R KM/log-rank fixture only; testing-level standard package with no clinical conclusion. |
 | Univariate lite worker | Present for base R clinical association fixture only; testing-level standard package with no clinical conclusion. |
 | Multivariate lite worker | Present for base R linear model fixture only; testing-level standard package with no clinical conclusion. |
+| Immune infiltration lite worker | Present for base R signature mean score fixture plus real SVG heatmap; testing-level standard package with no clinical interpretation. |
 | Standard package catalog | Present; Analysis Center state exposes result-index-derived package summaries. |
 | Other lite workers | Not enabled. |
 | Full worker | Not enabled. |

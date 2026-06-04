@@ -102,16 +102,35 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "multivariate" && mode == "lite" && table_file == "lite_multivariate_association.tsv") {
     return("lite_multivariate_clinical_association_table")
   }
+  if (module_id == "immune_infiltration" && mode == "lite" && table_file == "lite_immune_scores.tsv") {
+    return("lite_immune_infiltration_score_table")
+  }
   "analysis_table"
+}
+
+plot_artifact_type <- function(module_id, mode, plot_file) {
+  if (module_id == "immune_infiltration" && mode == "lite" && plot_file == "lite_immune_heatmap.svg") {
+    return("lite_immune_infiltration_heatmap_svg")
+  }
+  "analysis_plot"
 }
 
 write_result <- function(module_id, task_id, mode, status, blockers, warnings, message) {
   table_files <- list.files(file.path(output_dir, "tables"), full.names = FALSE)
+  plot_files <- list.files(file.path(output_dir, "plots"), full.names = FALSE)
   report_files <- list.files(file.path(output_dir, "reports"), full.names = FALSE)
   table_entries_vector <- character(0)
   for (table_file in table_files) {
     artifact_type <- table_artifact_type(module_id, mode, table_file)
     table_entries_vector <- c(table_entries_vector, paste0('    {"artifact_type": ', json_string(artifact_type), ', "path": ', json_string(file.path("tables", table_file)), '}'))
+  }
+  plot_entries_vector <- character(0)
+  for (plot_file in plot_files) {
+    if (!grepl("\\.(svg|png|pdf)$", plot_file, ignore.case = TRUE)) {
+      next
+    }
+    artifact_type <- plot_artifact_type(module_id, mode, plot_file)
+    plot_entries_vector <- c(plot_entries_vector, paste0('    {"artifact_type": ', json_string(artifact_type), ', "path": ', json_string(file.path("plots", plot_file)), '}'))
   }
   report_entries_vector <- character(0)
   for (report_file in report_files) {
@@ -119,6 +138,7 @@ write_result <- function(module_id, task_id, mode, status, blockers, warnings, m
     report_entries_vector <- c(report_entries_vector, paste0('    {"artifact_type": ', json_string(artifact_type), ', "path": ', json_string(file.path("reports", report_file)), '}'))
   }
   table_entries <- paste(table_entries_vector, collapse = ",\n")
+  plot_entries <- paste(plot_entries_vector, collapse = ",\n")
   report_entries <- paste(report_entries_vector, collapse = ",\n")
   blockers_json <- if (length(blockers) > 0) paste(vapply(blockers, json_string, character(1)), collapse = ", ") else ""
   warnings_json <- if (length(warnings) > 0) paste(vapply(warnings, json_string, character(1)), collapse = ", ") else ""
@@ -132,7 +152,7 @@ write_result <- function(module_id, task_id, mode, status, blockers, warnings, m
     '  "result_semantics": "testing_level",\n',
     '  "summary": {"message": ', json_string(message), ', "clinical_conclusion_status": "not_generated"},\n',
     '  "tables": [\n', table_entries, "\n  ],\n",
-    '  "plots": [],\n',
+    '  "plots": [\n', plot_entries, "\n  ],\n",
     '  "reports": [\n', report_entries, "\n  ],\n",
     '  "blockers": [', blockers_json, "],\n",
     '  "warnings": [', warnings_json, "],\n",
@@ -490,6 +510,143 @@ run_lite_multivariate_association <- function() {
   quit(status = 0)
 }
 
+run_lite_immune_infiltration <- function() {
+  expression_matrix_path <- resolve_input_path(read_string_field(input_text, "expression_matrix_path", ""))
+  signature_table_path <- resolve_input_path(read_string_field(input_text, "signature_table_path", ""))
+  blockers <- character(0)
+  if (expression_matrix_path == "" || !file.exists(expression_matrix_path)) {
+    blockers <- c(blockers, "lite_immune_expression_matrix_missing")
+  }
+  if (signature_table_path == "" || !file.exists(signature_table_path)) {
+    blockers <- c(blockers, "lite_immune_signature_table_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite immune infiltration blocked because required fixture inputs are missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  expression <- read.delim(expression_matrix_path, stringsAsFactors = FALSE, check.names = FALSE)
+  signatures <- read.delim(signature_table_path, stringsAsFactors = FALSE)
+  if (!("gene" %in% colnames(expression)) || ncol(expression) < 2) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_immune_expression_matrix_schema_invalid"), c(), "Lite immune infiltration blocked because expression matrix columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "immune_expression_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  if (!all(c("signature", "gene") %in% colnames(signatures))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_immune_signature_table_schema_invalid"), c(), "Lite immune infiltration blocked because signature table columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "immune_signature_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  expression_genes <- as.character(expression$gene)
+  expression_values <- as.data.frame(lapply(expression[, setdiff(colnames(expression), "gene"), drop = FALSE], as.numeric), check.names = FALSE)
+  if (any(is.na(as.matrix(expression_values)))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_immune_expression_matrix_non_numeric"), c(), "Lite immune infiltration blocked because expression values are not numeric.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "immune_non_numeric"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  expression_matrix <- as.matrix(expression_values)
+  rownames(expression_matrix) <- expression_genes
+  sample_ids <- colnames(expression_matrix)
+  signature_names <- unique(as.character(signatures$signature))
+  score_matrix <- matrix(NA_real_, nrow = length(signature_names), ncol = length(sample_ids), dimnames = list(signature_names, sample_ids))
+  rows <- list()
+  omitted_signatures <- character(0)
+  for (signature_name in signature_names) {
+    signature_genes <- unique(as.character(signatures$gene[signatures$signature == signature_name]))
+    matched_genes <- intersect(signature_genes, rownames(expression_matrix))
+    if (length(matched_genes) < 1) {
+      omitted_signatures <- c(omitted_signatures, signature_name)
+      next
+    }
+    scores <- colMeans(expression_matrix[matched_genes, , drop = FALSE])
+    score_matrix[signature_name, ] <- scores
+    for (sample_id in sample_ids) {
+      rows[[length(rows) + 1]] <- data.frame(
+        signature = signature_name,
+        sample_id = sample_id,
+        score = unname(scores[[sample_id]]),
+        genes_used = paste(matched_genes, collapse = "/"),
+        method = "base_r_signature_mean_fixture",
+        clinical_conclusion = "not_generated",
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  if (length(rows) == 0) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_immune_no_signature_gene_overlap"), c(), "Lite immune infiltration blocked because no signature genes overlap the expression matrix.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "immune_no_overlap"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  result_table <- do.call(rbind, rows)
+  write.table(result_table, file = file.path(output_dir, "tables", "lite_immune_scores.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  score_matrix <- score_matrix[stats::complete.cases(score_matrix), , drop = FALSE]
+  plot_path <- file.path(output_dir, "plots", "lite_immune_heatmap.svg")
+  palette <- heat.colors(20)
+  min_score <- min(score_matrix)
+  max_score <- max(score_matrix)
+  score_range <- max_score - min_score
+  if (score_range == 0) {
+    score_range <- 1
+  }
+  cell_width <- 80
+  cell_height <- 32
+  left_pad <- 120
+  top_pad <- 55
+  width <- left_pad + ncol(score_matrix) * cell_width + 30
+  height <- top_pad + nrow(score_matrix) * cell_height + 35
+  svg_lines <- c(
+    paste0('<svg xmlns="http://www.w3.org/2000/svg" width="', width, '" height="', height, '" viewBox="0 0 ', width, ' ', height, '">'),
+    '<rect width="100%" height="100%" fill="#ffffff"/>',
+    '<text x="16" y="24" font-family="Arial" font-size="16" font-weight="700">Lite immune signature scores</text>'
+  )
+  for (sample_index in seq_len(ncol(score_matrix))) {
+    x <- left_pad + (sample_index - 1) * cell_width + cell_width / 2
+    svg_lines <- c(svg_lines, paste0('<text x="', x, '" y="44" text-anchor="middle" font-family="Arial" font-size="11">', colnames(score_matrix)[[sample_index]], '</text>'))
+  }
+  display_matrix <- score_matrix[nrow(score_matrix):1, , drop = FALSE]
+  for (row_index in seq_len(nrow(display_matrix))) {
+    y <- top_pad + (row_index - 1) * cell_height
+    signature_label <- rownames(display_matrix)[[row_index]]
+    svg_lines <- c(svg_lines, paste0('<text x="', left_pad - 8, '" y="', y + 21, '" text-anchor="end" font-family="Arial" font-size="11">', signature_label, '</text>'))
+    for (sample_index in seq_len(ncol(display_matrix))) {
+      score <- display_matrix[row_index, sample_index]
+      palette_index <- max(1, min(length(palette), 1 + floor((score - min_score) / score_range * (length(palette) - 1))))
+      x <- left_pad + (sample_index - 1) * cell_width
+      svg_lines <- c(svg_lines, paste0('<rect x="', x, '" y="', y, '" width="', cell_width, '" height="', cell_height, '" fill="', palette[[palette_index]], '" stroke="#ffffff"/>'))
+      svg_lines <- c(svg_lines, paste0('<text x="', x + cell_width / 2, '" y="', y + 21, '" text-anchor="middle" font-family="Arial" font-size="10" fill="#111111">', format(round(score, 2), nsmall = 2), '</text>'))
+    }
+  }
+  svg_lines <- c(svg_lines, "</svg>")
+  writeLines(svg_lines, plot_path)
+  warnings <- c("lite_result_not_formal_analysis", "clinical_conclusion_not_generated", "base_r_fixture_only_no_heavy_resources")
+  if (length(omitted_signatures) > 0) {
+    warnings <- c(warnings, paste0("lite_immune_signatures_without_overlap:", paste(omitted_signatures, collapse = ",")))
+  }
+  writeLines(c(
+    "# Lite immune infiltration limitations",
+    "",
+    "This is a lightweight fixture immune signature score and heatmap package for worker and package-contract validation.",
+    "It is not a clinical immune microenvironment interpretation, diagnosis, prognosis, treatment recommendation, or report-ready analysis."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    warnings,
+    "Lite immune infiltration signature scoring completed with base R fixture data."
+  )
+  write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "clinical_conclusion=not_generated"), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
 write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version) {
   seed <- read_integer_field(input_text, "random_seed")
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
@@ -549,6 +706,10 @@ if (mode == "lite" && module_id == "univariate") {
 
 if (mode == "lite" && module_id == "multivariate") {
   run_lite_multivariate_association()
+}
+
+if (mode == "lite" && module_id == "immune_infiltration") {
+  run_lite_immune_infiltration()
 }
 
 if (mode != "mock") {

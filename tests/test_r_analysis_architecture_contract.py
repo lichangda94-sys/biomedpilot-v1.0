@@ -78,7 +78,7 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
         assert modes["mock"]["supported"] is True
         assert (ROOT / modes["mock"]["fixture_input"]).is_file()
         assert (ROOT / modes["mock"]["fixture_output_package"]).is_dir()
-        if module_id in {"enrichment", "survival", "univariate", "multivariate"}:
+        if module_id in {"enrichment", "survival", "univariate", "multivariate", "immune_infiltration"}:
             assert modes["lite"]["supported"] is True
             assert modes["lite"]["worker_backend"] == "rscript"
             assert (ROOT / modes["lite"]["fixture_input"]).is_file()
@@ -385,6 +385,39 @@ def test_standard_r_runner_multivariate_lite_mode_writes_real_fixture_associatio
     assert "model_formula" in table.splitlines()[0]
     assert "p_value" in table.splitlines()[0]
     assert "not_generated" in table
+    assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
+    assert provenance["runtime"]["bioconductor_version"] == "not_required_for_lite_base_r"  # type: ignore[index]
+    assert (output_dir / "reports" / "README_lite.md").is_file()
+
+
+def test_standard_r_runner_immune_lite_mode_writes_real_fixture_heatmap_package(tmp_path: Path) -> None:
+    rscript = rscript_path()
+    output_dir = tmp_path / "r-runner-immune-lite-output"
+    input_json = ROOT / "analysis" / "fixtures" / "inputs" / "immune_infiltration" / "module_input_lite.json"
+
+    completed = subprocess.run(
+        [rscript, str(ROOT / "analysis" / "runners" / "run_module.R"), str(input_json), str(output_dir), "lite"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    result = read_json(output_dir / "result.json")
+    provenance = read_json(output_dir / "provenance.json")
+    table = (output_dir / "tables" / "lite_immune_scores.tsv").read_text(encoding="utf-8")
+    plot = output_dir / "plots" / "lite_immune_heatmap.svg"
+    assert result["module_id"] == "immune_infiltration"
+    assert result["mode"] == "lite"
+    assert result["status"] == "passed"
+    assert result["result_semantics"] == "testing_level"
+    assert "clinical_conclusion_not_generated" in result["warnings"]
+    assert "lite_immune_infiltration_heatmap_svg" in str(result["plots"])
+    assert "signature" in table.splitlines()[0]
+    assert "score" in table.splitlines()[0]
+    assert "not_generated" in table
+    assert plot.is_file()
+    assert "<svg" in plot.read_text(encoding="utf-8", errors="ignore")
     assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
     assert provenance["runtime"]["bioconductor_version"] == "not_required_for_lite_base_r"  # type: ignore[index]
     assert (output_dir / "reports" / "README_lite.md").is_file()

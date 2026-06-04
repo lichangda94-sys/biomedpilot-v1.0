@@ -69,6 +69,8 @@ Update: univariate clinical association now has a `lite` standard worker path. `
 
 Update: multivariate clinical association now has a `lite` standard worker path. `run_module.R` can execute a base R linear model fixture on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, model selection recommendations, risk scores, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
 
+Update: immune infiltration now has a `lite` standard worker path. `run_module.R` can execute base R signature mean scoring on fixed local expression/signature fixture data and write a testing-level standard result package with a real SVG heatmap fixture. It does not use GSVA, CellChat, Seurat, large signature databases, report-ready immune interpretation, diagnosis, prognosis, or treatment guidance.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -87,6 +89,7 @@ Acceptance:
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
 - Univariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for third lite worker.**
 - Multivariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for fourth lite worker.**
+- Immune infiltration can run `lite` mode through the standard R worker using fixed local expression/signature fixture data and generate a real SVG heatmap fixture. **Completed for fifth lite worker.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 
@@ -225,6 +228,13 @@ Order:
 2. Spatial transcriptomics.
 3. Molecular docking.
 4. Molecular dynamics.
+
+Status:
+
+- Immune infiltration `mock` remains available without R.
+- Immune infiltration `lite` can run fixed base R signature mean scoring through `analysis/runners/run_module.R`.
+- Immune infiltration standard result package includes `result.json`, `provenance.json`, `tables/lite_immune_scores.tsv`, `plots/lite_immune_heatmap.svg`, `reports/README_lite.md`, and `logs/worker.log`.
+- Full immune analysis remains blocked until GSVA/CellChat/Seurat/signature resource locks and isolated worker environments are approved.
 
 Rules:
 

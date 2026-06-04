@@ -1,0 +1,23 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "immune_infiltration",
+  "mode": "lite",
+  "task_id": "immune-infiltration-lite-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-immune-lite-input",
+    "source_dataset_id": "fixture-immune-lite-dataset",
+    "expression_matrix_path": "analysis/fixtures/inputs/immune_infiltration/lite_expression.tsv",
+    "signature_table_path": "analysis/fixtures/inputs/immune_infiltration/lite_signatures.tsv"
+  },
+  "parameters": {
+    "analysis_family": "immune_infiltration",
+    "method": "base_r_signature_mean_fixture",
+    "score_policy": "mean_expression_by_signature",
+    "clinical_conclusion_policy": "not_generated"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-bio-core-lite"
+  }
+}
