@@ -5,7 +5,7 @@ import json
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from .registry import REPO_ROOT
 from app.bioinformatics.results.models import ResultIndexEntry
@@ -13,6 +13,7 @@ from app.bioinformatics.results.registry import register_result
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
 
 from .registry import get_analysis_module, load_analysis_module_registry
+from .r_worker import run_standard_r_worker
 from .standard_package import REQUIRED_DIRECTORIES, validate_standard_result_package
 
 
@@ -22,6 +23,7 @@ def run_analysis_module_task(
     *,
     output_dir: str | Path | None = None,
     task_center: TaskCenter | None = None,
+    worker_backend: Literal["python_fixture", "rscript"] = "python_fixture",
 ) -> dict[str, Any]:
     """Run the standard analysis boundary in mock mode or return a blocked package.
 
@@ -55,20 +57,34 @@ def run_analysis_module_task(
         result_entry = _register_standard_package(project, package_dir, module_input, validation, status="blocked", blockers=[blocker])
         return _bridge_result(package_dir, module_input, validation, result_entry, status="blocked", blockers=[blocker])
 
-    fixture_blockers = _write_mock_fixture_package(
-        package_dir,
-        module_input,
-        mode_policy=mode_policy,
-    )
-    if fixture_blockers:
-        _write_standard_package(
+    if worker_backend == "rscript":
+        worker_input = _write_worker_input_manifest(package_dir, module_input)
+        worker_result = run_standard_r_worker(worker_input, package_dir, mode)
+        fixture_blockers = list(worker_result.get("blockers", []))
+        if worker_result["status"] == "blocked" and not (package_dir / "result.json").is_file():
+            _write_standard_package(
+                package_dir,
+                module_input,
+                status="blocked",
+                blockers=fixture_blockers,
+                warnings=["r_worker_unavailable"],
+                command="analysis_task_bridge_rscript_worker",
+            )
+    else:
+        fixture_blockers = _write_mock_fixture_package(
             package_dir,
             module_input,
-            status="blocked",
-            blockers=fixture_blockers,
-            warnings=["mock_fixture_unavailable"],
-            command="analysis_task_bridge_mock_fixture_gate",
+            mode_policy=mode_policy,
         )
+        if fixture_blockers:
+            _write_standard_package(
+                package_dir,
+                module_input,
+                status="blocked",
+                blockers=fixture_blockers,
+                warnings=["mock_fixture_unavailable"],
+                command="analysis_task_bridge_mock_fixture_gate",
+            )
     validation = validate_standard_result_package(package_dir, expected_module_id=module_id, expected_task_id=task_id, expected_mode=mode)
     success = validation["status"] == "passed" and not fixture_blockers
     _finish_task(center, task, success=success, summary="Mock analysis task completed." if success else "Mock analysis task package validation failed.")
@@ -94,6 +110,13 @@ def _validate_input_payload(payload: dict[str, Any], *, module: dict[str, Any]) 
     return blockers
 
 
+def _write_worker_input_manifest(package_dir: Path, payload: dict[str, Any]) -> Path:
+    package_dir.mkdir(parents=True, exist_ok=True)
+    input_path = package_dir / "module_input.json"
+    _write_json(input_path, payload)
+    return input_path
+
+
 def _write_standard_package(
     package_dir: Path,
     payload: dict[str, Any],
@@ -112,6 +135,8 @@ def _write_standard_package(
     mode = str(payload.get("mode") or "")
     input_hash = _hash_payload(payload.get("inputs", {}))
     parameter_hash = _hash_payload(payload.get("parameters", {}))
+    r_not_required = mode == "mock" and command != "analysis_task_bridge_rscript_worker"
+    r_runtime_status = "not_required_for_mock" if r_not_required else "not_executed"
     result = {
         "schema_version": "biomedpilot.analysis.result.v1",
         "module_id": module_id,
@@ -140,8 +165,8 @@ def _write_standard_package(
         "random_seed": (payload.get("runtime") or {}).get("random_seed") if isinstance(payload.get("runtime"), dict) else None,
         "engine": {"name": "biomedpilot_analysis_task_bridge", "version": "v1"},
         "runtime": {
-            "r_version": "not_required_for_mock" if mode == "mock" else "not_executed",
-            "bioconductor_version": "not_required_for_mock" if mode == "mock" else "not_executed",
+            "r_version": r_runtime_status,
+            "bioconductor_version": r_runtime_status,
             "package_versions": {},
             "external_tool_versions": {},
         },
@@ -241,6 +266,11 @@ def _register_standard_package(
     task_id = str(payload.get("task_id") or "")
     module_id = str(payload.get("module_id") or "")
     rel_package = str(package_dir.relative_to(project)) if package_dir.is_relative_to(project) else str(package_dir)
+    provenance = _load_json(package_dir / "provenance.json") if (package_dir / "provenance.json").is_file() else {}
+    engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
+    runtime = provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {}
+    engine_name = str(engine.get("name") or "biomedpilot_analysis_task_bridge")
+    engine_version = str(engine.get("version") or "v1")
     entry = ResultIndexEntry(
         result_id=f"analysis-package-{task_id}",
         task_run_id=task_id,
@@ -250,11 +280,13 @@ def _register_standard_package(
         source_dataset_id=str((payload.get("inputs") or {}).get("source_dataset_id") or ""),
         source_repository_manifest="analysis/registry/analysis_modules.json",
         parameters_manifest=dict(payload.get("parameters") or {}),
-        engine_name="biomedpilot_analysis_task_bridge",
-        engine_version="v1",
+        engine_name=engine_name,
+        engine_version=engine_version,
         dependency_snapshot={
-            "policy": "mock_mode_no_r_dependency" if payload.get("mode") == "mock" else "mode_blocked_before_worker_execution",
+            "policy": "detect_first_no_runtime_install",
             "mode": str(payload.get("mode") or ""),
+            "runtime": runtime,
+            "command": str(provenance.get("command") or ""),
         },
         output_artifacts=(
             {"artifact_type": "standard_result_package", "path": rel_package, "schema": "biomedpilot.analysis.result_package.v1"},

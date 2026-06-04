@@ -28,6 +28,7 @@ Completed in this audit:
 - `analysis/fixtures/outputs/<module_id>/mock_result_package/**`
 - `analysis/resources/manifest.json`
 - `app/analysis_runtime/registry.py`
+- `app/analysis_runtime/r_worker.py`
 - `app/analysis_runtime/standard_package.py`
 - `app/analysis_runtime/task_bridge.py`
 - `analysis/modules/<module_id>/module.json`
@@ -52,6 +53,8 @@ Update: the first result package validator and mock-mode backend adapter now exi
 
 Update: the R-side standard runner now accepts `<input_json> <output_dir> <mode>`, copies module-specific mock packages in `mock` mode, writes blocked standard packages for `lite` and `full`, and blocks CLI/input mode mismatches. It remains a contract runner only; no real R algorithms are activated.
 
+Update: the main-backend task bridge now has an explicit `worker_backend="rscript"` path. It materializes `module_input.json`, invokes the standard R runner, validates the standard package, and registers worker provenance in the result index. Missing `Rscript` is a graceful blocked package.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -64,6 +67,7 @@ Acceptance:
 
 - Every registered module can run `mock` mode through the task system using its fixed fixture package. **Completed for mock mode.**
 - The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
+- The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 

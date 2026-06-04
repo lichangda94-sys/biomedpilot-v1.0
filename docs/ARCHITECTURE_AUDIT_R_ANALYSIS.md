@@ -54,6 +54,12 @@ The R-side standard entrypoint has also been hardened:
 - Paths containing spaces are supported.
 - No R package install/download or `library(...)` import is used.
 
+The main-backend bridge now has two mock-safe paths:
+
+- `worker_backend="python_fixture"` copies fixed standard packages without requiring R.
+- `worker_backend="rscript"` writes `module_input.json`, invokes the standard R runner, validates the package, and registers result-index entries from worker provenance.
+- Missing `Rscript` produces a blocked standard result package, not a traceback or installer path.
+
 A first environment isolation scaffold now also exists:
 
 - `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
@@ -83,7 +89,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | FAIL | Current UI still consumes module-specific result indexes and service payloads. |
-| Main backend task-system invocation | WARN | A mock-mode bridge now creates `TaskCenter` entries and result-index entries; existing analysis calls still include direct service calls. |
+| Main backend task-system invocation | WARN | A mock-mode bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock packages. Existing analysis calls still include direct service calls. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
 | Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
@@ -195,7 +201,7 @@ New architecture boundary files:
 
 1. Keep existing algorithms stable.
 2. Add standard result package schema, registry, mock runner, and fixtures. **Completed in this audit.**
-3. Wrap one existing R-native module behind the standard worker in mock mode first. **Started with `app/analysis_runtime/task_bridge.py`.**
+3. Wrap one existing R-native module behind the standard worker in mock mode first. **Started with `app/analysis_runtime/task_bridge.py` and `app/analysis_runtime/r_worker.py`.**
 4. Add lite mode for one module with lightweight fixture data and no large downloads.
 5. Move full mode to an isolated `renv`/Docker environment.
 6. Repeat module by module: survival, univariate, multivariate, enrichment, immune infiltration, then spatial/chem.
@@ -217,6 +223,7 @@ New architecture boundary files:
 - Added resource manifest skeleton with blocked full resources.
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
+- Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.

@@ -71,13 +71,16 @@ The main-backend side has a narrow mock-mode bridge:
 ```text
 app/analysis_runtime/
   registry.py
+  r_worker.py
   standard_package.py
   task_bridge.py
 ```
 
 The bridge can create a task record, write a standard result package, validate the package, and register the package in the current result index. It returns blocked standard packages for lite/full modes until isolated worker environments are available.
 
-In mock mode, the bridge now copies the module-specific fixed standard result package declared by the registry, then stamps the current `task_id`, hashes, timestamp, and worker log. This keeps UI/API/task-flow development deterministic while preserving task provenance.
+In default mock mode, the bridge copies the module-specific fixed standard result package declared by the registry, then stamps the current `task_id`, hashes, timestamp, and worker log. This keeps UI/API/task-flow development deterministic without requiring R.
+
+For worker-boundary validation, the bridge also supports an explicit `worker_backend="rscript"` path. That path writes `module_input.json`, invokes `analysis/runners/run_module.R`, validates the resulting standard package, and registers the package using the worker provenance. If `Rscript` is unavailable, it writes a blocked standard package instead of raising a traceback or installing R.
 
 ## Module Manifests
 
@@ -143,7 +146,7 @@ logs/
 | Registry/schema | Present. |
 | Per-module mock result packages | Present for all registered modules. |
 | Standard R runner | Present for mock mode and blocked lite/full standard packages; no scientific execution enabled. |
-| Mock task bridge | Present; copies module-specific fixture packages and registers result-index entries. |
+| Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Lite worker | Not enabled. |
 | Full worker | Not enabled. |
 | Docker/renv split | Scaffolded only; not build/restoration proven. |
