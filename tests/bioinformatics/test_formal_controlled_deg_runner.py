@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+from app.analysis_runtime import build_standard_analysis_package_catalog, validate_standard_result_package
 from app.bioinformatics.deg_engine import run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.results.registry import load_registry
 
@@ -35,6 +36,15 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     )
 
     assert result["status"] == "passed"
+    standard_package_dir = Path(result["standard_result_package_dir"])
+    assert standard_package_dir.is_dir()
+    validation = validate_standard_result_package(
+        standard_package_dir,
+        expected_module_id="deg",
+        expected_task_id=str(result["task_run_id"]),
+        expected_mode="full",
+    )
+    assert validation["status"] == "passed"
     registry = load_registry(tmp_path)
     entry = registry["results"][0]
     assert entry["result_semantics"] == "formal_computed_result"
@@ -47,6 +57,17 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     assert entry["plot_artifacts"] == []
     assert entry["report_artifacts"] == []
     assert (tmp_path / entry["output_artifacts"][0]["path"]).is_file()
+    assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = catalog["rows"][0]
+    assert row["module_id"] == "deg"
+    assert row["mode"] == "full"
+    assert row["result_semantics"] == "formal_computed_result"
+    assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert row["artifact_counts"]["tables"] == 1
+    assert row["artifact_counts"]["reports"] == 1
+    assert row["artifact_manifest"]["tables"][0]["exists"] is True
+    assert "clinical_conclusion_not_generated" in row["warnings"]
 
 
 def test_formal_controlled_deg_runner_requires_user_parameter_confirmation(tmp_path: Path, monkeypatch) -> None:

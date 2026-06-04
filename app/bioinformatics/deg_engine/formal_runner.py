@@ -17,6 +17,7 @@ from .dependency_check import check_deg_backend_dependencies
 from .models import DEG_ENGINE_NAME, DEG_ENGINE_VERSION, REQUIRED_DEG_RESULT_COLUMNS
 from .parameter_gate import build_deg_parameter_manifest
 from .result_schema import build_formal_deg_result_schema_gate, validate_deg_result_bundle, validate_formal_deg_result_index_entry
+from .standard_package import write_formal_deg_standard_result_package
 
 
 FORMAL_DEG_RUN_SCHEMA_VERSION = "biomedpilot.formal_deg_controlled_run.v1"
@@ -90,6 +91,17 @@ def run_formal_controlled_deg(
     task_run_id = str(output_plan.get("task_run_id") or f"task-run-{uuid4().hex[:10]}")
     output_path = _write_deg_table(root, result_id, bundle.get("rows", []) or [])
     log_path = _write_run_log(root, result_id, bundle, parameter_manifest)
+    standard_package_dir = write_formal_deg_standard_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        result_table_path=output_path,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency,
+        engine_name=DEG_ENGINE_NAME,
+        engine_version=DEG_ENGINE_VERSION,
+    )
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     entry = ResultIndexEntry(
         result_id=result_id,
@@ -103,7 +115,10 @@ def run_formal_controlled_deg(
         engine_name=DEG_ENGINE_NAME,
         engine_version=DEG_ENGINE_VERSION,
         dependency_snapshot=dependency,
-        output_artifacts=({"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},),
+        output_artifacts=(
+            {"artifact_type": "deg_result_table", "path": str(output_path.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+        ),
         plot_artifacts=(),
         report_artifacts=(),
         validation_status="passed",
@@ -127,6 +142,7 @@ def run_formal_controlled_deg(
         "task_run_id": task_run_id,
         "result_entry": registered,
         "result_table_path": str(output_path),
+        "standard_result_package_dir": str(standard_package_dir),
         "parameter_manifest": parameter_manifest,
         "dependency_snapshot": dependency,
         "warnings": list(registered.get("warnings", []) or []),

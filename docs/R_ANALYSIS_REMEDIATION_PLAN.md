@@ -81,7 +81,7 @@ Update: enrichment now has a `lite` standard worker path. `run_module.R` can exe
 
 Update: controlled ORA/GSEA R adapters now mirror successful formal enrichment fixture results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. Their provenance records the sidecar-only worker boundary. This does not change the algorithms, does not enable plot/report-ready output, and does not complete isolated worker migration.
 
-Update: controlled multi-factor DEG R adapters now mirror successful limma/DESeq2/edgeR fixture-proven formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result table, task log, parameter manifest, dependency snapshot, formula/contrast provenance, hashes, package versions, command provenance, and sidecar-only worker-boundary metadata. This does not enable new DEG execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration.
+Update: controlled DEG executors now mirror successful formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This covers two-group Python controlled formal DEG plus multi-factor limma/DESeq2/edgeR fixture-proven formal results. It preserves result table, task log, parameter manifest, dependency snapshot, hashes, command provenance, and sidecar-only worker-boundary metadata; multi-factor sidecars also preserve formula/contrast provenance and R package versions. This does not enable new DEG execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration.
 
 Update: controlled KM/log-rank and Cox univariate executors now mirror successful controlled formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result tables, task logs, parameter manifests, dependency snapshots, hashes, engine metadata, and sidecar-only worker-boundary metadata. This does not enable clinical conclusions, risk grouping, plot artifacts, report-ready survival/clinical output, or complete isolated worker migration.
 
@@ -219,6 +219,7 @@ Status: started with result-package sidecar alignment.
 
 Completed:
 
+- Successful two-group Python formal DEG results write a standard result package sidecar and result-index `standard_result_package` artifact.
 - Successful controlled limma multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
 - Successful controlled DESeq2 multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
 - Successful controlled edgeR multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
