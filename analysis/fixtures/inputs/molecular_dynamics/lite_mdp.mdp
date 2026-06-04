@@ -1,0 +1,5 @@
+; BioMedPilot lite molecular dynamics parameter fixture.
+; This file is for command-manifest contract validation only.
+integrator = md
+nsteps = 0
+dt = 0.002

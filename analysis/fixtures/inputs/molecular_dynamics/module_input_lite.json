@@ -1,0 +1,25 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "molecular_dynamics",
+  "mode": "lite",
+  "task_id": "molecular-dynamics-lite-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-md-lite-input",
+    "source_dataset_id": "fixture-md-lite-dataset",
+    "topology_path": "analysis/fixtures/inputs/molecular_dynamics/lite_topology.top",
+    "coordinate_path": "analysis/fixtures/inputs/molecular_dynamics/lite_coordinates.gro",
+    "mdp_path": "analysis/fixtures/inputs/molecular_dynamics/lite_mdp.mdp"
+  },
+  "parameters": {
+    "analysis_family": "molecular_dynamics",
+    "adapter_contract": "gromacs_command_manifest_only",
+    "external_tool": "GROMACS",
+    "execute_external_tool": false,
+    "scientific_result_policy": "not_generated_in_lite_mode"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-chem-gpu-lite-contract"
+  }
+}

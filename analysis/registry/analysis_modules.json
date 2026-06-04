@@ -147,7 +147,7 @@
       "current_adapter_status": "planned_external_tool_adapter_only",
       "modes": {
         "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/molecular_dynamics/mock_result_package"},
-        "lite": {"supported": false, "blocker": "lite_md_worker_not_defined"},
+        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-chem-gpu", "result_semantics": "testing_level", "capability": "gromacs_command_manifest_fixture_no_execution", "external_tool_execution": "not_executed_in_lite_mode"},
         "full": {"supported": false, "blocker": "r_chem_gpu_container_not_available"}
       },
       "analysis_environment": "r-chem-gpu",

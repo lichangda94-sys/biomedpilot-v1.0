@@ -125,6 +125,22 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
             "scientific_result_policy": "not_generated_in_lite_mode",
         }
         payload["runtime"] = {"random_seed": 7, "requested_environment": "r-chem-lite-contract"}
+    if module_id == "molecular_dynamics" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-md-lite-input",
+            "source_dataset_id": "fixture-md-lite-dataset",
+            "topology_path": "analysis/fixtures/inputs/molecular_dynamics/lite_topology.top",
+            "coordinate_path": "analysis/fixtures/inputs/molecular_dynamics/lite_coordinates.gro",
+            "mdp_path": "analysis/fixtures/inputs/molecular_dynamics/lite_mdp.mdp",
+        }
+        payload["parameters"] = {
+            "analysis_family": "molecular_dynamics",
+            "adapter_contract": "gromacs_command_manifest_only",
+            "external_tool": "GROMACS",
+            "execute_external_tool": False,
+            "scientific_result_policy": "not_generated_in_lite_mode",
+        }
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-chem-gpu-lite-contract"}
     return payload
 
 
@@ -583,6 +599,46 @@ def test_docking_lite_mode_writes_external_tool_command_manifest_without_executi
     assert registry["results"][0]["result_semantics"] == "testing_level"
     assert registry["results"][0]["report_ready_eligible"] is False
     assert catalog["rows"][0]["module_id"] == "docking"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+    assert catalog["rows"][0]["artifact_counts"]["plots"] == 0
+
+
+def test_molecular_dynamics_lite_mode_writes_gromacs_command_manifest_without_execution(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite", module_id="molecular_dynamics"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    table = (package_dir / "tables" / "lite_md_command_manifest.tsv").read_text(encoding="utf-8")
+    readme = (package_dir / "reports" / "README_lite.md").read_text(encoding="utf-8")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    assert result["status"] == "passed"
+    assert result_json["module_id"] == "molecular_dynamics"
+    assert result_json["mode"] == "lite"
+    assert result_json["result_semantics"] == "testing_level"
+    assert "external_tool_not_executed_in_lite_mode" in result_json["warnings"]
+    assert "scientific_molecular_dynamics_result_not_generated" in result_json["warnings"]
+    assert "GROMACS" in table
+    assert "not_executed_lite_contract" in table
+    assert "grompp_command_preview" in table.splitlines()[0]
+    assert "mdrun_command_preview" in table.splitlines()[0]
+    assert "No trajectory" in readme
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert provenance["runtime"]["external_tool_versions"]["GROMACS"] == "not_executed_lite_contract"  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["report_ready_eligible"] is False
+    assert catalog["rows"][0]["module_id"] == "molecular_dynamics"
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 0

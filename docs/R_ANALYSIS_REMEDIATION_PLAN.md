@@ -91,6 +91,8 @@ Update: immune infiltration now has a `lite` standard worker path. `run_module.R
 
 Update: docking now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local receptor/ligand/config fixtures and write `tables/lite_docking_command_manifest.tsv` plus provenance and limitations. It does not execute AutoDock Vina, does not generate docking poses/scores/affinities, and does not enable full molecular docking.
 
+Update: molecular dynamics now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local topology/coordinate/mdp fixtures and write `tables/lite_md_command_manifest.tsv` plus provenance and limitations. It does not execute GROMACS, does not generate trajectory/energy/RMSD/simulation outputs, and does not enable full molecular dynamics.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -113,6 +115,7 @@ Acceptance:
 - Multivariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for fourth lite worker.**
 - Immune infiltration can run `lite` mode through the standard R worker using fixed local expression/signature fixture data and generate a real SVG heatmap fixture. **Completed for fifth lite worker.**
 - Docking can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing AutoDock Vina. **Completed for docking adapter boundary fixture.**
+- Molecular dynamics can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing GROMACS. **Completed for MD adapter boundary fixture.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.
@@ -260,12 +263,40 @@ Completed:
 Remaining:
 
 - Full AutoDock Vina execution remains blocked until `r-chem-full` image/tool/resource locks are approved.
-- Molecular dynamics still has no lite adapter contract.
 
 Acceptance:
 
 - Lite command-manifest package is testing-level only.
 - No AutoDock Vina binary is required in app-dev.
+- No runtime tool install/download is performed.
+
+## Phase R5b: Molecular Dynamics External Tool Adapter Boundary
+
+Scope:
+
+- Keep GROMACS outside app-dev, ordinary R bio-core, and ordinary chem-full environments.
+- Prove a standard result package can describe the external-tool command boundary before full GPU/tool execution exists.
+- Do not generate scientific molecular dynamics results in lite mode.
+
+Status: started with command-manifest contract fixture.
+
+Completed:
+
+- Molecular dynamics `mock` remains available without R.
+- Molecular dynamics `lite` can run through `analysis/runners/run_module.R` using fixed topology, coordinate, and mdp fixture files.
+- The lite package includes `result.json`, `provenance.json`, `tables/lite_md_command_manifest.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
+- Provenance records `external_tool_versions.GROMACS=not_executed_lite_contract`.
+- The result warnings explicitly state that the external tool was not executed and no scientific molecular dynamics result was generated.
+
+Remaining:
+
+- Full GROMACS execution remains blocked until `r-chem-gpu` image/tool/resource locks are approved.
+- Trajectory, energy, RMSD, simulation metrics, and scientific MD outputs remain unavailable in lite mode.
+
+Acceptance:
+
+- Lite command-manifest package is testing-level only.
+- No GROMACS binary is required in app-dev.
 - No runtime tool install/download is performed.
 
 ## Phase R6: Resource Governance
@@ -310,6 +341,7 @@ Status:
 - Immune infiltration standard result package includes `result.json`, `provenance.json`, `tables/lite_immune_scores.tsv`, `plots/lite_immune_heatmap.svg`, `reports/README_lite.md`, and `logs/worker.log`.
 - Full immune analysis remains blocked until GSVA/CellChat/Seurat/signature resource locks and isolated worker environments are approved.
 - Docking `lite` can run a command-manifest adapter contract through `analysis/runners/run_module.R` without executing AutoDock Vina or generating scientific docking results.
+- Molecular dynamics `lite` can run a command-manifest adapter contract through `analysis/runners/run_module.R` without executing GROMACS or generating trajectory, energy, RMSD, simulation metrics, or scientific MD results.
 
 Rules:
 

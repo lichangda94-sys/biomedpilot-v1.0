@@ -163,6 +163,9 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "docking" && mode == "lite" && table_file == "lite_docking_command_manifest.tsv") {
     return("lite_docking_external_tool_command_manifest")
   }
+  if (module_id == "molecular_dynamics" && mode == "lite" && table_file == "lite_md_command_manifest.tsv") {
+    return("lite_molecular_dynamics_external_tool_command_manifest")
+  }
   "analysis_table"
 }
 
@@ -891,6 +894,86 @@ run_lite_docking_adapter_contract <- function() {
   quit(status = 0)
 }
 
+run_lite_molecular_dynamics_adapter_contract <- function() {
+  topology_path <- resolve_input_path(read_string_field(input_text, "topology_path", ""))
+  coordinate_path <- resolve_input_path(read_string_field(input_text, "coordinate_path", ""))
+  mdp_path <- resolve_input_path(read_string_field(input_text, "mdp_path", ""))
+  blockers <- character(0)
+  if (topology_path == "" || !file.exists(topology_path)) {
+    blockers <- c(blockers, "lite_md_topology_missing")
+  }
+  if (coordinate_path == "" || !file.exists(coordinate_path)) {
+    blockers <- c(blockers, "lite_md_coordinates_missing")
+  }
+  if (mdp_path == "" || !file.exists(mdp_path)) {
+    blockers <- c(blockers, "lite_md_mdp_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite molecular dynamics adapter contract blocked because required fixture inputs are missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  tpr_path <- file.path(output_dir, "tables", "lite_md_output_not_generated.tpr")
+  trajectory_path <- file.path(output_dir, "tables", "lite_md_trajectory_not_generated.xtc")
+  grompp_preview <- paste(
+    "gmx", "grompp",
+    "-f", mdp_path,
+    "-c", coordinate_path,
+    "-p", topology_path,
+    "-o", tpr_path
+  )
+  mdrun_preview <- paste(
+    "gmx", "mdrun",
+    "-s", tpr_path,
+    "-x", trajectory_path
+  )
+  manifest <- data.frame(
+    external_tool = "GROMACS",
+    execution_status = "not_executed_lite_contract",
+    adapter_boundary = "r_chem_gpu_external_tool_adapter_required_for_full_mode",
+    topology_path = topology_path,
+    topology_md5 = as.character(tools::md5sum(topology_path)),
+    coordinate_path = coordinate_path,
+    coordinate_md5 = as.character(tools::md5sum(coordinate_path)),
+    mdp_path = mdp_path,
+    mdp_md5 = as.character(tools::md5sum(mdp_path)),
+    grompp_command_preview = grompp_preview,
+    mdrun_command_preview = mdrun_preview,
+    scientific_result = "not_generated",
+    stringsAsFactors = FALSE
+  )
+  write.table(manifest, file = file.path(output_dir, "tables", "lite_md_command_manifest.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  writeLines(c(
+    "# Lite molecular dynamics adapter limitations",
+    "",
+    "This is a lightweight external-tool adapter contract package for standard worker and result-package validation.",
+    "GROMACS is not executed in lite mode.",
+    "No trajectory, energy table, RMSD, simulation metric, or scientific molecular dynamics result is generated.",
+    "Full molecular dynamics must run in the isolated r-chem-gpu environment with locked tool/resource versions."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "external_tool_not_executed_in_lite_mode", "scientific_molecular_dynamics_result_not_generated"),
+    "Lite molecular dynamics adapter contract completed without executing GROMACS."
+  )
+  write_provenance(
+    module_id,
+    task_id,
+    mode,
+    command,
+    R.version.string,
+    "not_required_for_lite_external_tool_contract",
+    '{"GROMACS": "not_executed_lite_contract"}'
+  )
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "external_tool=GROMACS", "execution=not_executed"), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
 write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version, external_tool_versions_json = "{}") {
   seed <- read_integer_field(input_text, "random_seed")
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
@@ -963,6 +1046,10 @@ if (mode == "lite" && module_id == "immune_infiltration") {
 
 if (mode == "lite" && module_id == "docking") {
   run_lite_docking_adapter_contract()
+}
+
+if (mode == "lite" && module_id == "molecular_dynamics") {
+  run_lite_molecular_dynamics_adapter_contract()
 }
 
 if (mode != "mock") {

@@ -1,0 +1,7 @@
+; BioMedPilot lite molecular dynamics topology fixture.
+; This file is not a scientific simulation topology.
+[ system ]
+Lite MD Contract Complex
+
+[ molecules ]
+LIG 1
