@@ -6,7 +6,7 @@
   "input_schema": "analysis/schemas/input/module_input.schema.json",
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
-    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/immune_infiltration/mock_result_package"},
     "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
     "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
   },

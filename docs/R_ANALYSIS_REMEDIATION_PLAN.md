@@ -24,6 +24,8 @@ Completed in this audit:
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
+- `analysis/fixtures/inputs/<module_id>/module_input.json`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/**`
 - `analysis/resources/manifest.json`
 - `app/analysis_runtime/registry.py`
 - `app/analysis_runtime/standard_package.py`
@@ -43,10 +45,10 @@ Completed in this audit:
 
 Remaining:
 
-- Add per-module mock fixtures.
-- Wire one current analysis module through the bridge.
+- Add richer per-module mock tables/plots only where the UI needs them, while preserving mock labeling.
+- Wire one current real analysis module through the bridge for lite mode.
 
-Update: the first result package validator and mock-mode backend adapter now exist under `app/analysis_runtime/`.
+Update: the first result package validator and mock-mode backend adapter now exist under `app/analysis_runtime/`. All registered modules now have fixed mock input and standard result package fixtures.
 
 ## Phase R1: Task-System Bridge
 
@@ -58,7 +60,7 @@ Scope:
 
 Acceptance:
 
-- One module can run `mock` mode through the task system. **Started: generic registered modules can produce mock standard packages.**
+- Every registered module can run `mock` mode through the task system using its fixed fixture package. **Completed for mock mode.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 

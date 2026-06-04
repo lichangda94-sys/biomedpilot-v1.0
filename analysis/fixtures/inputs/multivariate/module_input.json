@@ -1,0 +1,20 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "multivariate",
+  "mode": "mock",
+  "task_id": "multivariate-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-multivariate-input",
+    "source_dataset_id": "fixture-multivariate-dataset",
+    "fixture_table": "analysis/fixtures/outputs/multivariate/mock_result_package/tables/mock_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "multivariate_association",
+    "model_formula": "mock_outcome ~ mock_covariate + mock_batch"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}

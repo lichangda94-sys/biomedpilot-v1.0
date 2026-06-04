@@ -1,0 +1,18 @@
+{
+  "schema_version": "biomedpilot.analysis.result.v1",
+  "module_id": "spatial_transcriptomics",
+  "mode": "mock",
+  "task_id": "spatial-transcriptomics-mock-fixture",
+  "status": "passed",
+  "result_semantics": "testing_level",
+  "summary": {
+    "message": "Mock spatial transcriptomics package for UI and task-flow development only.",
+    "clinical_conclusion_status": "not_generated"
+  },
+  "tables": [{"artifact_type": "mock_summary_table", "path": "tables/mock_summary.tsv"}],
+  "plots": [],
+  "reports": [{"artifact_type": "mock_limitations_report", "path": "reports/README_mock.md"}],
+  "blockers": [],
+  "warnings": ["mock_result_not_scientific_output"],
+  "created_at": "2026-06-04T00:00:00Z"
+}

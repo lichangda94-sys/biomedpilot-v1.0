@@ -1,0 +1,21 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "univariate",
+  "mode": "mock",
+  "task_id": "univariate-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-univariate-input",
+    "source_dataset_id": "fixture-univariate-dataset",
+    "fixture_table": "analysis/fixtures/outputs/univariate/mock_result_package/tables/mock_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "clinical_association",
+    "variable": "mock_covariate",
+    "outcome": "mock_outcome"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}

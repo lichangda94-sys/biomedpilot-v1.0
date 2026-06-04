@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from app.analysis_runtime import run_analysis_module_task, validate_standard_result_package
+from app.analysis_runtime.registry import load_analysis_module_registry
 from app.bioinformatics.results.registry import load_registry
 from app.shared.task_center.service import TaskCenter, TaskStatus
 
@@ -49,12 +50,36 @@ def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index
     assert validation["status"] == "passed"
     assert result_json["status"] == "passed"
     assert result_json["summary"]["clinical_conclusion_status"] == "not_generated"  # type: ignore[index]
+    assert "mock enrichment package" in result_json["summary"]["message"].lower()  # type: ignore[index]
     assert provenance["runtime"]["r_version"] == "not_required_for_mock"  # type: ignore[index]
     assert provenance["input_hash"] != "fixture"
+    assert provenance["command"] == "analysis_task_bridge_mock_fixture_copy"
     assert tasks[0].status == TaskStatus.COMPLETED
     assert registry["results"][0]["result_id"] == "analysis-package-enrichment-mock-task"
     assert registry["results"][0]["result_semantics"] == "testing_level"
     assert registry["results"][0]["output_artifacts"][0]["artifact_type"] == "standard_result_package"
+
+
+def test_all_registered_modules_run_mock_bridge_with_standard_package(tmp_path: Path) -> None:
+    registry = load_analysis_module_registry()
+
+    for module in registry["modules"]:
+        module_id = module["module_id"]
+        task_center = TaskCenter(tmp_path / module_id / "tasks" / "tasks.json")
+        result = run_analysis_module_task(tmp_path / module_id, module_input(tmp_path, module_id=module_id), task_center=task_center)
+        package_dir = Path(result["result_package_dir"])
+        result_json = read_json(package_dir / "result.json")
+        provenance = read_json(package_dir / "provenance.json")
+
+        assert result["status"] == "passed"
+        assert result_json["module_id"] == module_id
+        assert result_json["task_id"] == f"{module_id}-mock-task"
+        assert result_json["result_semantics"] == "testing_level"
+        assert "mock_result_not_scientific_output" in result_json["warnings"]
+        assert provenance["module_id"] == module_id
+        assert provenance["task_id"] == f"{module_id}-mock-task"
+        assert provenance["input_hash"] != "fixture"
+        assert task_center.list_tasks()[0].status == TaskStatus.COMPLETED
 
 
 def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execution(tmp_path: Path) -> None:
@@ -85,4 +110,3 @@ def test_invalid_module_input_is_blocked_but_still_has_standard_package(tmp_path
     assert result["status"] == "blocked"
     assert validation["status"] == "passed"
     assert "module_input_parameters_missing_or_invalid" in read_json(package_dir / "result.json")["blockers"]
-

@@ -1,0 +1,21 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "survival",
+  "mode": "mock",
+  "task_id": "survival-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-survival-input",
+    "source_dataset_id": "fixture-survival-dataset",
+    "fixture_table": "analysis/fixtures/outputs/survival/mock_result_package/tables/mock_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "survival",
+    "endpoint": "overall_survival",
+    "group_variable": "mock_group"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}

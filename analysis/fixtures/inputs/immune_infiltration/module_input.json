@@ -1,0 +1,20 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "immune_infiltration",
+  "mode": "mock",
+  "task_id": "immune-infiltration-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-immune-input",
+    "source_dataset_id": "fixture-immune-dataset",
+    "fixture_table": "analysis/fixtures/outputs/immune_infiltration/mock_result_package/tables/mock_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "immune_infiltration",
+    "signature_set": "fixture_signatures"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}

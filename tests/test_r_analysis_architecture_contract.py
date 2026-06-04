@@ -35,6 +35,8 @@ def test_analysis_registry_declares_standard_modules_modes_and_package_contract(
     for module_id, module in modules.items():
         modes = module["modes"]
         assert modes["mock"]["supported"] is True
+        assert (ROOT / modes["mock"]["fixture_input"]).is_file()
+        assert (ROOT / modes["mock"]["fixture_output_package"]).is_dir()
         assert "lite" in modes
         assert "full" in modes
         assert module["result_package_contract"] == "analysis/schemas/output/result_package.schema.json"
@@ -61,6 +63,8 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
         assert manifest["result_package_contract"] == "analysis/schemas/output/result_package.schema.json"
         assert manifest["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
         assert modes["mock"]["supported"] is True
+        assert (ROOT / modes["mock"]["fixture_input"]).is_file()
+        assert (ROOT / modes["mock"]["fixture_output_package"]).is_dir()
         assert modes["lite"]["supported"] is False
         assert modes["full"]["supported"] is False
         assert environment["app_dev"] == "docker/Dockerfile.app-dev"
@@ -71,6 +75,31 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
             "runtime_install": "forbidden",
             "default_app_dependency": False,
         }
+
+
+def test_per_module_mock_fixtures_are_standard_result_packages() -> None:
+    registry = read_json(ROOT / "analysis" / "registry" / "analysis_modules.json")
+
+    for module in registry["modules"]:  # type: ignore[index]
+        module_id = module["module_id"]
+        mode_policy = module["modes"]["mock"]
+        fixture_input = read_json(ROOT / mode_policy["fixture_input"])
+        fixture_package = ROOT / mode_policy["fixture_output_package"]
+        result = read_json(fixture_package / "result.json")
+        provenance = read_json(fixture_package / "provenance.json")
+
+        assert fixture_input["schema_version"] == "biomedpilot.analysis.module_input.v1"
+        assert fixture_input["module_id"] == module_id
+        assert fixture_input["mode"] == "mock"
+        assert result["module_id"] == module_id
+        assert result["mode"] == "mock"
+        assert result["status"] == "passed"
+        assert result["result_semantics"] == "testing_level"
+        assert "mock_result_not_scientific_output" in result["warnings"]
+        assert provenance["module_id"] == module_id
+        assert provenance["runtime"]["r_version"] == "not_required_for_mock"
+        for dirname in ("tables", "plots", "reports", "logs"):
+            assert (fixture_package / dirname).is_dir()
 
 
 def test_analysis_environment_split_scaffold_exists_without_claiming_full_readiness() -> None:

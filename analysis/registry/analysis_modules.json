@@ -26,7 +26,7 @@
       "title": "Survival analysis",
       "current_adapter_status": "existing_python_contracts_pending_r_worker_migration",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/survival/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/survival/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
         "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
       },
@@ -41,7 +41,7 @@
       "title": "Univariate clinical association",
       "current_adapter_status": "contract_required_before_formal_r_worker",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/univariate/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/univariate/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
         "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
       },
@@ -56,7 +56,7 @@
       "title": "Multivariate clinical association",
       "current_adapter_status": "contract_required_before_formal_r_worker",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/multivariate/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/multivariate/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
         "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
       },
@@ -71,7 +71,7 @@
       "title": "ORA and preranked GSEA enrichment",
       "current_adapter_status": "existing_controlled_adapters_pending_standard_worker_wrapper",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/enrichment/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/enrichment/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_worker_not_wrapped"},
         "full": {"supported": false, "blocker": "full_resource_manifest_and_container_not_available"}
       },
@@ -86,7 +86,7 @@
       "title": "Immune infiltration heatmap",
       "current_adapter_status": "python_contracts_exist_for_scoring_pending_r_worker_boundary",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/immune_infiltration/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/immune_infiltration/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
         "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
       },
@@ -101,7 +101,7 @@
       "title": "Spatial transcriptomics",
       "current_adapter_status": "planned_not_current_runtime",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/spatial_transcriptomics/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_spatial_worker_not_defined"},
         "full": {"supported": false, "blocker": "r_spatial_full_container_not_available"}
       },
@@ -116,7 +116,7 @@
       "title": "Molecular docking",
       "current_adapter_status": "planned_external_tool_adapter_only",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/docking/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/docking/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_chem_worker_not_defined"},
         "full": {"supported": false, "blocker": "r_chem_full_container_not_available"}
       },
@@ -131,7 +131,7 @@
       "title": "Molecular dynamics",
       "current_adapter_status": "planned_external_tool_adapter_only",
       "modes": {
-        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/molecular_dynamics/mock_result_package"},
         "lite": {"supported": false, "blocker": "lite_md_worker_not_defined"},
         "full": {"supported": false, "blocker": "r_chem_gpu_container_not_available"}
       },

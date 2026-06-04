@@ -38,7 +38,8 @@ analysis/
   schemas/output/result_package.schema.json
   modules/<module_id>/module.json
   runners/run_module.R
-  fixtures/
+  fixtures/inputs/<module_id>/module_input.json
+  fixtures/outputs/<module_id>/mock_result_package/
   resources/manifest.json
 
 docker/
@@ -69,6 +70,8 @@ app/analysis_runtime/
 ```
 
 The bridge can create a task record, write a standard result package, validate the package, and register the package in the current result index. It returns blocked standard packages for lite/full modes until isolated worker environments are available.
+
+In mock mode, the bridge now copies the module-specific fixed standard result package declared by the registry, then stamps the current `task_id`, hashes, timestamp, and worker log. This keeps UI/API/task-flow development deterministic while preserving task provenance.
 
 ## Module Manifests
 
@@ -132,8 +135,8 @@ logs/
 | Layer | Status |
 | --- | --- |
 | Registry/schema | Present. |
-| Mock result package | Present. |
-| Mock task bridge | Present. |
+| Per-module mock result packages | Present for all registered modules. |
+| Mock task bridge | Present; copies module-specific fixture packages and registers result-index entries. |
 | Lite worker | Not enabled. |
 | Full worker | Not enabled. |
 | Docker/renv split | Scaffolded only; not build/restoration proven. |

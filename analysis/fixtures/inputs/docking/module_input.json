@@ -1,0 +1,21 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "docking",
+  "mode": "mock",
+  "task_id": "docking-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-docking-input",
+    "source_dataset_id": "fixture-docking-dataset",
+    "fixture_table": "analysis/fixtures/outputs/docking/mock_result_package/tables/mock_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "molecular_docking",
+    "target": "mock_target",
+    "ligand": "mock_ligand"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}

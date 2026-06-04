@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .registry import REPO_ROOT
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -53,19 +55,26 @@ def run_analysis_module_task(
         result_entry = _register_standard_package(project, package_dir, module_input, validation, status="blocked", blockers=[blocker])
         return _bridge_result(package_dir, module_input, validation, result_entry, status="blocked", blockers=[blocker])
 
-    _write_standard_package(
+    fixture_blockers = _write_mock_fixture_package(
         package_dir,
         module_input,
-        status="passed",
-        blockers=[],
-        warnings=["mock_result_not_scientific_output"],
-        command="analysis_task_bridge_mock_fixture_copy",
+        mode_policy=mode_policy,
     )
+    if fixture_blockers:
+        _write_standard_package(
+            package_dir,
+            module_input,
+            status="blocked",
+            blockers=fixture_blockers,
+            warnings=["mock_fixture_unavailable"],
+            command="analysis_task_bridge_mock_fixture_gate",
+        )
     validation = validate_standard_result_package(package_dir, expected_module_id=module_id, expected_task_id=task_id, expected_mode=mode)
-    success = validation["status"] == "passed"
+    success = validation["status"] == "passed" and not fixture_blockers
     _finish_task(center, task, success=success, summary="Mock analysis task completed." if success else "Mock analysis task package validation failed.")
-    result_entry = _register_standard_package(project, package_dir, module_input, validation, status="passed" if success else "blocked", blockers=validation.get("blockers", []))
-    return _bridge_result(package_dir, module_input, validation, result_entry, status="passed" if success else "blocked", blockers=validation.get("blockers", []))
+    blockers = list(fixture_blockers or validation.get("blockers", []))
+    result_entry = _register_standard_package(project, package_dir, module_input, validation, status="passed" if success else "blocked", blockers=blockers)
+    return _bridge_result(package_dir, module_input, validation, result_entry, status="passed" if success else "blocked", blockers=blockers)
 
 
 def _validate_input_payload(payload: dict[str, Any], *, module: dict[str, Any]) -> list[str]:
@@ -144,6 +153,79 @@ def _write_standard_package(
         f"{now} status={status} module_id={module_id} mode={mode} task_id={task_id}\n",
         encoding="utf-8",
     )
+
+
+def _write_mock_fixture_package(package_dir: Path, payload: dict[str, Any], *, mode_policy: dict[str, Any]) -> list[str]:
+    fixture_package = mode_policy.get("fixture_output_package")
+    if not isinstance(fixture_package, str) or not fixture_package:
+        return ["mock_fixture_output_package_missing"]
+    source = (REPO_ROOT / fixture_package).resolve()
+    if not source.is_dir():
+        return [f"mock_fixture_output_package_not_found:{fixture_package}"]
+
+    package_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, package_dir, dirs_exist_ok=True)
+    for dirname in REQUIRED_DIRECTORIES:
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+
+    now = _now()
+    task_id = str(payload.get("task_id") or "")
+    module_id = str(payload.get("module_id") or "")
+    mode = str(payload.get("mode") or "")
+    input_hash = _hash_payload(payload.get("inputs", {}))
+    parameter_hash = _hash_payload(payload.get("parameters", {}))
+    result = _load_json(package_dir / "result.json")
+    provenance = _load_json(package_dir / "provenance.json")
+    result.update(
+        {
+            "module_id": module_id,
+            "mode": mode,
+            "task_id": task_id,
+            "status": "passed",
+            "created_at": now,
+        }
+    )
+    warnings = list(result.get("warnings") or [])
+    if "mock_result_not_scientific_output" not in warnings:
+        warnings.append("mock_result_not_scientific_output")
+    result["warnings"] = warnings
+    result["blockers"] = []
+    provenance.update(
+        {
+            "module_id": module_id,
+            "mode": mode,
+            "task_id": task_id,
+            "created_at": now,
+            "input_hash": input_hash,
+            "parameter_hash": parameter_hash,
+            "random_seed": (payload.get("runtime") or {}).get("random_seed") if isinstance(payload.get("runtime"), dict) else None,
+            "command": "analysis_task_bridge_mock_fixture_copy",
+        }
+    )
+    runtime = provenance.get("runtime")
+    if not isinstance(runtime, dict):
+        runtime = {}
+    runtime.update(
+        {
+            "r_version": "not_required_for_mock",
+            "bioconductor_version": "not_required_for_mock",
+            "package_versions": {},
+            "external_tool_versions": {},
+        }
+    )
+    provenance["runtime"] = runtime
+    engine = provenance.get("engine")
+    if not isinstance(engine, dict):
+        engine = {}
+    engine.update({"name": "biomedpilot_analysis_task_bridge", "version": "v1"})
+    provenance["engine"] = engine
+    _write_json(package_dir / "result.json", result)
+    _write_json(package_dir / "provenance.json", provenance)
+    (package_dir / "logs" / "worker.log").write_text(
+        f"{now} status=passed module_id={module_id} mode={mode} task_id={task_id} fixture_source={fixture_package}\n",
+        encoding="utf-8",
+    )
+    return []
 
 
 def _register_standard_package(
@@ -252,6 +334,10 @@ def _finish_task(center: TaskCenter, task: TaskRecord, *, success: bool, summary
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _hash_payload(payload: object) -> str:

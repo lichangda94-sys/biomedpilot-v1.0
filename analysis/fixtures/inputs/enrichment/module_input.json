@@ -1,0 +1,21 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "enrichment",
+  "mode": "mock",
+  "task_id": "enrichment-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-enrichment-input",
+    "source_dataset_id": "fixture-enrichment-dataset",
+    "fixture_table": "analysis/fixtures/outputs/enrichment/mock_result_package/tables/mock_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "enrichment",
+    "method": "mock_ora",
+    "gene_set_source": "fixture_term2gene"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}

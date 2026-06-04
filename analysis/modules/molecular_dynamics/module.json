@@ -6,7 +6,7 @@
   "input_schema": "analysis/schemas/input/module_input.schema.json",
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
-    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/molecular_dynamics/mock_result_package"},
     "lite": {"supported": false, "blocker": "lite_md_worker_not_defined"},
     "full": {"supported": false, "blocker": "r_chem_gpu_container_not_available"}
   },

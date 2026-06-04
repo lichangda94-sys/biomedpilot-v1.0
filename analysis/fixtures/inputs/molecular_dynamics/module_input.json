@@ -1,0 +1,21 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "molecular_dynamics",
+  "mode": "mock",
+  "task_id": "molecular-dynamics-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-md-input",
+    "source_dataset_id": "fixture-md-dataset",
+    "fixture_table": "analysis/fixtures/outputs/molecular_dynamics/mock_result_package/tables/mock_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "molecular_dynamics",
+    "system": "mock_complex",
+    "duration": "mock_only"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}

@@ -33,6 +33,18 @@ The scaffold fixes the most basic registry/schema/mock result-package boundary. 
 
 The bridge creates a `TaskCenter` task, writes a standard result package, validates it, and registers a result-index entry. It does not execute R packages or enable lite/full algorithms yet.
 
+Mock mode now has fixed per-module inputs and fixed per-module standard result package fixtures:
+
+- `analysis/fixtures/inputs/<module_id>/module_input.json`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/result.json`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/provenance.json`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/tables/`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/plots/`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/reports/`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/logs/`
+
+The task bridge copies the module fixture package for `mock` mode and stamps current task metadata. Lite/full modes remain blocked.
+
 A first environment isolation scaffold now also exists:
 
 - `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
@@ -57,10 +69,10 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified analysis module directory | WARN | Added `analysis/` and `analysis/modules/<module_id>/module.json`; existing algorithms still live under `app/bioinformatics/**`. |
 | Module registry | PASS | Added `analysis/registry/analysis_modules.json`. |
 | Unified entrypoint | WARN | Added `analysis/runners/run_module.R` for mock boundary; existing modules do not call it yet. |
-| Mock/lite/full design | WARN | Registry declares all three modes; mock supported, lite/full blocked pending migration. |
+| Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; lite/full remain blocked pending migration. |
 | Unified input/output schema | PASS | Added input and result package schemas. |
-| Every module outputs `result.json` / `provenance.json` | WARN | Contract exists; existing modules still use varied result-index/report structures. |
-| Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock package fixture and schema exist; existing modules not fully normalized. |
+| Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; existing real algorithms still use varied structures. |
+| Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | FAIL | Current UI still consumes module-specific result indexes and service payloads. |
 | Main backend task-system invocation | WARN | A mock-mode bridge now creates `TaskCenter` entries and result-index entries; existing analysis calls still include direct service calls. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
@@ -106,7 +118,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 | Issue | Evidence |
 | --- | --- |
-| Tests do not yet prove all modules can run mock/lite/full through one interface | Added only static contract tests. |
+| Tests do not yet prove lite/full through one interface | Static tests and bridge tests now prove all registered modules can run mock through one interface; lite/full remain blocked. |
 | Logs/provenance differ by module | Existing modules have custom log artifacts and result indexes. |
 | Example data is incomplete for every declared module | One generic mock fixture exists; per-module fixtures pending. |
 
@@ -164,6 +176,8 @@ New architecture boundary files:
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/result.json`
 - `analysis/fixtures/outputs/mock_result_package/provenance.json`
+- `analysis/fixtures/inputs/<module_id>/module_input.json`
+- `analysis/fixtures/outputs/<module_id>/mock_result_package/**`
 - `app/analysis_runtime/registry.py`
 - `app/analysis_runtime/standard_package.py`
 - `app/analysis_runtime/task_bridge.py`
@@ -190,9 +204,10 @@ New architecture boundary files:
 - Established `analysis/` registry and schema scaffold.
 - Added base R mock runner without package installation.
 - Added generic mock input and standard mock result package.
+- Added per-module fixed mock inputs and fixed standard result package fixtures for all registered modules.
 - Added resource manifest skeleton with blocked full resources.
 - Added static contract tests that do not require R.
-- Added a mock-mode task bridge that writes a standard result package, records task status, validates the package, and registers a result-index entry without requiring R.
+- Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.
