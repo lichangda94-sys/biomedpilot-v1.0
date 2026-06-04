@@ -6,92 +6,94 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `db5bef1a224a8a6983c011da9260658364c25c7f`
+Current HEAD: `f8590cc458317656aee600430e911d57cecbb32f`
 
-Current subject: `surface R worker invocation diagnostics in catalog`
+Current subject: `harden standard package module mapping`
 
 ## Audit Boundary
 
-Phase 2.5 is read-only branch and legacy inventory. No old branch was checked out, merged, cherry-picked, or used to replace the current UI or analysis implementation. The current UI remains the only mainline. Old branches and legacy directories are material libraries only.
+Phase 2.5 is a read-only branch, legacy, and historical implementation inventory. No old branch was checked out, merged, cherry-picked, or used to replace the current UI or analysis implementation. The current UI remains the only mainline. Old branches, `legacy/` directories, and `archive/legacy_sources/**` are material libraries only.
 
-This audit did not run validation suites. Tests would validate the current checkout, not prove old branch runtime availability. Old-branch evidence below is therefore classified as inventory evidence unless explicitly marked as current-line proof.
+This audit does not classify any branch-only, legacy-only, mock, placeholder, dry-run, or testing-level output as a completed current feature. Runtime availability requires a current UI entry, current contract mapping, current tests, and real output evidence.
 
 ## Guidance Read
 
 | Document | Rule applied |
 | --- | --- |
 | `../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Current UI is the only mainline; old branches are source material only; migrate one page/button/feature at a time after audit. |
-| `../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Mock, placeholder, static, and testing-level output must not be promoted to real completed analysis. |
+| `../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Mock, placeholder, static, branch-only, and testing-level output must not be promoted to real completed analysis. |
 
-## Preserved Worktree State
+## Worktree State
 
-The worktree contained pre-existing non-Phase-2.5 changes. They were not modified or included as migration work:
+The current worktree was not clean before this refresh. The Phase 2.5 report files were updated; unrelated non-audit changes were observed and left untouched:
 
 ```text
- M app/analysis_runtime/standard_package.py
- M docs/R_ANALYSIS_ARCHITECTURE.md
- M tests/test_analysis_runtime_task_bridge.py
- M tests/test_r_analysis_architecture_contract.py
-?? analysis/schemas/output/worker_invocation.schema.json
+ M app/bioinformatics/gene_set_resources.py
+ M tests/bioinformatics/test_gene_set_resources.py
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
+
+These paths are not Phase 2.5 migration outputs and were not used to claim current runtime availability.
 
 ## Commands Used
 
 | Command | Purpose |
 | --- | --- |
-| `git status --short` | Capture dirty worktree and preserve unrelated changes. |
-| `git branch --show-current` | Capture active branch. |
-| `git rev-parse HEAD` | Capture active commit. |
-| `git branch --all --verbose --no-abbrev` | Enumerate available refs and linked worktree markers. |
-| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads` | Capture branch heads and subjects. |
-| `git log --oneline --decorate --max-count=60 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Review current-line feature history. |
-| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Estimate branch divergence without checkout or merge. |
-| `git diff --name-status HEAD..<branch> -- ...` | Sample high-relevance branch deltas. |
-| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f` | Inventory legacy and archive source files. |
+| `sed -n '1,240p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Read branch/UI migration rules. |
+| `sed -n '1,240p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Read real-loop and testing-level rules. |
+| `git status --short --branch` | Capture active worktree and out-of-scope dirty files. |
+| `git branch --all --verbose --no-abbrev` | Enumerate available local refs and linked worktree markers. |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads refs/remotes` | Capture branch heads, dates, and subjects. |
+| `git rev-parse HEAD` | Capture current baseline commit. |
+| `git log --oneline --decorate --max-count=90 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Review current-line Bio/Meta/UI/runtime history. |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Estimate high-relevance branch divergence without checkout or merge. |
+| `git diff --name-status HEAD..<branch> -- ...` | Sample candidate branch deltas. |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy -maxdepth 4 -type f` | Inventory in-tree legacy source files. |
+| `find archive -maxdepth 4 -type f` | Inventory archive mirrors. |
 | `find app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui -maxdepth 3 -type f` | Inventory current implementation and tests. |
-| `rg -n "QPushButton\|setText\|plot\|report\|DEG\|ORA\|GSEA\|survival\|Cox\|Meta" app/bioinformatics app/meta_analysis -g '*.py'` | Sample current and legacy UI/action surfaces. |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|meta" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Sample current UI/action/test surfaces. |
+
+No functional tests were required for this documentation-only inventory. Tests would validate the current checkout, not prove old branch runtime availability.
 
 ## Current-Line Recent History
 
-Recent current-line commits show current Bio/Meta L3 proof work followed by standard analysis runtime scaffolding and external-tool lite contracts:
+Recent current-line commits show Meta and Bio single-point L3 proof work followed by standard analysis runtime scaffolding, standard package sidecars, worker invocation manifests, and standard package module mapping:
 
 ```text
+f8590cc harden standard package module mapping
+521907c record survival sidecar worker invocations
+cdae468 validate indexed worker invocation artifacts
+3ef6618 index legacy sidecar worker invocation logs
+5829e79 record legacy analysis sidecar worker invocations
+42d82f2 harden direct R worker package contract
+8c34c37 validate full-mode analysis environment snapshots
+b0b96ac record full-mode analysis environment blockers
+fca3a01 mirror correlation results into standard packages
+7e07dba mirror immune scoring results into standard packages
+7f9b242 mirror formal DEG results into standard packages
+05d3afc mirror survival clinical results into standard packages
+ec65eb4 expose standard analysis package artifact manifests
+cf43487 validate R worker invocation manifest schema
 db5bef1 surface R worker invocation diagnostics in catalog
 2eb11b6 extend R worker invocation manifest to all task bridge paths
 00d7bd6 add R worker invocation manifest contract
 239131a add R analysis environment registry contract
-a62e97b add spatial transcriptomics lite worker contract
-e101d24 add molecular dynamics lite worker contract
-e478591 docs: refresh Phase 2.5 branch migration audit
-ccf7967 add docking lite worker contract
-c35ffc9 centralize external R command boundary
-13132c3 docs: audit branch inventory migration candidates
-a471a25 harden standard package provenance gate
-c5bcfa5 label standard package worker boundaries
-b5aff58 harden analysis resource lock validation
-083e7fe docs: refresh Phase 2.5 branch inventory audit
-9436f03 separate standard R worker parameter provenance hash
-02f9acb add DEG lite standard worker fixture
-6c059ef add DEG standard analysis module contract
-6bdc6e2 add multifactor DEG standard result package sidecar
-0aa6793 add enrichment standard result package sidecar
 bf92811 add standard R analysis worker bridge
 5f6150a feat(meta): prove current UI L3 result loop
 5c435a8 unify Meta analysis result contract
 8036e50 prove Bioinformatics formal DEG L3 UI loop
 ```
 
-Current standard worker/mock/lite contracts are current code, but they are not evidence of full production analysis unless a selected module has a proven current UI loop and real output contract.
+Current standard worker/mock/lite contracts are current code. They are not evidence that every module has full production analysis.
 
 ## Local Branch Inventory
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Audit disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `db5bef1` | 2026-06-04 | surface R worker invocation diagnostics in catalog | Current source of truth for this worktree | Source of truth |
-| `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | High-value Bio ReleaseBuild candidate with R DEG, enrichment, survival/risk, renderer/report history | Candidate library only |
-| `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | Formal DEG/ReleaseBuild gate material | Candidate library only |
+| `dev/bioinformatics` | `f8590cc` | 2026-06-04 | harden standard package module mapping | Current source of truth for this worktree | Source of truth |
+| `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | High-value Bio candidate with DEG, enrichment, survival/risk, renderer/report history | Candidate library only |
+| `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | Formal DEG and ReleaseBuild gate material | Candidate library only |
 | `codex/mainline-survival-clinical-carryover` | `74775fe` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Survival/clinical and enrichment convergence material | Candidate library only |
 | `stable/mainline` | `be8c924` | 2026-05-21 | carry over Bioinformatics formal DEG MVP to MainLine | Older MainLine formal DEG baseline | Historical baseline only |
 | `feature/meta-l3-ui-loop` | `5f6150a` | 2026-05-29 | feat(meta): prove current UI L3 result loop | Focused Meta UI proof, already represented in current history | Reference |
@@ -107,7 +109,7 @@ Current standard worker/mock/lite contracts are current code, but they are not e
 | `audit/integration-bioinformatics-merge-plan` | `d6a5914` | 2026-05-29 | docs(integration): add bioinformatics merge plan audit | Integration merge planning audit | Reference |
 | `audit/mainline-phase4-meta-l3-scope-plan` | `be8c924` | 2026-05-21 | carry over Bioinformatics formal DEG MVP to MainLine | MainLine baseline pointer | Historical |
 | `codex/bio-geo-real-download-test` | `a90a2a1` | 2026-05-06 | feat(bio): harden GEO asset recognition and DEG runner | Older GEO recognition/download/DEG runner hardening | Adapter/reference only |
-| `codex/stage-3.6-deg-preflight` | `750f076` | 2026-05-12 | feat(bioinformatics): add DEG executor preflight | Pre-B8 DEG preflight | Superseded |
+| `codex/stage-3.6-deg-preflight` | `750f076` | 2026-05-12 | feat(bioinformatics): add DEG executor preflight | Pre-contract DEG preflight | Superseded |
 | Bio search UI branches | various | 2026-05 | GEO search UI refinements | Search wording/download UI references | Reference only |
 | `codex/bioinformatics-safe-stage2` | `75fe3c3` | 2026-04-30 | feat(bio): add Chinese project wizard UI | Early Bio project wizard | UI material only |
 | `codex/meta-workflow-ui` | `8b6d0b6` | 2026-05-10 | feat(meta): connect workflow ui later stages | Early Meta workflow UI | Superseded/reference only |
@@ -118,28 +120,31 @@ Current standard worker/mock/lite contracts are current code, but they are not e
 
 ## High-Relevance Delta Size
 
-Selected branch deltas are large. Direct carry-over is unsafe because many branches would delete or reshape current `analysis/**` and `app/analysis_runtime/**` scaffolds.
+Selected branch deltas are large. Direct carry-over is unsafe because several branches would delete or reshape current `analysis/**`, `app/analysis_runtime/**`, current Bio contracts, or current Meta runtime paths.
 
 | Branch | Files changed vs current in audited paths | Practical implication |
 | --- | ---: | --- |
-| `dev/release-internal-test` | 2105 | Whole-branch merge would delete/rewrite current standard runtime scaffolds and reshape Bio modules. |
-| `codex/releasebuild-formal-deg-carryover` | 1080 | Useful formal DEG gate material, but older and layout-divergent. |
-| `codex/mainline-survival-clinical-carryover` | 719 | Useful survival/clinical history, but older than current runtime work. |
-| `stable/mainline` | 781 | Historical formal DEG baseline, not current source. |
-| `feature/meta-l3-ui-loop` | 134 | Focused Meta L3 proof, already represented in current line. |
-| `dev/meta-analysis` | 600 | OCR/fulltext/package material, not current-proven. |
-| `dev/ui-shell` | 2111 | UI design/shell material only; diff warns rename detection skipped. |
-| `integration/release-ui-shell-scoped-migration` | 784 | UI shell reference, not analysis proof. |
-| `codex/bio-geo-real-download-test` | 562 | Early GEO material; current recognition/resolver contracts supersede it. |
-| `codex/stage-3.6-deg-preflight` | 1071 | Pre-contract DEG preflight; superseded. |
-| `codex/meta-workflow-ui` | 498 | Older Meta UI; use as design reference only. |
-| `codex/meta-search-ui-main` | 585 | Older PubMed execution branch; current Meta search services supersede it. |
+| `dev/release-internal-test` | 2118 | Whole-branch merge would delete/rewrite current standard runtime scaffolds and reshape Bio modules. |
+| `codex/releasebuild-formal-deg-carryover` | 1093 | Useful formal DEG gate material, but older and layout-divergent. |
+| `codex/mainline-survival-clinical-carryover` | 732 | Useful survival/clinical history, but older than current runtime work. |
+| `stable/mainline` | 790 | Historical formal DEG baseline, not current source. |
+| `feature/meta-l3-ui-loop` | 149 | Focused Meta L3 proof, already represented in current line. |
+| `dev/meta-analysis` | 607 | OCR/fulltext/package material, not current-proven. |
+| `dev/ui-shell` | 2118 | UI design/shell material only; diff warns direct carry-over is unsafe. |
+| `integration/release-ui-shell-scoped-migration` | 793 | UI shell reference, not analysis proof. |
+| `integration/release-labtools-c1-module-nav` | 809 | Cross-module shell/report export reference, not analysis proof. |
+| `codex/bio-geo-real-download-test` | 567 | Early GEO material; current recognition/resolver contracts supersede it. |
+| `codex/stage-3.6-deg-preflight` | 1078 | Pre-contract DEG preflight; superseded. |
+| `codex/meta-workflow-ui` | 505 | Older Meta UI; use as design reference only. |
+| `codex/meta-search-ui-main` | 590 | Older PubMed execution branch; current Meta search services supersede it. |
+| `integration/phase4-meta-l3-scoped-pick` | 930 | Meta L3 receive branch, not a safe whole-branch source. |
+| `mainline/phase4-meta-l3-scoped-pick` | 790 | MainLine governance/reference branch, not current runtime proof. |
 
 ## Audit Conclusion
 
 The repository contains substantial historical UI, Bioinformatics, Meta Analysis, plot, report, export, test, and helper material. No old branch is safe to merge wholesale. Candidate functionality must be selected one at a time, mapped to a current UI entry, adapted or rewritten against current contracts, and then proven with current tests and real output evidence.
 
-Mock, placeholder, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+Mock, placeholder, dry-run, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
 
 ## Stop Point
 

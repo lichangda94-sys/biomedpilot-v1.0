@@ -2,7 +2,7 @@
 
 Date: 2026-06-04
 
-Baseline: `dev/bioinformatics` at `db5bef1a224a8a6983c011da9260658364c25c7f`
+Baseline: `dev/bioinformatics` at `f8590cc458317656aee600430e911d57cecbb32f`
 
 ## Deprecation Rule
 
@@ -25,6 +25,9 @@ Deprecated does not mean the idea is useless. It means the code must not be copi
 | Legacy Meta analysis/profile stack | `app/meta_analysis/legacy/analysis/**`, `analysis_profiles/**` | Old profile/result contracts conflict with current v2 statistics contract | Current Meta v2 statistics and result contract bridge | High | deprecated |
 | Legacy Meta task runner real-run controls | `legacy/core/task_*.py`, `legacy/tests/test_main_window_reporting_summary.py` | Uses old task state, dry-run/real-run text gates, and old adapter model | Rebuild only through current Meta canonical run/artifact contract | High | deprecated/rewrite |
 | Legacy Meta reporting widgets | `legacy/app/reporting_summary_widget.py`, `task_results_summary_widget.py` | Old widgets tied to old shell and output assumptions | Current Meta reporting page/services | Medium/high | UI reference only |
+| Legacy Meta bias/profile/readiness stores | `legacy/bias/**`, `legacy/reporting/**`, `legacy/core/profile_*`, `legacy/analysis_profiles/**` | Old profile-store and readiness concepts conflict with current canonical Meta run/artifact contract | Re-evaluate only behind current Meta result contract | Medium/high | quarantined adapter candidate |
+| Legacy Meta GEO/local readiness utilities | `legacy/geo_readiness/**`, `legacy/local_data/**` | GEO/local dataset readiness belongs behind current Bio recognition/standardization or a scoped Meta import contract, not old Meta state | Use as requirements/reference only | High | rewrite/reference |
+| Legacy Meta packaging scripts | `legacy/packaging/**`, `legacy/scripts/check_packaging_readiness.py` | Old app bundle entrypoints and package names do not match current root package workflow | Current `scripts/package_app.py` and LaunchServices gates | High | deprecated |
 | Legacy pycache | `app/**/legacy/**/__pycache__/*.pyc` | Machine-local compiled artifacts | None | High | ignore/remove only in explicit cleanup task |
 | Archive mirror code | `archive/legacy_sources/**` | Duplicates old Bio/Meta source snapshots with stale paths | Use only as provenance/reference | High | reference only |
 | Mock result packages as real analysis proof | `analysis/fixtures/outputs/*/mock_result_package/**` | Explicit mock packages | Use only for contract tests | Medium | testing-only |
@@ -32,6 +35,7 @@ Deprecated does not mean the idea is useless. It means the code must not be copi
 | Branch-only UI shell/screenshots | `dev/ui-shell`, `integration/*ui*`, branch `docs/ui/**` material | Design material cannot replace current UI without selected UI migration task | Use as design reference | Medium | adapter/design review |
 | Branch-only risk/nomogram clinical material | ReleaseBuild/internal-test branches | High risk of clinical overclaim and old state coupling | Rewrite under strict non-clinical gates if selected | High | rewrite |
 | Branch-only OCR/fulltext engines | `dev/meta-analysis`, OCR branches | External dependency and package divergence; not current-proven | Adapter behind current Meta fulltext contracts | High | rewrite/adapter later |
+| Runtime or branch-only resource download behavior | old Bio branches and some resource-manager history | User-triggered or silent resource downloads can conflict with current detect/import/lock governance | Use current resource-lock or explicit import contracts only | High | quarantined |
 
 ## Not Deprecated, But Not Automatically Available
 
@@ -39,8 +43,8 @@ Deprecated does not mean the idea is useless. It means the code must not be copi
 | --- | --- |
 | Current formal DEG loop | Current implementation exists, but availability still depends on gates and prior proofs; not generalized to every DEG scenario. |
 | Current Meta v2 result contract bridge | Current implementation exists and remains testing-level; not production-grade Meta. |
-| Current ORA/GSEA/survival/Cox/risk/report modules | Current or branch material exists, but each remains governed by its current gate and proof status. |
-| Current standard analysis runtime | Useful scaffold; mock/lite/full modes must stay labeled and gated. |
+| Current ORA/GSEA/survival/Cox/risk/report/immune/correlation modules | Current or branch material exists. Each module remains governed by its current gate and proof status. |
+| Current standard analysis runtime | Useful scaffold; mock/lite/full modes must stay labeled and gated. Recent full-mode environment snapshots are blocker evidence, not proof that full production analyses ran. |
 | Current external R command boundary | Useful isolation boundary; does not by itself prove any module's full scientific output. |
 | Current docking lite command-manifest contract | Current testing-level contract only; no AutoDock Vina execution or scientific docking result. |
 

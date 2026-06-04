@@ -662,6 +662,311 @@ No migration candidate is approved for direct carry-over. Future work must selec
 
 Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
 
+## Phase 2.5 Refresh: Full Branch Inventory at `8c34c37`
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the Phase 2.5 branch, legacy, migration-candidate, deprecated-register, and current-UI coverage reports against the current `dev/bioinformatics` HEAD:
+
+```text
+8c34c377f28302128161c23384ca79f40ded4e2d
+```
+
+The task remained audit-only:
+
+- No old branch was checked out.
+- No branch was merged.
+- No cherry-pick was performed.
+- No current UI code was changed.
+- No analysis algorithm was changed.
+- No legacy code was migrated.
+- No mock, placeholder, testing-level, branch-only, or legacy-only output was promoted to completed functionality.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Current Worktree State
+
+The refresh observed and preserved non-Phase-2.5 working changes:
+
+```text
+ M analysis/runners/run_module.R
+ M analysis/schemas/output/worker_invocation.schema.json
+ M app/analysis_runtime/standard_package.py
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M docs/R_ANALYSIS_REMEDIATION_PLAN.md
+ M tests/test_r_analysis_architecture_contract.py
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+These files were not treated as Phase 2.5 migration outputs.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,260p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short --branch` | Passed, current branch `dev/bioinformatics` |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git for-each-ref --format='%(refname:short) %(objectname:short) %(committerdate:short) %(subject)' --sort=refname refs/heads refs/remotes` | Passed |
+| `git rev-parse HEAD` | Passed, `8c34c377f28302128161c23384ca79f40ded4e2d` |
+| `git log --oneline --decorate --max-count=80 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f` | Passed |
+| `find app/meta_analysis tests/meta_analysis tests/ui -maxdepth 4 -type f` | Passed |
+| `rg -n "QPushButton\|setText\|plot\|report\|export\|DEG\|ORA\|GSEA\|survival\|Cox\|forest\|funnel\|Meta\|run" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Passed |
+
+No functional tests were run for this refresh because the task was audit-only and documentation-only. Functional tests would validate the current checkout but would not prove old-branch runtime availability.
+
+### Findings
+
+The current line now includes standard analysis runtime scaffolding, external R command boundary material, standard package sidecars for selected Bioinformatics results, and full-mode environment blocker snapshots. These are current-code governance and packaging-contract materials, not proof that every old branch analysis or every full-mode scientific workflow is production-ready.
+
+Additional legacy inventory was recorded for:
+
+- Meta bias/profile/readiness helpers.
+- Meta GEO/local dataset readiness utilities.
+- Meta legacy packaging scripts.
+- Full-mode analysis environment blocker snapshots as current governance scaffold.
+
+Selected high-relevance branch deltas remain large:
+
+- `dev/release-internal-test`: 2118 audited-path files.
+- `codex/releasebuild-formal-deg-carryover`: 1093 files.
+- `codex/mainline-survival-clinical-carryover`: 732 files.
+- `stable/mainline`: 790 files.
+- `feature/meta-l3-ui-loop`: 149 files.
+- `dev/meta-analysis`: 607 files.
+- `dev/ui-shell`: 2118 files.
+- `integration/release-ui-shell-scoped-migration`: 793 files.
+- `integration/release-labtools-c1-module-nav`: 809 files.
+- `codex/bio-geo-real-download-test`: 567 files.
+- `codex/stage-3.6-deg-preflight`: 1078 files.
+- `codex/meta-workflow-ui`: 505 files.
+- `codex/meta-search-ui-main`: 590 files.
+- `integration/phase4-meta-l3-scoped-pick`: 930 files.
+- `mainline/phase4-meta-l3-scoped-pick`: 790 files.
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must choose one candidate feature, one current UI entry, one contract bridge, and one focused proof plan. Old branches and legacy directories remain material libraries only.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `fca3a01`
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the full branch inventory and migration-candidate reports against the current `dev/bioinformatics` HEAD:
+
+```text
+fca3a012342d2fa6168107835bdcb196df43d3a1
+```
+
+The task remained audit-only:
+
+- No old branch was checked out.
+- No branch was merged.
+- No cherry-pick was performed.
+- No UI code was changed.
+- No analysis algorithm was changed.
+- No legacy code was migrated.
+- No mock, placeholder, testing-level, branch-only, or legacy-only output was promoted to completed functionality.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Current Worktree State
+
+The refresh intentionally modified only the Phase 2.5 report files above. These unrelated untracked paths were observed and preserved:
+
+```text
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `rg -n "Meta analysis\|BioMedPilot\|LabTools\|legacy\|L3" /Users/changdali/.codex/memories/MEMORY.md` | Passed |
+| `git status --short --branch` | Passed |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `rg --files docs/reports app tests` | Passed |
+| `sed -n '1,260p' docs/reports/BRANCH_INVENTORY.md` | Passed |
+| `sed -n '1,260p' docs/reports/LEGACY_FEATURE_CATALOG.md` | Passed |
+| `sed -n '1,260p' docs/reports/MIGRATION_CANDIDATE_LEDGER.md` | Passed |
+| `sed -n '1,260p' docs/reports/DEPRECATED_LEGACY_REGISTER.md` | Passed |
+| `sed -n '1,260p' docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md` | Passed |
+| `sed -n '1,220p' docs/reports/L3_CLOSURE_WORKLOG.md` | Passed |
+| `sed -n '1,220p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,220p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git rev-parse HEAD` | Passed, `fca3a012342d2fa6168107835bdcb196df43d3a1` |
+| `git log --oneline --decorate --max-count=80 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f` | Passed |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches |
+| `rg -n "risk_score\|nomogram\|calibration\|decision curve\|DCA\|forest\|funnel\|OCR\|fulltext\|DESeq2\|edgeR\|limma\|ORA\|GSEA\|survival\|Cox\|report_ready\|standard_result_package\|source_statistics_result_hash" app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui -g '*.py' -g '*.json'` | Passed |
+| `git diff --stat -- docs/reports/BRANCH_INVENTORY.md docs/reports/LEGACY_FEATURE_CATALOG.md docs/reports/MIGRATION_CANDIDATE_LEDGER.md docs/reports/DEPRECATED_LEGACY_REGISTER.md docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md docs/reports/L3_CLOSURE_WORKLOG.md` | Passed |
+| `git diff -- docs/reports/BRANCH_INVENTORY.md` | Passed |
+| `git diff -- docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md docs/reports/DEPRECATED_LEGACY_REGISTER.md docs/reports/LEGACY_FEATURE_CATALOG.md docs/reports/MIGRATION_CANDIDATE_LEDGER.md` | Passed |
+| `tail -n 140 docs/reports/L3_CLOSURE_WORKLOG.md` | Passed |
+| `git diff -- docs/reports/L3_CLOSURE_WORKLOG.md` | Passed |
+
+No functional tests were run for this refresh because it was documentation-only and audit-only. Functional tests would validate the current checkout, not prove old-branch runtime availability.
+
+### Findings
+
+The current line has advanced beyond the previous Phase 2.5 reports and now includes formal DEG, survival/Cox, immune infiltration, and expression correlation standard result package sidecars, plus standard analysis runtime/package catalog scaffolds. These are current-code contract/package materials, not proof that every old branch, legacy directory, Bioinformatics candidate, or Meta Analysis candidate is current available.
+
+High-relevance branch deltas remain large:
+
+| Branch | Audited-path file delta vs current |
+| --- | ---: |
+| `dev/release-internal-test` | 2118 |
+| `codex/releasebuild-formal-deg-carryover` | 1093 |
+| `codex/mainline-survival-clinical-carryover` | 732 |
+| `stable/mainline` | 790 |
+| `feature/meta-l3-ui-loop` | 149 |
+| `dev/meta-analysis` | 607 |
+| `dev/ui-shell` | 2118 |
+| `integration/release-ui-shell-scoped-migration` | 793 |
+| `integration/release-labtools-c1-module-nav` | 809 |
+| `codex/bio-geo-real-download-test` | 567 |
+| `codex/stage-3.6-deg-preflight` | 1078 |
+| `codex/meta-workflow-ui` | 505 |
+| `codex/meta-search-ui-main` | 590 |
+| `integration/phase4-meta-l3-scoped-pick` | 930 |
+| `mainline/phase4-meta-l3-scoped-pick` | 790 |
+
+No old branch is safe to merge wholesale. Legacy directories and `archive/legacy_sources/**` remain quarantined material libraries only.
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one candidate feature, one current UI entry, one current contract bridge, and one focused proof plan. Mock, placeholder, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `05d3afc`
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the full branch inventory and migration-candidate reports against the current `dev/bioinformatics` HEAD:
+
+```text
+05d3afcff4782d037405dd618db32661cb338fd4
+```
+
+The task remained audit-only:
+
+- No old branch was checked out.
+- No branch was merged.
+- No cherry-pick was performed.
+- No UI code was changed.
+- No analysis algorithm was changed.
+- No legacy code was migrated.
+- No mock, placeholder, testing-level, branch-only, or legacy-only output was promoted to completed functionality.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Current Worktree State
+
+The refresh observed and preserved pre-existing non-Phase-2.5 changes:
+
+```text
+ M app/bioinformatics/deg_engine/formal_runner.py
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M docs/R_ANALYSIS_REMEDIATION_PLAN.md
+ M tests/bioinformatics/test_formal_controlled_deg_runner.py
+?? app/bioinformatics/deg_engine/standard_package.py
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+These files were not treated as Phase 2.5 migration outputs.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,260p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short` | Passed |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads` | Passed |
+| `git rev-parse HEAD` | Passed, `05d3afcff4782d037405dd618db32661cb338fd4` |
+| `git log --oneline --decorate --max-count=80 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 3 -type f` | Passed |
+| `rg --files app tests docs` | Passed |
+
+No functional tests were run for this refresh because it was documentation-only and audit-only. Functional tests would validate the current checkout, not prove old-branch runtime availability.
+
+### Findings
+
+The current line has advanced beyond the previous Phase 2.5 reports and now includes standard package artifact manifests, worker invocation manifest validation, and controlled survival/Cox standard package sidecars. These are current-code contract/package materials, not proof that every old branch, legacy directory, Bioinformatics candidate, or Meta Analysis candidate is current available.
+
+High-relevance branch deltas remain large:
+
+| Branch | Audited-path file delta vs current |
+| --- | ---: |
+| `dev/release-internal-test` | 2111 |
+| `codex/releasebuild-formal-deg-carryover` | 1086 |
+| `codex/mainline-survival-clinical-carryover` | 725 |
+| `stable/mainline` | 783 |
+| `dev/meta-analysis` | 602 |
+| `dev/ui-shell` | 2115 |
+| `integration/phase4-meta-l3-scoped-pick` | 923 |
+
+No old branch is safe to merge wholesale. Legacy directories and `archive/legacy_sources/**` remain quarantined material libraries only.
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one candidate feature, one current UI entry, one current contract bridge, and one focused proof plan. Mock, placeholder, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
+
 ## Phase 2.5 Refresh: Full Branch Inventory at `db5bef1`
 
 Date: 2026-06-04
@@ -921,3 +1226,168 @@ No migration candidate is approved for direct carry-over. Future work must selec
 ### Stop Point
 
 Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
+
+## Current Latest Phase 2.5 Snapshot
+
+Date: 2026-06-04
+
+Latest refreshed audit baseline: `dev/bioinformatics` at `cdae46876aaf383ecca218d5d6dd57a3449983aa`.
+
+The detailed current refresh entry is recorded below as `Phase 2.5 Refresh: Full Branch Inventory at cdae468`. It supersedes older Phase 2.5 entries for current-state reporting while preserving them as historical worklog records.
+
+Current decision remains unchanged: no old branch, legacy directory, archive source, mock output, placeholder output, testing-level output, or branch-only implementation is approved for direct carry-over. The current UI remains the only mainline, and old branches remain material libraries only.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `cdae468`
+
+Date: 2026-06-04
+
+This refresh updated the Phase 2.5 branch inventory, legacy catalog, migration ledger, deprecated register, and current UI coverage matrix against the current `dev/bioinformatics` HEAD:
+
+```text
+cdae46876aaf383ecca218d5d6dd57a3449983aa
+validate indexed worker invocation artifacts
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories, archive sources, and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Worktree Boundaries
+
+The refresh intentionally modified only Phase 2.5 report files. These unrelated untracked paths were observed and preserved:
+
+```text
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+They were not treated as Phase 2.5 migration outputs.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,220p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,220p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short --branch` | Passed |
+| `git branch --all --no-color` | Passed |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git rev-parse HEAD` | Passed, `cdae46876aaf383ecca218d5d6dd57a3449983aa` |
+| `git for-each-ref '--format=%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads refs/remotes` | Passed |
+| `git log --oneline --decorate --max-count=80 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f` | Passed |
+| `find app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui -maxdepth 3 -type f` | Passed |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|meta" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Passed |
+
+No functional tests were run because this phase was documentation-only and audit-only. The audit does not claim branch-only or legacy-only runtime availability.
+
+### Updated Findings
+
+Current `dev/bioinformatics` has advanced beyond the previous `8c34c37` snapshot and now includes direct and legacy-sidecar worker invocation validation, including indexed worker invocation log validation. These are current contract/runtime diagnostics, not approval to migrate any old branch or to treat old implementations as current available features.
+
+High-relevance branch deltas remain large. Selected audited branches ranged from `149` to `2118` changed files in audited paths, so whole-branch carry-over remains unsafe.
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one current UI entry and one candidate, then adapt or rewrite it against the current contracts with current tests and real output evidence.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `f8590cc`
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the Phase 2.5 branch inventory, legacy catalog, migration candidate ledger, deprecated legacy register, and branch-to-current-UI coverage matrix against the current `dev/bioinformatics` HEAD:
+
+```text
+f8590cc458317656aee600430e911d57cecbb32f
+harden standard package module mapping
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories, archive sources, and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Worktree Boundaries
+
+The refresh intentionally modified only Phase 2.5 report files. These unrelated dirty or untracked paths were observed and preserved:
+
+```text
+ M app/bioinformatics/gene_set_resources.py
+ M tests/bioinformatics/test_gene_set_resources.py
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+They were not treated as Phase 2.5 migration outputs and were not committed as part of this audit.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,240p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,240p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short --branch` | Passed |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads refs/remotes` | Passed |
+| `git rev-parse HEAD` | Passed, `f8590cc458317656aee600430e911d57cecbb32f` |
+| `git log --oneline --decorate --max-count=90 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches |
+| `git diff --name-status HEAD..<branch> -- ...` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy -maxdepth 4 -type f` | Passed |
+| `find archive -maxdepth 4 -type f` | Passed |
+| `find app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui -maxdepth 3 -type f` | Passed |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|meta" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Passed |
+
+No functional tests were run because this phase was documentation-only and audit-only. Functional tests would validate the current checkout, not prove old-branch runtime availability.
+
+### Findings
+
+Current `dev/bioinformatics` now includes standard package module mapping on top of prior worker invocation manifest, sidecar standard package, and Bio/Meta L3 proof history. This strengthens current contract inventory, but it does not approve any old branch for direct migration.
+
+High-relevance branch deltas remain large:
+
+- `dev/release-internal-test`: 2118 files in audited paths.
+- `codex/releasebuild-formal-deg-carryover`: 1093 files.
+- `codex/mainline-survival-clinical-carryover`: 732 files.
+- `dev/meta-analysis`: 607 files.
+- `dev/ui-shell`: 2118 files.
+
+Legacy directories remain quarantined:
+
+```text
+app/bioinformatics/legacy/**
+app/meta_analysis/legacy/**
+archive/legacy_sources/**
+```
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one current UI entry and one candidate, then adapt or rewrite it against current contracts with current tests and real output evidence. Mock, placeholder, dry-run, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.

@@ -2,7 +2,7 @@
 
 Date: 2026-06-04
 
-Baseline: `dev/bioinformatics` at `db5bef1a224a8a6983c011da9260658364c25c7f`
+Baseline: `dev/bioinformatics` at `f8590cc458317656aee600430e911d57cecbb32f`
 
 ## Scope
 
@@ -14,13 +14,13 @@ app/meta_analysis/legacy/**
 archive/legacy_sources/**
 ```
 
-Legacy code was read only. It was not imported, executed, adapted, or promoted. Legacy tests are evidence that historical code once had checks, not evidence that the current UI can run those features.
+Legacy code was read only. It was not imported, executed, adapted, merged, or promoted. Legacy tests are evidence that historical code once had checks, not evidence that the current UI can run those features.
 
 ## Bioinformatics Legacy Catalog
 
 | Legacy area | Representative files | Developed material | Current UI/page mapping | Current implementation? | Real run evidence in this audit? | Tests? | Real output claim allowed? | Old state/path dependency | Risk | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| GEO standalone tool | `app/bioinformatics/legacy/geo_tool/main.py`, `geo_workflow.py`, `run_geo_tool.py`, `geo_info_fetcher.py`; mirrored under `archive/legacy_sources/bioinformatics_project/geo_tool/**` | Standalone GEO search/download/workflow utilities and term dictionaries | Current Bio data source/search pages only indirectly related | No direct current UI call should use it | No | Legacy tests/scripts only | No | Standalone app paths, old wrappers, old requirements | High | deprecated |
+| GEO standalone tool | `app/bioinformatics/legacy/geo_tool/main.py`, `geo_workflow.py`, `run_geo_tool.py`, `geo_info_fetcher.py`; mirrored under `archive/legacy_sources/bioinformatics_project/geo_tool/**` | Standalone GEO search/download/workflow utilities and term dictionaries | Current Bio data source/search pages only indirectly related | No direct current UI call should use it | No | Legacy tests/scripts only | No | Standalone app paths, wrappers, old requirements | High | deprecated |
 | GEO processing and detector | `legacy/geo_processing/detector/*.py`, `module1_readers.py`, `module3_assets.py` | Dataset/matrix classification, readers, asset helpers | Current recognition/standardization/resolver pages | Partly superseded by current recognition and standardization contracts | No | Legacy tests | No | Old detector models/config and old output assumptions | Medium/high | adapter only if selected |
 | GEO pipeline scripts | `legacy/geo_pipeline/*.py`, `download_geo_full_only.py`, `download_supplement_and_sra.py`, `process_geo_family_soft.py` | Historical download/process pipeline | Current data source request/download pages | Current services supersede direct use | No | Legacy smoke scripts only | No | Network/runtime/filesystem assumptions | High | deprecated/adapter |
 | TCGA/GTEx facade | `legacy/tcga_gtex/facade.py`, `adapters/*.py`, `processing/*.py`, `download/task_runner.py` | Old TCGA/GTEx search, download, parsing, normalization facade | Current TCGA/GTEx source cards and standardization pages | Current `data_sources/**` and `search_center/**` supersede it | No | Legacy tests | No | Old locator/task-run contracts | High | rewrite |
@@ -42,6 +42,9 @@ Legacy code was read only. It was not imported, executed, adapted, or promoted. 
 | Legacy reporting assets/widgets | `legacy/app/reporting_summary_widget.py`, `task_results_summary_widget.py`, `assets/icons/**` | Old reporting summaries and icons | Current reporting page and UI shell are separate | No runtime | No | No current proof | No | Old app resources | Medium | UI reference only |
 | Legacy demo projects | `legacy/demo_projects/MP-2024-0007/**` | Historical sample project/logs | No direct current UI mapping | No | No | Legacy only | No | Fixed demo state | Medium | reference only |
 | Legacy icon/contact sheets | `legacy/assets/icons/**`, `legacy/assets/meta_icons/**` | Visual asset library | UI design material | No runtime | No | No | No analysis output | Static assets | Low/medium | adapter/design review |
+| Legacy bias/readiness/profile helpers | `legacy/bias/**`, `legacy/reporting/**`, `legacy/core/dataset_readiness.py`, `legacy/core/profile_*` | Bias/readiness/profile/reporting service patterns | Current Meta quality/reporting pages only conceptually related | No direct current use | No | Legacy tests only | No | Old project/profile store | Medium/high | adapter only after current contract mapping |
+| Legacy GEO readiness under Meta | `legacy/geo_readiness/**`, `legacy/local_data/**` | Historical GEO/local-data readiness utilities inside Meta legacy tree | Current Bio recognition/standardization, not current Meta runtime | No | No | Legacy tests only | No | Old GEO readiness state and local-data assumptions | High | rewrite/reference |
+| Legacy packaging scripts | `legacy/packaging/**`, `legacy/scripts/check_packaging_readiness.py` | Old standalone Meta app packaging helpers | Current root package script only by concept | No | No | Legacy tests only | No | Old app bundle names and entrypoints | High | deprecated |
 
 ## Archive Findings
 
@@ -49,7 +52,7 @@ Legacy code was read only. It was not imported, executed, adapted, or promoted. 
 | --- | --- | --- |
 | `archive/legacy_sources/bioinformatics_project/**` | Duplicates or older snapshot of Bio legacy GEO/TCGA/literature code | Do not migrate directly; use only for provenance/reference if a current adapter task needs it. |
 | `archive/legacy_sources/model9/**` | Duplicates or older snapshot of Meta legacy workbench, services, tests, docs, packaging scripts | Do not migrate directly; use only as requirements/reference after mapping to current Meta pages and contracts. |
-| `archive/old_docs/**` | Historical documentation | Reference only; not runtime evidence. |
+| `archive/old_docs/**` if present | Historical documentation | Reference only; not runtime evidence. |
 
 ## Cross-Legacy Findings
 
