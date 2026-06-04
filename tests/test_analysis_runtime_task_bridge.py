@@ -225,6 +225,9 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["worker_invocation_status"] == "fixture_copy_completed"
     assert row["worker_boundary_type"] == "analysis_task_bridge_fixture"
     assert row["worker_migration_status"] == "mock_fixture_contract"
+    assert row["input_hash"] != "fixture"
+    assert row["parameter_hash"] != "fixture"
+    assert row["random_seed"] == "7"
     assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
     assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
     assert row["artifact_counts"] == {"tables": 1, "plots": 0, "reports": 1, "logs": 2}

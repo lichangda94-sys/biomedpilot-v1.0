@@ -139,6 +139,8 @@ Update: Analysis Center result rows now join current result-index entries with t
 
 Update: the current Bioinformatics Results Browser table now displays standard package contract status for each result row, including registration, validation state, relative package path, and artifact counts. This is a UI consumption step only; it does not change result semantics or make testing/imported/preflight outputs formal.
 
+Update: standard package catalog rows now expose `input_hash`, `parameter_hash`, and `random_seed` from `provenance.json`. The current Bioinformatics Results Browser displays these alongside runtime, engine, command, worker backend, invocation status, worker boundary, and migration status.
+
 Update: the current Bioinformatics Results Browser now displays a standard package artifact manifest table for declared `tables`, `plots`, `reports`, and package `logs`. The table is derived from the standard package catalog and uses package-relative paths only.
 
 ## Phase R1: Task-System Bridge
@@ -163,6 +165,7 @@ Acceptance:
 - Analysis Center exposes standard package validation/artifact blockers as gate rows. **Completed for UI gate preview.**
 - Analysis Center result rows expose per-result standard package registration, validation, path, and artifact-count status. **Completed for result-row package preview.**
 - Results Browser displays per-result standard package registration, validation, path, and artifact-count status in the user-visible result table. **Completed for current results table preview.**
+- Results Browser displays standard package provenance and worker-boundary rows including runtime, engine, command, hashes, seed, worker backend, invocation status, boundary type, and migration status. **Completed for current provenance/worker preview.**
 - Results Browser displays standard package artifact manifest rows for declared tables, plots, reports, and logs without scanning module-private output folders. **Completed for current artifact manifest preview.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**

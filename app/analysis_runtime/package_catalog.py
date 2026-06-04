@@ -68,6 +68,9 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "worker_boundary_type": str(worker_boundary.get("boundary_type") or _default_worker_boundary_type(provenance_payload)),
                     "worker_migration_status": str(worker_boundary.get("migration_status") or ""),
                     "command": str(provenance_payload.get("command") or ""),
+                    "input_hash": str(provenance_payload.get("input_hash") or ""),
+                    "parameter_hash": str(provenance_payload.get("parameter_hash") or ""),
+                    "random_seed": "" if provenance_payload.get("random_seed") is None else str(provenance_payload.get("random_seed")),
                     "artifact_counts": {
                         "tables": len(result_payload.get("tables") or []),
                         "plots": len(result_payload.get("plots") or []),

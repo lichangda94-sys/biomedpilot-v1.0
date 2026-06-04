@@ -6569,8 +6569,13 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         _set_table_widths(self._results, [170, 110, 170, 120, 170, 120, 160, 280, 100])
         self._results.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
 
-        package_card, package_layout = _card("Standard result package artifacts")
-        package_layout.addWidget(_muted("只展示标准结果包声明的 tables / plots / reports / logs，不扫描模块私有输出目录。"))
+        package_card, package_layout = _card("Standard result package details")
+        package_layout.addWidget(_muted("只展示标准结果包 catalog 中的 provenance、worker boundary 和 artifact manifest，不扫描模块私有输出目录。"))
+        self._standard_package_provenance = _table(["Result", "Module", "Mode", "Engine", "Runtime", "Worker", "Boundary", "Command", "Hashes"])
+        self._standard_package_provenance.setObjectName("resultsStandardPackageProvenanceTable")
+        package_layout.addWidget(self._standard_package_provenance)
+        _set_table_widths(self._standard_package_provenance, [180, 110, 80, 190, 160, 180, 220, 240, 220])
+        self._standard_package_provenance.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
         self._standard_package_artifacts = _table(["Result", "Validation", "Group", "Artifact", "Package path", "Exists", "Size"])
         self._standard_package_artifacts.setObjectName("resultsStandardPackageArtifactTable")
         package_layout.addWidget(self._standard_package_artifacts)
@@ -6683,6 +6688,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._results,
             _results_user_rows(self._project_root, entries, records),
         )
+        _fill_table(self._standard_package_provenance, _standard_package_provenance_rows(analysis_state))
         _fill_table(self._standard_package_artifacts, _standard_package_artifact_rows(analysis_state))
         review = build_formal_deg_result_review(
             self._project_root,
@@ -11088,14 +11094,34 @@ def _result_entries_with_standard_packages(entries: list[dict[str, object]], ana
     return enriched
 
 
-def _standard_package_artifact_rows(analysis_state: dict[str, object]) -> list[list[object]]:
+def _standard_package_catalog_rows(analysis_state: dict[str, object]) -> list[dict[str, object]]:
     catalog = analysis_state.get("standard_analysis_packages")
     package_rows = catalog.get("rows", []) if isinstance(catalog, dict) else []
+    return [row for row in package_rows if isinstance(row, dict)] if isinstance(package_rows, list | tuple) else []
+
+
+def _standard_package_provenance_rows(analysis_state: dict[str, object]) -> list[list[object]]:
     rows: list[list[object]] = []
-    iterable_rows = package_rows if isinstance(package_rows, list | tuple) else []
-    for package_row in iterable_rows:
-        if not isinstance(package_row, dict):
-            continue
+    for package_row in _standard_package_catalog_rows(analysis_state):
+        rows.append(
+            [
+                str(package_row.get("result_id") or ""),
+                str(package_row.get("module_id") or ""),
+                str(package_row.get("mode") or ""),
+                str(package_row.get("engine_name") or ""),
+                _standard_package_runtime_label(package_row),
+                _standard_package_worker_label(package_row),
+                _standard_package_boundary_label(package_row),
+                str(package_row.get("command") or ""),
+                _standard_package_hash_label(package_row),
+            ]
+        )
+    return rows
+
+
+def _standard_package_artifact_rows(analysis_state: dict[str, object]) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for package_row in _standard_package_catalog_rows(analysis_state):
         manifest = package_row.get("artifact_manifest")
         if not isinstance(manifest, dict):
             continue
@@ -11120,6 +11146,46 @@ def _standard_package_artifact_rows(analysis_state: dict[str, object]) -> list[l
                     ]
                 )
     return rows
+
+
+def _standard_package_runtime_label(row: dict[str, object]) -> str:
+    runtime = row.get("runtime")
+    if not isinstance(runtime, dict):
+        return ""
+    r_version = str(runtime.get("r_version") or "")
+    bioc_version = str(runtime.get("bioconductor_version") or "")
+    parts = []
+    if r_version:
+        parts.append(f"R={r_version}")
+    if bioc_version:
+        parts.append(f"Bioc={bioc_version}")
+    return "; ".join(parts)
+
+
+def _standard_package_worker_label(row: dict[str, object]) -> str:
+    backend = str(row.get("worker_backend") or "")
+    status = str(row.get("worker_invocation_status") or "")
+    return "; ".join(item for item in (backend, status) if item)
+
+
+def _standard_package_boundary_label(row: dict[str, object]) -> str:
+    boundary_type = str(row.get("worker_boundary_type") or "")
+    migration = str(row.get("worker_migration_status") or "")
+    return "; ".join(item for item in (boundary_type, migration) if item)
+
+
+def _standard_package_hash_label(row: dict[str, object]) -> str:
+    input_hash = str(row.get("input_hash") or "")
+    parameter_hash = str(row.get("parameter_hash") or "")
+    random_seed = str(row.get("random_seed") or "")
+    parts = []
+    if input_hash:
+        parts.append(f"input={input_hash[:12]}")
+    if parameter_hash:
+        parts.append(f"parameters={parameter_hash[:12]}")
+    if random_seed:
+        parts.append(f"seed={random_seed}")
+    return "; ".join(parts)
 
 
 def _results_user_rows(project_root: Path | None, entries: list[dict[str, object]], records: list[dict[str, object]]) -> list[list[object]]:

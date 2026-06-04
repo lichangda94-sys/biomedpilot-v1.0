@@ -4156,6 +4156,25 @@ def test_results_browser_displays_standard_package_contract_status(qt_app, proje
     assert "tables=1; plots=0; reports=1; logs=2" in table_text
     assert "path=analysis_results/enrichment-mock-task" in table_text
 
+    provenance_table = widget.findChild(QTableWidget, "resultsStandardPackageProvenanceTable")
+    assert provenance_table is not None
+    provenance_headers = [provenance_table.horizontalHeaderItem(index).text() for index in range(provenance_table.columnCount())]
+    assert provenance_headers == ["Result", "Module", "Mode", "Engine", "Runtime", "Worker", "Boundary", "Command", "Hashes"]
+    provenance_text = _table_text(provenance_table)
+    assert "analysis-package-enrichment-mock-task" in provenance_text
+    assert "enrichment" in provenance_text
+    assert "mock" in provenance_text
+    assert "biomedpilot_analysis_task_bridge" in provenance_text
+    assert "R=not_required_for_mock" in provenance_text
+    assert "python_fixture" in provenance_text
+    assert "fixture_copy_completed" in provenance_text
+    assert "analysis_task_bridge_fixture" in provenance_text
+    assert "mock_fixture_contract" in provenance_text
+    assert "analysis_task_bridge_mock_fixture_copy" in provenance_text
+    assert "input=" in provenance_text
+    assert "parameters=" in provenance_text
+    assert "seed=7" in provenance_text
+
     artifact_table = widget.findChild(QTableWidget, "resultsStandardPackageArtifactTable")
     assert artifact_table is not None
     artifact_headers = [artifact_table.horizontalHeaderItem(index).text() for index in range(artifact_table.columnCount())]
