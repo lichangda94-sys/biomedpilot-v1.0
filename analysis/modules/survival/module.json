@@ -1,0 +1,32 @@
+{
+  "schema_version": "biomedpilot.analysis_module_manifest.v1",
+  "module_id": "survival",
+  "title": "Survival analysis",
+  "standard_entrypoint": "analysis/runners/run_module.R",
+  "input_schema": "analysis/schemas/input/module_input.schema.json",
+  "output_schema": "analysis/schemas/output/result_package.schema.json",
+  "modes": {
+    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+    "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
+    "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
+  },
+  "environment": {
+    "app_dev": "docker/Dockerfile.app-dev",
+    "lite": "docker/Dockerfile.r-bio-core",
+    "full": "docker/Dockerfile.r-bio-full",
+    "renv_lite": "renv/renv.bio-core.lock",
+    "renv_full": "renv/renv.bio-full.lock"
+  },
+  "analysis_environment": "r-bio-core",
+  "full_environment": "r-bio-full",
+  "environment_lock": "renv/renv.bio-full.lock",
+  "dockerfile": "docker/Dockerfile.r-bio-full",
+  "dependency_policy": {
+    "detection": "detect_first",
+    "runtime_install": "forbidden",
+    "default_app_dependency": false
+  },
+  "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+  "result_package_required": ["result.json", "provenance.json", "tables", "plots", "reports", "logs"],
+  "clinical_conclusion_policy": "not_generated_by_default"
+}

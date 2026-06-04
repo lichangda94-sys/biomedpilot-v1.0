@@ -1,0 +1,32 @@
+{
+  "schema_version": "biomedpilot.analysis_module_manifest.v1",
+  "module_id": "molecular_dynamics",
+  "title": "Molecular dynamics",
+  "standard_entrypoint": "analysis/runners/run_module.R",
+  "input_schema": "analysis/schemas/input/module_input.schema.json",
+  "output_schema": "analysis/schemas/output/result_package.schema.json",
+  "modes": {
+    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+    "lite": {"supported": false, "blocker": "lite_md_worker_not_defined"},
+    "full": {"supported": false, "blocker": "r_chem_gpu_container_not_available"}
+  },
+  "environment": {
+    "app_dev": "docker/Dockerfile.app-dev",
+    "lite": "docker/Dockerfile.r-chem-gpu",
+    "full": "docker/Dockerfile.r-chem-gpu",
+    "renv_lite": "renv/renv.chem-full.lock",
+    "renv_full": "renv/renv.chem-full.lock"
+  },
+  "analysis_environment": "r-chem-gpu",
+  "full_environment": "r-chem-gpu",
+  "environment_lock": "renv/renv.chem-full.lock",
+  "dockerfile": "docker/Dockerfile.r-chem-gpu",
+  "dependency_policy": {
+    "detection": "detect_first",
+    "runtime_install": "forbidden",
+    "default_app_dependency": false
+  },
+  "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+  "result_package_required": ["result.json", "provenance.json", "tables", "plots", "reports", "logs"],
+  "external_tool_policy": "R_adapter_calls_GROMACS_in_chem_gpu_environment_only"
+}

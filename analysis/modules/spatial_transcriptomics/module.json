@@ -1,0 +1,32 @@
+{
+  "schema_version": "biomedpilot.analysis_module_manifest.v1",
+  "module_id": "spatial_transcriptomics",
+  "title": "Spatial transcriptomics",
+  "standard_entrypoint": "analysis/runners/run_module.R",
+  "input_schema": "analysis/schemas/input/module_input.schema.json",
+  "output_schema": "analysis/schemas/output/result_package.schema.json",
+  "modes": {
+    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/mock_analysis_input.json"},
+    "lite": {"supported": false, "blocker": "lite_spatial_worker_not_defined"},
+    "full": {"supported": false, "blocker": "r_spatial_full_container_not_available"}
+  },
+  "environment": {
+    "app_dev": "docker/Dockerfile.app-dev",
+    "lite": "docker/Dockerfile.r-spatial-full",
+    "full": "docker/Dockerfile.r-spatial-full",
+    "renv_lite": "renv/renv.spatial-full.lock",
+    "renv_full": "renv/renv.spatial-full.lock"
+  },
+  "analysis_environment": "r-spatial-full",
+  "full_environment": "r-spatial-full",
+  "environment_lock": "renv/renv.spatial-full.lock",
+  "dockerfile": "docker/Dockerfile.r-spatial-full",
+  "dependency_policy": {
+    "detection": "detect_first",
+    "runtime_install": "forbidden",
+    "default_app_dependency": false
+  },
+  "result_package_contract": "analysis/schemas/output/result_package.schema.json",
+  "result_package_required": ["result.json", "provenance.json", "tables", "plots", "reports", "logs"],
+  "resource_policy": "spatial_references_require_locked_manifest_before_full_mode"
+}

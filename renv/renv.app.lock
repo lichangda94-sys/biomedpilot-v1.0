@@ -1,0 +1,15 @@
+{
+  "R": {
+    "Version": "not-required-for-app-dev",
+    "Repositories": []
+  },
+  "Packages": {},
+  "BioMedPilotPolicy": {
+    "schema_version": "biomedpilot.renv_policy.v1",
+    "environment": "app-dev",
+    "status": "scaffold_only_not_restored",
+    "heavy_analysis_dependencies_allowed": false,
+    "runtime_package_install": "forbidden",
+    "notes": "Default app development must start and test without full R analysis dependencies."
+  }
+}

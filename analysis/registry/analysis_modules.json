@@ -32,6 +32,7 @@
       },
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
+      "module_manifest": "analysis/modules/survival/module.json",
       "heavy_dependencies": ["survival", "survminer"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -46,6 +47,7 @@
       },
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
+      "module_manifest": "analysis/modules/univariate/module.json",
       "heavy_dependencies": ["survival"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -60,6 +62,7 @@
       },
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
+      "module_manifest": "analysis/modules/multivariate/module.json",
       "heavy_dependencies": ["survival", "glmnet"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -74,6 +77,7 @@
       },
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
+      "module_manifest": "analysis/modules/enrichment/module.json",
       "heavy_dependencies": ["clusterProfiler", "fgsea", "ReactomePA", "reactome.db", "msigdbr"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -88,6 +92,7 @@
       },
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
+      "module_manifest": "analysis/modules/immune_infiltration/module.json",
       "heavy_dependencies": ["GSVA", "GSEABase", "limma"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -102,6 +107,7 @@
       },
       "analysis_environment": "r-spatial-full",
       "full_environment": "r-spatial-full",
+      "module_manifest": "analysis/modules/spatial_transcriptomics/module.json",
       "heavy_dependencies": ["Seurat", "CellChat", "spacexr"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -116,6 +122,7 @@
       },
       "analysis_environment": "r-chem-full",
       "full_environment": "r-chem-full",
+      "module_manifest": "analysis/modules/docking/module.json",
       "external_tools": ["AutoDock Vina"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -130,6 +137,7 @@
       },
       "analysis_environment": "r-chem-gpu",
       "full_environment": "r-chem-gpu",
+      "module_manifest": "analysis/modules/molecular_dynamics/module.json",
       "external_tools": ["GROMACS"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     }

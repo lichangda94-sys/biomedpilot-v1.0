@@ -28,6 +28,18 @@ Completed in this audit:
 - `app/analysis_runtime/registry.py`
 - `app/analysis_runtime/standard_package.py`
 - `app/analysis_runtime/task_bridge.py`
+- `analysis/modules/<module_id>/module.json`
+- `docker/Dockerfile.app-dev`
+- `docker/Dockerfile.r-bio-core`
+- `docker/Dockerfile.r-bio-full`
+- `docker/Dockerfile.r-spatial-full`
+- `docker/Dockerfile.r-chem-full`
+- `docker/Dockerfile.r-chem-gpu`
+- `renv/renv.app.lock`
+- `renv/renv.bio-core.lock`
+- `renv/renv.bio-full.lock`
+- `renv/renv.spatial-full.lock`
+- `renv/renv.chem-full.lock`
 
 Remaining:
 
@@ -109,6 +121,21 @@ renv/renv.bio-full.lock
 renv/renv.spatial-full.lock
 renv/renv.chem-full.lock
 ```
+
+Status: scaffolded, not restored.
+
+Completed:
+
+- Added Dockerfile scaffolds for app-dev, bio-core, bio-full, spatial-full, chem-full, and chem-gpu.
+- Added empty policy lockfiles for app, bio-core, bio-full, spatial-full, and chem-full.
+- Added contract tests proving app-dev excludes known heavy analysis dependency names and that Dockerfiles do not contain runtime package installer entrypoints.
+
+Remaining:
+
+- Build real images in a controlled environment.
+- Replace empty policy locks with approved package-version locks.
+- Add resource lock validation for full mode.
+- Add package/open-W checks only after real worker runtime exists.
 
 Acceptance:
 

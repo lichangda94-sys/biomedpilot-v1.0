@@ -1,0 +1,16 @@
+{
+  "R": {
+    "Version": "4.4.2",
+    "Repositories": []
+  },
+  "Packages": {},
+  "BioMedPilotPolicy": {
+    "schema_version": "biomedpilot.renv_policy.v1",
+    "environment": "r-chem-full",
+    "status": "scaffold_only_not_restored",
+    "heavy_analysis_dependencies_allowed": true,
+    "runtime_package_install": "forbidden",
+    "external_tool_lock_required": true,
+    "notes": "Chem worker lock placeholder. Docking and MD tools remain external-tool adapters, not app-dev dependencies."
+  }
+}

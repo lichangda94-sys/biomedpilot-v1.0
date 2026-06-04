@@ -1,0 +1,11 @@
+FROM python:3.14-slim
+
+LABEL org.biomedpilot.environment="app-dev"
+LABEL org.biomedpilot.analysis-boundary="ui-and-main-backend-only"
+LABEL org.biomedpilot.r-runtime="not-required"
+LABEL org.biomedpilot.full-analysis-dependencies="excluded"
+LABEL org.biomedpilot.runtime-package-install="forbidden"
+
+WORKDIR /opt/biomedpilot
+
+CMD ["python3", "-m", "app.main", "--smoke-test"]

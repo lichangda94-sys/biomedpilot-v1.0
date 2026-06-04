@@ -1,0 +1,10 @@
+FROM rocker/r-ver:4.4.2
+
+LABEL org.biomedpilot.environment="r-bio-core"
+LABEL org.biomedpilot.analysis-boundary="lite-r-worker"
+LABEL org.biomedpilot.resource-downloads="disabled-by-default"
+LABEL org.biomedpilot.runtime-package-install="forbidden"
+
+WORKDIR /analysis
+
+CMD ["Rscript", "/analysis/runners/run_module.R"]

@@ -33,11 +33,28 @@ The scaffold fixes the most basic registry/schema/mock result-package boundary. 
 
 The bridge creates a `TaskCenter` task, writes a standard result package, validates it, and registers a result-index entry. It does not execute R packages or enable lite/full algorithms yet.
 
+A first environment isolation scaffold now also exists:
+
+- `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
+- `docker/Dockerfile.app-dev`
+- `docker/Dockerfile.r-bio-core`
+- `docker/Dockerfile.r-bio-full`
+- `docker/Dockerfile.r-spatial-full`
+- `docker/Dockerfile.r-chem-full`
+- `docker/Dockerfile.r-chem-gpu`
+- `renv/renv.app.lock`
+- `renv/renv.bio-core.lock`
+- `renv/renv.bio-full.lock`
+- `renv/renv.spatial-full.lock`
+- `renv/renv.chem-full.lock`
+
+These files are policy scaffolds only. They do not restore packages, install full R dependencies, or prove full analysis readiness.
+
 ## 2. PASS / WARN / FAIL Table
 
 | Requirement | Status | Evidence |
 | --- | --- | --- |
-| Unified analysis module directory | WARN | Added `analysis/`; existing algorithms still live under `app/bioinformatics/**`. |
+| Unified analysis module directory | WARN | Added `analysis/` and `analysis/modules/<module_id>/module.json`; existing algorithms still live under `app/bioinformatics/**`. |
 | Module registry | PASS | Added `analysis/registry/analysis_modules.json`. |
 | Unified entrypoint | WARN | Added `analysis/runners/run_module.R` for mock boundary; existing modules do not call it yet. |
 | Mock/lite/full design | WARN | Registry declares all three modes; mock supported, lite/full blocked pending migration. |
@@ -48,9 +65,9 @@ The bridge creates a `TaskCenter` task, writes a standard result package, valida
 | Main backend task-system invocation | WARN | A mock-mode bridge now creates `TaskCenter` entries and result-index entries; existing analysis calls still include direct service calls. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
-| Environment split | FAIL | No complete `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full` container/renv implementation yet. |
-| `renv.lock` equivalent | FAIL | No committed renv lock split for analysis environments. |
-| Full analysis Docker image | FAIL | No dedicated full-analysis Docker images in current tree. |
+| Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
+| `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
+| Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added starter `analysis/resources/manifest.json`; real resource locks are incomplete. |
 | Provenance captures versions/hashes/seed/command | WARN | Some Bio result packages capture provenance; universal schema now requires it, migration incomplete. |
 | Survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | FAIL | Registry now declares target modules; implementation migration is pending. |
@@ -60,7 +77,7 @@ The bridge creates a `TaskCenter` task, writes a standard result package, valida
 ## 3. Top 5 Architecture Risks
 
 1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a mock-mode bridge exists but does not migrate existing algorithms yet.
-2. **P1: No full environment split.** There is no complete `renv`/Docker separation for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`.
+2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`.
 4. **P1: Large resource governance is incomplete.** Reactome/MSigDB and future spatial/chem resources need version, source, hash, license, and cache-path locks.
 5. **P2/P3: UI and backend are still aware of module-specific payloads.** Current UI should eventually consume standard result package metadata rather than individual R package output shapes.
@@ -79,10 +96,10 @@ The bridge creates a `TaskCenter` task, writes a standard result package, valida
 
 | Issue | Evidence | Status after this audit |
 | --- | --- | --- |
-| No lite/full environment split | No `docker/` or `renv/` split found | Not fixed. |
+| No lite/full environment split | No `docker/` or `renv/` split existed before scaffold | Partially fixed with scaffold; real package locks and builds pending. |
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
 | No complete resource lock | Only module-specific gates/docs existed | Starter `analysis/resources/manifest.json` added; real locks pending. |
-| Full analysis no independent container | No Docker image split | Not fixed. |
+| Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
 | UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge only; current UI algorithms not migrated. |
 
 ### P2
@@ -124,6 +141,25 @@ New architecture boundary files:
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/resources/manifest.json`
+- `analysis/modules/survival/module.json`
+- `analysis/modules/univariate/module.json`
+- `analysis/modules/multivariate/module.json`
+- `analysis/modules/enrichment/module.json`
+- `analysis/modules/immune_infiltration/module.json`
+- `analysis/modules/spatial_transcriptomics/module.json`
+- `analysis/modules/docking/module.json`
+- `analysis/modules/molecular_dynamics/module.json`
+- `docker/Dockerfile.app-dev`
+- `docker/Dockerfile.r-bio-core`
+- `docker/Dockerfile.r-bio-full`
+- `docker/Dockerfile.r-spatial-full`
+- `docker/Dockerfile.r-chem-full`
+- `docker/Dockerfile.r-chem-gpu`
+- `renv/renv.app.lock`
+- `renv/renv.bio-core.lock`
+- `renv/renv.bio-full.lock`
+- `renv/renv.spatial-full.lock`
+- `renv/renv.chem-full.lock`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/result.json`
@@ -157,6 +193,8 @@ New architecture boundary files:
 - Added resource manifest skeleton with blocked full resources.
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that writes a standard result package, records task status, validates the package, and registers a result-index entry without requiring R.
+- Added per-module manifest scaffolds for all target modules.
+- Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

@@ -1,0 +1,10 @@
+FROM rocker/r-ver:4.4.2
+
+LABEL org.biomedpilot.environment="r-chem-gpu"
+LABEL org.biomedpilot.analysis-boundary="external-chem-gpu-tool-worker"
+LABEL org.biomedpilot.external-tool-adapter="r-wrapper-only"
+LABEL org.biomedpilot.runtime-package-install="forbidden"
+
+WORKDIR /analysis
+
+CMD ["Rscript", "/analysis/runners/run_module.R"]

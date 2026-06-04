@@ -1,0 +1,10 @@
+FROM rocker/r-ver:4.4.2
+
+LABEL org.biomedpilot.environment="r-bio-full"
+LABEL org.biomedpilot.analysis-boundary="full-r-worker"
+LABEL org.biomedpilot.resource-lock-required="true"
+LABEL org.biomedpilot.runtime-package-install="forbidden"
+
+WORKDIR /analysis
+
+CMD ["Rscript", "/analysis/runners/run_module.R"]
