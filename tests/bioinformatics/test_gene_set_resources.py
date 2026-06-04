@@ -6,8 +6,11 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
+import pytest
+
 from app.bioinformatics.gene_set_resources import (
     GENE_SET_REGISTRY,
+    RUNTIME_GENE_SET_DOWNLOAD_POLICY,
     build_gsea_gene_set_readiness,
     download_gene_set_resource,
     get_selected_gene_set,
@@ -202,9 +205,19 @@ def test_list_downloadable_gene_set_resources_includes_common_sources(tmp_path: 
     by_id = {item["resource_id"]: item for item in resources}
 
     assert {"reactome_pathways", "go_bp_human", "go_cc_human", "go_mf_human", "kegg_hsa_pathways", "msigdb_hallmark_user_import", "custom_gmt_import"} <= set(by_id)
-    assert by_id["reactome_pathways"]["downloadable"] is True
+    assert by_id["reactome_pathways"]["downloadable"] is False
+    assert by_id["reactome_pathways"]["runtime_download_policy"] == RUNTIME_GENE_SET_DOWNLOAD_POLICY
+    assert by_id["go_bp_human"]["downloadable"] is False
+    assert by_id["kegg_hsa_pathways"]["downloadable"] is False
     assert by_id["msigdb_hallmark_user_import"]["downloadable"] is False
     assert "导入" in by_id["msigdb_hallmark_user_import"]["operation"]
+
+
+def test_runtime_gene_set_download_is_blocked_by_default(tmp_path: Path) -> None:
+    project_root = _project_root(tmp_path)
+
+    with pytest.raises(RuntimeError, match=RUNTIME_GENE_SET_DOWNLOAD_POLICY):
+        download_gene_set_resource(project_root, "reactome_pathways", fetcher=lambda *_: _reactome_zip_bytes())
 
 
 def test_reactome_fake_zip_download_registers_available_resource(tmp_path: Path) -> None:
@@ -215,7 +228,7 @@ def test_reactome_fake_zip_download_registers_available_resource(tmp_path: Path)
         calls.append(url)
         return _reactome_zip_bytes()
 
-    result = download_gene_set_resource(project_root, "reactome_pathways", fetcher=fetcher)
+    result = download_gene_set_resource(project_root, "reactome_pathways", fetcher=fetcher, allow_runtime_download=True)
 
     resource = result["resource"]
     assert resource["collection_type"] == "Reactome"
@@ -236,9 +249,9 @@ def test_go_fake_annotation_generates_bp_cc_mf_gmt_resources(tmp_path: Path) -> 
     def fetcher(_url: str, _timeout: int) -> bytes:
         return _go_gaf_bytes()
 
-    bp = download_gene_set_resource(project_root, "go_bp_human", fetcher=fetcher)["resource"]
-    cc = download_gene_set_resource(project_root, "go_cc_human", fetcher=fetcher)["resource"]
-    mf = download_gene_set_resource(project_root, "go_mf_human", fetcher=fetcher)["resource"]
+    bp = download_gene_set_resource(project_root, "go_bp_human", fetcher=fetcher, allow_runtime_download=True)["resource"]
+    cc = download_gene_set_resource(project_root, "go_cc_human", fetcher=fetcher, allow_runtime_download=True)["resource"]
+    mf = download_gene_set_resource(project_root, "go_mf_human", fetcher=fetcher, allow_runtime_download=True)["resource"]
 
     assert bp["collection_type"] == "GO_BP"
     assert cc["collection_type"] == "GO_CC"
@@ -252,7 +265,7 @@ def test_go_fake_annotation_generates_bp_cc_mf_gmt_resources(tmp_path: Path) -> 
 def test_kegg_fake_rest_generates_human_pathway_gmt(tmp_path: Path) -> None:
     project_root = _project_root(tmp_path)
 
-    result = download_gene_set_resource(project_root, "kegg_hsa_pathways", fetcher=_kegg_fetcher)
+    result = download_gene_set_resource(project_root, "kegg_hsa_pathways", fetcher=_kegg_fetcher, allow_runtime_download=True)
 
     resource = result["resource"]
     assert resource["collection_type"] == "KEGG"
@@ -266,11 +279,11 @@ def test_kegg_fake_rest_generates_human_pathway_gmt(tmp_path: Path) -> None:
 
 def test_download_failure_does_not_break_existing_registry_or_selection(tmp_path: Path) -> None:
     project_root = _project_root(tmp_path)
-    existing = download_gene_set_resource(project_root, "reactome_pathways", fetcher=lambda *_: _reactome_zip_bytes())["resource"]
+    existing = download_gene_set_resource(project_root, "reactome_pathways", fetcher=lambda *_: _reactome_zip_bytes(), allow_runtime_download=True)["resource"]
     select_gene_set(project_root, str(existing["resource_id"]))
 
     try:
-        refresh_downloaded_gene_set(project_root, "reactome_pathways", fetcher=lambda *_: (_ for _ in ()).throw(RuntimeError("offline")))
+        refresh_downloaded_gene_set(project_root, "reactome_pathways", fetcher=lambda *_: (_ for _ in ()).throw(RuntimeError("offline")), allow_runtime_download=True)
     except RuntimeError:
         pass
 
@@ -282,7 +295,7 @@ def test_download_failure_does_not_break_existing_registry_or_selection(tmp_path
 
 def test_downloaded_resource_missing_file_validates_missing_and_can_reselect_after_refresh(tmp_path: Path) -> None:
     project_root = _project_root(tmp_path)
-    resource = download_gene_set_resource(project_root, "kegg_hsa_pathways", fetcher=_kegg_fetcher)["resource"]
+    resource = download_gene_set_resource(project_root, "kegg_hsa_pathways", fetcher=_kegg_fetcher, allow_runtime_download=True)["resource"]
     select_gene_set(project_root, "kegg_hsa_pathways")
     Path(project_root / resource["local_path"]).unlink()
 
@@ -290,7 +303,7 @@ def test_downloaded_resource_missing_file_validates_missing_and_can_reselect_aft
 
     missing = next(item for item in validation["resources"] if item["resource_id"] == "kegg_hsa_pathways")
     assert missing["status"] == "missing"
-    refreshed = refresh_downloaded_gene_set(project_root, "kegg_hsa_pathways", fetcher=_kegg_fetcher)["resource"]
+    refreshed = refresh_downloaded_gene_set(project_root, "kegg_hsa_pathways", fetcher=_kegg_fetcher, allow_runtime_download=True)["resource"]
     assert refreshed["status"] == "available"
     selected = get_selected_gene_set(project_root)
     assert selected is not None

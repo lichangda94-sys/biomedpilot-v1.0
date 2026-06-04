@@ -29,6 +29,7 @@ KEGG_PATHWAY_LIST_URL = "https://rest.kegg.jp/list/pathway/hsa"
 KEGG_PATHWAY_LINK_URL = "https://rest.kegg.jp/link/pathway/hsa"
 DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 30
 DOWNLOAD_USER_AGENT = "BioMedPilot/0.1 gene-set-resource-manager"
+RUNTIME_GENE_SET_DOWNLOAD_POLICY = "runtime_gene_set_download_forbidden_import_or_prelocked_resource_required"
 
 RESOURCE_STATUSES = {"available", "missing", "invalid", "pending_download"}
 COLLECTION_TYPES = {"GO_BP", "GO_CC", "GO_MF", "Reactome", "KEGG", "Hallmark", "Custom", "Unknown"}
@@ -95,12 +96,15 @@ def download_gene_set_resource(
     refresh: bool = False,
     fetcher: Fetcher | None = None,
     timeout: int = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
+    allow_runtime_download: bool = False,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     normalized_id = str(resource_id)
     cached = get_gene_set(root, normalized_id)
     if cached and not refresh and str(cached.get("status") or "") == "available":
         return {"resource": cached, "cached": True, "registry": _load_registry(root)}
+    if not allow_runtime_download:
+        raise RuntimeError(RUNTIME_GENE_SET_DOWNLOAD_POLICY)
     if normalized_id == "reactome_pathways":
         return _download_reactome_pathways(root, refresh=refresh, fetcher=fetcher, timeout=timeout)
     if normalized_id in {"go_bp_human", "go_cc_human", "go_mf_human"}:
@@ -118,8 +122,18 @@ def refresh_downloaded_gene_set(
     gene_id_type: str = "symbol",
     fetcher: Fetcher | None = None,
     timeout: int = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
+    allow_runtime_download: bool = False,
 ) -> dict[str, Any]:
-    return download_gene_set_resource(project_root, resource_id, species=species, gene_id_type=gene_id_type, refresh=True, fetcher=fetcher, timeout=timeout)
+    return download_gene_set_resource(
+        project_root,
+        resource_id,
+        species=species,
+        gene_id_type=gene_id_type,
+        refresh=True,
+        fetcher=fetcher,
+        timeout=timeout,
+        allow_runtime_download=allow_runtime_download,
+    )
 
 
 def validate_downloaded_gene_set(project_root: str | Path, resource_id: str) -> dict[str, Any]:
@@ -523,10 +537,11 @@ def _downloadable_catalog() -> list[dict[str, Any]]:
             "gene_id_type": "symbol",
             "source_name": "Reactome",
             "source_url": REACTOME_GMT_ZIP_URL,
-            "license_note": "User-triggered download from Reactome; record source and download date.",
-            "description": "下载 Reactome pathways 到本地缓存。",
-            "operation": "下载到本地 / 更新缓存",
-            "downloadable": True,
+            "license_note": "Runtime download is disabled; import a user-provided GMT or use a prelocked Reactome resource with source/version/license recorded.",
+            "description": "运行时不下载 Reactome；请导入 GMT 或使用已预锁定外部资源。",
+            "operation": "导入 GMT / 使用预锁定资源",
+            "downloadable": False,
+            "runtime_download_policy": RUNTIME_GENE_SET_DOWNLOAD_POLICY,
         },
         {
             "resource_id": "go_bp_human",
@@ -536,10 +551,11 @@ def _downloadable_catalog() -> list[dict[str, Any]]:
             "gene_id_type": "symbol",
             "source_name": "Gene Ontology",
             "source_url": GO_HUMAN_GAF_URL,
-            "license_note": "GO annotation data are used with CC BY 4.0 attribution.",
-            "description": "从 human GO annotation 生成 BP GMT。",
-            "operation": "下载到本地 / 更新缓存",
-            "downloadable": True,
+            "license_note": "Runtime download is disabled; import a user-provided GMT or use a prelocked GO resource with CC BY 4.0 attribution recorded.",
+            "description": "运行时不下载 GO annotation；请导入 GMT 或使用已预锁定外部资源。",
+            "operation": "导入 GMT / 使用预锁定资源",
+            "downloadable": False,
+            "runtime_download_policy": RUNTIME_GENE_SET_DOWNLOAD_POLICY,
         },
         {
             "resource_id": "go_cc_human",
@@ -549,10 +565,11 @@ def _downloadable_catalog() -> list[dict[str, Any]]:
             "gene_id_type": "symbol",
             "source_name": "Gene Ontology",
             "source_url": GO_HUMAN_GAF_URL,
-            "license_note": "GO annotation data are used with CC BY 4.0 attribution.",
-            "description": "从 human GO annotation 生成 CC GMT。",
-            "operation": "下载到本地 / 更新缓存",
-            "downloadable": True,
+            "license_note": "Runtime download is disabled; import a user-provided GMT or use a prelocked GO resource with CC BY 4.0 attribution recorded.",
+            "description": "运行时不下载 GO annotation；请导入 GMT 或使用已预锁定外部资源。",
+            "operation": "导入 GMT / 使用预锁定资源",
+            "downloadable": False,
+            "runtime_download_policy": RUNTIME_GENE_SET_DOWNLOAD_POLICY,
         },
         {
             "resource_id": "go_mf_human",
@@ -562,10 +579,11 @@ def _downloadable_catalog() -> list[dict[str, Any]]:
             "gene_id_type": "symbol",
             "source_name": "Gene Ontology",
             "source_url": GO_HUMAN_GAF_URL,
-            "license_note": "GO annotation data are used with CC BY 4.0 attribution.",
-            "description": "从 human GO annotation 生成 MF GMT。",
-            "operation": "下载到本地 / 更新缓存",
-            "downloadable": True,
+            "license_note": "Runtime download is disabled; import a user-provided GMT or use a prelocked GO resource with CC BY 4.0 attribution recorded.",
+            "description": "运行时不下载 GO annotation；请导入 GMT 或使用已预锁定外部资源。",
+            "operation": "导入 GMT / 使用预锁定资源",
+            "downloadable": False,
+            "runtime_download_policy": RUNTIME_GENE_SET_DOWNLOAD_POLICY,
         },
         {
             "resource_id": "kegg_hsa_pathways",
@@ -575,10 +593,11 @@ def _downloadable_catalog() -> list[dict[str, Any]]:
             "gene_id_type": "entrez",
             "source_name": "KEGG REST",
             "source_url": "https://rest.kegg.jp/",
-            "license_note": "KEGG REST API is for academic users and academic use; users must confirm their usage rights.",
-            "description": "在线获取并缓存 KEGG human pathways。",
-            "operation": "在线获取并缓存 / 更新缓存",
-            "downloadable": True,
+            "license_note": "Runtime download is disabled; import a user-provided GMT or use a prelocked KEGG resource after confirming usage rights.",
+            "description": "运行时不下载 KEGG；请导入 GMT 或使用已预锁定外部资源。",
+            "operation": "导入 GMT / 使用预锁定资源",
+            "downloadable": False,
+            "runtime_download_policy": RUNTIME_GENE_SET_DOWNLOAD_POLICY,
         },
         {
             "resource_id": "msigdb_hallmark_user_import",
@@ -637,7 +656,7 @@ def _download_reactome_pathways(root: Path, *, refresh: bool, fetcher: Fetcher |
             gene_id_type="symbol",
             source_name="Reactome",
             source_url=REACTOME_GMT_ZIP_URL,
-            license_note="User-triggered download from Reactome; record source and download date.",
+            license_note="Explicit developer/test runtime download override; production use requires imported GMT or prelocked Reactome resource with source and date recorded.",
             version=_date_version(),
             local_path=target.relative_to(root),
             validation=validation,

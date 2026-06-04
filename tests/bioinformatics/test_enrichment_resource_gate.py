@@ -10,7 +10,7 @@ from app.bioinformatics.enrichment_resources import (
     build_enrichment_resource_registry,
     write_enrichment_resource_lock_manifest,
 )
-from app.bioinformatics.gene_set_resources import GENE_SET_REGISTRY, import_gmt_file, select_gene_set
+from app.bioinformatics.gene_set_resources import GENE_SET_REGISTRY, RUNTIME_GENE_SET_DOWNLOAD_POLICY, import_gmt_file, select_gene_set
 
 
 def test_enrichment_resource_registry_records_provenance_checksum_and_scope(tmp_path: Path) -> None:
@@ -26,7 +26,7 @@ def test_enrichment_resource_registry_records_provenance_checksum_and_scope(tmp_
     catalog = {item["resource_id"]: item for item in registry["known_resource_catalog"]}
     assert {"reactome_pathways", "go_bp_human", "go_cc_human", "go_mf_human", "kegg_hsa_pathways", "msigdb_hallmark_user_import", "custom_gmt_import"} <= set(catalog)
     assert catalog["msigdb_hallmark_user_import"]["downloadable"] is False
-    assert catalog["reactome_pathways"]["policy"] == "user_triggered_only_no_silent_download"
+    assert catalog["reactome_pathways"]["policy"] == RUNTIME_GENE_SET_DOWNLOAD_POLICY
     assert row["resource_id"] == resource["resource_id"]
     assert row["species"] == "human"
     assert row["gene_id_type"] == "symbol"
@@ -92,6 +92,8 @@ def test_enrichment_library_policy_records_supported_libraries_without_execution
     assert policy["auto_install"] is False
     rows = {item["collection_type"]: item for item in policy["library_policies"]}
     assert rows["GO_BP"]["backend_capabilities"]["ora"] == ["ora_go"]
+    assert rows["GO_BP"]["acquisition_policy"] == "import_or_prelocked_resource_required"
+    assert rows["GO_BP"]["download_policy"] == RUNTIME_GENE_SET_DOWNLOAD_POLICY
     assert rows["Reactome"]["backend_capabilities"]["ora"] == ["ora_reactome"]
     assert rows["Hallmark"]["acquisition_policy"] == "user_provided_licensed_gmt_only"
     assert rows["Hallmark"]["requires_user_import"] is True

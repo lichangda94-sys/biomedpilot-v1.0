@@ -2687,7 +2687,7 @@ def test_gsea_gene_set_resource_manager_displays_and_selects_local_resource(qt_a
     assert detail["gene_id_type"] == "symbol"
 
 
-def test_gene_set_resource_manager_shows_downloadable_resources_and_refreshes_after_download(qt_app, project_summary, tmp_path: Path, monkeypatch) -> None:
+def test_gene_set_resource_manager_shows_common_resources_but_blocks_runtime_download(qt_app, project_summary, tmp_path: Path, monkeypatch) -> None:
     dialog = GseaGeneSetResourceManagerDialog(project_summary.project_root)
     future_table = dialog.findChild(QTableWidget, "gseaGeneSetFutureResourcesTable")
     assert future_table is not None
@@ -2697,7 +2697,10 @@ def test_gene_set_resource_manager_shows_downloadable_resources_and_refreshes_af
     assert "KEGG human pathways" in future_text
     assert "请导入用户已下载的 MSigDB GMT" in future_text
 
+    called: list[str] = []
+
     def fake_download(project_root: Path, resource_id: str, **_kwargs):
+        called.append(resource_id)
         return workflow_pages.import_gmt_file(
             project_root,
             _write_gmt(tmp_path / f"{resource_id}.gmt"),
@@ -2705,12 +2708,13 @@ def test_gene_set_resource_manager_shows_downloadable_resources_and_refreshes_af
         ) | {"cached": False}
 
     monkeypatch.setattr(workflow_pages, "download_gene_set_resource", fake_download)
-    dialog.download_selected_common_resource()
+    result = dialog.download_selected_common_resource()
 
     local_table = dialog.findChild(QTableWidget, "gseaGeneSetResourceTable")
     assert local_table is not None
-    assert local_table.item(0, 0).text() == "Downloaded Reactome"
-    assert local_table.item(0, 6).text() == "available"
+    assert result is None
+    assert called == []
+    assert local_table.item(0, 0).text() == "暂无本地 GSEA 基因集资源。"
 
 
 def test_readiness_gene_set_button_opens_manager_and_status_updates(qt_app, project_summary, tmp_path: Path) -> None:

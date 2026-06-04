@@ -6,7 +6,7 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Branch: `dev/bioinformatics`
 
-HEAD audited before changes: `4e66e5e848cac38742781cf58d629af9d85291e6`
+HEAD audited before changes: `f57bfcc4651c19b62e906e0b9c084fa5ffc98ee0`
 
 ## 1. Current Fit to Target Mode
 
@@ -80,6 +80,7 @@ Resource governance now has a programmatic gate:
 - `locked` resources are rejected if version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`; this prevents a resource from being falsely marked full-mode ready.
 - Blocked resources may carry partial future lock metadata, but they still produce module-specific full-mode blockers until their status is changed to a fully validated `locked` entry.
 - Full mode remains blocked until these resources have real version, hash, license, and cache-path locks.
+- `app/bioinformatics/gene_set_resources.py` now aligns with that policy for enrichment resources: Reactome, GO, and KEGG catalog rows are visible but not runtime-downloadable by default. User/UI flows must import GMT files or use externally prepared prelocked resources; parser/download tests opt in explicitly.
 
 Standard package discovery is now available to the UI state layer:
 
@@ -196,11 +197,12 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Worker invocation audit trail | WARN | All standard task-bridge outcomes, direct standard R runner outputs, and current transitional service-adapter sidecar packages now persist `logs/worker_invocation.json`; task-bridge and current sidecar result-index entries register it as `analysis_worker_invocation_manifest`; the standard package catalog blocks packages whose result-index log artifact omits, mispoints, or mis-schemas that invocation manifest; sidecar manifests remain explicitly labeled as non-isolated legacy adapter diagnostics. |
 | Worker invocation schema validation | PASS | Added `analysis/schemas/output/worker_invocation.schema.json`; standard package validation blocks missing or invalid invocation manifests for task-bridge and standard-worker packages, and validates sidecar manifests when present while preserving legacy sidecar compatibility. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
+| Runtime large resource download in user flow | PASS/WARN | Gene-set resource UI/gates now block Reactome/GO/KEGG runtime downloads by default and require GMT import or prelocked resources; real full resource locks are still incomplete. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages and external tools are detect-first external dependencies, not default Python/app-dev deps; tests guard `requirements.txt`, `pyproject.toml`, `docker/Dockerfile.app-dev`, and `renv/renv.app.lock` against ReactomePA, Seurat, CellChat, GSVA, AutoDock Vina, GROMACS, limma, DESeq2, edgeR, clusterProfiler, fgsea, and related full-stack names. Full env split is not build/restoration proven. |
 | Environment split | WARN | Docker/renv scaffold and `analysis/registry/analysis_environments.json` exist for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; module manifests are tested against this registry, but images/lock restoration are not build proven. |
 | `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
-| Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; real resource locks are incomplete. |
+| Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; gene-set runtime downloads are blocked by default; real resource locks are incomplete. |
 | Provenance captures versions/hashes/seed/command | WARN | The standard R worker records separate input and parameter hashes plus seed and command; bridge-blocked full packages now record and validate target environment Dockerfile/renv/resource-lock snapshots; full/formal standard package validation blocks missing provenance containers, but package/tool version capture is still incomplete for unmigrated formal/full modules. |
 | DEG/survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, first R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, immune infiltration, and spatial transcriptomics, and docking/MD have lite external-tool command-manifest contract fixtures; formal/full migration remains pending. |
 | Docking/MD external tool adapters | WARN | Docking and molecular dynamics have testing-level command-manifest adapter contracts that do not execute AutoDock Vina or GROMACS and do not generate scientific docking or MD outputs. |
@@ -211,7 +213,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current controlled R adapters now call a shared `analysis_runtime` external R command boundary instead of owning direct `subprocess.run`, and a standard bridge exists for mock, DEG lite, enrichment lite, survival lite, univariate lite, multivariate lite, immune lite, spatial lite, docking lite, and MD lite command-manifest packages. Most existing formal algorithms are still not migrated into isolated standard-worker tasks.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, exploratory immune/TME scoring, and local correlation results are now partially remediated with sidecar packages that are explicitly labeled as legacy service-adapter sidecars.
-4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, and fake `locked` entries with placeholder values are rejected, but resources still need real version, source, hash, license, and cache-path locks.
+4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, fake `locked` entries with placeholder values are rejected, and Reactome/GO/KEGG runtime downloads are blocked by default, but resources still need real version, source, hash, license, and cache-path locks.
 5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state has a standard package catalog, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
 
 ## 4. P0/P1/P2/P3 Issues

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .gene_set_resources import GENE_SET_REGISTRY, list_downloadable_gene_set_resources, validate_gene_set_registry
+from .gene_set_resources import GENE_SET_REGISTRY, RUNTIME_GENE_SET_DOWNLOAD_POLICY, list_downloadable_gene_set_resources, validate_gene_set_registry
 
 
 ENRICHMENT_RESOURCE_REGISTRY_SCHEMA_VERSION = "biomedpilot.enrichment_resource_registry.v1"
@@ -20,7 +20,7 @@ LIBRARY_POLICIES: dict[str, dict[str, Any]] = {
     "GO_BP": {
         "library_family": "Gene Ontology",
         "supported_analysis_types": ["ora", "gsea_preranked"],
-        "acquisition_policy": "user_triggered_download_or_preexisting_cache",
+        "acquisition_policy": "import_or_prelocked_resource_required",
         "license_policy": "go_cc_by_attribution_required",
         "backend_capabilities": {"ora": ["ora_go"], "gsea_preranked": ["gsea_preranked"]},
         "requires_user_import": False,
@@ -28,7 +28,7 @@ LIBRARY_POLICIES: dict[str, dict[str, Any]] = {
     "GO_CC": {
         "library_family": "Gene Ontology",
         "supported_analysis_types": ["ora", "gsea_preranked"],
-        "acquisition_policy": "user_triggered_download_or_preexisting_cache",
+        "acquisition_policy": "import_or_prelocked_resource_required",
         "license_policy": "go_cc_by_attribution_required",
         "backend_capabilities": {"ora": ["ora_go"], "gsea_preranked": ["gsea_preranked"]},
         "requires_user_import": False,
@@ -36,7 +36,7 @@ LIBRARY_POLICIES: dict[str, dict[str, Any]] = {
     "GO_MF": {
         "library_family": "Gene Ontology",
         "supported_analysis_types": ["ora", "gsea_preranked"],
-        "acquisition_policy": "user_triggered_download_or_preexisting_cache",
+        "acquisition_policy": "import_or_prelocked_resource_required",
         "license_policy": "go_cc_by_attribution_required",
         "backend_capabilities": {"ora": ["ora_go"], "gsea_preranked": ["gsea_preranked"]},
         "requires_user_import": False,
@@ -44,7 +44,7 @@ LIBRARY_POLICIES: dict[str, dict[str, Any]] = {
     "KEGG": {
         "library_family": "KEGG",
         "supported_analysis_types": ["ora", "gsea_preranked"],
-        "acquisition_policy": "user_triggered_download_or_preexisting_cache",
+        "acquisition_policy": "import_or_prelocked_resource_required",
         "license_policy": "kegg_usage_rights_must_be_confirmed_by_user",
         "backend_capabilities": {"ora": ["ora_kegg"], "gsea_preranked": ["gsea_preranked"]},
         "requires_user_import": False,
@@ -52,7 +52,7 @@ LIBRARY_POLICIES: dict[str, dict[str, Any]] = {
     "Reactome": {
         "library_family": "Reactome",
         "supported_analysis_types": ["ora", "gsea_preranked"],
-        "acquisition_policy": "user_triggered_download_or_preexisting_cache",
+        "acquisition_policy": "import_or_prelocked_resource_required",
         "license_policy": "reactome_source_and_download_date_required",
         "backend_capabilities": {"ora": ["ora_reactome"], "gsea_preranked": ["gsea_preranked"]},
         "requires_user_import": False,
@@ -346,7 +346,7 @@ def _known_resource_catalog(root: Path) -> list[dict[str, Any]]:
                 "license_note": str(item.get("license_note") or ""),
                 "downloadable": bool(item.get("downloadable")),
                 "operation": str(item.get("operation") or ""),
-                "policy": "user_triggered_only_no_silent_download",
+                "policy": str(item.get("runtime_download_policy") or "local_import_or_preconfigured_resource"),
                 "local_status": str(item.get("local_status") or ""),
                 "local_version": str(item.get("local_version") or ""),
             }
@@ -373,7 +373,7 @@ def _library_policy_row(collection_type: str, *, resources: list[dict[str, Any]]
         "requires_user_import": bool(policy.get("requires_user_import")),
         "local_resource_count": len(matching),
         "available_resource_count": len(available),
-        "download_policy": "user_triggered_only_no_silent_download",
+        "download_policy": RUNTIME_GENE_SET_DOWNLOAD_POLICY if collection_type in {"GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome"} else "local_import_or_preconfigured_resource",
         "auto_install": False,
         "network_downloads": False,
         "status": "blocked" if blockers else "supported",
