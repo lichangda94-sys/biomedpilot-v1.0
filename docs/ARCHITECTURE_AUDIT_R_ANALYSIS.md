@@ -60,6 +60,12 @@ The main-backend bridge now has two mock-safe paths:
 - `worker_backend="rscript"` writes `module_input.json`, invokes the standard R runner, validates the package, and registers result-index entries from worker provenance.
 - Missing `Rscript` produces a blocked standard result package, not a traceback or installer path.
 
+Resource governance now has a programmatic gate:
+
+- `analysis/resources/manifest.json` records mock fixture resources and full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
+- `app/analysis_runtime/resources.py` validates required fields, forbids runtime downloads, and reports module-specific full-mode blockers.
+- Full mode remains blocked until these resources have real version, hash, license, and cache-path locks.
+
 A first environment isolation scaffold now also exists:
 
 - `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
@@ -95,7 +101,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
 | `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
-| Large resources version/hash/license/cache | WARN | Added starter `analysis/resources/manifest.json`; real resource locks are incomplete. |
+| Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; real resource locks are incomplete. |
 | Provenance captures versions/hashes/seed/command | WARN | Some Bio result packages capture provenance; universal schema now requires it, migration incomplete. |
 | Survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | FAIL | Registry now declares target modules; implementation migration is pending. |
 | Docking/MD external tool adapters | FAIL | Target registry only; no adapters. |
@@ -106,7 +112,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a mock-mode bridge exists but does not migrate existing algorithms yet.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`.
-4. **P1: Large resource governance is incomplete.** Reactome/MSigDB and future spatial/chem resources need version, source, hash, license, and cache-path locks.
+4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, but they still need real version, source, hash, license, and cache-path locks.
 5. **P2/P3: UI and backend are still aware of module-specific payloads.** Current UI should eventually consume standard result package metadata rather than individual R package output shapes.
 
 ## 4. P0/P1/P2/P3 Issues
@@ -125,7 +131,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | --- | --- | --- |
 | No lite/full environment split | No `docker/` or `renv/` split existed before scaffold | Partially fixed with scaffold; real package locks and builds pending. |
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
-| No complete resource lock | Only module-specific gates/docs existed | Starter `analysis/resources/manifest.json` added; real locks pending. |
+| No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; real locks pending. |
 | Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
 | UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge only; current UI algorithms not migrated. |
 
@@ -224,6 +230,7 @@ New architecture boundary files:
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
+- Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.

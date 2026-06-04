@@ -72,6 +72,7 @@ The main-backend side has a narrow mock-mode bridge:
 app/analysis_runtime/
   registry.py
   r_worker.py
+  resources.py
   standard_package.py
   task_bridge.py
 ```
@@ -81,6 +82,8 @@ The bridge can create a task record, write a standard result package, validate t
 In default mock mode, the bridge copies the module-specific fixed standard result package declared by the registry, then stamps the current `task_id`, hashes, timestamp, and worker log. This keeps UI/API/task-flow development deterministic without requiring R.
 
 For worker-boundary validation, the bridge also supports an explicit `worker_backend="rscript"` path. That path writes `module_input.json`, invokes `analysis/runners/run_module.R`, validates the resulting standard package, and registers the package using the worker provenance. If `Rscript` is unavailable, it writes a blocked standard package instead of raising a traceback or installing R.
+
+Resource governance is centralized in `analysis/resources/manifest.json` and validated by `app/analysis_runtime/resources.py`. The manifest records mock fixtures plus blocked full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and molecular dynamics templates. These entries are not installations and do not enable full mode; they are explicit cache/version/hash/license requirements that must be satisfied before future full workers can run.
 
 ## Module Manifests
 
@@ -150,4 +153,5 @@ logs/
 | Lite worker | Not enabled. |
 | Full worker | Not enabled. |
 | Docker/renv split | Scaffolded only; not build/restoration proven. |
+| Resource manifest gate | Present as blocked full-mode resource ledger with validator; real locks pending. |
 | Algorithm migration | Pending. |

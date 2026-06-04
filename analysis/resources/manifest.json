@@ -1,35 +1,173 @@
 {
   "schema_version": "biomedpilot.analysis_resources.v1",
   "policy": "large_resources_are_versioned_external_references_not_user_request_downloads",
+  "runtime_download_policy": "forbidden",
+  "full_mode_policy": "all_required_resources_must_be_locked_before_full_mode",
   "resources": [
     {
       "resource_id": "mock_fixture_builtin_v1",
       "title": "Built-in mock fixture resources",
+      "resource_family": "mock_fixture",
       "version": "v1",
       "source": "BioMedPilot repository fixture",
       "hash": "not_applicable_repository_fixture",
       "license": "internal_test_fixture",
-      "cache_path": "analysis/fixtures"
+      "cache_path": "analysis/fixtures",
+      "status": "locked",
+      "runtime_download_allowed": false,
+      "required_for_modules": [
+        "survival",
+        "univariate",
+        "multivariate",
+        "enrichment",
+        "immune_infiltration",
+        "spatial_transcriptomics",
+        "docking",
+        "molecular_dynamics"
+      ]
     },
     {
       "resource_id": "reactome_full",
       "title": "Reactome resources for full enrichment",
-      "version": "not_locked",
+      "resource_family": "pathway_database",
+      "version": "required_before_full_mode",
       "source": "Reactome / Bioconductor package metadata",
       "hash": "required_before_full_mode",
       "license": "required_before_full_mode",
       "cache_path": "external_analysis_resources/reactome",
-      "status": "blocked_until_resource_lock"
+      "status": "blocked_until_resource_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["enrichment"]
     },
     {
       "resource_id": "msigdb_full",
       "title": "MSigDB resources for full enrichment",
-      "version": "not_locked",
+      "resource_family": "gene_set_database",
+      "version": "required_before_full_mode",
       "source": "MSigDB",
       "hash": "required_before_full_mode",
       "license": "required_before_full_mode",
       "cache_path": "external_analysis_resources/msigdb",
-      "status": "blocked_until_resource_lock"
+      "status": "blocked_until_resource_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["enrichment"]
+    },
+    {
+      "resource_id": "go_full",
+      "title": "Gene Ontology resources for full enrichment",
+      "resource_family": "ontology_database",
+      "version": "required_before_full_mode",
+      "source": "Gene Ontology / Bioconductor annotation metadata",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/go",
+      "status": "blocked_until_resource_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["enrichment", "immune_infiltration"]
+    },
+    {
+      "resource_id": "kegg_full",
+      "title": "KEGG resources for full enrichment",
+      "resource_family": "pathway_database",
+      "version": "required_before_full_mode",
+      "source": "KEGG",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/kegg",
+      "status": "blocked_until_resource_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["enrichment"]
+    },
+    {
+      "resource_id": "orgdb_human_full",
+      "title": "Human organism annotation database",
+      "resource_family": "organism_annotation_database",
+      "version": "required_before_full_mode",
+      "source": "Bioconductor organism annotation package metadata",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/orgdb/human",
+      "status": "blocked_until_resource_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["enrichment", "immune_infiltration"]
+    },
+    {
+      "resource_id": "spatial_reference_full",
+      "title": "Spatial transcriptomics reference resources",
+      "resource_family": "spatial_reference",
+      "version": "required_before_full_mode",
+      "source": "Approved project-specific spatial reference bundle",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/spatial/references",
+      "status": "blocked_until_reference_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["spatial_transcriptomics"]
+    },
+    {
+      "resource_id": "cellchatdb_full",
+      "title": "CellChat ligand-receptor database",
+      "resource_family": "cell_communication_database",
+      "version": "required_before_full_mode",
+      "source": "CellChatDB metadata approved for isolated spatial worker",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/spatial/cellchatdb",
+      "status": "blocked_until_reference_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["spatial_transcriptomics"]
+    },
+    {
+      "resource_id": "autodock_vina_tool",
+      "title": "AutoDock Vina external tool",
+      "resource_family": "external_scientific_tool",
+      "version": "required_before_full_mode",
+      "source": "AutoDock Vina release artifact",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/chem/autodock_vina",
+      "status": "blocked_until_tool_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["docking"]
+    },
+    {
+      "resource_id": "docking_template_bundle",
+      "title": "Docking receptor and ligand template bundle",
+      "resource_family": "docking_template",
+      "version": "required_before_full_mode",
+      "source": "Approved project-specific docking template bundle",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/chem/docking_templates",
+      "status": "blocked_until_reference_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["docking"]
+    },
+    {
+      "resource_id": "gromacs_tool",
+      "title": "GROMACS external tool",
+      "resource_family": "external_scientific_tool",
+      "version": "required_before_full_mode",
+      "source": "GROMACS release artifact",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/chem/gromacs",
+      "status": "blocked_until_tool_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["molecular_dynamics"]
+    },
+    {
+      "resource_id": "md_forcefield_template_bundle",
+      "title": "Molecular dynamics force-field and template bundle",
+      "resource_family": "md_template",
+      "version": "required_before_full_mode",
+      "source": "Approved project-specific MD template bundle",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/chem/md_templates",
+      "status": "blocked_until_reference_lock",
+      "runtime_download_allowed": false,
+      "required_for_modules": ["molecular_dynamics"]
     }
   ]
 }

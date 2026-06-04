@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from app.analysis_runtime.resources import full_mode_resource_blockers, validate_analysis_resource_manifest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_MODULES = {
@@ -280,6 +282,52 @@ def test_standard_r_runner_blocks_input_manifest_mode_mismatch(tmp_path: Path) -
     result = read_json(output_dir / "result.json")
     assert result["status"] == "blocked"
     assert "module_input_mode_arg_mismatch:input=mock,arg=full" in result["blockers"]
+
+
+def test_analysis_resource_manifest_declares_full_mode_resource_locks_without_downloads() -> None:
+    manifest = read_json(ROOT / "analysis" / "resources" / "manifest.json")
+    validation = validate_analysis_resource_manifest(manifest)
+    resources = {item["resource_id"]: item for item in manifest["resources"]}  # type: ignore[index]
+
+    assert validation["status"] == "passed"
+    assert validation["full_mode_ready"] is False
+    assert resources["mock_fixture_builtin_v1"]["status"] == "locked"
+    required_resource_ids = {
+        "reactome_full",
+        "msigdb_full",
+        "go_full",
+        "kegg_full",
+        "orgdb_human_full",
+        "spatial_reference_full",
+        "cellchatdb_full",
+        "autodock_vina_tool",
+        "docking_template_bundle",
+        "gromacs_tool",
+        "md_forcefield_template_bundle",
+    }
+    assert required_resource_ids <= set(resources)
+    for resource_id in required_resource_ids:
+        resource = resources[resource_id]
+        assert resource["runtime_download_allowed"] is False
+        assert resource["version"] == "required_before_full_mode"
+        assert resource["hash"] == "required_before_full_mode"
+        assert resource["license"] == "required_before_full_mode"
+        assert resource["cache_path"].startswith("external_analysis_resources/")
+        assert resource["status"].startswith("blocked_until_")
+
+
+def test_full_mode_resource_blockers_are_module_specific() -> None:
+    enrichment_blockers = full_mode_resource_blockers("enrichment")
+    spatial_blockers = full_mode_resource_blockers("spatial_transcriptomics")
+    docking_blockers = full_mode_resource_blockers("docking")
+    md_blockers = full_mode_resource_blockers("molecular_dynamics")
+
+    assert "analysis_resource_not_locked:reactome_full" in enrichment_blockers
+    assert "analysis_resource_not_locked:msigdb_full" in enrichment_blockers
+    assert "analysis_resource_not_locked:spatial_reference_full" in spatial_blockers
+    assert "analysis_resource_not_locked:autodock_vina_tool" in docking_blockers
+    assert "analysis_resource_not_locked:gromacs_tool" in md_blockers
+    assert "analysis_resource_not_locked:gromacs_tool" not in enrichment_blockers
 
 
 def test_app_dev_dockerfile_excludes_heavy_analysis_dependency_names() -> None:

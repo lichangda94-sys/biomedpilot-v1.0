@@ -14,6 +14,7 @@ from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, T
 
 from .registry import get_analysis_module, load_analysis_module_registry
 from .r_worker import run_standard_r_worker
+from .resources import full_mode_resource_blockers
 from .standard_package import REQUIRED_DIRECTORIES, validate_standard_result_package
 
 
@@ -51,11 +52,15 @@ def run_analysis_module_task(
     mode_policy = module.get("modes", {}).get(mode, {}) if isinstance(module.get("modes"), dict) else {}
     if mode != "mock" or not mode_policy.get("supported"):
         blocker = str(mode_policy.get("blocker") or f"analysis_mode_not_enabled:{mode}")
-        _write_standard_package(package_dir, module_input, status="blocked", blockers=[blocker], command="analysis_task_bridge_mode_gate")
+        mode_blockers = [blocker]
+        if mode == "full":
+            mode_blockers.extend(full_mode_resource_blockers(module_id))
+            mode_blockers = list(dict.fromkeys(mode_blockers))
+        _write_standard_package(package_dir, module_input, status="blocked", blockers=mode_blockers, command="analysis_task_bridge_mode_gate")
         validation = validate_standard_result_package(package_dir, expected_module_id=module_id, expected_task_id=task_id, expected_mode=mode)
-        _finish_task(center, task, success=False, summary=f"Analysis task blocked: {blocker}")
-        result_entry = _register_standard_package(project, package_dir, module_input, validation, status="blocked", blockers=[blocker])
-        return _bridge_result(package_dir, module_input, validation, result_entry, status="blocked", blockers=[blocker])
+        _finish_task(center, task, success=False, summary=f"Analysis task blocked: {', '.join(mode_blockers)}")
+        result_entry = _register_standard_package(project, package_dir, module_input, validation, status="blocked", blockers=mode_blockers)
+        return _bridge_result(package_dir, module_input, validation, result_entry, status="blocked", blockers=mode_blockers)
 
     if worker_backend == "rscript":
         worker_input = _write_worker_input_manifest(package_dir, module_input)

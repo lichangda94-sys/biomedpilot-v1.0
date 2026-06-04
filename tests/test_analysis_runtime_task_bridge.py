@@ -144,6 +144,8 @@ def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execu
     assert result["status"] == "blocked"
     assert result_json["status"] == "blocked"
     assert "full_resource_manifest_and_container_not_available" in result_json["blockers"]
+    assert "analysis_resource_not_locked:reactome_full" in result_json["blockers"]
+    assert "analysis_resource_not_locked:msigdb_full" in result_json["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
     assert task_center.list_tasks()[0].status == TaskStatus.FAILED
     assert registry["results"][0]["result_semantics"] == "blocked"

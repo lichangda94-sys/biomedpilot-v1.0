@@ -29,6 +29,7 @@ Completed in this audit:
 - `analysis/resources/manifest.json`
 - `app/analysis_runtime/registry.py`
 - `app/analysis_runtime/r_worker.py`
+- `app/analysis_runtime/resources.py`
 - `app/analysis_runtime/standard_package.py`
 - `app/analysis_runtime/task_bridge.py`
 - `analysis/modules/<module_id>/module.json`
@@ -54,6 +55,8 @@ Update: the first result package validator and mock-mode backend adapter now exi
 Update: the R-side standard runner now accepts `<input_json> <output_dir> <mode>`, copies module-specific mock packages in `mock` mode, writes blocked standard packages for `lite` and `full`, and blocks CLI/input mode mismatches. It remains a contract runner only; no real R algorithms are activated.
 
 Update: the main-backend task bridge now has an explicit `worker_backend="rscript"` path. It materializes `module_input.json`, invokes the standard R runner, validates the standard package, and registers worker provenance in the result index. Missing `Rscript` is a graceful blocked package.
+
+Update: the resource manifest now declares required full-mode resources for enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics. `app/analysis_runtime/resources.py` validates the manifest and adds module-specific full-mode blockers until real locks exist.
 
 ## Phase R1: Task-System Bridge
 
@@ -158,6 +161,19 @@ Scope:
 
 - Lock Reactome, MSigDB, GO, KEGG, org dbs, spatial references, docking resources, and MD templates.
 - Record version, source, hash, license, and cache path.
+
+Status: contract gate present; real locks pending.
+
+Completed:
+
+- Declared blocked full-mode resources for Reactome, MSigDB, GO, KEGG, human org db, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
+- Added resource manifest validation and module-specific full-mode resource blockers.
+- Kept runtime downloads forbidden for every resource entry.
+
+Remaining:
+
+- Replace `required_before_full_mode` placeholders with approved versions, source metadata, hashes, licenses, and cache paths.
+- Add controlled environment checks proving resources are present in the isolated full worker.
 
 Acceptance:
 
