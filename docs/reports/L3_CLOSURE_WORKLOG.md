@@ -1231,11 +1231,183 @@ Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch
 
 Date: 2026-06-04
 
-Latest refreshed audit baseline: `dev/bioinformatics` at `cdae46876aaf383ecca218d5d6dd57a3449983aa`.
+Latest refreshed audit baseline: `dev/bioinformatics` at `25e179d238b762fc63a69b802f4f231f01effdbe`.
 
-The detailed current refresh entry is recorded below as `Phase 2.5 Refresh: Full Branch Inventory at cdae468`. It supersedes older Phase 2.5 entries for current-state reporting while preserving them as historical worklog records.
+The detailed current refresh entry is recorded below as `Phase 2.5 Refresh: Full Branch Inventory at 25e179d`. It supersedes older Phase 2.5 entries for current-state reporting while preserving them as historical worklog records.
 
 Current decision remains unchanged: no old branch, legacy directory, archive source, mock output, placeholder output, testing-level output, or branch-only implementation is approved for direct carry-over. The current UI remains the only mainline, and old branches remain material libraries only.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `25e179d`
+
+Date: 2026-06-04
+
+This refresh updated the Phase 2.5 branch inventory, legacy catalog, migration ledger, deprecated register, and current UI coverage matrix against the current `dev/bioinformatics` HEAD:
+
+```text
+25e179d238b762fc63a69b802f4f231f01effdbe
+block runtime gene set resource downloads
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories, archive sources, and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Worktree Boundaries
+
+The refresh intentionally modified only Phase 2.5 report files. These unrelated untracked paths were observed and preserved:
+
+```text
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+They were not treated as Phase 2.5 migration outputs.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,240p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,240p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short --branch` | Passed |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git rev-parse HEAD` | Passed, `25e179d238b762fc63a69b802f4f231f01effdbe` |
+| `git for-each-ref '--format=%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads refs/remotes` | Passed |
+| `git log --oneline --decorate --max-count=60 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f` | Passed; current inventory size is 827 files |
+| `find app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui -maxdepth 3 -type f` | Passed |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|meta" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Passed |
+
+No functional tests were run because this phase was documentation-only and audit-only. The audit does not claim branch-only or legacy-only runtime availability.
+
+### Updated Findings
+
+Current `dev/bioinformatics` has advanced beyond the previous `f8590cc` snapshot and now includes a resource-governance hardening commit that blocks runtime gene-set downloads by default. This affects enrichment resource migration candidates: old branch code that silently downloads Reactome, GO, KEGG, or related resources must remain quarantined unless adapted to explicit import or prelocked resource contracts.
+
+High-relevance branch deltas remain large. Selected audited branches ranged from `154` to `2120` changed files in audited paths, so whole-branch carry-over remains unsafe.
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one current UI entry and one candidate, then adapt or rewrite it against the current contracts with current tests and real output evidence.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `81225c3`
+
+Date: 2026-06-05
+
+### Scope
+
+This refresh updated the Phase 2.5 branch inventory, legacy feature catalog, migration candidate ledger, deprecated legacy register, and branch-to-current-UI coverage matrix against the current `dev/bioinformatics` HEAD:
+
+```text
+81225c3625022d180447b4a3fe4b2d0f7882360f
+surface standard package gates in analysis center
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories, archive sources, and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Worktree Boundaries
+
+The refresh intentionally modified only Phase 2.5 report files. These unrelated dirty or untracked paths were observed and preserved:
+
+```text
+ M app/bioinformatics/analysis_ui/state.py
+ M tests/bioinformatics/test_analysis_ui_state.py
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+They were not treated as Phase 2.5 migration outputs and were not used as evidence for old-branch runtime availability.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,260p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short --branch` | Passed |
+| `git branch --show-current` | Passed, `dev/bioinformatics` |
+| `git rev-parse HEAD` | Passed, `81225c3625022d180447b4a3fe4b2d0f7882360f` |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads refs/remotes` | Passed |
+| `git log --oneline --decorate --max-count=100 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed |
+| `git diff --name-only HEAD..<branch> -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports docs/bioinformatics docs/ui scripts` | Passed for selected high-relevance branches; `dev/ui-shell` produced a rename-detection warning due to size |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f` | Passed |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -maxdepth 4 -type f \| wc -l` | Passed, 827 files |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|meta\|Meta\|Bioinformatics" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Passed |
+
+No functional tests were run because this phase was documentation-only and audit-only. Functional tests would validate the current checkout, not prove old-branch runtime availability.
+
+### Findings
+
+Current `dev/bioinformatics` has advanced beyond the previous `25e179d` inventory and now includes:
+
+```text
+d2ed1ed harden R adapter subprocess boundary
+8632907 harden standard package artifact validation
+81225c3 surface standard package gates in analysis center
+```
+
+These are current contract and UI-gate facts, not approval to migrate any old branch or treat old implementations as current available features.
+
+High-relevance branch deltas remain large:
+
+- `dev/release-internal-test`: 2120 files in audited paths.
+- `codex/releasebuild-formal-deg-carryover`: 1094 files.
+- `codex/mainline-survival-clinical-carryover`: 734 files.
+- `stable/mainline`: 791 files.
+- `feature/meta-l3-ui-loop`: 154 files.
+- `dev/meta-analysis`: 607 files.
+- `dev/ui-shell`: 2118 files.
+- `integration/release-ui-shell-scoped-migration`: 794 files.
+- `integration/release-labtools-c1-module-nav`: 810 files.
+- `codex/bio-geo-real-download-test`: 567 files.
+- `codex/stage-3.6-deg-preflight`: 1078 files.
+- `codex/meta-workflow-ui`: 505 files.
+- `codex/meta-search-ui-main`: 590 files.
+- `integration/phase4-meta-l3-scoped-pick`: 931 files.
+- `mainline/phase4-meta-l3-scoped-pick`: 791 files.
+- `integration/release-bio-c1-ui-shell`: 1071 files.
+
+Legacy directories remain quarantined:
+
+```text
+app/bioinformatics/legacy/**
+app/meta_analysis/legacy/**
+archive/legacy_sources/**
+```
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one current UI entry and one candidate, then adapt or rewrite it against the current contracts with current tests and real output evidence. Mock, placeholder, dry-run, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
 
 ## Phase 2.5 Refresh: Full Branch Inventory at `cdae468`
 

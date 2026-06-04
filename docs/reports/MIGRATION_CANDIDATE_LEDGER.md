@@ -1,12 +1,12 @@
 # Migration Candidate Ledger
 
-Date: 2026-06-04
+Date: 2026-06-05
 
 Current audit baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: f8590cc458317656aee600430e911d57cecbb32f
+HEAD: 81225c3625022d180447b4a3fe4b2d0f7882360f
 audit mode: Phase 2.5 read-only inventory
 ```
 
@@ -37,7 +37,7 @@ No candidate below is marked current available solely because it exists on a bra
 | Survival/univariate/multivariate/immune lite workers | current | `analysis/modules/{survival,univariate,multivariate,immune_infiltration}/**` | Lite R fixtures and packages for future module proof | Package catalog scaffold | Yes/current scaffold | Not rerun here | Current focused tests by history | Fixture tables/SVG where applicable, testing-level | Lite worker mode | Medium/high | reuse as scaffold |
 | ORA enrichment MVP | current flat modules + ReleaseBuild structured modules | `enrichment_*`, `gene_set_resources.py`; branch `app/bioinformatics/enrichment/**` | Controlled ORA gates/execution/review/plot/report history | Enrichment page / Analysis Center | Yes current flat; branch has structured layout | Not rerun here | Yes by inventory | Plot/report gates exist for controlled outputs | Current flat paths vs branch package paths | Medium | adapter/rewrite for structure |
 | GSEA preranked MVP | current flat modules + ReleaseBuild structured modules | `enrichment_*`; branch `gsea/**`, `plots/gsea.py`, `reports/gsea.py` | Controlled preranked GSEA history | Analysis Center GSEA rows | Partial/current flat; branch package richer | Not rerun here | Current/branch evidence | Plot/report gates exist by inventory | Branch package paths differ | Medium/high | adapter |
-| Enrichment resource registry | current + ReleaseBuild branches | `gene_set_resources.py`, `enrichment_resources.py`, branch `gene_set_gate.py` | Gene set resource/version/dependency gates | Enrichment resources panel | Partial/current | Not rerun here | Yes by inventory | Resource/gate output, not analysis result | External R/resource availability | Medium | reuse/adapter |
+| Enrichment resource registry | current + ReleaseBuild branches | `gene_set_resources.py`, `enrichment_resources.py`, branch `gene_set_gate.py` | Gene set resource/version/dependency gates; current runtime download policy blocks Reactome/GO/KEGG downloads unless explicit import/prelocked resources exist | Enrichment resources panel | Partial/current | Not rerun here | Yes by inventory | Resource/gate output, not analysis result | External R/resource availability and prelocked/imported resource state | Medium | reuse/adapter |
 | Real SVG plot renderers | current + ReleaseBuild branches | current `plots/basic_renderers.py`, `formal_deg.py`, `survival.py`, `cox.py`; branch `plots/real_svg.py`, `ora.py`, `gsea.py` | Plot artifact renderers | Results Browser plot actions | Current for supported modules; branch has broader split | Not rerun here | Current plot tests by inventory | SVG artifacts when source result gate passes | Must inherit result semantics | Medium | adapter |
 | KM/log-rank survival | current | `survival_clinical/km_*`, `plots/survival.py`, `survival_clinical/standard_package.py` | Controlled KM/log-rank with standard package sidecar registration | Survival/Clinical UI rows | Yes/controlled | Not rerun here | Yes by inventory | Plot artifact support exists; standard package sidecar exists for controlled results | Clinical report-ready restricted | High | reuse with strict gate |
 | Cox univariate | current | `survival_clinical/cox_*`, `plots/cox.py`, `survival_clinical/standard_package.py` | Controlled Cox univariate with standard package sidecar registration | Survival/Clinical UI rows | Yes/controlled | Not rerun here | Yes by inventory | Plot artifact support exists; standard package sidecar exists for controlled results | Clinical report-ready restricted | High | reuse with strict gate |
@@ -74,3 +74,18 @@ No candidate below is marked current available solely because it exists on a bra
 ## Stop Point
 
 This ledger is a planning artifact, not a migration approval. No `reuse`, `adapter`, or `rewrite` recommendation changes runtime availability.
+
+## 2026-06-05 Refresh Notes
+
+The candidate ledger was refreshed against current HEAD `81225c3625022d180447b4a3fe4b2d0f7882360f`. Current-line commits after the previous inventory added R adapter subprocess boundary hardening, standard package artifact validation, and Analysis Center standard package gate surfacing. These are current implementation facts, not approval to migrate old branch code.
+
+Candidate handling remains:
+
+| Candidate class | Handling after refresh |
+| --- | --- |
+| Current Bio controlled DEG, selected enrichment, survival/Cox, immune/correlation, and standard package scaffolds | `reuse` only through current gates and current tests; do not expand availability based on branch history. |
+| Branch-only limma/DESeq2/edgeR, enrichment/report/rendering/risk/OCR material | `adapter` or `rewrite`; no whole-branch carry-over. |
+| Legacy standalone Bio and Meta workbench/tool code | `deprecated`, `reference`, or `adapter` only after a scoped current UI contract is defined. |
+| Mock/lite/full-blocked standard worker packages | Contract scaffolds only; not production output proof. |
+
+Every future candidate still requires the required fields recorded above: source branch/path, involved files, current UI page/button, current implementation status, real-run evidence, tests, real figure/table/report evidence, old-state/path dependency, risk, and handling recommendation.

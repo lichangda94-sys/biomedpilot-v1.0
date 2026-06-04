@@ -1,8 +1,8 @@
 # Deprecated Legacy Register
 
-Date: 2026-06-04
+Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `f8590cc458317656aee600430e911d57cecbb32f`
+Baseline: `dev/bioinformatics` at `81225c3625022d180447b4a3fe4b2d0f7882360f`
 
 ## Deprecation Rule
 
@@ -32,6 +32,7 @@ Deprecated does not mean the idea is useless. It means the code must not be copi
 | Archive mirror code | `archive/legacy_sources/**` | Duplicates old Bio/Meta source snapshots with stale paths | Use only as provenance/reference | High | reference only |
 | Mock result packages as real analysis proof | `analysis/fixtures/outputs/*/mock_result_package/**` | Explicit mock packages | Use only for contract tests | Medium | testing-only |
 | Lite standard worker fixtures as production proof | `analysis/modules/**`, `analysis/fixtures/inputs/**`, `analysis/runners/run_module.R` | Lite worker scaffolds are useful but not full current production proof | Prove each selected module through current UI and result package | Medium | scaffold only |
+| Runtime gene-set downloads as resource readiness proof | old Bio branches, historical enrichment resource code, and any direct Reactome/GO/KEGG download shortcut | Current `25e179d` policy blocks runtime gene-set downloads by default; resource readiness must come from explicit import or prelocked resource packages | Use current resource-lock/import contracts and visible blockers | High | quarantined |
 | Branch-only UI shell/screenshots | `dev/ui-shell`, `integration/*ui*`, branch `docs/ui/**` material | Design material cannot replace current UI without selected UI migration task | Use as design reference | Medium | adapter/design review |
 | Branch-only risk/nomogram clinical material | ReleaseBuild/internal-test branches | High risk of clinical overclaim and old state coupling | Rewrite under strict non-clinical gates if selected | High | rewrite |
 | Branch-only OCR/fulltext engines | `dev/meta-analysis`, OCR branches | External dependency and package divergence; not current-proven | Adapter behind current Meta fulltext contracts | High | rewrite/adapter later |
@@ -51,3 +52,18 @@ Deprecated does not mean the idea is useless. It means the code must not be copi
 ## Register Conclusion
 
 Deprecated and quarantined items must not be used as shortcuts. The next migration phase must choose one candidate, one current UI entry, one contract bridge, and one focused test plan.
+
+## 2026-06-05 Refresh Notes
+
+This register was refreshed after current-line standard package gate hardening reached HEAD `81225c3625022d180447b4a3fe4b2d0f7882360f`. The refresh did not remove any item from quarantine. The stronger current package gates make direct legacy migration less acceptable, not more acceptable, because legacy code still has to preserve current provenance, semantics, task logs, artifact validation, and UI disabled-reason boundaries.
+
+Additional direct-migration blockers retained:
+
+| Blocker | Reason |
+| --- | --- |
+| Old branch as source of truth | Would bypass the current UI-only mainline and may overwrite newer standard package/runtime contracts. |
+| Legacy or archive runner path | May rely on old state directories, fake/dry-run controls, or old project stores. |
+| Branch-only report/plot/output | Not current runtime evidence unless a current UI path and current result contract prove it. |
+| Mock/lite standard package | Useful for contract tests only; cannot be called production or clinical output. |
+
+No deprecated or quarantined item was promoted in this audit.

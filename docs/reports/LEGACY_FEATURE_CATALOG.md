@@ -1,8 +1,8 @@
 # Legacy Feature Catalog
 
-Date: 2026-06-04
+Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `f8590cc458317656aee600430e911d57cecbb32f`
+Baseline: `dev/bioinformatics` at `81225c3625022d180447b4a3fe4b2d0f7882360f`
 
 ## Scope
 
@@ -13,6 +13,8 @@ app/bioinformatics/legacy/**
 app/meta_analysis/legacy/**
 archive/legacy_sources/**
 ```
+
+Current scan count for this boundary is 827 files. The count includes source, tests, static assets, archived mirrors, and compiled cache files; it is an inventory size, not a current-feature count.
 
 Legacy code was read only. It was not imported, executed, adapted, merged, or promoted. Legacy tests are evidence that historical code once had checks, not evidence that the current UI can run those features.
 
@@ -67,3 +69,19 @@ Legacy code was read only. It was not imported, executed, adapted, merged, or pr
 ## Catalog Conclusion
 
 Legacy contains useful requirements, terminology, visual assets, and possible helper algorithms, but no legacy feature is considered current available from this audit alone. Every item requires a scoped migration task with a current UI entry, current contract mapping, focused tests, and real output proof before any availability claim.
+
+## 2026-06-05 Refresh Notes
+
+The legacy boundary was rechecked against HEAD `81225c3625022d180447b4a3fe4b2d0f7882360f`. The file count remains 827 in the audited legacy/archive boundary. No legacy file was executed or imported during this audit.
+
+The catalog classification remains unchanged:
+
+| Legacy class | Current handling |
+| --- | --- |
+| Old standalone Bio GEO/TCGA/GTEx/literature tools | Do not call directly from current UI; adapter/rewrite only after current resolver and result contracts are mapped. |
+| Old Meta workbench, task runners, profile/readiness/reporting widgets | Do not migrate directly; use only as requirements/UI reference after mapping to current Meta canonical run/artifact contract. |
+| Archive mirrors | Provenance/reference only; not runtime evidence. |
+| Legacy tests | Historical evidence only; not proof that current UI can run those features. |
+| Static assets/icons/lexicons | Potential design/resource material; still require versioning and current contract review before use. |
+
+No mock, placeholder, dry-run, legacy-only, or branch-only output was reclassified as current available.

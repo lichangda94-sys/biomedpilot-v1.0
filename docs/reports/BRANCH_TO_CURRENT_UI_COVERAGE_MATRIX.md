@@ -1,8 +1,8 @@
 # Branch To Current UI Coverage Matrix
 
-Date: 2026-06-04
+Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `f8590cc458317656aee600430e911d57cecbb32f`
+Baseline: `dev/bioinformatics` at `81225c3625022d180447b4a3fe4b2d0f7882360f`
 
 ## Rule
 
@@ -15,17 +15,17 @@ The current UI is the only mainline. A branch feature is not available merely be
 | Module entry / Bio project home | `app/bioinformatics/project_home.py`, `workflow_pages.py`, `tests/ui/test_bioinformatics_project_home.py` | Current UI exists; project workspace validation and page navigation tests exist by inventory | Early wizard branches | Covered current | Reuse current |
 | Data source search / GEO / TCGA / GTEx cards | `workflow_pages.py`, `search_center/**`, `data_sources/**`, `download/**` | Current services and UI tests exist; some searches/downloads are gated/testing-level | `codex/bio-geo-real-download-test`, bio search UI branches, legacy GEO/TCGA/GTEx | Partly covered current | Adapter only for selected helpers |
 | Recognition / readiness / standardization | `project_recognition.py`, `project_readiness.py`, `project_standardization.py`, `analysis_inputs/**`, `workflow_pages.py` | Current contract layer exists; used by downstream gates | Legacy GEO detector, asset contracts | Covered current | Reuse current; do not bypass resolver |
-| Analysis Center / DEG gates | `analysis_ui/**`, `deg_ready/**`, `deg_engine/**`, `workflow_pages.py` | Current gate state exists; formal DEG/multifactor DEG paths are gated | ReleaseBuild DEG branches, `stable/mainline` | Covered but gated | Reuse/adapt branch engine pieces only through gates |
+| Analysis Center / DEG gates | `analysis_ui/**`, `deg_ready/**`, `deg_engine/**`, `workflow_pages.py` | Current gate state exists; formal DEG/multifactor DEG paths are gated; current standard package gate rows are surfaced | ReleaseBuild DEG branches, `stable/mainline` | Covered but gated | Reuse/adapt branch engine pieces only through gates |
 | Formal DEG run/review/export | `deg_engine/formal_runner.py`, `deg_engine/standard_package.py`, `result_review.py`, `plots/formal_deg.py`, `reports/formal_deg.py` | Prior L3 proof exists in current reports/tests; standard result package sidecar is current; not rerun here | ReleaseBuild DEG carry-over | Covered current for controlled DEG | Reuse |
 | limma/DESeq2/edgeR controls | `deg_engine/multifactor_r_runner.py`, `dependency_check.py`, UI gates | Current controlled runner/gate material exists; runtime is external/detect-first | ReleaseBuild R adapter branches | Partly covered | Adapter; no direct branch merge |
-| ORA/GSEA enrichment | current `enrichment_*`, `gene_set_resources.py`, `enrichment_r_adapter.py` | Current flat modules exist with gates/results/plot/report history; not rerun here | ReleaseBuild structured `enrichment/**`, `gsea/**` | Partly covered | Adapter/rewrite to current flat/contracts |
+| ORA/GSEA enrichment | current `enrichment_*`, `gene_set_resources.py`, `enrichment_r_adapter.py` | Current flat modules exist with gates/results/plot/report history; runtime gene-set downloads are blocked by policy and resource readiness must use import/prelocked resources; not rerun here | ReleaseBuild structured `enrichment/**`, `gsea/**` | Partly covered | Adapter/rewrite to current flat/contracts |
 | Plot artifacts | `plots/**`, Results Browser in `workflow_pages.py` | Real SVG artifacts exist for supported gated sources; not a full plot platform | ReleaseBuild plot split | Covered for selected outputs | Adapter style/system only |
 | Report/export | `reports/**`, report viewer/gates in `workflow_pages.py` | Section/full-package and renderer gate history exists; no clinical conclusion | ReleaseBuild report/renderer branches | Partly covered | Adapter with current report-ready gates |
 | Survival / Cox | `survival_clinical/**`, `plots/survival.py`, `plots/cox.py` | Controlled statistical paths and standard package sidecars exist; clinical report-ready remains restricted | survival clinical carry-over branch | Covered but strictly gated | Reuse with clinical boundary |
 | Risk score / nomogram / calibration / DCA | mixed current/branch evidence | Not production-current; clinical interpretation restricted | ReleaseBuild/internal-test branches | Not fully covered | Rewrite only after selected scope |
 | Immune infiltration | `immune_infiltration/**`, `analysis/modules/immune_infiltration/**` | Current scoring, testing-level standard package sidecar, and lite worker scaffold exist; proof not rerun here | ReleaseBuild/current branches | Partly covered | Reuse with focused proof |
 | Expression correlation | `services/correlation_runner.py`, `services/correlation_service.py`, `services/correlation_standard_package.py` | Current local correlation service and testing-level standard package sidecar exist; proof not rerun here | current line | Partly covered | Reuse with focused proof |
-| Standard analysis worker/package catalog | `app/analysis_runtime/**`, `analysis/**` | Current mock/lite scaffolds, external R command boundary, package catalog, docking lite command-manifest contract, and full-mode environment blocker snapshots exist | Not old-branch driven | Scaffold covered | Keep labeled testing/lite/full-blocked until selected proof |
+| Standard analysis worker/package catalog | `app/analysis_runtime/**`, `analysis/**` | Current mock/lite scaffolds, external R command boundary, package catalog, artifact validation, Analysis Center gate surfacing, docking lite command-manifest contract, full-mode environment blocker snapshots, and resource-download blocker policy exist | Not old-branch driven | Scaffold covered | Keep labeled testing/lite/full-blocked until selected proof |
 | Legacy GEO check/settings | `workflow_pages.py`, legacy adapters | UI can expose environment/status style checks, but legacy execution cannot become formal analysis | `app/bioinformatics/legacy/**` | Quarantined | Deprecated/adapter only |
 
 ## Meta Analysis UI Coverage
@@ -63,3 +63,16 @@ The current UI is the only mainline. A branch feature is not available merely be
 ## Matrix Conclusion
 
 Current UI coverage is strongest for controlled Bio DEG and current Meta v2 testing-level L3 proof paths. Enrichment, survival/Cox, reports, standard workers, and several resource gates have current or branch material, but they must remain governed by current contracts. Old branches fill a migration backlog, not a replacement UI.
+
+## 2026-06-05 Refresh Notes
+
+The matrix was refreshed against HEAD `81225c3625022d180447b4a3fe4b2d0f7882360f`. Current UI remains the only mainline. The observed current UI/test surfaces still support the same coverage decision:
+
+| Area | Current coverage interpretation |
+| --- | --- |
+| Bio Analysis Center | Current gates and standard package rows exist; this does not authorize legacy runner bypass. |
+| Bio Results Browser / report/export | Current artifact and report gates exist for selected current modules; old branch plot/report code remains candidate material only. |
+| Meta Analysis page | Current v2 statistics and canonical artifact bridge remain the current path; old workbench/reporting widgets remain deprecated/reference only. |
+| Standard worker/package catalog | Current scaffold and validation exist; mock/lite/full-blocked labels must remain visible and must not become production claims. |
+
+No UI page or button was modified by this audit.
