@@ -49,7 +49,7 @@ Completed in this audit:
 Remaining:
 
 - Add richer per-module mock tables/plots only where the UI needs them, while preserving mock labeling.
-- Wire one current real analysis module through the bridge for lite mode.
+- Migrate existing formal/full algorithms behind the isolated standard worker instead of sidecar or service-adapter execution.
 
 Update: the first result package validator and mock-mode backend adapter now exist under `app/analysis_runtime/`. All registered modules now have fixed mock input and standard result package fixtures.
 
@@ -95,6 +95,8 @@ Update: docking now has a `lite` standard worker adapter-contract path. `run_mod
 
 Update: molecular dynamics now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local topology/coordinate/mdp fixtures and write `tables/lite_md_command_manifest.tsv` plus provenance and limitations. It does not execute GROMACS, does not generate trajectory/energy/RMSD/simulation outputs, and does not enable full molecular dynamics.
 
+Update: lite-mode coverage is now enforced by a registry-driven bridge test. Every module that declares `modes.lite.supported=true` in `analysis/registry/analysis_modules.json` must run through `run_analysis_module_task(..., worker_backend="rscript")`, produce a passed standard result package, register a result-index entry, appear in the standard package catalog, preserve `result_semantics=testing_level`, and keep `report_ready_eligible=false`.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -119,6 +121,7 @@ Acceptance:
 - Spatial transcriptomics can run `lite` mode through the standard R worker using fixed local expression/coordinate fixture data and generate a real SVG spot QC preview. **Completed for sixth lite worker.**
 - Docking can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing AutoDock Vina. **Completed for docking adapter boundary fixture.**
 - Molecular dynamics can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing GROMACS. **Completed for MD adapter boundary fixture.**
+- Every registered `lite` module can run through the same main-backend task bridge and standard R worker package contract. **Completed with registry-driven focused test.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.

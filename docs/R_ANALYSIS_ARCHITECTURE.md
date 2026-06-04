@@ -80,6 +80,8 @@ app/analysis_runtime/
 
 The bridge can create a task record, write a standard result package, validate the package, and register the package in the current result index. It can invoke supported `lite` worker paths explicitly via `worker_backend="rscript"`; unsupported `lite` modes and all `full` modes remain blocked until isolated worker environments are available.
 
+Lite support is registry-gated. Any module that declares `modes.lite.supported=true` in `analysis/registry/analysis_modules.json` is covered by a focused task-bridge test that runs the module through `run_analysis_module_task(..., worker_backend="rscript")`, validates the standard package, verifies result-index registration, verifies standard package catalog discovery, and confirms the output remains `testing_level` with `report_ready_eligible=false`.
+
 In default mock mode, the bridge copies the module-specific fixed standard result package declared by the registry, then stamps the current `task_id`, hashes, timestamp, and worker log. This keeps UI/API/task-flow development deterministic without requiring R.
 
 For worker-boundary validation, the bridge also supports an explicit `worker_backend="rscript"` path. That path writes `module_input.json`, invokes `analysis/runners/run_module.R`, validates the resulting standard package, and registers the package using the worker provenance. If `Rscript` is unavailable, it writes a blocked standard package instead of raising a traceback or installing R.
@@ -167,6 +169,7 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | DEG module contract | Present as a registered standard module with mock input/output package and base R lite fixture; full standard worker execution remains blocked. |
 | Standard R runner | Present for mock mode, DEG/enrichment/survival/univariate/multivariate/immune/spatial lite fixtures, docking and molecular dynamics external-tool command-manifest lite fixtures, and blocked full standard packages. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
+| Registered lite bridge acceptance | Present; all registry-declared lite modules are exercised through the same task bridge, standard R worker, standard result package validator, result index, and catalog path. |
 | Shared external R command boundary | Present for transitional controlled adapters; reduces scattered subprocess handling but does not complete isolated standard-worker migration. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
 | Survival lite worker | Present for base R KM/log-rank fixture only; testing-level standard package with no clinical conclusion. |

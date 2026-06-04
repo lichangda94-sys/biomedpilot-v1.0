@@ -700,6 +700,62 @@ def test_molecular_dynamics_lite_mode_writes_gromacs_command_manifest_without_ex
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 0
 
 
+def test_all_registered_lite_modules_run_through_standard_r_worker_package_contract(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    registry = load_analysis_module_registry()
+    lite_module_ids = [
+        str(module["module_id"])
+        for module in registry["modules"]
+        if bool(module.get("modes", {}).get("lite", {}).get("supported"))
+    ]
+
+    assert lite_module_ids
+
+    for module_id in lite_module_ids:
+        project_root = tmp_path / module_id
+        task_center = TaskCenter(project_root / "tasks" / "tasks.json")
+        result = run_analysis_module_task(
+            project_root,
+            module_input(tmp_path, mode="lite", module_id=module_id),
+            task_center=task_center,
+            worker_backend="rscript",
+        )
+        package_dir = Path(result["result_package_dir"])
+        result_json = read_json(package_dir / "result.json")
+        provenance = read_json(package_dir / "provenance.json")
+        validation = validate_standard_result_package(
+            package_dir,
+            expected_module_id=module_id,
+            expected_task_id=f"{module_id}-lite-task",
+            expected_mode="lite",
+        )
+        catalog = build_standard_analysis_package_catalog(project_root)
+        result_index = load_registry(project_root)
+
+        assert result["status"] == "passed", module_id
+        assert validation["status"] == "passed", module_id
+        assert result_json["module_id"] == module_id
+        assert result_json["mode"] == "lite"
+        assert result_json["status"] == "passed"
+        assert result_json["result_semantics"] == "testing_level"
+        assert "formal_computed_result" not in str(result_json)
+        assert result_json["summary"]["clinical_conclusion_status"] == "not_generated"  # type: ignore[index]
+        assert len(result_json["tables"]) >= 1
+        assert len(result_json["reports"]) >= 1
+        assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+        assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
+        assert provenance["input_hash"] != provenance["parameter_hash"]
+        assert task_center.list_tasks()[0].status == TaskStatus.COMPLETED
+        assert result_index["results"][0]["result_semantics"] == "testing_level"
+        assert result_index["results"][0]["validation_status"] == "passed"
+        assert result_index["results"][0]["report_ready_eligible"] is False
+        assert catalog["status"] == "passed"
+        assert catalog["rows"][0]["module_id"] == module_id
+        assert catalog["rows"][0]["mode"] == "lite"
+        assert catalog["rows"][0]["worker_boundary_type"] == "standard_r_worker"
+
+
 def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execution(tmp_path: Path) -> None:
     task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
     result = run_analysis_module_task(tmp_path, module_input(tmp_path, mode="full"), task_center=task_center)
