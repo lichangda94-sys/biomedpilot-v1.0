@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.analysis_runtime import build_standard_analysis_package_catalog, validate_standard_result_package
 from app.bioinformatics.clinical_analysis import build_survival_package
 from app.bioinformatics.survival_clinical import build_km_logrank_parameter_manifest, confirm_km_logrank_parameters, run_controlled_km_logrank
 
@@ -15,6 +16,9 @@ def test_controlled_km_logrank_registers_formal_result_without_hr_or_report(tmp_
     assert result["status"] == "passed"
     assert Path(result["km_curve_table"]).is_file()
     assert Path(result["logrank_result_table"]).is_file()
+    standard_package_dir = Path(result["standard_result_package_dir"])
+    assert standard_package_dir.is_dir()
+    assert validate_standard_result_package(standard_package_dir)["status"] == "passed"
     table = Path(result["logrank_result_table"]).read_text(encoding="utf-8")
     assert "p_value" in table
     assert "hazard_ratio" not in table
@@ -24,6 +28,15 @@ def test_controlled_km_logrank_registers_formal_result_without_hr_or_report(tmp_
     assert '"plot_artifacts": []' in index
     assert '"report_artifacts": []' in index
     assert '"report_ready_eligible": false' in index
+    assert '"artifact_type": "standard_result_package"' in index
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = catalog["rows"][0]
+    assert row["module_id"] == "survival"
+    assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert row["artifact_counts"]["tables"] == 2
+    assert row["artifact_counts"]["reports"] == 1
+    assert row["artifact_manifest"]["tables"][0]["exists"] is True
+    assert "clinical_conclusion_not_generated" in row["warnings"]
 
 
 def test_controlled_km_logrank_blocks_missing_confirmation_without_traceback(tmp_path: Path) -> None:

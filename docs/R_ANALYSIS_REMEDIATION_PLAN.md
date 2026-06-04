@@ -83,6 +83,8 @@ Update: controlled ORA/GSEA R adapters now mirror successful formal enrichment f
 
 Update: controlled multi-factor DEG R adapters now mirror successful limma/DESeq2/edgeR fixture-proven formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result table, task log, parameter manifest, dependency snapshot, formula/contrast provenance, hashes, package versions, command provenance, and sidecar-only worker-boundary metadata. This does not enable new DEG execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration.
 
+Update: controlled KM/log-rank and Cox univariate executors now mirror successful controlled formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result tables, task logs, parameter manifests, dependency snapshots, hashes, engine metadata, and sidecar-only worker-boundary metadata. This does not enable clinical conclusions, risk grouping, plot artifacts, report-ready survival/clinical output, or complete isolated worker migration.
+
 Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
 
 Update: univariate clinical association now has a `lite` standard worker path. `run_module.R` can execute base R Welch t-test and Pearson correlation calculations on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
@@ -180,6 +182,8 @@ Completed:
 - Survival `mock` remains available without R.
 - Survival `lite` can run a fixed KM/log-rank fixture through `analysis/runners/run_module.R`.
 - Standard result package includes `result.json`, `provenance.json`, `tables/lite_km_curve.tsv`, `tables/lite_logrank_result.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
+- Controlled KM/log-rank formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
+- Controlled Cox univariate formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
 - Univariate `mock` remains available without R.
 - Univariate `lite` can run a fixed base R clinical association fixture through `analysis/runners/run_module.R`.
 - Univariate standard result package includes `result.json`, `provenance.json`, `tables/lite_univariate_association.tsv`, `reports/README_lite.md`, and `logs/worker.log`.

@@ -12,6 +12,7 @@ from app.bioinformatics.results.registry import register_result
 from ._io import asset_path, event_observed, parse_float, read_table, sample_id, write_table
 from .cox_confirmation import validate_cox_univariate_confirmation
 from .cox_result_schema import COX_RESULT_COLUMNS, validate_cox_result_index_entry, validate_cox_result_table
+from .standard_package import write_survival_standard_result_package
 
 
 ENGINE_NAME = "biomedpilot_controlled_cox_univariate"
@@ -54,6 +55,20 @@ def run_controlled_cox_univariate(project_root: str | Path, parameter_manifest: 
 
     write_table(table_path, [cox_row], list(COX_RESULT_COLUMNS))
     _write_json(log_path, _task_log(task_run_id, parameter_manifest, dependency, "succeeded", str(table_path), "results/summaries/result_index.json", warnings, [], ""))
+    output_artifacts = ({"artifact_type": "cox_result_table", "path": str(table_path), "required_columns": list(COX_RESULT_COLUMNS)},)
+    standard_package_dir = write_survival_standard_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        analysis_type="cox_univariate",
+        table_artifacts=output_artifacts,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency,
+        engine_name=ENGINE_NAME,
+        engine_version=ENGINE_VERSION,
+        source_owner="app.bioinformatics.survival_clinical.cox_executor",
+    )
     entry = ResultIndexEntry(
         result_id=result_id,
         task_run_id=task_run_id,
@@ -66,7 +81,10 @@ def run_controlled_cox_univariate(project_root: str | Path, parameter_manifest: 
         engine_name=ENGINE_NAME,
         engine_version=ENGINE_VERSION,
         dependency_snapshot=dict(dependency),
-        output_artifacts=({"artifact_type": "cox_result_table", "path": str(table_path), "required_columns": list(COX_RESULT_COLUMNS)},),
+        output_artifacts=(
+            *output_artifacts,
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+        ),
         plot_artifacts=(),
         report_artifacts=(),
         validation_status="passed",
@@ -82,7 +100,7 @@ def run_controlled_cox_univariate(project_root: str | Path, parameter_manifest: 
         entry["validation_status"] = "blocked"
         entry["blockers"] = list(schema_gate.get("blockers", []) or [])
     registered = register_result(root, entry)
-    return {"status": "passed" if not registered.get("blockers") else "blocked", "result_id": result_id, "task_run_id": task_run_id, "cox_result_table": str(table_path), "task_run_log_path": str(log_path), "result": registered, "warnings": warnings, "blockers": list(registered.get("blockers", []) or [])}
+    return {"status": "passed" if not registered.get("blockers") else "blocked", "result_id": result_id, "task_run_id": task_run_id, "cox_result_table": str(table_path), "task_run_log_path": str(log_path), "standard_result_package_dir": str(standard_package_dir), "result": registered, "warnings": warnings, "blockers": list(registered.get("blockers", []) or [])}
 
 
 def _observations(rows: list[dict[str, str]], parameter_manifest: dict[str, Any]) -> list[dict[str, Any]]:

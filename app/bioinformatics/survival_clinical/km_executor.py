@@ -12,6 +12,7 @@ from app.bioinformatics.results.registry import register_result
 from ._io import asset_path, event_observed, parse_float, read_table, sample_id, write_table
 from .km_confirmation import validate_km_logrank_confirmation
 from .km_result_schema import KM_CURVE_COLUMNS, LOGRANK_COLUMNS, validate_km_result_index_entry, validate_km_result_tables
+from .standard_package import write_survival_standard_result_package
 
 
 ENGINE_NAME = "biomedpilot_controlled_km_logrank"
@@ -63,6 +64,23 @@ def run_controlled_km_logrank(project_root: str | Path, parameter_manifest: dict
     write_table(logrank_path, logrank_rows, list(LOGRANK_COLUMNS))
     log_payload = _task_log(task_run_id, parameter_manifest, dependency, "succeeded", str(km_path), str(logrank_path), "results/summaries/result_index.json", warnings, [], "")
     _write_json(log_path, log_payload)
+    output_artifacts = (
+        {"artifact_type": "km_curve_table", "path": str(km_path), "required_columns": list(KM_CURVE_COLUMNS)},
+        {"artifact_type": "logrank_result_table", "path": str(logrank_path), "required_columns": list(LOGRANK_COLUMNS)},
+    )
+    standard_package_dir = write_survival_standard_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        analysis_type="survival_km_logrank",
+        table_artifacts=output_artifacts,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency,
+        engine_name=ENGINE_NAME,
+        engine_version=ENGINE_VERSION,
+        source_owner="app.bioinformatics.survival_clinical.km_executor",
+    )
     entry = ResultIndexEntry(
         result_id=result_id,
         task_run_id=task_run_id,
@@ -76,8 +94,8 @@ def run_controlled_km_logrank(project_root: str | Path, parameter_manifest: dict
         engine_version=ENGINE_VERSION,
         dependency_snapshot=dict(dependency),
         output_artifacts=(
-            {"artifact_type": "km_curve_table", "path": str(km_path), "required_columns": list(KM_CURVE_COLUMNS)},
-            {"artifact_type": "logrank_result_table", "path": str(logrank_path), "required_columns": list(LOGRANK_COLUMNS)},
+            *output_artifacts,
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
         ),
         plot_artifacts=(),
         report_artifacts=(),
@@ -94,7 +112,7 @@ def run_controlled_km_logrank(project_root: str | Path, parameter_manifest: dict
         entry["validation_status"] = "blocked"
         entry["blockers"] = list(schema_gate.get("blockers", []) or [])
     registered = register_result(root, entry)
-    return {"status": "passed" if not registered.get("blockers") else "blocked", "result_id": result_id, "task_run_id": task_run_id, "result": registered, "km_curve_table": str(km_path), "logrank_result_table": str(logrank_path), "task_run_log_path": str(log_path), "warnings": warnings, "blockers": list(registered.get("blockers", []) or [])}
+    return {"status": "passed" if not registered.get("blockers") else "blocked", "result_id": result_id, "task_run_id": task_run_id, "result": registered, "km_curve_table": str(km_path), "logrank_result_table": str(logrank_path), "task_run_log_path": str(log_path), "standard_result_package_dir": str(standard_package_dir), "warnings": warnings, "blockers": list(registered.get("blockers", []) or [])}
 
 
 def _observations(rows: list[dict[str, str]], parameter_manifest: dict[str, Any]) -> list[dict[str, Any]]:

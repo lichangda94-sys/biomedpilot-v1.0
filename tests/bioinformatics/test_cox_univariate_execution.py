@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.analysis_runtime import build_standard_analysis_package_catalog, validate_standard_result_package
 from app.bioinformatics.clinical_analysis import build_survival_package
 from app.bioinformatics.survival_clinical import build_cox_univariate_parameter_manifest, confirm_cox_univariate_parameters, run_controlled_cox_univariate
 
@@ -13,6 +14,9 @@ def test_controlled_cox_univariate_registers_formal_result_without_risk_score(tm
     result = run_controlled_cox_univariate(tmp_path, manifest, confirmation)
 
     assert result["status"] == "passed"
+    standard_package_dir = Path(result["standard_result_package_dir"])
+    assert standard_package_dir.is_dir()
+    assert validate_standard_result_package(standard_package_dir)["status"] == "passed"
     table = Path(result["cox_result_table"]).read_text(encoding="utf-8")
     assert "hazard_ratio" in table
     assert "ci_lower" in table
@@ -24,6 +28,15 @@ def test_controlled_cox_univariate_registers_formal_result_without_risk_score(tm
     assert '"plot_artifacts": []' in index
     assert '"report_artifacts": []' in index
     assert '"report_ready_eligible": false' in index
+    assert '"artifact_type": "standard_result_package"' in index
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = catalog["rows"][0]
+    assert row["module_id"] == "survival"
+    assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert row["artifact_counts"]["tables"] == 1
+    assert row["artifact_counts"]["reports"] == 1
+    assert row["artifact_manifest"]["tables"][0]["exists"] is True
+    assert "clinical_conclusion_not_generated" in row["warnings"]
 
 
 def test_controlled_cox_blocks_missing_confirmation_without_traceback(tmp_path: Path) -> None:
