@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from app.labtools.image_analysis.analysis_task import ImageAnalysisTask, create_experiment_image_analysis_task
+from app.labtools.image_analysis.cell_imagej_workflows import is_cell_imagej_analysis, write_cell_imagej_macro
 from app.labtools.image_analysis.image_io import create_image_record
 from app.labtools.image_analysis.image_models import ImageAnalysisError, LabImageRecord, utc_timestamp
 from app.labtools.image_analysis.macro_registry import MacroTemplate, default_macro_for_analysis
@@ -113,7 +114,16 @@ class ImageAnalysisTaskStore:
             directory.mkdir(parents=True, exist_ok=True)
         entries = self._write_image_manifest(records, inputs_dir, import_mode)
         selected_macro_path = macros_dir / "selected_macro.ijm"
-        shutil.copyfile(macro_template.path, selected_macro_path)
+        if macro_template.experiment_module == "cell_experiment" and is_cell_imagej_analysis(analysis_type):
+            write_cell_imagej_macro(
+                analysis_type,
+                self._macro_input_dir(entries, inputs_dir, import_mode),
+                output_dir,
+                macro_path=selected_macro_path,
+                parameters=parameters or {},
+            )
+        else:
+            shutil.copyfile(macro_template.path, selected_macro_path)
         generated_parameters_path = macros_dir / "generated_parameters.json"
         generated_parameters_path.write_text(json.dumps(parameters or {}, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         task = task.with_workspace(
@@ -204,3 +214,15 @@ class ImageAnalysisTaskStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"schema_version": TASK_MANIFEST_SCHEMA_VERSION, "task": task.to_dict()}, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return path
+
+    def _macro_input_dir(
+        self,
+        entries: tuple[ImageManifestEntry, ...],
+        inputs_dir: Path,
+        import_mode: str,
+    ) -> Path:
+        if import_mode == "copy_to_task_workspace":
+            return inputs_dir
+        if entries:
+            return Path(entries[0].original_path).expanduser().parent
+        return inputs_dir

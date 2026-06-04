@@ -19,6 +19,7 @@ TASK_TYPES: dict[str, str] = {
     "wound_healing": "划痕实验面积分析",
     "cell_counting": "细胞计数",
     "fluorescence_intensity": "荧光强度分析",
+    "immunohistochemistry": "免疫组化 DAB 阳性面积分析",
     "densitometry": "灰度 / 墨值分析",
 }
 

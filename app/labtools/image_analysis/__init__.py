@@ -7,6 +7,19 @@ Other task types remain reviewable drafts.
 
 from app.labtools.image_analysis.analysis_task import TASK_TYPES, ImageAnalysisTask, create_analysis_task, create_experiment_image_analysis_task
 from app.labtools.image_analysis.audit_models import ImageAnalysisAuditRecord
+from app.labtools.image_analysis.cell_imagej_workflows import (
+    CellImageJExperimentSpec,
+    CellImageJMacroBundle,
+    CellImageJRunResult,
+    build_imagej_run_command,
+    get_cell_imagej_experiment,
+    is_cell_imagej_analysis,
+    list_cell_imagej_experiments,
+    render_cell_imagej_macro,
+    resolve_imagej_executable,
+    run_cell_imagej_macro,
+    write_cell_imagej_macro,
+)
 from app.labtools.image_analysis.export_package import (
     ImageAnalysisExportPackage,
     export_fluorescence_analysis_package,
@@ -76,6 +89,9 @@ __all__ = [
     "FluorescenceAnalysisParameters",
     "FluorescenceAnalysisResult",
     "FluorescenceROI",
+    "CellImageJExperimentSpec",
+    "CellImageJMacroBundle",
+    "CellImageJRunResult",
     "analyze_fluorescence_roi",
     "WoundHealingMetrics",
     "WoundHealingParameters",
@@ -84,6 +100,7 @@ __all__ = [
     "analyze_wound_healing_area",
     "builtin_macro_registry",
     "built_in_macro_root",
+    "build_imagej_run_command",
     "create_analysis_task",
     "create_experiment_image_analysis_task",
     "create_image_record",
@@ -96,8 +113,15 @@ __all__ = [
     "fluorescence_result_to_json_dict",
     "placeholder_result",
     "get_macro_template",
+    "get_cell_imagej_experiment",
+    "is_cell_imagej_analysis",
+    "list_cell_imagej_experiments",
     "save_run_request",
+    "render_cell_imagej_macro",
+    "resolve_imagej_executable",
+    "run_cell_imagej_macro",
     "validate_image_path",
+    "write_cell_imagej_macro",
     "wound_markdown_report_fragment",
     "wound_result_to_json_dict",
 ]

@@ -1,15 +1,15 @@
-// BioMedPilot LabTools scratch/wound ImageJ workflow template.
+// BioMedPilot LabTools IHC/DAB ImageJ workflow template.
 // Runtime task workspaces render this template with concrete input/output paths.
 setBatchMode(true);
 inputDir = "";
 outputDir = "";
-outputCsv = outputDir + "wound_scratch_results.csv";
+outputCsv = outputDir + "ihc_dab_area_results.csv";
 threshold_method = "Default";
-gap_polarity = "bright";
-blur_sigma = 2.0;
-min_gap_area_px = 500;
+positive_polarity = "dark";
+blur_sigma = 1.0;
+min_positive_area_px = 50;
 saturated_percent = 0.35;
-File.saveString("image,gap_area_px,total_area_px,gap_fraction\n", outputCsv);
+File.saveString("image,positive_area_px,total_area_px,positive_fraction,mean_gray\n", outputCsv);
 list = getFileList(inputDir);
 for (i = 0; i < list.length; i++) {
     if (!isImageFile(list[i])) continue;
@@ -23,18 +23,19 @@ for (i = 0; i < list.length; i++) {
     run("8-bit");
     run("Enhance Contrast", "saturated=" + saturated_percent);
     run("Gaussian Blur...", "sigma=" + blur_sigma);
-    if (gap_polarity == "bright")
-        setAutoThreshold(threshold_method + " light");
-    else
+    getStatistics(area, meanGray);
+    if (positive_polarity == "dark")
         setAutoThreshold(threshold_method + " dark");
+    else
+        setAutoThreshold(threshold_method + " light");
     run("Convert to Mask");
     run("Clear Results");
-    run("Analyze Particles...", "size=" + min_gap_area_px + "-Infinity display clear");
-    gapArea = 0;
+    run("Analyze Particles...", "size=" + min_positive_area_px + "-Infinity display clear");
+    positiveArea = 0;
     for (row = 0; row < nResults; row++)
-        gapArea = gapArea + getResult("Area", row);
-    gapFraction = gapArea / totalArea;
-    File.append(csvEscape(list[i]) + "," + gapArea + "," + totalArea + "," + gapFraction + "\n", outputCsv);
+        positiveArea = positiveArea + getResult("Area", row);
+    positiveFraction = positiveArea / totalArea;
+    File.append(csvEscape(list[i]) + "," + positiveArea + "," + totalArea + "," + positiveFraction + "," + meanGray + "\n", outputCsv);
     close("*");
 }
 

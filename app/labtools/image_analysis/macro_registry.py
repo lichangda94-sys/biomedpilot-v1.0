@@ -70,6 +70,9 @@ def _template(
     *,
     parameter_schema: dict[str, Any] | None = None,
     minimum_engine_requirement: str = IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ,
+    version: str = "0.1-placeholder",
+    description: str = "占位 Macro：仅用于生成可复现运行请求，不执行真实图像识别算法。",
+    expected_outputs: tuple[str, ...] = ("outputs/results.csv", "outputs/summary.txt", "logs/run_log.txt", "review/manual_review.json"),
 ) -> MacroTemplate:
     if minimum_engine_requirement not in IMAGE_ANALYSIS_ENGINE_REQUIREMENTS:
         raise ImageAnalysisError(f"暂不支持该 Macro 外部引擎要求：{minimum_engine_requirement}")
@@ -79,10 +82,10 @@ def _template(
         experiment_module=experiment_module,
         analysis_type=analysis_type,
         macro_file_path=str(built_in_macro_root() / relative_path),
-        version="0.1-placeholder",
-        description="占位 Macro：仅用于生成可复现运行请求，不执行真实图像识别算法。",
+        version=version,
+        description=description,
         required_inputs=("input_images", "output_dir", "parameters"),
-        expected_outputs=("outputs/results.csv", "outputs/summary.txt", "logs/run_log.txt", "review/manual_review.json"),
+        expected_outputs=expected_outputs,
         parameter_schema=parameter_schema or {},
         minimum_engine_requirement=minimum_engine_requirement,
     )
@@ -123,19 +126,25 @@ BUILTIN_MACRO_TEMPLATES: tuple[MacroTemplate, ...] = (
     ),
     _template(
         "scratch_area_basic",
-        "划痕实验面积分析占位 Macro",
+        "划痕实验面积分析 ImageJ Macro",
         "cell_experiment",
         "scratch_area",
         "cell_experiment/scratch_area_basic.ijm",
-        parameter_schema={"time_point": "str", "group": "str", "threshold_mode": "placeholder", "output_format": "CSV/TXT"},
+        parameter_schema={"threshold_method": "str", "gap_polarity": "bright/dark", "blur_sigma": "number", "min_gap_area_px": "int", "saturated_percent": "number"},
+        version="0.2-imagej-workflow",
+        description="真实 ImageJ macro 生成模板：批量估算划痕空白区域面积和闭合比例；执行仍受外部引擎 gate 控制。",
+        expected_outputs=("outputs/wound_scratch_results.csv", "logs/run_log.txt", "review/manual_review.json"),
     ),
     _template(
         "transwell_count_basic",
-        "Transwell 图像分析占位 Macro",
+        "Transwell 颗粒计数 ImageJ Macro",
         "cell_experiment",
         "transwell_count",
         "cell_experiment/transwell_count_basic.ijm",
-        parameter_schema={"group": "str", "threshold_mode": "placeholder", "particle_area_min": "placeholder", "particle_area_max": "placeholder"},
+        parameter_schema={"threshold_method": "str", "cell_polarity": "dark/bright", "blur_sigma": "number", "min_particle_area_px": "int", "max_particle_area_px": "int/Infinity", "watershed": "bool"},
+        version="0.2-imagej-workflow",
+        description="真实 ImageJ macro 生成模板：批量统计 Transwell 染色图像颗粒数量和面积；执行仍受外部引擎 gate 控制。",
+        expected_outputs=("outputs/transwell_results.csv", "logs/run_log.txt", "review/manual_review.json"),
     ),
     _template(
         "fluorescence_intensity_basic",
@@ -144,6 +153,17 @@ BUILTIN_MACRO_TEMPLATES: tuple[MacroTemplate, ...] = (
         "fluorescence_intensity",
         "cell_experiment/fluorescence_intensity_basic.ijm",
         parameter_schema={"channel": "Red/Green/Blue/Gray/custom", "roi_mode": "placeholder", "metric": "mean/integrated_density"},
+    ),
+    _template(
+        "ihc_dab_area_basic",
+        "免疫组化 DAB 阳性面积 ImageJ Macro",
+        "cell_experiment",
+        "immunohistochemistry",
+        "cell_experiment/ihc_dab_area_basic.ijm",
+        parameter_schema={"threshold_method": "str", "positive_polarity": "dark/bright", "blur_sigma": "number", "min_positive_area_px": "int", "saturated_percent": "number"},
+        version="0.2-imagej-workflow",
+        description="真实 ImageJ macro 生成模板：批量估算 IHC/DAB 阳性面积比例和平均灰度；执行仍受外部引擎 gate 控制。",
+        expected_outputs=("outputs/ihc_dab_area_results.csv", "logs/run_log.txt", "review/manual_review.json"),
     ),
     _template("convert_to_8bit", "转换 8-bit 占位 Macro", "common", "preprocess", "common/convert_to_8bit.ijm"),
     _template("batch_preprocess", "批量预处理占位 Macro", "common", "preprocess", "common/batch_preprocess.ijm"),
@@ -157,6 +177,7 @@ DEFAULT_MACRO_BY_ANALYSIS: dict[tuple[str, str], str] = {
     ("cell_experiment", "scratch_area"): "scratch_area_basic",
     ("cell_experiment", "transwell_count"): "transwell_count_basic",
     ("cell_experiment", "fluorescence_intensity"): "fluorescence_intensity_basic",
+    ("cell_experiment", "immunohistochemistry"): "ihc_dab_area_basic",
 }
 
 
