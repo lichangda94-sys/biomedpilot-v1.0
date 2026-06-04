@@ -2,60 +2,44 @@
 
 Date: 2026-06-04
 
-Current audit baseline:
+Baseline: `dev/bioinformatics` at `a471a25a9153b23c224ea7a96e425c44de92ee5e`
 
-```text
-branch: dev/bioinformatics
-HEAD: 9436f03aa0ea3d926f44e3aceef5320bfb0e2781
-audit mode: Phase 2.5 read-only inventory
-```
+## Deprecation Rule
 
-This register identifies legacy paths that must not be migrated directly or counted as current completion evidence. They may be useful for requirements archaeology, fixtures, resource review, or UI inspiration, but they are not current runtime sources.
+An item is deprecated for direct migration when it bypasses current UI/contract boundaries, depends on old global state or old paths, produces mock/placeholder/testing-level output without clear labeling, or would replace current source of truth.
+
+Deprecated does not mean the idea is useless. It means the code must not be copied directly into current runtime. Requirements or small helpers can still be re-evaluated in a later scoped adapter/rewrite task.
 
 ## Deprecated / Quarantined Items
 
-| Item | Source | Why deprecated | Current replacement / allowed use | Migration status |
-| --- | --- | --- | --- | --- |
-| Standalone Bio GEO GUI | `app/bioinformatics/legacy/geo_tool/main.py`, `run_geo_tool.py`, archive copy | Separate historical app with old contracts and launchers | Current Bio UI pages plus search/recognition/standardization services | Do not import; reference only |
-| Bio legacy GEO workflow | `legacy/geo_tool/geo_workflow.py`, `geo_pipeline/**`, `geo_processing/**` | Old GEO mainline, duplicate surfaces, compatibility wrappers | Current resolver and standardized asset contracts | Deprecated/direct-use forbidden |
-| Bio literature utilities | `app/bioinformatics/legacy/literature_cli.py`, `literature_gui.py` | Bio no longer owns PubMed/PICO/literature workflows | Current Meta literature workflow | Deprecated for Bio |
-| Legacy download scripts | `download_geo_full_only.py`, `process_geo_family_soft.py`, `download_supplement_and_sra.py` | Compatibility scripts outside current UI/task contracts | Current downloader/search/recognition services | Deprecated |
-| Legacy TCGA/GTEx facade | `app/bioinformatics/legacy/tcga_gtex/**` | Old optional runtime/facade and mockable locator contracts | Current `data_sources`, `tcga`, `standard_assets` after audit | Rewrite only |
-| Archive duplicate Bio source | `archive/legacy_sources/bioinformatics_project/**` | Archived duplicate of old Bio source | File archaeology only | Deprecated as runtime |
-| Meta old workbench shell | `app/meta_analysis/legacy/app/**`, `app_meta/**`, archive `model9/app/**` | Separate UI shell; current UI is the only mainline | Current `app/meta_analysis/pages/**` | Deprecated as runtime |
-| Meta fake GEO readiness | `app/meta_analysis/legacy/geo_readiness/**`, `legacy/analysis/deg_ready_matrix.py` | Belongs to old snapshot and Bio boundary; metadata/fake preflight risk | Current Bio recognition/resolver/DEG gates | Deprecated for Meta |
-| Meta task mock/no-op runner | `app/meta_analysis/legacy/core/task_runner_adapters.py`, task runner docs | Historical dry-run/no-op contract; not real analysis output | Current task/result contracts only if reimplemented | Do not count as real run |
-| Meta legacy reporting placeholders | `app/meta_analysis/legacy/reporting/**`, old reporting docs, archive copy | Historical report summaries, not tied to current canonical result contract | Current `formal_report_service`, `publication_export_service`, Meta result contract bridge | Adapter/rewrite only |
-| Legacy package scripts | `app/meta_analysis/legacy/packaging/**`, `legacy/scripts/check_packaging_readiness.py` | Standalone package flow, not current app bundle source | Current root `scripts/package_app.py` | Deprecated |
-| Legacy icons/contact sheets | `app/meta_analysis/legacy/assets/**` | Visual assets only, not functionality | May be reviewed by UI design | Ignore for analysis capability |
-| Legacy bytecode/cache artifacts | `app/bioinformatics/**/__pycache__/**`, `app/meta_analysis/**/__pycache__/**` if present | Interpreter cache files from old runs; not source or reproducible evidence | Ignore; do not migrate or cite as implementation | Deprecated |
-| Archive duplicate model9 source | `archive/legacy_sources/model9/**` | Archived duplicate of old Meta workbench and task/report stack | File archaeology only | Deprecated as runtime |
-| Old pre-B8 DEG preflight | `codex/stage-3.6-deg-preflight`, old `deg_executor_preflight.py` variants | Predates current B8/B9+ result/input contracts | Current DEG formal gates | Superseded |
-| Old GEO search UI branches | `codex/bio-search-ui-main*`, `codex/bio-ui-download-integration`, `codex/bio-geo-real-download-test` | Older UI copy/search logic and partial recognition | Current Bio search/recognition pages | Reference only |
-| Old Meta workflow UI branch | `codex/meta-workflow-ui`, `codex/meta-analysis-refresh` | Early UI integration, superseded by current pages | Current Meta pages/workflow dashboard | Reference only |
-| Old UI shell branches | `dev/ui-shell`, `integration/release-ui-shell-scoped-migration`, `integration/release-labtools-c1-module-nav` | UI shell/design branch state is not the current Bio/Meta runtime | Current UI only; UI owner may select scoped assets later | Design reference only |
-| Branch-only risk/nomogram clinical claims | `codex/releasebuild-formal-deg-carryover`, `dev/release-internal-test` risk artifacts | High risk of overclaiming clinical prediction/prognosis | Only gated, non-clinical research outputs if reimplemented | Do not migrate as clinical feature |
-| Branch-only OCR runtime | `dev/meta-analysis` OCR/PaddleOCR files | External dependency and packaging state differs from current branch | Future adapter only after dependency/package audit | Not current-proven |
-| Branch-only structured ORA/GSEA package layout | `dev/release-internal-test` `enrichment/**`, `gsea/**` | Diverges from current flat modules; direct copy would overwrite current contracts | Adapter or rewrite only | Do not merge as-is |
+| Item | Source | Why deprecated or quarantined | Current replacement or safe route | Risk | Final handling |
+| --- | --- | --- | --- | --- | --- |
+| Whole old branch merge | Any old branch | Branch deltas are large and would overwrite/delete current contracts, standard runtime scaffolds, or UI state | Select one feature and adapt to current contracts | High | deprecated |
+| Legacy standalone GEO tool | `app/bioinformatics/legacy/geo_tool/**` | Old standalone entrypoint and wrappers bypass current project/resolver/result contracts | Current data source, recognition, standardization, and resolver pages | High | deprecated |
+| Legacy GEO direct download/process scripts | `legacy/download_geo_full_only.py`, `download_supplement_and_sra.py`, `process_geo_family_soft.py`, `geo_pipeline/**` | Network/file effects and old assumptions; no current UI/result contract proof | Current data source requests and standardized repository flow | High | deprecated/adapter only |
+| Legacy GEO detector as formal input resolver | `legacy/geo_processing/detector/**` | May be useful, but direct use can bypass B8-style standardized input resolver | Adapt only behind current recognition/standardization contracts | Medium/high | quarantined adapter candidate |
+| Legacy TCGA/GTEx facade/task runner | `legacy/tcga_gtex/**` | Old locator/download/task contracts differ from current services | Rewrite around current `data_sources/**`, `search_center/**`, and resolver | High | rewrite |
+| Legacy literature CLI/GUI in Bio legacy | `legacy/literature_cli.py`, `literature_gui.py` | Separate old app flow; overlaps Meta but not current Meta runtime | Current Meta literature/search workflow | High | deprecated |
+| Legacy Bio sandbox UI | `legacy/ui/module3_sandbox.py` | Standalone sandbox not part of current UI mainline | Current Bio workflow pages | High | deprecated |
+| Legacy Meta app shell/workbench | `app/meta_analysis/legacy/app/**`, `app_meta/**` | Old shell, routes, state, and visual structure would replace current UI | Current `app/meta_analysis/pages/**` | High | deprecated |
+| Legacy Meta analysis/profile stack | `app/meta_analysis/legacy/analysis/**`, `analysis_profiles/**` | Old profile/result contracts conflict with current v2 statistics contract | Current Meta v2 statistics and result contract bridge | High | deprecated |
+| Legacy Meta reporting widgets | `legacy/app/reporting_summary_widget.py`, `task_results_summary_widget.py` | Old widgets tied to old shell and output assumptions | Current Meta reporting page/services | Medium/high | UI reference only |
+| Legacy pycache | `app/**/legacy/**/__pycache__/*.pyc` | Machine-local compiled artifacts | None | High | ignore/remove only in explicit cleanup task |
+| Mock result packages as real analysis proof | `analysis/fixtures/outputs/*/mock_result_package/**` | Explicit mock packages | Use only for contract tests | Medium | testing-only |
+| Lite standard worker fixtures as production proof | `analysis/modules/**`, `analysis/fixtures/inputs/**`, `analysis/runners/run_module.R` | Lite worker scaffolds are useful but not current production proof | Prove each selected module through current UI and result package | Medium | scaffold only |
+| Branch-only UI shell/screenshots | `dev/ui-shell`, `integration/*ui*`, branch `docs/ui/**` material | Design material cannot replace current UI without selected UI migration task | Use as design reference | Medium | adapter/design review |
+| Branch-only risk/nomogram clinical material | ReleaseBuild/internal-test branches | High risk of clinical overclaim and old state coupling | Rewrite under strict non-clinical gates if selected | High | rewrite |
+| Branch-only OCR/fulltext engines | `dev/meta-analysis`, OCR branches | External dependency and package divergence; not current-proven | Adapter behind current Meta fulltext contracts | High | rewrite/adapter later |
 
-## Not Deprecated, But Not A Production Claim
+## Not Deprecated, But Not Automatically Available
 
-The following are current or current-adjacent, but still require focused proof before release or production claims:
+| Item | Status |
+| --- | --- |
+| Current formal DEG loop | Current implementation exists, but availability still depends on gates and prior proofs; not generalized to every DEG scenario. |
+| Current Meta v2 result contract bridge | Current implementation exists and remains testing-level; not production-grade Meta. |
+| Current ORA/GSEA/survival/Cox/risk/report modules | Current or branch material exists, but each remains governed by its current gate and proof status. |
+| Current standard analysis runtime | Useful scaffold; mock/lite/full modes must stay labeled and gated. |
 
-- Current Bio controlled formal DEG.
-- Current Bio controlled ORA/GSEA.
-- Current Bio controlled KM/log-rank and Cox.
-- Current Bio risk score candidate gates.
-- Current Bio immune infiltration candidates.
-- Current Meta v2 statistics engine.
-- Current Meta result contract bridge.
-- Current analysis runtime mock/lite bridge, package catalog, resource governance, and separated input/parameter provenance hashes.
-- Current standard analysis lite workers for DEG, enrichment, survival, univariate, multivariate, and immune infiltration.
-- Current multi-factor DEG standard package sidecar.
-- Current enrichment standard result package sidecar.
+## Register Conclusion
 
-None of these should be described as clinical-grade, public-release ready, or full production analysis unless a later phase proves that standard with current UI, current contracts, real outputs, and tests.
-
-## Phase 2.5 Stop Point
-
-This register is intentionally conservative. Deprecated entries are blocked from direct migration even when they contain useful algorithms, UI copy, tests, or fixtures. Any future reuse must be through a new scoped adapter or rewrite against current contracts.
+Deprecated and quarantined items must not be used as shortcuts. The next migration phase must choose one candidate, one current UI entry, one contract bridge, and one focused test plan.

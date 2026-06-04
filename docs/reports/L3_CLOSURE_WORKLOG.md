@@ -661,3 +661,83 @@ No migration candidate is approved for direct carry-over. Future work must selec
 ### Stop Point
 
 Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `a471a25`
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the branch inventory reports against the current `dev/bioinformatics` HEAD:
+
+```text
+a471a25a9153b23c224ea7a96e425c44de92ee5e
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Current Worktree State
+
+The refresh observed and preserved pre-existing unrelated changes:
+
+```text
+ M app/analysis_runtime/__init__.py
+ M app/analysis_runtime/r_worker.py
+ M app/bioinformatics/deg_engine/multifactor_r_runner.py
+ M app/bioinformatics/enrichment_r_adapter.py
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M docs/R_ANALYSIS_REMEDIATION_PLAN.md
+ M tests/test_analysis_runtime_task_bridge.py
+ M tests/test_r_analysis_architecture_contract.py
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,260p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short --branch` | Passed |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads refs/remotes` | Passed |
+| `git rev-parse HEAD` | Passed, `a471a25a9153b23c224ea7a96e425c44de92ee5e` |
+| `git log --oneline --decorate --max-count=45 -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts app/analysis_runtime analysis` | Passed |
+| `git diff --name-status HEAD..<branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/bioinformatics docs/reports docs/ui scripts app/analysis_runtime analysis` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy -maxdepth 4 -type f` | Passed |
+| `find app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui -maxdepth 4 -type f` | Passed |
+| `rg -n "QPushButton\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel" app/bioinformatics app/meta_analysis tests/ui` | Passed |
+
+No functional tests were run for this refresh because it was documentation-only and audit-only. The audit did not claim branch-only runtime availability.
+
+### Findings
+
+Current Bioinformatics and Meta Analysis contain substantial non-legacy implementations and tests. Old branches contain useful material for DEG, enrichment, survival/Cox, risk/report/renderers, OCR/fulltext, UI shell design, and search workflows, but no old branch is safe to merge wholesale. High-relevance branch deltas ranged from `122` to `2099` files in audited paths.
+
+Legacy directories remain quarantined:
+
+```text
+app/bioinformatics/legacy/**
+app/meta_analysis/legacy/**
+```
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one candidate and one current UI entry, then adapt or rewrite against current contracts with real output proof. Mock, placeholder, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
