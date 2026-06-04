@@ -44,6 +44,14 @@ def run_analysis_module_task(
     blockers = _validate_input_payload(module_input, module=module)
     if blockers:
         _write_standard_package(package_dir, module_input, status="blocked", blockers=blockers, command="analysis_task_bridge_validation")
+        _write_worker_invocation_manifest(
+            package_dir,
+            module_input,
+            worker_backend=worker_backend,
+            invocation_status="blocked_validation_gate",
+            worker_result={},
+            blockers=blockers,
+        )
         validation = validate_standard_result_package(package_dir, expected_module_id=module_id, expected_task_id=task_id, expected_mode=mode)
         _finish_task(center, task, success=False, summary=f"Analysis task blocked: {', '.join(blockers)}")
         result_entry = _register_standard_package(project, package_dir, module_input, validation, status="blocked", blockers=blockers)
@@ -111,6 +119,14 @@ def run_analysis_module_task(
                 warnings=["mock_fixture_unavailable"],
                 command="analysis_task_bridge_mock_fixture_gate",
             )
+        _write_worker_invocation_manifest(
+            package_dir,
+            module_input,
+            worker_backend=worker_backend,
+            invocation_status="fixture_copy_blocked" if fixture_blockers else "fixture_copy_completed",
+            worker_result={},
+            blockers=fixture_blockers,
+        )
     validation = validate_standard_result_package(package_dir, expected_module_id=module_id, expected_task_id=task_id, expected_mode=mode)
     success = validation["status"] == "passed" and not fixture_blockers
     _finish_task(center, task, success=success, summary="Mock analysis task completed." if success else "Mock analysis task package validation failed.")
@@ -293,6 +309,16 @@ def _write_worker_invocation_manifest(
     command = worker_result.get("command")
     if not isinstance(command, list):
         command = []
+    if worker_backend == "rscript" and invocation_status == "completed":
+        boundary_type = "standard_r_worker"
+        migration_status = "standard_worker_contract"
+    elif worker_backend == "python_fixture" and invocation_status == "fixture_copy_completed":
+        boundary_type = "analysis_task_bridge_fixture"
+        migration_status = "mock_fixture_contract"
+    else:
+        boundary_type = "analysis_task_bridge_gate"
+        migration_status = "blocked_before_worker_execution"
+    input_manifest = "module_input.json" if (package_dir / "module_input.json").is_file() else "not_materialized"
     manifest = {
         "schema_version": "biomedpilot.analysis.worker_invocation.v1",
         "created_at": _now(),
@@ -302,7 +328,7 @@ def _write_worker_invocation_manifest(
         "worker_backend": worker_backend,
         "invocation_status": invocation_status,
         "standard_worker_entrypoint": str(REPO_ROOT / "analysis" / "runners" / "run_module.R"),
-        "input_manifest": "module_input.json",
+        "input_manifest": input_manifest,
         "output_contract": "standard_result_package",
         "runtime_install_policy": "forbidden",
         "resource_download_policy": "forbidden",
@@ -312,9 +338,9 @@ def _write_worker_invocation_manifest(
         "stderr": str(worker_result.get("stderr") or ""),
         "blockers": [str(item) for item in blockers],
         "worker_boundary": {
-            "boundary_type": "standard_r_worker" if worker_backend == "rscript" and invocation_status == "completed" else "analysis_task_bridge_gate",
+            "boundary_type": boundary_type,
             "task_system_invocation": "task_center_registered",
-            "migration_status": "standard_worker_contract" if worker_backend == "rscript" and invocation_status == "completed" else "blocked_before_worker_execution",
+            "migration_status": migration_status,
         },
     }
     _write_json(logs_dir / "worker_invocation.json", manifest)

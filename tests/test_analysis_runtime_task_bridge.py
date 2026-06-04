@@ -177,6 +177,7 @@ def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index
     )
     result_json = read_json(package_dir / "result.json")
     provenance = read_json(package_dir / "provenance.json")
+    invocation = read_json(package_dir / "logs" / "worker_invocation.json")
     tasks = task_center.list_tasks()
     registry = load_registry(tmp_path)
 
@@ -192,6 +193,15 @@ def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index
     assert registry["results"][0]["result_id"] == "analysis-package-enrichment-mock-task"
     assert registry["results"][0]["result_semantics"] == "testing_level"
     assert registry["results"][0]["output_artifacts"][0]["artifact_type"] == "standard_result_package"
+    assert registry["results"][0]["log_artifacts"][0]["artifact_type"] == "analysis_worker_log"
+    assert registry["results"][0]["log_artifacts"][1]["artifact_type"] == "analysis_worker_invocation_manifest"
+    assert invocation["worker_backend"] == "python_fixture"
+    assert invocation["invocation_status"] == "fixture_copy_completed"
+    assert invocation["input_manifest"] == "not_materialized"
+    assert invocation["runtime_install_policy"] == "forbidden"
+    assert invocation["resource_download_policy"] == "forbidden"
+    assert invocation["worker_boundary"]["boundary_type"] == "analysis_task_bridge_fixture"  # type: ignore[index]
+    assert invocation["worker_boundary"]["migration_status"] == "mock_fixture_contract"  # type: ignore[index]
 
 
 def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path: Path) -> None:
@@ -316,6 +326,7 @@ def test_all_registered_modules_run_mock_bridge_with_standard_package(tmp_path: 
         assert provenance["module_id"] == module_id
         assert provenance["task_id"] == f"{module_id}-mock-task"
         assert provenance["input_hash"] != "fixture"
+        assert (package_dir / "logs" / "worker_invocation.json").is_file()
         assert task_center.list_tasks()[0].status == TaskStatus.COMPLETED
 
 
@@ -877,7 +888,14 @@ def test_invalid_module_input_is_blocked_but_still_has_standard_package(tmp_path
     result = run_analysis_module_task(tmp_path, payload)
     package_dir = Path(result["result_package_dir"])
     validation = validate_standard_result_package(package_dir, expected_module_id="enrichment", expected_task_id="enrichment-mock-task", expected_mode="mock")
+    invocation = read_json(package_dir / "logs" / "worker_invocation.json")
+    registry = load_registry(tmp_path)
 
     assert result["status"] == "blocked"
     assert validation["status"] == "passed"
     assert "module_input_parameters_missing_or_invalid" in read_json(package_dir / "result.json")["blockers"]
+    assert invocation["worker_backend"] == "python_fixture"
+    assert invocation["invocation_status"] == "blocked_validation_gate"
+    assert invocation["worker_boundary"]["boundary_type"] == "analysis_task_bridge_gate"  # type: ignore[index]
+    assert "module_input_parameters_missing_or_invalid" in invocation["blockers"]
+    assert registry["results"][0]["log_artifacts"][1]["artifact_type"] == "analysis_worker_invocation_manifest"

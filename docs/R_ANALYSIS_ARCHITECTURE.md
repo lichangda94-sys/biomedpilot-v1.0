@@ -89,7 +89,7 @@ In default mock mode, the bridge copies the module-specific fixed standard resul
 
 For worker-boundary validation, the bridge also supports an explicit `worker_backend="rscript"` path. That path writes `module_input.json`, invokes `analysis/runners/run_module.R`, validates the resulting standard package, and registers the package using the worker provenance. If `Rscript` is unavailable, it writes a blocked standard package instead of raising a traceback or installing R.
 
-Standard task-bridge worker attempts now persist `logs/worker_invocation.json` alongside `logs/worker.log`. The invocation manifest records the module, mode, task id, backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, runtime-install/resource-download policy, and worker-boundary migration status. The result index keeps `worker.log` as the first log artifact for compatibility and appends the invocation manifest as `analysis_worker_invocation_manifest`.
+Standard task-bridge outcomes now persist `logs/worker_invocation.json` alongside `logs/worker.log`. The invocation manifest records the module, mode, task id, backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, runtime-install/resource-download policy, and worker-boundary migration status for mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates. The result index keeps `worker.log` as the first log artifact for compatibility and appends the invocation manifest as `analysis_worker_invocation_manifest`.
 
 For transitional controlled adapters that still need module-specific R scripts, `app/analysis_runtime/r_worker.py` exposes `run_external_r_command()`. This helper centralizes external R subprocess behavior, timeout handling, blocker payloads, and worker-boundary metadata. It is not the final isolated standard worker interface; adapter-generated packages remain labeled as sidecars until their algorithms are moved behind `analysis/runners/run_module.R` or an equivalent isolated worker service.
 
@@ -181,7 +181,7 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Registered lite bridge acceptance | Present; all registry-declared lite modules are exercised through the same task bridge, standard R worker, standard result package validator, result index, and catalog path. |
 | Registered full bridge block gate | Present; all registry-declared full modules are blocked before worker execution and still emit standard package, result-index, catalog, and non-executed provenance records. |
-| Worker invocation manifest | Present for task-bridge R worker attempts and full-mode bridge gates; stored as `logs/worker_invocation.json` and registered in result index log artifacts. |
+| Worker invocation manifest | Present for all standard task-bridge outcomes; stored as `logs/worker_invocation.json` and registered in result index log artifacts. |
 | Shared external R command boundary | Present for transitional controlled adapters; reduces scattered subprocess handling but does not complete isolated standard-worker migration. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
 | Survival lite worker | Present for base R KM/log-rank fixture only; testing-level standard package with no clinical conclusion. |
