@@ -3,6 +3,13 @@ source_docs:
   parameter_inventory: docs/bioinformatics_original_code_parameter_inventory.md
   schema_draft: docs/bioinformatics_software_parameter_schema_draft.md
 
+dependency_policy:
+  purpose: survival parameter defaults and gated capability candidates only; not an install manifest.
+  execution_policy: detect_first_external_worker_only
+  runtime_install_allowed: false
+  default_app_dependency: false
+  download_allowed: false
+
 input:
   time_column: OS.time
   event_column: OS

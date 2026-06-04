@@ -758,3 +758,35 @@ def test_bioinformatics_package_requirements_config_is_detect_first_not_install_
 
     assert offenders == []
     assert missing_policy == []
+
+
+def test_bioinformatics_analysis_default_configs_are_gated_capabilities_not_install_manifests() -> None:
+    config_paths = (
+        ROOT / "config" / "bioinformatics" / "analysis_defaults.yaml",
+        ROOT / "config" / "bioinformatics" / "enrichment_defaults.yaml",
+        ROOT / "config" / "bioinformatics" / "survival_defaults.yaml",
+    )
+    forbidden_markers = (
+        "install.packages",
+        "BiocManager::install",
+        "pak::pkg_install",
+        "remotes::install_github",
+        "runtime_install_allowed: true",
+        "default_app_dependency: true",
+        "download_allowed: true",
+    )
+    required_policy_markers = (
+        "dependency_policy:",
+        "execution_policy: detect_first_external_worker_only",
+        "runtime_install_allowed: false",
+        "default_app_dependency: false",
+        "download_allowed: false",
+        "not an install manifest",
+    )
+
+    for path in config_paths:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        offenders = [marker for marker in forbidden_markers if marker in text]
+        missing_policy = [marker for marker in required_policy_markers if marker not in text]
+        assert offenders == [], path
+        assert missing_policy == [], path

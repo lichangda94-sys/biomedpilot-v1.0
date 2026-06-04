@@ -149,6 +149,8 @@ Update: the current Bioinformatics Results Browser now displays a standard packa
 
 Update: `config/bioinformatics/package_requirements.yaml` now records R/Bioconductor packages as a detect-first capability inventory only. It explicitly forbids runtime install/download and default app dependency use, and an architecture test guards it against becoming an install manifest.
 
+Update: Bioinformatics analysis default configs that mention heavy R packages now carry the same no-install boundary. `analysis_defaults.yaml`, `enrichment_defaults.yaml`, and `survival_defaults.yaml` are parameter/capability defaults only; they explicitly forbid runtime install/download and default app dependency use, and an architecture test guards those files.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
