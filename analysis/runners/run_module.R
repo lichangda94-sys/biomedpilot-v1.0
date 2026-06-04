@@ -90,6 +90,9 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "enrichment" && mode == "lite" && table_file == "lite_ora_result.tsv") {
     return("lite_enrichment_ora_result_table")
   }
+  if (module_id == "deg" && mode == "lite" && table_file == "lite_deg_result.tsv") {
+    return("lite_deg_result_table")
+  }
   if (module_id == "survival" && mode == "lite" && table_file == "lite_km_curve.tsv") {
     return("lite_survival_km_curve_table")
   }
@@ -248,6 +251,120 @@ run_lite_enrichment_ora <- function() {
   )
   write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
   writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), paste0("result_table=", result_path)), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
+run_lite_deg_two_group <- function() {
+  expression_matrix_path <- resolve_input_path(read_string_field(input_text, "expression_matrix_path", ""))
+  sample_metadata_path <- resolve_input_path(read_string_field(input_text, "sample_metadata_path", ""))
+  case_group <- read_string_field(input_text, "case_group", "case")
+  control_group <- read_string_field(input_text, "control_group", "control")
+  blockers <- character(0)
+  if (expression_matrix_path == "" || !file.exists(expression_matrix_path)) {
+    blockers <- c(blockers, "lite_deg_expression_matrix_missing")
+  }
+  if (sample_metadata_path == "" || !file.exists(sample_metadata_path)) {
+    blockers <- c(blockers, "lite_deg_sample_metadata_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite DEG blocked because required fixture inputs are missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  expression <- read.delim(expression_matrix_path, stringsAsFactors = FALSE, check.names = FALSE)
+  metadata <- read.delim(sample_metadata_path, stringsAsFactors = FALSE, check.names = FALSE)
+  if (!("gene" %in% colnames(expression)) || ncol(expression) < 3) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_deg_expression_matrix_schema_invalid"), c(), "Lite DEG blocked because expression matrix columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "deg_expression_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  if (!all(c("sample_id", "group") %in% colnames(metadata))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_deg_sample_metadata_schema_invalid"), c(), "Lite DEG blocked because sample metadata columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "deg_metadata_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  sample_ids <- setdiff(colnames(expression), "gene")
+  metadata$sample_id <- as.character(metadata$sample_id)
+  metadata$group <- as.character(metadata$group)
+  if (!all(sample_ids %in% metadata$sample_id)) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_deg_sample_metadata_mismatch"), c(), "Lite DEG blocked because expression samples do not align with metadata.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "deg_sample_mismatch"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  expression_values <- as.data.frame(lapply(expression[, sample_ids, drop = FALSE], as.numeric), check.names = FALSE)
+  if (any(is.na(as.matrix(expression_values)))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_deg_expression_matrix_non_numeric"), c(), "Lite DEG blocked because expression values are not numeric.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "deg_non_numeric"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  if (any(as.matrix(expression_values) < 0)) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_deg_negative_counts"), c(), "Lite DEG blocked because count values cannot be negative.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "deg_negative_counts"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  case_samples <- metadata$sample_id[metadata$group == case_group]
+  control_samples <- metadata$sample_id[metadata$group == control_group]
+  case_samples <- intersect(case_samples, sample_ids)
+  control_samples <- intersect(control_samples, sample_ids)
+  if (length(case_samples) < 2 || length(control_samples) < 2) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_deg_requires_two_groups_with_minimum_two_samples"), c(), "Lite DEG blocked because two groups with at least two samples each are required.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "deg_group_size_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  matrix_values <- as.matrix(expression_values)
+  rownames(matrix_values) <- as.character(expression$gene)
+  log_matrix <- log2(matrix_values + 1)
+  rows <- list()
+  for (gene in rownames(log_matrix)) {
+    case_values <- as.numeric(log_matrix[gene, case_samples])
+    control_values <- as.numeric(log_matrix[gene, control_samples])
+    test <- try(t.test(case_values, control_values), silent = TRUE)
+    p_value <- if (inherits(test, "try-error")) NA_real_ else test$p.value
+    log2_fc <- mean(case_values) - mean(control_values)
+    rows[[length(rows) + 1]] <- data.frame(
+      feature_id = gene,
+      gene_symbol = gene,
+      log2_fold_change = log2_fc,
+      p_value = p_value,
+      method = "base_r_welch_t_test_fixture",
+      clinical_conclusion = "not_generated",
+      stringsAsFactors = FALSE
+    )
+  }
+  result_table <- do.call(rbind, rows)
+  result_table$adjusted_p_value <- p.adjust(result_table$p_value, method = "BH")
+  result_table$significance_label <- ifelse(
+    !is.na(result_table$adjusted_p_value) & result_table$adjusted_p_value <= 0.05 & result_table$log2_fold_change >= 1,
+    "up",
+    ifelse(!is.na(result_table$adjusted_p_value) & result_table$adjusted_p_value <= 0.05 & result_table$log2_fold_change <= -1, "down", "not_significant")
+  )
+  result_table <- result_table[, c("feature_id", "gene_symbol", "log2_fold_change", "p_value", "adjusted_p_value", "significance_label", "method", "clinical_conclusion")]
+  write.table(result_table, file = file.path(output_dir, "tables", "lite_deg_result.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  writeLines(c(
+    "# Lite DEG limitations",
+    "",
+    "This is a lightweight fixture DEG result for worker and package-contract validation.",
+    "It uses base R Welch t-tests on fixed local count fixtures.",
+    "It is not a formal DEG result, clinical result, report-ready output, or replacement for limma/DESeq2/edgeR."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "base_r_fixture_only_no_heavy_resources", "clinical_conclusion_not_generated"),
+    "Lite DEG completed with base R fixture data."
+  )
+  write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "clinical_conclusion=not_generated"), file.path(output_dir, "logs", "worker.log"))
   quit(status = 0)
 }
 
@@ -694,6 +811,10 @@ if (input_mode != mode) {
 
 if (mode == "lite" && module_id == "enrichment") {
   run_lite_enrichment_ora()
+}
+
+if (mode == "lite" && module_id == "deg") {
+  run_lite_deg_two_group()
 }
 
 if (mode == "lite" && module_id == "survival") {

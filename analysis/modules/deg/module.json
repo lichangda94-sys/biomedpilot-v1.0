@@ -12,8 +12,14 @@
       "fixture_output_package": "analysis/fixtures/outputs/deg/mock_result_package"
     },
     "lite": {
-      "supported": false,
-      "blocker": "deg_lite_worker_not_defined"
+      "supported": true,
+      "fixture_input": "analysis/fixtures/inputs/deg/module_input_lite.json",
+      "runner": "analysis/runners/run_module.R",
+      "worker_backend": "rscript",
+      "environment": "r-bio-core",
+      "result_semantics": "testing_level",
+      "capability": "base_r_two_group_deg_fixture",
+      "clinical_conclusion_policy": "not_generated"
     },
     "full": {
       "supported": false,

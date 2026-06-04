@@ -27,7 +27,7 @@
       "current_adapter_status": "existing_controlled_python_and_r_contracts_pending_standard_worker_migration",
       "modes": {
         "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/deg/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/deg/mock_result_package"},
-        "lite": {"supported": false, "blocker": "deg_lite_worker_not_defined"},
+        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/deg/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_two_group_deg_fixture", "clinical_conclusion_policy": "not_generated"},
         "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
       },
       "analysis_environment": "r-bio-core",

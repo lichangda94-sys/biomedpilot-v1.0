@@ -24,7 +24,7 @@ R and external tools are not default frontend or main-backend runtime dependenci
 | Mode | Purpose | Dependency policy |
 | --- | --- | --- |
 | `mock` | Frontend, API, task-flow, and result-display development | No heavy R packages; fixed fixture input/output. |
-| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. Enrichment, survival, univariate, multivariate clinical association, and immune infiltration now have base R fixtures through the standard runner. |
+| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. DEG, enrichment, survival, univariate, multivariate clinical association, and immune infiltration now have base R fixtures through the standard runner. |
 | `full` | Formal analysis and full integration testing | Dedicated analysis container, renv lock, or isolated analysis environment. |
 
 ## Repository Contract
@@ -92,7 +92,7 @@ Existing controlled enrichment ORA/GSEA R adapters now also write a standard res
 
 Existing controlled multi-factor DEG R adapters for limma, DESeq2, and edgeR now also write standard result package sidecars for successful fixture-proven formal results. The sidecar preserves the result table, task log, parameter manifest, dependency snapshot, formula, contrast, covariates, batch variables, hashes, R/package versions, and command provenance. It is registered in result index v2 as a `standard_result_package` output artifact. This is a package-contract migration step only: it does not enable new DEG execution, plot artifacts, report-ready output, clinical interpretation, or complete migration into the isolated standard worker.
 
-The first `lite` worker paths are enrichment ORA, survival KM/log-rank, univariate clinical association, multivariate clinical association, and immune infiltration signature scoring. `analysis/runners/run_module.R` can run these modules in `mode=lite` using base R and fixed repository fixtures. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`; immune infiltration also writes a real fixture SVG heatmap without relying on an R graphics device. They remain `testing_level`; they do not enable full resources, GSVA/CellChat/Seurat, plot/report-ready export, prognosis, treatment guidance, diagnosis, or clinical interpretation.
+The first `lite` worker paths are DEG two-group testing, enrichment ORA, survival KM/log-rank, univariate clinical association, multivariate clinical association, and immune infiltration signature scoring. `analysis/runners/run_module.R` can run these modules in `mode=lite` using base R and fixed repository fixtures. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`; immune infiltration also writes a real fixture SVG heatmap without relying on an R graphics device. They remain `testing_level`; they do not enable formal DEG, limma/DESeq2/edgeR, full resources, GSVA/CellChat/Seurat, plot/report-ready export, prognosis, treatment guidance, diagnosis, or clinical interpretation.
 
 ## Module Manifests
 
@@ -158,8 +158,8 @@ logs/
 | --- | --- |
 | Registry/schema | Present. |
 | Per-module mock result packages | Present for all registered modules. |
-| DEG module contract | Present as a registered standard module with mock input/output package; lite/full standard worker execution remains blocked. |
-| Standard R runner | Present for mock mode, enrichment/survival/univariate/multivariate/immune lite fixtures, and blocked full standard packages. |
+| DEG module contract | Present as a registered standard module with mock input/output package and base R lite fixture; full standard worker execution remains blocked. |
+| Standard R runner | Present for mock mode, DEG/enrichment/survival/univariate/multivariate/immune lite fixtures, and blocked full standard packages. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
 | Survival lite worker | Present for base R KM/log-rank fixture only; testing-level standard package with no clinical conclusion. |

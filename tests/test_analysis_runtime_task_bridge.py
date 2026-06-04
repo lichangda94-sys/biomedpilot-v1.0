@@ -41,6 +41,23 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
         }
         payload["parameters"] = {"analysis_family": "enrichment", "method": "base_r_hypergeometric_ora"}
         payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
+    if module_id == "deg" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-deg-lite-input",
+            "source_dataset_id": "fixture-deg-lite-dataset",
+            "expression_matrix_path": "analysis/fixtures/inputs/deg/lite_counts.tsv",
+            "sample_metadata_path": "analysis/fixtures/inputs/deg/lite_metadata.tsv",
+        }
+        payload["parameters"] = {
+            "analysis_family": "differential_expression",
+            "method": "base_r_welch_t_test_fixture",
+            "comparison": "case_vs_control",
+            "case_group": "case",
+            "control_group": "control",
+            "value_type": "raw_count",
+            "clinical_conclusion_policy": "not_generated",
+        }
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
     if module_id == "survival" and mode == "lite":
         payload["inputs"] = {
             "input_package_id": "fixture-survival-lite-input",
@@ -254,6 +271,41 @@ def test_enrichment_lite_mode_runs_through_standard_r_worker_and_catalog(tmp_pat
     assert registry["results"][0]["engine_name"] == "biomedpilot_standard_r_worker"
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+
+
+def test_deg_lite_mode_runs_through_standard_r_worker_without_formal_upgrade(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite", module_id="deg"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    table_text = (package_dir / "tables" / "lite_deg_result.tsv").read_text(encoding="utf-8")
+    assert result["status"] == "passed"
+    assert result_json["module_id"] == "deg"
+    assert result_json["mode"] == "lite"
+    assert result_json["result_semantics"] == "testing_level"
+    assert "lite_result_not_formal_analysis" in result_json["warnings"]
+    assert "clinical_conclusion_not_generated" in result_json["warnings"]
+    assert "adjusted_p_value" in table_text
+    assert "significance_label" in table_text
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["engine_name"] == "biomedpilot_standard_r_worker"
+    assert catalog["rows"][0]["module_id"] == "deg"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+    assert registry["results"][0]["report_ready_eligible"] is False
 
 
 def test_survival_lite_mode_runs_through_standard_r_worker_without_clinical_upgrade(tmp_path: Path) -> None:

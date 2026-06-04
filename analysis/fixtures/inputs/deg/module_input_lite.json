@@ -1,0 +1,29 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "deg",
+  "mode": "lite",
+  "task_id": "deg-lite-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-deg-lite-input",
+    "source_dataset_id": "fixture-deg-lite-dataset",
+    "expression_matrix_path": "analysis/fixtures/inputs/deg/lite_counts.tsv",
+    "sample_metadata_path": "analysis/fixtures/inputs/deg/lite_metadata.tsv"
+  },
+  "parameters": {
+    "analysis_family": "differential_expression",
+    "method": "base_r_welch_t_test_fixture",
+    "comparison": "case_vs_control",
+    "case_group": "case",
+    "control_group": "control",
+    "value_type": "raw_count",
+    "pseudocount": 1,
+    "fdr_threshold": 0.05,
+    "log2fc_threshold": 1,
+    "clinical_conclusion_policy": "not_generated"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-bio-core-lite"
+  }
+}

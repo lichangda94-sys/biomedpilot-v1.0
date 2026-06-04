@@ -53,7 +53,7 @@ Remaining:
 
 Update: the first result package validator and mock-mode backend adapter now exist under `app/analysis_runtime/`. All registered modules now have fixed mock input and standard result package fixtures.
 
-Update: DEG is now registered as a standard analysis module with a mock input and mock standard result package. DEG lite/full standard worker execution remains blocked until the existing controlled DEG runners are migrated behind the standard worker.
+Update: DEG is now registered as a standard analysis module with a mock input, mock standard result package, and base R lite worker fixture. DEG full/formal standard worker execution remains blocked until the existing controlled DEG runners are migrated behind the standard worker.
 
 Update: the R-side standard runner now accepts `<input_json> <output_dir> <mode>`, copies module-specific mock packages in `mock` mode, writes blocked standard packages for `lite` and `full`, and blocks CLI/input mode mismatches. It remains a contract runner only; no real R algorithms are activated.
 
@@ -63,7 +63,9 @@ Update: the resource manifest now declares required full-mode resources for enri
 
 Update: the standard package catalog now reads result-index `standard_result_package` artifacts and is exposed in Analysis Center state as `standard_analysis_packages`. This is a read-only UI bridge; detailed module result views still need migration.
 
-Update: enrichment now has the first `lite` standard worker path. `run_module.R` can execute a base R hypergeometric ORA fixture with local TERM2GENE files and write a testing-level standard result package. It does not use Reactome/MSigDB/full resources and does not enable report-ready output.
+Update: DEG now has a `lite` standard worker path. `run_module.R` can execute base R two-group Welch t-tests on fixed local count/metadata fixtures and write a testing-level standard result package. It does not use limma, DESeq2, edgeR, scipy, statsmodels, report-ready output, or clinical interpretation.
+
+Update: enrichment now has a `lite` standard worker path. `run_module.R` can execute a base R hypergeometric ORA fixture with local TERM2GENE files and write a testing-level standard result package. It does not use Reactome/MSigDB/full resources and does not enable report-ready output.
 
 Update: controlled ORA/GSEA R adapters now mirror successful formal enrichment fixture results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This does not change the algorithms, does not enable plot/report-ready output, and does not complete isolated worker migration.
 
@@ -91,7 +93,8 @@ Acceptance:
 - The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
 - The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
-- Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for first lite worker.**
+- DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
+- Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
 - Univariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for third lite worker.**
 - Multivariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for fourth lite worker.**
