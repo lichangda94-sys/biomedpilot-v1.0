@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.result_package.v1",
+  "title": "BioMedPilot standard analysis result package",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "module_id",
+    "mode",
+    "task_id",
+    "status",
+    "result_json",
+    "provenance_json",
+    "directories"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.result_package.v1"},
+    "module_id": {"type": "string"},
+    "mode": {"enum": ["mock", "lite", "full"]},
+    "task_id": {"type": "string"},
+    "status": {"enum": ["passed", "blocked", "failed"]},
+    "result_json": {"const": "result.json"},
+    "provenance_json": {"const": "provenance.json"},
+    "directories": {
+      "type": "array",
+      "items": {"enum": ["tables", "plots", "reports", "logs"]},
+      "contains": {"const": "logs"}
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "tables": {"type": "array"},
+        "plots": {"type": "array"},
+        "reports": {"type": "array"},
+        "logs": {"type": "array"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

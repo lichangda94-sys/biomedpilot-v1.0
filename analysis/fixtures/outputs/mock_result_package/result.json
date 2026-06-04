@@ -1,0 +1,16 @@
+{
+  "schema_version": "biomedpilot.analysis.result.v1",
+  "module_id": "survival",
+  "mode": "mock",
+  "task_id": "mock-task-001",
+  "status": "passed",
+  "summary": {
+    "message": "Mock result for UI/API/task-flow development only.",
+    "clinical_conclusion_status": "not_generated"
+  },
+  "tables": [],
+  "plots": [],
+  "reports": [],
+  "blockers": [],
+  "warnings": ["mock_result_not_scientific_output"]
+}

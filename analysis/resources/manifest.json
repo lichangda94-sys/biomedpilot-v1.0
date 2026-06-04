@@ -1,0 +1,35 @@
+{
+  "schema_version": "biomedpilot.analysis_resources.v1",
+  "policy": "large_resources_are_versioned_external_references_not_user_request_downloads",
+  "resources": [
+    {
+      "resource_id": "mock_fixture_builtin_v1",
+      "title": "Built-in mock fixture resources",
+      "version": "v1",
+      "source": "BioMedPilot repository fixture",
+      "hash": "not_applicable_repository_fixture",
+      "license": "internal_test_fixture",
+      "cache_path": "analysis/fixtures"
+    },
+    {
+      "resource_id": "reactome_full",
+      "title": "Reactome resources for full enrichment",
+      "version": "not_locked",
+      "source": "Reactome / Bioconductor package metadata",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/reactome",
+      "status": "blocked_until_resource_lock"
+    },
+    {
+      "resource_id": "msigdb_full",
+      "title": "MSigDB resources for full enrichment",
+      "version": "not_locked",
+      "source": "MSigDB",
+      "hash": "required_before_full_mode",
+      "license": "required_before_full_mode",
+      "cache_path": "external_analysis_resources/msigdb",
+      "status": "blocked_until_resource_lock"
+    }
+  ]
+}

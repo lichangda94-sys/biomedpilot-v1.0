@@ -1,0 +1,20 @@
+{
+  "schema_version": "biomedpilot.analysis.provenance.v1",
+  "module_id": "survival",
+  "mode": "mock",
+  "task_id": "mock-task-001",
+  "input_hash": "fixture",
+  "parameter_hash": "fixture",
+  "random_seed": 1,
+  "engine": {
+    "name": "biomedpilot_mock_worker",
+    "version": "v1"
+  },
+  "runtime": {
+    "r_version": "not_required_for_mock",
+    "bioconductor_version": "not_required_for_mock",
+    "package_versions": {},
+    "external_tool_versions": {}
+  },
+  "command": "analysis/runners/run_module.R analysis/fixtures/inputs/mock_analysis_input.json <output_dir> mock"
+}

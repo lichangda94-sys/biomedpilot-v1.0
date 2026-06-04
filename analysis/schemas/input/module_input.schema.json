@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.module_input.v1",
+  "title": "BioMedPilot analysis module input",
+  "type": "object",
+  "required": ["schema_version", "module_id", "mode", "task_id", "inputs", "parameters"],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.module_input.v1"},
+    "module_id": {"type": "string"},
+    "mode": {"enum": ["mock", "lite", "full"]},
+    "task_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": "string"},
+    "inputs": {
+      "type": "object",
+      "description": "File paths, package ids, or resource ids prepared by the main backend. Heavy resources must be referenced, not downloaded by the request handler."
+    },
+    "parameters": {"type": "object"},
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "random_seed": {"type": ["integer", "null"]},
+        "requested_environment": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
