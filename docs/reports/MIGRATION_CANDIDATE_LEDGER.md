@@ -6,7 +6,7 @@ Current audit baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: ccf7967609a283cddfbb83bdf6d68ceb7bc12b63
+HEAD: db5bef1a224a8a6983c011da9260658364c25c7f
 audit mode: Phase 2.5 read-only inventory
 ```
 

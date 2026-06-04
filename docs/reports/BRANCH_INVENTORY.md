@@ -6,9 +6,9 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `ccf7967609a283cddfbb83bdf6d68ceb7bc12b63`
+Current HEAD: `db5bef1a224a8a6983c011da9260658364c25c7f`
 
-Current subject: `add docking lite worker contract`
+Current subject: `surface R worker invocation diagnostics in catalog`
 
 ## Audit Boundary
 
@@ -28,15 +28,11 @@ This audit did not run validation suites. Tests would validate the current check
 The worktree contained pre-existing non-Phase-2.5 changes. They were not modified or included as migration work:
 
 ```text
- M analysis/modules/molecular_dynamics/module.json
- M analysis/registry/analysis_modules.json
- M analysis/runners/run_module.R
+ M app/analysis_runtime/standard_package.py
+ M docs/R_ANALYSIS_ARCHITECTURE.md
  M tests/test_analysis_runtime_task_bridge.py
  M tests/test_r_analysis_architecture_contract.py
-?? analysis/fixtures/inputs/molecular_dynamics/lite_coordinates.gro
-?? analysis/fixtures/inputs/molecular_dynamics/lite_mdp.mdp
-?? analysis/fixtures/inputs/molecular_dynamics/lite_topology.top
-?? analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json
+?? analysis/schemas/output/worker_invocation.schema.json
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
@@ -62,6 +58,13 @@ The worktree contained pre-existing non-Phase-2.5 changes. They were not modifie
 Recent current-line commits show current Bio/Meta L3 proof work followed by standard analysis runtime scaffolding and external-tool lite contracts:
 
 ```text
+db5bef1 surface R worker invocation diagnostics in catalog
+2eb11b6 extend R worker invocation manifest to all task bridge paths
+00d7bd6 add R worker invocation manifest contract
+239131a add R analysis environment registry contract
+a62e97b add spatial transcriptomics lite worker contract
+e101d24 add molecular dynamics lite worker contract
+e478591 docs: refresh Phase 2.5 branch migration audit
 ccf7967 add docking lite worker contract
 c35ffc9 centralize external R command boundary
 13132c3 docs: audit branch inventory migration candidates
@@ -86,7 +89,7 @@ Current standard worker/mock/lite contracts are current code, but they are not e
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Audit disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `ccf7967` | 2026-06-04 | add docking lite worker contract | Current source of truth for this worktree | Source of truth |
+| `dev/bioinformatics` | `db5bef1` | 2026-06-04 | surface R worker invocation diagnostics in catalog | Current source of truth for this worktree | Source of truth |
 | `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | High-value Bio ReleaseBuild candidate with R DEG, enrichment, survival/risk, renderer/report history | Candidate library only |
 | `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | Formal DEG/ReleaseBuild gate material | Candidate library only |
 | `codex/mainline-survival-clinical-carryover` | `74775fe` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Survival/clinical and enrichment convergence material | Candidate library only |
@@ -98,7 +101,7 @@ Current standard worker/mock/lite contracts are current code, but they are not e
 | `dev/ui-shell` | `6d5dca5` | 2026-06-01 | docs(project-control): add high fidelity UI integration handoff | UI shell/design/material branch | Design reference only |
 | `integration/release-ui-shell-scoped-migration` | `610cc20` | 2026-05-31 | feat(ui): restore scoped UI shell baseline | UI shell baseline and screenshots | UI design reference only |
 | `integration/release-labtools-c1-module-nav` | `ef526dc` | 2026-06-01 | feat(ui): gate bio report exports | Cross-module UI shell gates and LabTools material | UI reference only |
-| `integration/release-bio-c1-ui-shell` | `dee35e5` | 2026-06-04 | fix(labtools): integrate gated cell imagej macros | LabTools/UI shell integration | Out of Bio/Meta analysis migration scope |
+| `integration/release-bio-c1-ui-shell` | `f0af1d4` | 2026-06-04 | fix(labtools): scope latest imagej macro extensions | LabTools/UI shell integration | Out of Bio/Meta analysis migration scope |
 | `dev/labtools` | `c418eba` | 2026-06-04 | Fix gated cell ImageJ macro integration scope | LabTools feature work | Out of Bio/Meta scope |
 | `dev/integration` | `056a1f3` | 2026-05-29 | docs(integration): add Phase 4 scoped integration audit | Integration audit branch | Reference |
 | `audit/integration-bioinformatics-merge-plan` | `d6a5914` | 2026-05-29 | docs(integration): add bioinformatics merge plan audit | Integration merge planning audit | Reference |
@@ -119,18 +122,18 @@ Selected branch deltas are large. Direct carry-over is unsafe because many branc
 
 | Branch | Files changed vs current in audited paths | Practical implication |
 | --- | ---: | --- |
-| `dev/release-internal-test` | 2097 | Whole-branch merge would delete/rewrite current standard runtime scaffolds and reshape Bio modules. |
-| `codex/releasebuild-formal-deg-carryover` | 1072 | Useful formal DEG gate material, but older and layout-divergent. |
-| `codex/mainline-survival-clinical-carryover` | 711 | Useful survival/clinical history, but older than current runtime work. |
-| `stable/mainline` | 773 | Historical formal DEG baseline, not current source. |
-| `feature/meta-l3-ui-loop` | 126 | Focused Meta L3 proof, already represented in current line. |
-| `dev/meta-analysis` | 592 | OCR/fulltext/package material, not current-proven. |
-| `dev/ui-shell` | 2103 | UI design/shell material only; diff warns rename detection skipped. |
-| `integration/release-ui-shell-scoped-migration` | 776 | UI shell reference, not analysis proof. |
-| `codex/bio-geo-real-download-test` | 554 | Early GEO material; current recognition/resolver contracts supersede it. |
-| `codex/stage-3.6-deg-preflight` | 1063 | Pre-contract DEG preflight; superseded. |
-| `codex/meta-workflow-ui` | 490 | Older Meta UI; use as design reference only. |
-| `codex/meta-search-ui-main` | 577 | Older PubMed execution branch; current Meta search services supersede it. |
+| `dev/release-internal-test` | 2105 | Whole-branch merge would delete/rewrite current standard runtime scaffolds and reshape Bio modules. |
+| `codex/releasebuild-formal-deg-carryover` | 1080 | Useful formal DEG gate material, but older and layout-divergent. |
+| `codex/mainline-survival-clinical-carryover` | 719 | Useful survival/clinical history, but older than current runtime work. |
+| `stable/mainline` | 781 | Historical formal DEG baseline, not current source. |
+| `feature/meta-l3-ui-loop` | 134 | Focused Meta L3 proof, already represented in current line. |
+| `dev/meta-analysis` | 600 | OCR/fulltext/package material, not current-proven. |
+| `dev/ui-shell` | 2111 | UI design/shell material only; diff warns rename detection skipped. |
+| `integration/release-ui-shell-scoped-migration` | 784 | UI shell reference, not analysis proof. |
+| `codex/bio-geo-real-download-test` | 562 | Early GEO material; current recognition/resolver contracts supersede it. |
+| `codex/stage-3.6-deg-preflight` | 1071 | Pre-contract DEG preflight; superseded. |
+| `codex/meta-workflow-ui` | 498 | Older Meta UI; use as design reference only. |
+| `codex/meta-search-ui-main` | 585 | Older PubMed execution branch; current Meta search services supersede it. |
 
 ## Audit Conclusion
 
