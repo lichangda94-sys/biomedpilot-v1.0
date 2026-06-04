@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.analysis_runtime.standard_package import write_legacy_service_adapter_invocation_manifest
+
 
 def write_formal_deg_standard_result_package(
     root: Path,
@@ -102,6 +104,15 @@ def write_formal_deg_standard_result_package(
     }
     (package_dir / "result.json").write_text(json.dumps(result_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "provenance.json").write_text(json.dumps(provenance_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_legacy_service_adapter_invocation_manifest(
+        package_dir,
+        module_id="deg",
+        mode="full",
+        task_id=task_run_id,
+        subprocess_owner="app.bioinformatics.deg_engine.formal_runner",
+        command="app.bioinformatics.deg_engine.formal_runner.run_formal_controlled_deg",
+        created_at=now,
+    )
     return package_dir
 
 

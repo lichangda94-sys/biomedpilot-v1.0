@@ -11,6 +11,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from app.analysis_runtime.r_worker import run_external_r_command
+from app.analysis_runtime.standard_package import write_legacy_service_adapter_invocation_manifest
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
 from app.bioinformatics.enrichment_result_schema import build_enrichment_statistical_policy
 from app.bioinformatics.results.models import ResultIndexEntry
@@ -442,6 +443,15 @@ def _write_standard_enrichment_result_package(
     }
     (package_dir / "result.json").write_text(json.dumps(result_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "provenance.json").write_text(json.dumps(provenance_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_legacy_service_adapter_invocation_manifest(
+        package_dir,
+        module_id="enrichment",
+        mode="full",
+        task_id=task_run_id,
+        subprocess_owner="app.bioinformatics.enrichment_r_adapter",
+        command=command,
+        created_at=now,
+    )
     return package_dir
 
 

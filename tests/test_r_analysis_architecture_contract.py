@@ -244,8 +244,10 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "runtime_install_policy" in invocation_schema["required"]
     assert invocation_schema["properties"]["runtime_install_policy"]["const"] == "forbidden"  # type: ignore[index]
     assert invocation_schema["properties"]["resource_download_policy"]["const"] == "forbidden"  # type: ignore[index]
+    assert "legacy_service_adapter" in invocation_schema["properties"]["worker_backend"]["enum"]  # type: ignore[index]
+    assert "sidecar_recorded" in invocation_schema["properties"]["invocation_status"]["enum"]  # type: ignore[index]
     task_invocation_enum = invocation_schema["properties"]["worker_boundary"]["properties"]["task_system_invocation"]["enum"]  # type: ignore[index]
-    assert {"task_center_registered", "standard_worker_direct_cli"} <= set(task_invocation_enum)
+    assert {"task_center_registered", "standard_worker_direct_cli", "legacy_service_adapter_direct_call"} <= set(task_invocation_enum)
     assert result["mode"] == "mock"
     assert result["status"] == "passed"
     assert provenance["mode"] == "mock"

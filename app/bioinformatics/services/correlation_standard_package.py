@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.analysis_runtime.standard_package import write_legacy_service_adapter_invocation_manifest
+
 
 def write_correlation_standard_result_package(
     project_root: Path,
@@ -121,6 +123,15 @@ def write_correlation_standard_result_package(
     }
     (package_dir / "result.json").write_text(json.dumps(result_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "provenance.json").write_text(json.dumps(provenance_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_legacy_service_adapter_invocation_manifest(
+        package_dir,
+        module_id="correlation",
+        mode="lite",
+        task_id=result_id,
+        subprocess_owner="app.bioinformatics.services.correlation_runner",
+        command="app.bioinformatics.services.correlation_runner.run_expression_correlation",
+        created_at=now,
+    )
     return package_dir
 
 

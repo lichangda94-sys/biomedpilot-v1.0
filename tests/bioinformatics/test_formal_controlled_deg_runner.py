@@ -45,6 +45,10 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
         expected_mode="full",
     )
     assert validation["status"] == "passed"
+    invocation = json.loads((standard_package_dir / "logs" / "worker_invocation.json").read_text(encoding="utf-8"))
+    assert invocation["worker_backend"] == "legacy_service_adapter"
+    assert invocation["invocation_status"] == "sidecar_recorded"
+    assert invocation["worker_boundary"]["task_system_invocation"] == "legacy_service_adapter_direct_call"
     registry = load_registry(tmp_path)
     entry = registry["results"][0]
     assert entry["result_semantics"] == "formal_computed_result"
@@ -64,6 +68,8 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     assert row["mode"] == "full"
     assert row["result_semantics"] == "formal_computed_result"
     assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert row["worker_backend"] == "legacy_service_adapter"
+    assert row["worker_invocation_status"] == "sidecar_recorded"
     assert row["artifact_counts"]["tables"] == 1
     assert row["artifact_counts"]["reports"] == 1
     assert row["artifact_manifest"]["tables"][0]["exists"] is True

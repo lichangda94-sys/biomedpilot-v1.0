@@ -15,7 +15,65 @@ WORKER_INVOCATION_STATUSES = {
     "not_invoked_mode_gate",
     "blocked_before_process",
     "completed",
+    "sidecar_recorded",
 }
+WORKER_BACKENDS = {"python_fixture", "rscript", "legacy_service_adapter"}
+TASK_SYSTEM_INVOCATIONS = {"task_center_registered", "standard_worker_direct_cli", "legacy_service_adapter_direct_call"}
+
+
+def write_legacy_service_adapter_invocation_manifest(
+    package_dir: str | Path,
+    *,
+    module_id: str,
+    mode: str,
+    task_id: str,
+    subprocess_owner: str,
+    command: str | list[Any],
+    created_at: str,
+    returncode: int | None = 0,
+    stdout: str = "",
+    stderr: str = "",
+    blockers: list[str] | tuple[str, ...] | None = None,
+) -> Path:
+    """Write a worker invocation manifest for transitional sidecar packages.
+
+    This keeps catalog diagnostics consistent while explicitly preserving that
+    the package came from a legacy service adapter, not the isolated standard
+    worker or task bridge.
+    """
+
+    root = Path(package_dir)
+    logs_dir = root / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    command_vector = command if isinstance(command, list) else [command]
+    manifest = {
+        "schema_version": "biomedpilot.analysis.worker_invocation.v1",
+        "created_at": created_at,
+        "module_id": module_id,
+        "mode": mode,
+        "task_id": task_id,
+        "worker_backend": "legacy_service_adapter",
+        "invocation_status": "sidecar_recorded",
+        "standard_worker_entrypoint": "not_used",
+        "input_manifest": "service_adapter_payload",
+        "output_contract": "standard_result_package",
+        "runtime_install_policy": "forbidden",
+        "resource_download_policy": "forbidden",
+        "returncode": returncode,
+        "command": [str(item) for item in command_vector],
+        "stdout": stdout,
+        "stderr": stderr,
+        "blockers": list(blockers or []),
+        "worker_boundary": {
+            "boundary_type": "legacy_service_adapter_sidecar",
+            "task_system_invocation": "legacy_service_adapter_direct_call",
+            "migration_status": "sidecar_only_not_isolated_standard_worker",
+            "subprocess_owner": subprocess_owner,
+        },
+    }
+    path = logs_dir / "worker_invocation.json"
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
 
 
 def validate_standard_result_package(
@@ -115,6 +173,9 @@ def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict
 def _analysis_environment_blockers(result: dict[str, Any], provenance: dict[str, Any], *, expected_mode: str) -> list[str]:
     mode = str(result.get("mode") or provenance.get("mode") or expected_mode or "")
     environment = provenance.get("analysis_environment")
+    worker_boundary = provenance.get("worker_boundary") if isinstance(provenance.get("worker_boundary"), dict) else {}
+    if worker_boundary.get("boundary_type") == "legacy_service_adapter_sidecar":
+        return []
     if mode != "full" and environment is None:
         return []
     if not isinstance(environment, dict):
@@ -221,7 +282,7 @@ def _worker_invocation_blockers(
         blockers.append("worker_invocation_task_id_mismatch")
     if expected_mode and invocation.get("mode") != expected_mode:
         blockers.append("worker_invocation_mode_mismatch")
-    if invocation.get("worker_backend") not in {"python_fixture", "rscript"}:
+    if invocation.get("worker_backend") not in WORKER_BACKENDS:
         blockers.append("worker_invocation_worker_backend_invalid")
     if invocation.get("invocation_status") not in WORKER_INVOCATION_STATUSES:
         blockers.append("worker_invocation_status_invalid")
@@ -242,7 +303,7 @@ def _worker_invocation_blockers(
         for field in ("boundary_type", "task_system_invocation", "migration_status"):
             if not boundary.get(field):
                 blockers.append(f"worker_invocation_worker_boundary_{field}_missing")
-        if boundary.get("task_system_invocation") not in {"task_center_registered", "standard_worker_direct_cli"}:
+        if boundary.get("task_system_invocation") not in TASK_SYSTEM_INVOCATIONS:
             blockers.append("worker_invocation_task_system_invocation_invalid")
     return blockers
 

@@ -29,7 +29,7 @@
     "module_id": {"type": "string"},
     "mode": {"enum": ["mock", "lite", "full"]},
     "task_id": {"type": "string"},
-    "worker_backend": {"enum": ["python_fixture", "rscript"]},
+    "worker_backend": {"enum": ["python_fixture", "rscript", "legacy_service_adapter"]},
     "invocation_status": {
       "enum": [
         "fixture_copy_completed",
@@ -37,7 +37,8 @@
         "blocked_validation_gate",
         "not_invoked_mode_gate",
         "blocked_before_process",
-        "completed"
+        "completed",
+        "sidecar_recorded"
       ]
     },
     "standard_worker_entrypoint": {"type": "string"},
@@ -55,7 +56,7 @@
       "required": ["boundary_type", "task_system_invocation", "migration_status"],
       "properties": {
         "boundary_type": {"type": "string"},
-        "task_system_invocation": {"enum": ["task_center_registered", "standard_worker_direct_cli"]},
+        "task_system_invocation": {"enum": ["task_center_registered", "standard_worker_direct_cli", "legacy_service_adapter_direct_call"]},
         "migration_status": {"type": "string"}
       },
       "additionalProperties": true

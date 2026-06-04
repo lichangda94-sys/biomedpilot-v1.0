@@ -31,6 +31,10 @@ def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report
         expected_mode="full",
     )
     assert validation["status"] == "passed"
+    invocation = json.loads((standard_package_dir / "logs" / "worker_invocation.json").read_text(encoding="utf-8"))
+    assert invocation["worker_backend"] == "legacy_service_adapter"
+    assert invocation["invocation_status"] == "sidecar_recorded"
+    assert invocation["worker_boundary"]["task_system_invocation"] == "legacy_service_adapter_direct_call"
     provenance = json.loads((standard_package_dir / "provenance.json").read_text(encoding="utf-8"))
     assert provenance["worker_boundary"] == {
         "boundary_type": "legacy_service_adapter_sidecar",
@@ -57,6 +61,8 @@ def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report
     assert catalog["rows"][0]["mode"] == "full"
     assert catalog["rows"][0]["result_semantics"] == "formal_computed_result"
     assert catalog["rows"][0]["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert catalog["rows"][0]["worker_backend"] == "legacy_service_adapter"
+    assert catalog["rows"][0]["worker_invocation_status"] == "sidecar_recorded"
     assert catalog["rows"][0]["worker_migration_status"] == "sidecar_only_not_isolated_standard_worker"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 0

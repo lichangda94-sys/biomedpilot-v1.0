@@ -117,6 +117,8 @@ Update: all standard task-bridge outcomes now write `logs/worker_invocation.json
 
 Update: direct `analysis/runners/run_module.R` outputs now also write `logs/worker_invocation.json` with `worker_boundary.task_system_invocation=standard_worker_direct_cli`. Focused tests validate direct mock and blocked full runner packages through the same Python standard package validator. The blocked full direct-runner package records target environment/resource-lock snapshots and remains non-executing.
 
+Update: transitional service-adapter sidecar packages now write `logs/worker_invocation.json` with `worker_backend=legacy_service_adapter`, `invocation_status=sidecar_recorded`, and `task_system_invocation=legacy_service_adapter_direct_call`. This covers current formal DEG, multifactor DEG, controlled enrichment, immune scoring, and correlation sidecar packages while preserving the explicit `sidecar_only_not_isolated_standard_worker` migration status.
+
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.
 
 Update: the standard package catalog now exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`. Analysis Center can display these diagnostics from the standard package catalog instead of reading module-private R outputs.
@@ -156,6 +158,7 @@ Acceptance:
 - All standard task-bridge outcomes write a worker invocation manifest and register it in result-index log artifacts. **Completed for task-bridge paths.**
 - Task-bridge and standard-worker packages are blocked if their worker invocation manifest is missing or violates the schema/policy contract. **Completed for validator gate.**
 - Direct standard R runner mock and blocked full outputs validate as standard packages without requiring heavy R packages or enabling full execution. **Completed for direct runner contract.**
+- Current service-adapter sidecar standard packages expose worker invocation diagnostics without claiming isolated standard-worker execution. **Completed for sidecar diagnostics.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.

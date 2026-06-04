@@ -77,6 +77,10 @@ def test_scoring_outputs_manifest_receipt_and_result_index(tmp_path: Path) -> No
         expected_mode="lite",
     )
     assert validation["status"] == "passed"
+    invocation = json.loads((standard_package_dir / "logs" / "worker_invocation.json").read_text(encoding="utf-8"))
+    assert invocation["worker_backend"] == "legacy_service_adapter"
+    assert invocation["invocation_status"] == "sidecar_recorded"
+    assert invocation["worker_boundary"]["task_system_invocation"] == "legacy_service_adapter_direct_call"
     manifest = json.loads(Path(result.manifest_path).read_text(encoding="utf-8"))
     assert manifest["schema_version"] == "biomedpilot.immune_tme_scoring_manifest.v1"
     assert manifest["scored_signature_count"] >= 1
@@ -93,6 +97,8 @@ def test_scoring_outputs_manifest_receipt_and_result_index(tmp_path: Path) -> No
     assert row["mode"] == "lite"
     assert row["result_semantics"] == "testing_level"
     assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert row["worker_backend"] == "legacy_service_adapter"
+    assert row["worker_invocation_status"] == "sidecar_recorded"
     assert row["artifact_counts"]["tables"] == 3
     assert row["artifact_counts"]["reports"] == 1
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
