@@ -97,6 +97,8 @@ Update: molecular dynamics now has a `lite` standard worker adapter-contract pat
 
 Update: lite-mode coverage is now enforced by a registry-driven bridge test. Every module that declares `modes.lite.supported=true` in `analysis/registry/analysis_modules.json` must run through `run_analysis_module_task(..., worker_backend="rscript")`, produce a passed standard result package, register a result-index entry, appear in the standard package catalog, preserve `result_semantics=testing_level`, and keep `report_ready_eligible=false`.
 
+Update: full-mode blocking is now enforced by a registry-driven bridge test. Every module that declares a `full` mode must return a blocked standard result package through `run_analysis_module_task(..., worker_backend="rscript")` before worker execution, preserve empty table/plot/report artifacts, register a blocked result-index entry, expose the blocked package through the standard catalog, and record `r_version=not_executed`, `bioconductor_version=not_executed`, empty package/tool version maps, and `command=analysis_task_bridge_mode_gate`.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -122,6 +124,7 @@ Acceptance:
 - Docking can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing AutoDock Vina. **Completed for docking adapter boundary fixture.**
 - Molecular dynamics can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing GROMACS. **Completed for MD adapter boundary fixture.**
 - Every registered `lite` module can run through the same main-backend task bridge and standard R worker package contract. **Completed with registry-driven focused test.**
+- Every registered `full` module is blocked through the same main-backend task bridge with a standard result package, result-index entry, catalog row, and non-executed provenance. **Completed with registry-driven focused test.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.

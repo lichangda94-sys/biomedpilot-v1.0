@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from app.analysis_runtime import build_standard_analysis_package_catalog, run_analysis_module_task, run_external_r_command, validate_standard_result_package
+from app.analysis_runtime import (
+    build_standard_analysis_package_catalog,
+    full_mode_resource_blockers,
+    run_analysis_module_task,
+    run_external_r_command,
+    validate_standard_result_package,
+)
 from app.analysis_runtime.registry import load_analysis_module_registry
 from app.bioinformatics.results.registry import load_registry
 from app.shared.task_center.service import TaskCenter, TaskStatus
@@ -754,6 +760,69 @@ def test_all_registered_lite_modules_run_through_standard_r_worker_package_contr
         assert catalog["rows"][0]["module_id"] == module_id
         assert catalog["rows"][0]["mode"] == "lite"
         assert catalog["rows"][0]["worker_boundary_type"] == "standard_r_worker"
+
+
+def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_package(tmp_path: Path) -> None:
+    registry = load_analysis_module_registry()
+    full_module_ids = [
+        str(module["module_id"])
+        for module in registry["modules"]
+        if "full" in module.get("modes", {})
+    ]
+
+    assert full_module_ids
+
+    for module_id in full_module_ids:
+        project_root = tmp_path / module_id
+        task_center = TaskCenter(project_root / "tasks" / "tasks.json")
+        payload = module_input(tmp_path, mode="full", module_id=module_id)
+        module = next(item for item in registry["modules"] if item["module_id"] == module_id)
+        full_mode_blocker = str(module["modes"]["full"].get("blocker") or f"analysis_mode_not_enabled:full")
+        expected_resource_blockers = full_mode_resource_blockers(module_id)
+
+        result = run_analysis_module_task(
+            project_root,
+            payload,
+            task_center=task_center,
+            worker_backend="rscript",
+        )
+        package_dir = Path(result["result_package_dir"])
+        result_json = read_json(package_dir / "result.json")
+        provenance = read_json(package_dir / "provenance.json")
+        validation = validate_standard_result_package(
+            package_dir,
+            expected_module_id=module_id,
+            expected_task_id=f"{module_id}-full-task",
+            expected_mode="full",
+        )
+        catalog = build_standard_analysis_package_catalog(project_root)
+        result_index = load_registry(project_root)
+
+        assert result["status"] == "blocked", module_id
+        assert validation["status"] == "passed", module_id
+        assert result_json["module_id"] == module_id
+        assert result_json["mode"] == "full"
+        assert result_json["status"] == "blocked"
+        assert full_mode_blocker in result_json["blockers"]
+        for blocker in expected_resource_blockers:
+            assert blocker in result_json["blockers"]
+        assert result_json["tables"] == []
+        assert result_json["plots"] == []
+        assert result_json["reports"] == []
+        assert provenance["engine"]["name"] == "biomedpilot_analysis_task_bridge"  # type: ignore[index]
+        assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
+        assert provenance["runtime"]["bioconductor_version"] == "not_executed"  # type: ignore[index]
+        assert provenance["runtime"]["package_versions"] == {}  # type: ignore[index]
+        assert provenance["runtime"]["external_tool_versions"] == {}  # type: ignore[index]
+        assert provenance["command"] == "analysis_task_bridge_mode_gate"
+        assert task_center.list_tasks()[0].status == TaskStatus.FAILED
+        assert result_index["results"][0]["result_semantics"] == "blocked"
+        assert result_index["results"][0]["validation_status"] == "blocked"
+        assert result_index["results"][0]["report_ready_eligible"] is False
+        assert catalog["status"] == "blocked"
+        assert catalog["rows"][0]["module_id"] == module_id
+        assert catalog["rows"][0]["mode"] == "full"
+        assert full_mode_blocker in catalog["rows"][0]["blockers"]
 
 
 def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execution(tmp_path: Path) -> None:
