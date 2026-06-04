@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -490,6 +491,46 @@ def test_full_mode_resource_blockers_are_module_specific() -> None:
     assert "analysis_resource_not_locked:autodock_vina_tool" in docking_blockers
     assert "analysis_resource_not_locked:gromacs_tool" in md_blockers
     assert "analysis_resource_not_locked:gromacs_tool" not in enrichment_blockers
+
+
+def test_locked_resource_with_placeholder_fields_blocks_full_mode() -> None:
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resources = {item["resource_id"]: item for item in manifest["resources"]}  # type: ignore[index]
+    reactome = resources["reactome_full"]
+    reactome["status"] = "locked"
+    reactome["version"] = "Reactome-2026-04"
+    reactome["source"] = "Reactome release archive"
+    reactome["hash"] = "required_before_full_mode"
+    reactome["license"] = "Reactome Content Service License"
+    reactome["cache_path"] = "external_analysis_resources/reactome/Reactome-2026-04"
+
+    validation = validate_analysis_resource_manifest(manifest)
+    blockers = validation["blockers"]
+
+    assert validation["status"] == "blocked"
+    assert (
+        "analysis_resource_locked_with_placeholder_fields:reactome_full:hash"
+        in blockers
+    )
+    assert validation["full_mode_ready"] is False
+    assert "analysis_resource_locked_with_placeholder_fields:reactome_full:hash" in full_mode_resource_blockers(
+        "enrichment", manifest
+    )
+
+
+def test_blocked_resource_with_partial_final_lock_warns_but_still_blocks_module_full_mode() -> None:
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resources = {item["resource_id"]: item for item in manifest["resources"]}  # type: ignore[index]
+    reactome = resources["reactome_full"]
+    reactome["version"] = "Reactome-2026-04"
+    reactome["hash"] = "sha256:0123456789abcdef"
+
+    validation = validate_analysis_resource_manifest(manifest)
+
+    assert validation["status"] == "passed"
+    assert "blocked_resource_has_partial_final_lock:reactome_full" in validation["warnings"]
+    blockers = full_mode_resource_blockers("enrichment", manifest)
+    assert "analysis_resource_not_locked:reactome_full" in blockers
 
 
 def test_app_dev_dockerfile_excludes_heavy_analysis_dependency_names() -> None:

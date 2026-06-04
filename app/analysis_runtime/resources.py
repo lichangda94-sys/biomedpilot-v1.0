@@ -19,6 +19,15 @@ REQUIRED_RESOURCE_FIELDS = (
     "status",
     "required_for_modules",
 )
+PLACEHOLDER_RESOURCE_VALUES = {
+    "required_before_full_mode",
+    "required_before_lite_mode",
+    "pending",
+    "todo",
+    "tbd",
+    "",
+}
+FINAL_LOCK_REQUIRED_FIELDS = ("version", "source", "hash", "license", "cache_path")
 BLOCKED_RESOURCE_STATUSES = {
     "blocked_until_resource_lock",
     "blocked_until_tool_lock",
@@ -61,14 +70,23 @@ def validate_analysis_resource_manifest(manifest: dict[str, Any] | None = None) 
         status = str(item.get("status") or "")
         if status == "locked":
             locked_resource_ids.append(resource_id)
+            placeholder_fields = [
+                field
+                for field in FINAL_LOCK_REQUIRED_FIELDS
+                if _is_placeholder_resource_value(item.get(field))
+            ]
+            if placeholder_fields:
+                blockers.append(
+                    f"analysis_resource_locked_with_placeholder_fields:{resource_id or 'unknown'}:{','.join(placeholder_fields)}"
+                )
         elif status in BLOCKED_RESOURCE_STATUSES:
             blocked_resource_ids.append(resource_id)
+            if _blocked_resource_has_partial_final_lock(item):
+                warnings.append(f"blocked_resource_has_partial_final_lock:{resource_id}")
         else:
             blockers.append(f"analysis_resource_status_invalid:{resource_id or 'unknown'}:{status or 'missing'}")
         if item.get("runtime_download_allowed") is not False:
             blockers.append(f"analysis_resource_runtime_download_not_forbidden:{resource_id or 'unknown'}")
-        if status in BLOCKED_RESOURCE_STATUSES and item.get("hash") not in {"required_before_full_mode", "not_applicable_repository_fixture"}:
-            warnings.append(f"blocked_resource_has_nonfinal_hash:{resource_id}")
 
     return {
         "schema_version": "biomedpilot.analysis_resource_manifest_validation.v1",
@@ -80,6 +98,17 @@ def validate_analysis_resource_manifest(manifest: dict[str, Any] | None = None) 
         "blockers": blockers,
         "warnings": warnings,
     }
+
+
+def _is_placeholder_resource_value(value: Any) -> bool:
+    if value is None:
+        return True
+    text = str(value).strip()
+    return text.lower() in PLACEHOLDER_RESOURCE_VALUES
+
+
+def _blocked_resource_has_partial_final_lock(item: dict[str, Any]) -> bool:
+    return any(not _is_placeholder_resource_value(item.get(field)) for field in FINAL_LOCK_REQUIRED_FIELDS)
 
 
 def full_mode_resource_blockers(module_id: str, manifest: dict[str, Any] | None = None) -> list[str]:

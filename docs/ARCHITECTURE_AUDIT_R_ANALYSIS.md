@@ -64,6 +64,8 @@ Resource governance now has a programmatic gate:
 
 - `analysis/resources/manifest.json` records mock fixture resources and full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
 - `app/analysis_runtime/resources.py` validates required fields, forbids runtime downloads, and reports module-specific full-mode blockers.
+- `locked` resources are rejected if version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`; this prevents a resource from being falsely marked full-mode ready.
+- Blocked resources may carry partial future lock metadata, but they still produce module-specific full-mode blockers until their status is changed to a fully validated `locked` entry.
 - Full mode remains blocked until these resources have real version, hash, license, and cache-path locks.
 
 Standard package discovery is now available to the UI state layer:
@@ -138,7 +140,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
 | `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
-| Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; real resource locks are incomplete. |
+| Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; real resource locks are incomplete. |
 | Provenance captures versions/hashes/seed/command | WARN | The standard R worker now records separate input and parameter hashes plus seed and command; package/tool version capture is still incomplete for formal/full module migrations. |
 | DEG/survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, and first R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, and immune infiltration; formal/full migration remains pending. |
 | Docking/MD external tool adapters | FAIL | Target registry only; no adapters. |
@@ -149,7 +151,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a standard bridge exists for mock, DEG lite, enrichment lite, survival lite, univariate lite, multivariate lite, and immune lite, but most existing formal algorithms are not migrated yet.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results are now partially remediated with sidecar packages.
-4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, but they still need real version, source, hash, license, and cache-path locks.
+4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, and fake `locked` entries with placeholder values are rejected, but resources still need real version, source, hash, license, and cache-path locks.
 5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state has a standard package catalog, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
 
 ## 4. P0/P1/P2/P3 Issues
@@ -168,7 +170,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | --- | --- | --- |
 | No lite/full environment split | No `docker/` or `renv` split existed before scaffold | Partially fixed with scaffold plus DEG, enrichment, survival, univariate, multivariate, and immune base R lite fixtures; real package locks and builds pending. |
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
-| No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; real locks pending. |
+| No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; fake locked resources with placeholder values are blocked; real locks pending. |
 | Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
 | UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge, standard package catalog, and controlled enrichment sidecar output; current UI algorithms not fully migrated. |
 

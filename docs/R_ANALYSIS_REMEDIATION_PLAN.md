@@ -63,6 +63,8 @@ Update: the main-backend task bridge now has an explicit `worker_backend="rscrip
 
 Update: the resource manifest now declares required full-mode resources for enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics. `app/analysis_runtime/resources.py` validates the manifest and adds module-specific full-mode blockers until real locks exist.
 
+Update: resource validation now rejects any resource marked `locked` while version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`. Partially prepared blocked resources may carry warnings, but full mode remains blocked until the lock is complete.
+
 Update: the standard package catalog now reads result-index `standard_result_package` artifacts and is exposed in Analysis Center state as `standard_analysis_packages`. This is a read-only UI bridge; detailed module result views still need migration.
 
 Update: DEG now has a `lite` standard worker path. `run_module.R` can execute base R two-group Welch t-tests on fixed local count/metadata fixtures and write a testing-level standard result package. It does not use limma, DESeq2, edgeR, scipy, statsmodels, report-ready output, or clinical interpretation.
@@ -237,6 +239,7 @@ Completed:
 - Declared blocked full-mode resources for Reactome, MSigDB, GO, KEGG, human org db, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
 - Added resource manifest validation and module-specific full-mode resource blockers.
 - Kept runtime downloads forbidden for every resource entry.
+- Added negative validation for fake `locked` resources whose version/source/hash/license/cache fields still contain placeholder values.
 
 Remaining:
 
