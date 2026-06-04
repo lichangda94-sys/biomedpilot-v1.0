@@ -17,6 +17,7 @@ The project has useful Bioinformatics and Meta Analysis contracts, result indexe
 This audit added a minimal boundary scaffold:
 
 - `analysis/registry/analysis_modules.json`
+- `analysis/registry/analysis_environments.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/runners/run_module.R`
@@ -126,6 +127,7 @@ The first lightweight worker paths are now available:
 
 A first environment isolation scaffold now also exists:
 
+- `analysis/registry/analysis_environments.json`
 - `analysis/modules/<module_id>/module.json` for DEG, survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
 - `docker/Dockerfile.app-dev`
 - `docker/Dockerfile.r-bio-core`
@@ -139,7 +141,7 @@ A first environment isolation scaffold now also exists:
 - `renv/renv.spatial-full.lock`
 - `renv/renv.chem-full.lock`
 
-These files are policy scaffolds only. They do not restore packages, install full R dependencies, or prove full analysis readiness.
+These files are policy scaffolds only. They do not restore packages, install full R dependencies, or prove full analysis readiness. The environment registry is now the authoritative map for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; tests verify module manifests cannot silently point lite/full analysis at unregistered environments or at `app-dev`.
 
 ## 2. PASS / WARN / FAIL Table
 
@@ -156,7 +158,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Main backend task-system invocation | WARN | A mock/lite/full-blocking bridge now creates `TaskCenter` entries and result-index entries; registry-declared lite modules are covered through the standard R runner, result package validator, result index, and catalog, while registry-declared full modules are blocked before worker execution with standard package provenance. Existing controlled enrichment and multi-factor DEG sidecars are now labeled as legacy service-adapter sidecars; direct service subprocess calls still remain. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
-| Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
+| Environment split | WARN | Docker/renv scaffold and `analysis/registry/analysis_environments.json` exist for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; module manifests are tested against this registry, but images/lock restoration are not build proven. |
 | `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; real resource locks are incomplete. |
@@ -187,7 +189,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 | Issue | Evidence | Status after this audit |
 | --- | --- | --- |
-| No lite/full environment split | No `docker/` or `renv` split existed before scaffold | Partially fixed with scaffold plus DEG, enrichment, survival, univariate, multivariate, immune, spatial base R lite fixtures, and docking/MD command-manifest lite fixtures; real package locks and builds pending. |
+| No lite/full environment split | No `docker/` or `renv` split existed before scaffold | Partially fixed with scaffold, authoritative environment registry, DEG/enrichment/survival/univariate/multivariate/immune/spatial base R lite fixtures, and docking/MD command-manifest lite fixtures; real package locks and builds pending. |
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
 | No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; fake locked resources with placeholder values are blocked; real locks pending. |
 | Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
@@ -229,6 +231,7 @@ Current result/provenance package candidates:
 New architecture boundary files:
 
 - `analysis/registry/analysis_modules.json`
+- `analysis/registry/analysis_environments.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/resources/manifest.json`
@@ -299,6 +302,7 @@ New architecture boundary files:
 - Added controlled multi-factor DEG R standard result package sidecars for successful limma/DESeq2/edgeR fixture results, registered in result index v2 without enabling new execution, plot/report-ready output, or clinical interpretation.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
+- Added `analysis/registry/analysis_environments.json` as the central environment boundary registry, with tests that module manifests match registered Dockerfiles, renv locks, allowed-module lists, heavy-dependency policy, and runtime-install policy.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

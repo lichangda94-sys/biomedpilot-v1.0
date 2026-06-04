@@ -123,6 +123,7 @@ def test_per_module_mock_fixtures_are_standard_result_packages() -> None:
 
 
 def test_analysis_environment_split_scaffold_exists_without_claiming_full_readiness() -> None:
+    environment_registry = read_json(ROOT / "analysis" / "registry" / "analysis_environments.json")
     dockerfiles = {
         "docker/Dockerfile.app-dev",
         "docker/Dockerfile.r-bio-core",
@@ -139,6 +140,14 @@ def test_analysis_environment_split_scaffold_exists_without_claiming_full_readin
         "renv/renv.chem-full.lock",
     }
 
+    assert environment_registry["schema_version"] == "biomedpilot.analysis_environments.v1"
+    assert environment_registry["policy"] == {
+        "default_app_dependency": False,
+        "runtime_package_install": "forbidden",
+        "runtime_resource_download": "forbidden",
+        "full_mode_requires_isolated_environment": True,
+        "environment_registry_is_authoritative": True,
+    }
     for relative in dockerfiles:
         text = (ROOT / relative).read_text(encoding="utf-8")
         assert "runtime-package-install=\"forbidden\"" in text
@@ -148,6 +157,61 @@ def test_analysis_environment_split_scaffold_exists_without_claiming_full_readin
         assert lock["Packages"] == {}
         assert lock["BioMedPilotPolicy"]["status"] == "scaffold_only_not_restored"  # type: ignore[index]
         assert lock["BioMedPilotPolicy"]["runtime_package_install"] == "forbidden"  # type: ignore[index]
+
+
+def test_analysis_environment_registry_is_authoritative_for_module_worker_boundaries() -> None:
+    module_registry = read_json(ROOT / "analysis" / "registry" / "analysis_modules.json")
+    environment_registry = read_json(ROOT / "analysis" / "registry" / "analysis_environments.json")
+    environments = {item["environment_id"]: item for item in environment_registry["environments"]}  # type: ignore[index]
+
+    assert {
+        "app-dev",
+        "r-bio-core",
+        "r-bio-full",
+        "r-spatial-full",
+        "r-chem-full",
+        "r-chem-gpu",
+    } <= set(environments)
+    app_dev = environments["app-dev"]
+    assert app_dev["allowed_module_ids"] == []
+    assert app_dev["allows_heavy_analysis_dependencies"] is False
+    assert app_dev["r_runtime"] == "not_required"
+
+    for environment_id, environment in environments.items():
+        dockerfile = ROOT / environment["dockerfile"]
+        lockfile = ROOT / environment["renv_lock"]
+        docker_text = dockerfile.read_text(encoding="utf-8")
+        lock = read_json(lockfile)
+        assert dockerfile.exists()
+        assert lockfile.exists()
+        assert f'org.biomedpilot.environment="{environment_id}"' in docker_text
+        assert 'runtime-package-install="forbidden"' in docker_text
+        assert lock["BioMedPilotPolicy"]["runtime_package_install"] == "forbidden"  # type: ignore[index]
+        if environment_id in {"app-dev", "r-bio-core"}:
+            assert environment["allows_heavy_analysis_dependencies"] is False
+        else:
+            assert environment["allows_heavy_analysis_dependencies"] is True
+
+    for module in module_registry["modules"]:  # type: ignore[index]
+        module_id = module["module_id"]
+        manifest = read_json(ROOT / module["module_manifest"])
+        manifest_environment = manifest["environment"]
+        lite_environment_id = manifest["modes"]["lite"].get("environment")
+        full_environment_id = manifest["full_environment"]
+        lite_environment = environments[lite_environment_id]
+        full_environment = environments[full_environment_id]
+
+        assert module_id in lite_environment["allowed_module_ids"]
+        assert module_id in full_environment["allowed_module_ids"]
+        assert manifest_environment["app_dev"] == environments["app-dev"]["dockerfile"]
+        assert manifest_environment["lite"] == lite_environment["dockerfile"]
+        assert manifest_environment["renv_lite"] == lite_environment["renv_lock"]
+        assert manifest_environment["full"] == full_environment["dockerfile"]
+        assert manifest_environment["renv_full"] == full_environment["renv_lock"]
+        assert manifest["dockerfile"] == full_environment["dockerfile"]
+        assert manifest["environment_lock"] == full_environment["renv_lock"]
+        assert manifest["dependency_policy"]["runtime_install"] == "forbidden"
+        assert manifest["dependency_policy"]["default_app_dependency"] is False
 
 
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:

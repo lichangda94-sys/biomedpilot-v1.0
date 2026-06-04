@@ -1,0 +1,113 @@
+{
+  "schema_version": "biomedpilot.analysis_environments.v1",
+  "policy": {
+    "default_app_dependency": false,
+    "runtime_package_install": "forbidden",
+    "runtime_resource_download": "forbidden",
+    "full_mode_requires_isolated_environment": true,
+    "environment_registry_is_authoritative": true
+  },
+  "environments": [
+    {
+      "environment_id": "app-dev",
+      "title": "Application development environment",
+      "purpose": "frontend_and_main_backend_without_r_analysis_dependencies",
+      "dockerfile": "docker/Dockerfile.app-dev",
+      "renv_lock": "renv/renv.app.lock",
+      "r_runtime": "not_required",
+      "allows_heavy_analysis_dependencies": false,
+      "resource_lock_required": false,
+      "external_tool_lock_required": false,
+      "allowed_module_ids": [],
+      "blocked_dependency_examples": [
+        "ReactomePA",
+        "reactome.db",
+        "Seurat",
+        "CellChat",
+        "GSVA",
+        "AutoDock Vina",
+        "GROMACS"
+      ]
+    },
+    {
+      "environment_id": "r-bio-core",
+      "title": "Lite bioinformatics R worker",
+      "purpose": "lightweight_base_r_fixture_worker_for_daily_development",
+      "dockerfile": "docker/Dockerfile.r-bio-core",
+      "renv_lock": "renv/renv.bio-core.lock",
+      "r_runtime": "R 4.4.2",
+      "allows_heavy_analysis_dependencies": false,
+      "resource_lock_required": false,
+      "external_tool_lock_required": false,
+      "allowed_module_ids": [
+        "deg",
+        "survival",
+        "univariate",
+        "multivariate",
+        "enrichment",
+        "immune_infiltration"
+      ]
+    },
+    {
+      "environment_id": "r-bio-full",
+      "title": "Full bioinformatics R worker",
+      "purpose": "formal_bioinformatics_r_and_bioconductor_worker_after_lock_approval",
+      "dockerfile": "docker/Dockerfile.r-bio-full",
+      "renv_lock": "renv/renv.bio-full.lock",
+      "r_runtime": "R 4.4.2",
+      "allows_heavy_analysis_dependencies": true,
+      "resource_lock_required": true,
+      "external_tool_lock_required": false,
+      "allowed_module_ids": [
+        "deg",
+        "survival",
+        "univariate",
+        "multivariate",
+        "enrichment",
+        "immune_infiltration"
+      ]
+    },
+    {
+      "environment_id": "r-spatial-full",
+      "title": "Spatial transcriptomics R worker",
+      "purpose": "spatial_transcriptomics_worker_after_spatial_resource_and_package_lock_approval",
+      "dockerfile": "docker/Dockerfile.r-spatial-full",
+      "renv_lock": "renv/renv.spatial-full.lock",
+      "r_runtime": "R 4.4.2",
+      "allows_heavy_analysis_dependencies": true,
+      "resource_lock_required": true,
+      "external_tool_lock_required": false,
+      "allowed_module_ids": [
+        "spatial_transcriptomics"
+      ]
+    },
+    {
+      "environment_id": "r-chem-full",
+      "title": "Chemistry external tool R adapter worker",
+      "purpose": "molecular_docking_adapter_worker_after_external_tool_lock_approval",
+      "dockerfile": "docker/Dockerfile.r-chem-full",
+      "renv_lock": "renv/renv.chem-full.lock",
+      "r_runtime": "R 4.4.2",
+      "allows_heavy_analysis_dependencies": true,
+      "resource_lock_required": true,
+      "external_tool_lock_required": true,
+      "allowed_module_ids": [
+        "docking"
+      ]
+    },
+    {
+      "environment_id": "r-chem-gpu",
+      "title": "Chemistry GPU external tool R adapter worker",
+      "purpose": "molecular_dynamics_adapter_worker_after_gromacs_gpu_tool_lock_approval",
+      "dockerfile": "docker/Dockerfile.r-chem-gpu",
+      "renv_lock": "renv/renv.chem-full.lock",
+      "r_runtime": "R 4.4.2",
+      "allows_heavy_analysis_dependencies": true,
+      "resource_lock_required": true,
+      "external_tool_lock_required": true,
+      "allowed_module_ids": [
+        "molecular_dynamics"
+      ]
+    }
+  ]
+}

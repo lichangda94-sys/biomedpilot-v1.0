@@ -19,6 +19,7 @@ Status: started.
 Completed in this audit:
 
 - `analysis/registry/analysis_modules.json`
+- `analysis/registry/analysis_environments.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/runners/run_module.R`
@@ -98,6 +99,8 @@ Update: molecular dynamics now has a `lite` standard worker adapter-contract pat
 Update: lite-mode coverage is now enforced by a registry-driven bridge test. Every module that declares `modes.lite.supported=true` in `analysis/registry/analysis_modules.json` must run through `run_analysis_module_task(..., worker_backend="rscript")`, produce a passed standard result package, register a result-index entry, appear in the standard package catalog, preserve `result_semantics=testing_level`, and keep `report_ready_eligible=false`.
 
 Update: full-mode blocking is now enforced by a registry-driven bridge test. Every module that declares a `full` mode must return a blocked standard result package through `run_analysis_module_task(..., worker_backend="rscript")` before worker execution, preserve empty table/plot/report artifacts, register a blocked result-index entry, expose the blocked package through the standard catalog, and record `r_version=not_executed`, `bioconductor_version=not_executed`, empty package/tool version maps, and `command=analysis_task_bridge_mode_gate`.
+
+Update: environment boundaries are now centralized in `analysis/registry/analysis_environments.json`. The registry declares `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`, including Dockerfile, renv lock, allowed modules, heavy-dependency policy, resource/tool lock policy, and no runtime-install policy. Tests verify module manifests match this registry and cannot point analysis execution at `app-dev` or unregistered worker environments.
 
 ## Phase R1: Task-System Bridge
 
@@ -228,6 +231,7 @@ renv/renv.bio-core.lock
 renv/renv.bio-full.lock
 renv/renv.spatial-full.lock
 renv/renv.chem-full.lock
+analysis/registry/analysis_environments.json
 ```
 
 Status: scaffolded, not restored.
@@ -236,6 +240,7 @@ Completed:
 
 - Added Dockerfile scaffolds for app-dev, bio-core, bio-full, spatial-full, chem-full, and chem-gpu.
 - Added empty policy lockfiles for app, bio-core, bio-full, spatial-full, and chem-full.
+- Added the central environment registry that maps modules to allowed worker environments and locks app-dev out of analysis execution.
 - Added contract tests proving app-dev excludes known heavy analysis dependency names and that Dockerfiles do not contain runtime package installer entrypoints.
 
 Remaining:
