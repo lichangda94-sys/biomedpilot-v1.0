@@ -43,6 +43,8 @@ def validate_standard_result_package(
         warnings.append("provenance_parameter_hash_missing")
     if not provenance.get("command"):
         warnings.append("provenance_command_missing")
+    formal_blockers = _formal_package_provenance_blockers(result, provenance, expected_mode=expected_mode)
+    blockers.extend(formal_blockers)
     return {
         "schema_version": "biomedpilot.analysis.result_package_validation.v1",
         "status": "blocked" if blockers else "passed",
@@ -53,6 +55,40 @@ def validate_standard_result_package(
         "required_files": list(REQUIRED_FILES),
         "required_directories": list(REQUIRED_DIRECTORIES),
     }
+
+
+def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict[str, Any], *, expected_mode: str) -> list[str]:
+    status = str(result.get("status") or "")
+    mode = str(result.get("mode") or provenance.get("mode") or expected_mode or "")
+    semantics = str(result.get("result_semantics") or "")
+    if status != "passed" or (mode != "full" and semantics != "formal_computed_result"):
+        return []
+
+    blockers: list[str] = []
+    engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
+    runtime = provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {}
+    worker_boundary = provenance.get("worker_boundary") if isinstance(provenance.get("worker_boundary"), dict) else {}
+
+    for field in ("input_hash", "parameter_hash", "command"):
+        if not provenance.get(field):
+            blockers.append(f"formal_provenance_{field}_missing")
+    if "random_seed" not in provenance:
+        blockers.append("formal_provenance_random_seed_missing")
+    for field in ("name", "version"):
+        if not engine.get(field):
+            blockers.append(f"formal_provenance_engine_{field}_missing")
+    for field in ("r_version", "bioconductor_version", "package_versions", "external_tool_versions"):
+        if field not in runtime:
+            blockers.append(f"formal_provenance_runtime_{field}_missing")
+    if not isinstance(runtime.get("package_versions"), dict):
+        blockers.append("formal_provenance_runtime_package_versions_invalid")
+    if not isinstance(runtime.get("external_tool_versions"), dict):
+        blockers.append("formal_provenance_runtime_external_tool_versions_invalid")
+
+    engine_name = str(engine.get("name") or "")
+    if engine_name != "biomedpilot_standard_r_worker" and not worker_boundary.get("boundary_type"):
+        blockers.append("formal_provenance_worker_boundary_missing")
+    return blockers
 
 
 def _load_json(path: Path) -> dict[str, Any]:

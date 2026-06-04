@@ -160,6 +160,65 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert "mock_result_not_scientific_output" in row["warnings"]
 
 
+def test_formal_standard_package_validation_blocks_missing_worker_boundary(tmp_path: Path) -> None:
+    package_dir = tmp_path / "formal-package"
+    for dirname in ("tables", "plots", "reports", "logs"):
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+    (package_dir / "result.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis.result.v1",
+                "module_id": "enrichment",
+                "mode": "full",
+                "task_id": "formal-task",
+                "status": "passed",
+                "result_semantics": "formal_computed_result",
+                "summary": {},
+                "tables": [],
+                "plots": [],
+                "reports": [],
+                "blockers": [],
+                "warnings": [],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (package_dir / "provenance.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis.provenance.v1",
+                "module_id": "enrichment",
+                "mode": "full",
+                "task_id": "formal-task",
+                "input_hash": "abc",
+                "parameter_hash": "def",
+                "random_seed": None,
+                "engine": {"name": "r_clusterProfiler_enricher", "version": "4.14.6"},
+                "runtime": {
+                    "r_version": "R 4.4.2",
+                    "bioconductor_version": "3.20",
+                    "package_versions": {"clusterProfiler": "4.14.6"},
+                    "external_tool_versions": {},
+                },
+                "command": "Rscript --vanilla -e ...",
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="formal-task",
+        expected_mode="full",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "formal_provenance_worker_boundary_missing" in validation["blockers"]
+
+
 def test_all_registered_modules_run_mock_bridge_with_standard_package(tmp_path: Path) -> None:
     registry = load_analysis_module_registry()
 

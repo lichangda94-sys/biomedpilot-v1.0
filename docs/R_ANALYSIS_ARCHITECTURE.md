@@ -154,6 +154,8 @@ logs/
 
 The standard R worker hashes the complete input manifest separately from the `parameters` object. This preserves distinct `input_hash` and `parameter_hash` values for mock, lite, blocked, and future full-mode standard packages without adding an R package dependency.
 
+Passed `full` or `formal_computed_result` packages are validated with a stricter provenance gate. Missing input hash, parameter hash, command, random seed field, engine name/version, runtime version containers, package/external-tool version containers, or worker-boundary metadata for non-standard-worker sidecars blocks package validation. Mock and lite testing-level packages remain allowed to carry lighter provenance.
+
 ## Current Implementation Status
 
 | Layer | Status |
@@ -169,6 +171,7 @@ The standard R worker hashes the complete input manifest separately from the `pa
 | Multivariate lite worker | Present for base R linear model fixture only; testing-level standard package with no clinical conclusion. |
 | Immune infiltration lite worker | Present for base R signature mean score fixture plus real SVG heatmap; testing-level standard package with no clinical interpretation. |
 | Standard package catalog | Present; Analysis Center state exposes result-index-derived package summaries and worker-boundary metadata. |
+| Full/formal package provenance gate | Present; passed full/formal packages with incomplete provenance or missing worker-boundary metadata are blocked by standard package validation. |
 | Controlled enrichment standard package sidecar | Present for ORA/GSEA R fixture results with `legacy_service_adapter_sidecar` boundary metadata; does not enable plot/report-ready output or complete isolated worker migration. |
 | Controlled multi-factor DEG R standard package sidecar | Present for successful limma/DESeq2/edgeR fixture results with `legacy_service_adapter_sidecar` boundary metadata; does not enable new execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration. |
 | Other lite workers | Not enabled. |

@@ -73,6 +73,7 @@ Standard package discovery is now available to the UI state layer:
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
 - The catalog now exposes `worker_boundary_type` and `worker_migration_status`, so standard R worker packages can be distinguished from legacy service-adapter sidecars.
+- `validate_standard_result_package()` now blocks passed full/formal packages if they are missing required provenance fields, runtime/package/tool version containers, command, hashes, random seed field, engine metadata, or worker-boundary metadata for non-standard-worker sidecars.
 - Testing-level mock packages remain testing-level and do not become formal/report-ready results.
 
 Existing controlled enrichment ORA/GSEA R adapters now write a standard result package sidecar:
@@ -144,7 +145,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; real resource locks are incomplete. |
-| Provenance captures versions/hashes/seed/command | WARN | The standard R worker now records separate input and parameter hashes plus seed and command; package/tool version capture is still incomplete for formal/full module migrations. |
+| Provenance captures versions/hashes/seed/command | WARN | The standard R worker records separate input and parameter hashes plus seed and command; full/formal standard package validation now blocks missing provenance containers, but package/tool version capture is still incomplete for unmigrated formal/full modules. |
 | DEG/survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, and first R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, and immune infiltration; formal/full migration remains pending. |
 | Docking/MD external tool adapters | FAIL | Target registry only; no adapters. |
 | Default dev can start without full analysis deps | PASS | Current source smoke historically works without requiring full R environments; scaffold test does not require R. |
@@ -182,7 +183,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Issue | Evidence |
 | --- | --- |
 | Tests do not yet prove all lite/full modules through one interface | Static tests and bridge tests now prove all registered modules can run mock through one interface, and DEG/enrichment/survival/univariate/multivariate/immune can run lite fixtures through the same R worker; other lite/full modules remain blocked. |
-| Logs/provenance differ by module | Existing modules have custom log artifacts and result indexes. |
+| Logs/provenance differ by module | Existing modules have custom log artifacts and result indexes; full/formal standard package sidecars now have a stricter provenance gate. |
 | Example data is incomplete for every declared module | Generic and per-module mock fixtures exist for all registered modules; lite fixtures exist for DEG, enrichment, survival, univariate, multivariate, and immune infiltration only. |
 
 ### P3
