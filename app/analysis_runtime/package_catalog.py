@@ -31,6 +31,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             )
             result_payload = _read_json(package_dir / "result.json")
             provenance_payload = _read_json(package_dir / "provenance.json")
+            worker_boundary = provenance_payload.get("worker_boundary") if isinstance(provenance_payload.get("worker_boundary"), dict) else {}
             rows.append(
                 {
                     "schema_version": "biomedpilot.analysis.standard_package_catalog_row.v1",
@@ -47,6 +48,9 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "engine_name": str((provenance_payload.get("engine") or {}).get("name") or entry.get("engine_name") or ""),
                     "engine_version": str((provenance_payload.get("engine") or {}).get("version") or entry.get("engine_version") or ""),
                     "runtime": provenance_payload.get("runtime") if isinstance(provenance_payload.get("runtime"), dict) else {},
+                    "worker_boundary": worker_boundary,
+                    "worker_boundary_type": str(worker_boundary.get("boundary_type") or _default_worker_boundary_type(provenance_payload)),
+                    "worker_migration_status": str(worker_boundary.get("migration_status") or ""),
                     "command": str(provenance_payload.get("command") or ""),
                     "artifact_counts": {
                         "tables": len(result_payload.get("tables") or []),
@@ -86,6 +90,13 @@ def _module_id_from_entry(entry: dict[str, Any]) -> str:
     task_type = str(entry.get("task_type") or "")
     if task_type.startswith("analysis:"):
         return task_type.split(":", 1)[1]
+    return ""
+
+
+def _default_worker_boundary_type(provenance: dict[str, Any]) -> str:
+    engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
+    if engine.get("name") == "biomedpilot_standard_r_worker":
+        return "standard_r_worker"
     return ""
 
 

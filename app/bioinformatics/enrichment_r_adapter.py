@@ -407,6 +407,7 @@ def _write_standard_enrichment_result_package(
             "clinical_conclusion_status": "not_generated",
             "analysis_type": analysis_type,
             "source_result_id": result_id,
+            "worker_boundary_status": "sidecar_only_not_isolated_standard_worker",
         },
         "tables": [{"artifact_type": artifact_type, "path": f"tables/{table_name}"}],
         "plots": [],
@@ -436,6 +437,13 @@ def _write_standard_enrichment_result_package(
             "external_tool_versions": {},
         },
         "command": " ".join(str(item) for item in command),
+        "worker_boundary": {
+            "boundary_type": "legacy_service_adapter_sidecar",
+            "standard_worker_entrypoint": "not_used",
+            "subprocess_owner": "app.bioinformatics.enrichment_r_adapter",
+            "migration_status": "sidecar_only_not_isolated_standard_worker",
+            "task_system_invocation": "not_yet_migrated",
+        },
         "source_result_id": result_id,
         "source_result_table_hash": _sha256_file(result_path),
     }

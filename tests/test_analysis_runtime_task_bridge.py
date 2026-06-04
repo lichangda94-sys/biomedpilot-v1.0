@@ -270,6 +270,7 @@ def test_enrichment_lite_mode_runs_through_standard_r_worker_and_catalog(tmp_pat
     assert registry["results"][0]["result_semantics"] == "testing_level"
     assert registry["results"][0]["engine_name"] == "biomedpilot_standard_r_worker"
     assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["worker_boundary_type"] == "standard_r_worker"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
 
 

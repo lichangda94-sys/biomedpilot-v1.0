@@ -44,6 +44,14 @@ def test_controlled_multifactor_limma_fixture_registers_formal_result(tmp_path: 
         expected_mode="full",
     )
     assert validation["status"] == "passed"
+    provenance = json.loads((standard_package_dir / "provenance.json").read_text(encoding="utf-8"))
+    assert provenance["worker_boundary"] == {
+        "boundary_type": "legacy_service_adapter_sidecar",
+        "standard_worker_entrypoint": "not_used",
+        "subprocess_owner": "app.bioinformatics.deg_engine.multifactor_r_runner",
+        "migration_status": "sidecar_only_not_isolated_standard_worker",
+        "task_system_invocation": "not_yet_migrated",
+    }
 
     registry = load_registry(tmp_path)
     entry = next(item for item in registry["results"] if item["result_id"] == result["result_id"])
@@ -59,6 +67,8 @@ def test_controlled_multifactor_limma_fixture_registers_formal_result(tmp_path: 
     assert catalog["package_count"] == 1
     assert catalog["rows"][0]["module_id"] == "deg"
     assert catalog["rows"][0]["mode"] == "full"
+    assert catalog["rows"][0]["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert catalog["rows"][0]["worker_migration_status"] == "sidecar_only_not_isolated_standard_worker"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 0
 

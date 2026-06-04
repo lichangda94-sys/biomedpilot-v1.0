@@ -72,12 +72,14 @@ Standard package discovery is now available to the UI state layer:
 
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
+- The catalog now exposes `worker_boundary_type` and `worker_migration_status`, so standard R worker packages can be distinguished from legacy service-adapter sidecars.
 - Testing-level mock packages remain testing-level and do not become formal/report-ready results.
 
 Existing controlled enrichment ORA/GSEA R adapters now write a standard result package sidecar:
 
 - `app/bioinformatics/enrichment_r_adapter.py` mirrors the controlled ORA/GSEA result table into `analysis/standard_packages/<result_id>/`.
 - The sidecar includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
+- The sidecar provenance records `worker_boundary.boundary_type=legacy_service_adapter_sidecar` and `migration_status=sidecar_only_not_isolated_standard_worker`.
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
 - This is a package-contract migration step, not a claim that all formal R algorithms already run through the isolated standard worker.
 
@@ -86,6 +88,7 @@ Existing controlled multi-factor DEG R adapters now write a standard result pack
 - `app/bioinformatics/deg_engine/multifactor_r_runner.py` mirrors successful limma, DESeq2, and edgeR fixture-proven formal result tables into `analysis/standard_packages/<result_id>/`.
 - The sidecar includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
 - The sidecar preserves the parameter manifest, dependency snapshot, formula, contrast, covariates, batch variables, input/parameter/table hashes, R/package versions, and Rscript command provenance.
+- The sidecar provenance records `worker_boundary.boundary_type=legacy_service_adapter_sidecar` and `migration_status=sidecar_only_not_isolated_standard_worker`.
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
 - This is a package-contract migration step, not a claim that multi-factor DEG has been fully migrated into the isolated standard worker.
 
@@ -133,8 +136,8 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified input/output schema | PASS | Added input and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
-| Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts; existing detailed result views still consume module-specific result indexes and service payloads. |
-| Main backend task-system invocation | WARN | A mock/lite bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock, DEG-lite, enrichment-lite, survival-lite, univariate-lite, multivariate-lite, and immune-lite packages. Existing analysis calls still include direct service calls. |
+| Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts and worker-boundary metadata; existing detailed result views still consume module-specific result indexes and service payloads. |
+| Main backend task-system invocation | WARN | A mock/lite bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock, DEG-lite, enrichment-lite, survival-lite, univariate-lite, multivariate-lite, and immune-lite packages. Existing controlled enrichment and multi-factor DEG sidecars are now labeled as legacy service-adapter sidecars; direct service subprocess calls still remain. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
 | Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
@@ -150,7 +153,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a standard bridge exists for mock, DEG lite, enrichment lite, survival lite, univariate lite, multivariate lite, and immune lite, but most existing formal algorithms are not migrated yet.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
-3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results are now partially remediated with sidecar packages.
+3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results are now partially remediated with sidecar packages that are explicitly labeled as legacy service-adapter sidecars.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, and fake `locked` entries with placeholder values are rejected, but resources still need real version, source, hash, license, and cache-path locks.
 5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state has a standard package catalog, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
 

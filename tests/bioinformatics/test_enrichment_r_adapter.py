@@ -31,6 +31,14 @@ def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report
         expected_mode="full",
     )
     assert validation["status"] == "passed"
+    provenance = json.loads((standard_package_dir / "provenance.json").read_text(encoding="utf-8"))
+    assert provenance["worker_boundary"] == {
+        "boundary_type": "legacy_service_adapter_sidecar",
+        "standard_worker_entrypoint": "not_used",
+        "subprocess_owner": "app.bioinformatics.enrichment_r_adapter",
+        "migration_status": "sidecar_only_not_isolated_standard_worker",
+        "task_system_invocation": "not_yet_migrated",
+    }
     registry = load_registry(tmp_path)
     entry = registry["results"][0]
     assert entry["task_type"] == "ora"
@@ -48,6 +56,8 @@ def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report
     assert catalog["rows"][0]["module_id"] == "enrichment"
     assert catalog["rows"][0]["mode"] == "full"
     assert catalog["rows"][0]["result_semantics"] == "formal_computed_result"
+    assert catalog["rows"][0]["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert catalog["rows"][0]["worker_migration_status"] == "sidecar_only_not_isolated_standard_worker"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 0
 
