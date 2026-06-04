@@ -65,6 +65,8 @@ Update: enrichment now has the first `lite` standard worker path. `run_module.R`
 
 Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
 
+Update: univariate clinical association now has a `lite` standard worker path. `run_module.R` can execute base R Welch t-test and Pearson correlation calculations on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -81,6 +83,7 @@ Acceptance:
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for first lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
+- Univariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for third lite worker.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 
@@ -116,18 +119,21 @@ Completed:
 - Survival `mock` remains available without R.
 - Survival `lite` can run a fixed KM/log-rank fixture through `analysis/runners/run_module.R`.
 - Standard result package includes `result.json`, `provenance.json`, `tables/lite_km_curve.tsv`, `tables/lite_logrank_result.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
-- Clinical conclusion remains disabled.
+- Univariate `mock` remains available without R.
+- Univariate `lite` can run a fixed base R clinical association fixture through `analysis/runners/run_module.R`.
+- Univariate standard result package includes `result.json`, `provenance.json`, `tables/lite_univariate_association.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
+- Clinical conclusion remains disabled for survival and univariate lite packages.
 
 Remaining:
 
 - Migrate existing controlled KM/Cox runtime behind the standard worker.
-- Add univariate and multivariate clinical association lite workers.
+- Add multivariate clinical association lite worker.
 - Keep full clinical analysis blocked until environment/resource locks are approved.
 
 Acceptance:
 
 - `mock` passes without R.
-- `lite` passes with lightweight R packages/data. **Completed for survival fixture only.**
+- `lite` passes with lightweight R packages/data. **Completed for survival and univariate base R fixtures.**
 - `full` blocked until container/renv is approved.
 
 ## Phase R4: DEG R Worker Alignment

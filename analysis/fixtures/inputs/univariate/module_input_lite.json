@@ -1,0 +1,24 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "univariate",
+  "mode": "lite",
+  "task_id": "univariate-lite-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-univariate-lite-input",
+    "source_dataset_id": "fixture-univariate-lite-dataset",
+    "clinical_table_path": "analysis/fixtures/inputs/univariate/lite_clinical.tsv"
+  },
+  "parameters": {
+    "analysis_family": "univariate_clinical_association",
+    "method": "base_r_univariate_fixture",
+    "outcome_column": "biomarker",
+    "group_column": "group",
+    "continuous_covariate": "age",
+    "clinical_conclusion_policy": "not_generated"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-bio-core-lite"
+  }
+}

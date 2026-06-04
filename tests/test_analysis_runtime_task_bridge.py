@@ -53,6 +53,18 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
             "clinical_conclusion_policy": "not_generated",
         }
         payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
+    if module_id == "univariate" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-univariate-lite-input",
+            "source_dataset_id": "fixture-univariate-lite-dataset",
+            "clinical_table_path": "analysis/fixtures/inputs/univariate/lite_clinical.tsv",
+        }
+        payload["parameters"] = {
+            "analysis_family": "univariate_clinical_association",
+            "method": "base_r_univariate_fixture",
+            "clinical_conclusion_policy": "not_generated",
+        }
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
     return payload
 
 
@@ -249,6 +261,38 @@ def test_survival_lite_mode_runs_through_standard_r_worker_without_clinical_upgr
     assert catalog["rows"][0]["module_id"] == "survival"
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 2
+
+
+def test_univariate_lite_mode_runs_through_standard_r_worker_without_clinical_upgrade(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite", module_id="univariate"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    assert result["status"] == "passed"
+    assert result_json["module_id"] == "univariate"
+    assert result_json["mode"] == "lite"
+    assert result_json["result_semantics"] == "testing_level"
+    assert result_json["summary"]["clinical_conclusion_status"] == "not_generated"  # type: ignore[index]
+    assert "clinical_conclusion_not_generated" in result_json["warnings"]
+    assert (package_dir / "tables" / "lite_univariate_association.tsv").is_file()
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["report_ready_eligible"] is False
+    assert catalog["rows"][0]["module_id"] == "univariate"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
 
 
 def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execution(tmp_path: Path) -> None:
