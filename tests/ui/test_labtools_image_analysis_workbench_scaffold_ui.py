@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -31,6 +33,30 @@ def _visible_text(widget) -> str:
     return "\n".join(part for part in parts if part)
 
 
+def _fake_executable(tmp_path: Path) -> Path:
+    path = tmp_path / "fake_imagej"
+    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    path.chmod(0o755)
+    return path
+
+
+def _successful_imagej_runner(command, **kwargs):
+    if "--version" in command:
+        return subprocess.CompletedProcess(command, 0, stdout="ImageJ 1.54f\n", stderr="")
+    if len(command) >= 2 and "smoke" in str(command[-2]):
+        Path(command[-1]).write_text("status=ok\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+    output_path = Path(command[-1])
+    output_path.write_text("status=macro_editor_ready\nanalysis=not_started\n", encoding="utf-8")
+    return subprocess.CompletedProcess(command, 0, stdout="macro ok\n", stderr="")
+
+
+def _bridge(tmp_path):
+    from app.shared.local_engines import IMAGEJ_FIJI_ENGINE_ID, ImageJFijiBridge, LocalEngineConfigStore
+
+    return ImageJFijiBridge(LocalEngineConfigStore(IMAGEJ_FIJI_ENGINE_ID, tmp_path / "imagej_fiji.json"))
+
+
 def test_western_blot_result_tab_shows_image_analysis_workbench(qapp) -> None:
     from PySide6.QtWidgets import QTabWidget
 
@@ -53,7 +79,7 @@ def test_western_blot_result_tab_shows_image_analysis_workbench(qapp) -> None:
 
 
 def test_cell_experiment_page_has_three_image_analysis_entries(qapp) -> None:
-    from PySide6.QtWidgets import QFrame, QPushButton, QTabWidget
+    from PySide6.QtWidgets import QFrame, QPushButton, QTabWidget, QTextEdit
 
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
@@ -70,7 +96,8 @@ def test_cell_experiment_page_has_three_image_analysis_entries(qapp) -> None:
     assert "识别划痕区域" in text
     assert "统计细胞数" in text
     assert "测量荧光强度" in text
-    assert "ImageJ/Fiji 本地后端状态" not in text
+    assert "ImageJ 本地后端状态" in text
+    assert "ImageJ macro 准备区" in text
     for index, analysis_type in enumerate(("scratch_area", "transwell_count", "fluorescence_intensity")):
         page = tabs.widget(index)
         assert page.property("uiPrimitive") == "labtools_c2_gated_workbench"
@@ -78,6 +105,7 @@ def test_cell_experiment_page_has_three_image_analysis_entries(qapp) -> None:
         assert page.property("formalActionEnabled") is False
         assert page.property("analysisType") == analysis_type
         assert page.findChild(QFrame, "imageWorkbenchHeader") is not None
+        assert page.findChild(QTextEdit, "cellImageJMacroEditor") is not None
         primary = page.findChild(QPushButton, "imageWorkbenchPrimaryActionButton")
         assert primary is not None
         assert primary.property("buttonBehavior") == "creates_image_analysis_run_request_without_running_engine"
@@ -126,3 +154,50 @@ def test_workbench_generates_run_request_without_running_engine(qapp, tmp_path) 
     assert "RunRequest 已生成" in text
     assert "尚未生成真实图像分析结果" in text
     assert "运行 ImageJ macro" not in text
+
+
+def test_cell_workbench_writes_and_runs_macro_draft_through_configured_imagej(qapp, tmp_path) -> None:
+    from PySide6.QtWidgets import QPushButton, QTextEdit
+
+    from app.labtools.image_analysis import ImageAnalysisTaskStore
+    from app.labtools.ui.image_analysis_widgets import ImageAnalysisWorkbenchWidget
+
+    bridge = _bridge(tmp_path)
+    bridge.configure_path(_fake_executable(tmp_path))
+    image_path = tmp_path / "cells.png"
+    image_path.write_bytes(b"image")
+    widget = ImageAnalysisWorkbenchWidget(
+        experiment_module="cell_experiment",
+        analysis_type="transwell_count",
+        title="Transwell 图像分析",
+        primary_actions=("识别细胞区域", "统计细胞数", "生成分析任务"),
+        parameter_defaults={"分组": "A", "输出格式": "CSV"},
+        task_store=ImageAnalysisTaskStore(tmp_path / "tasks"),
+        imagej_bridge=bridge,
+        imagej_runner=_successful_imagej_runner,
+    )
+    widget.set_image_paths_for_testing((str(image_path),))
+
+    editor = widget.findChild(QTextEdit, "cellImageJMacroEditor")
+    assert editor is not None
+    assert "not a formal cell-recognition macro" in editor.toPlainText()
+    write_button = widget.findChild(QPushButton, "cellImageJWriteMacroDraftButton")
+    run_button = widget.findChild(QPushButton, "cellImageJRunMacroDraftButton")
+    write_button.click()
+    workspace = widget.latest_workspace()
+
+    assert workspace is not None
+    draft_path = workspace.task_dir / "macros" / "user_macro_draft.ijm"
+    manifest_path = workspace.task_dir / "review" / "macro_editor_manifest.json"
+    assert draft_path.exists()
+    assert manifest_path.exists()
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["formal_analysis_macro_ready"] is False
+
+    run_button.click()
+    result_text = widget.findChild(QTextEdit, "imageWorkbenchResultPanel").toPlainText()
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert "ImageJ macro 调用完成" in result_text
+    assert "status=macro_editor_ready" in result_text
+    assert payload["external_engine_execution_enabled"] is True
+    assert payload["execution_result"]["succeeded"] is True

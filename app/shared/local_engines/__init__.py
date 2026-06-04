@@ -8,7 +8,7 @@ from app.shared.local_engines.engine_status import (
     EngineStatus,
     engine_status_from_dict,
 )
-from app.shared.local_engines.imagej_fiji_bridge import ImageJFijiBridge
+from app.shared.local_engines.imagej_fiji_bridge import ImageJFijiBridge, ImageJFijiMacroExecutionResult
 from app.shared.local_engines.imagej_fiji_detector import (
     DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS,
     IMAGEJ_FIJI_ENGINE_ID,
@@ -74,6 +74,7 @@ __all__ = [
     "EngineStatus",
     "ImageJFijiBridge",
     "ImageJFijiDownloadAsset",
+    "ImageJFijiMacroExecutionResult",
     "ImageJFijiRuntimeInstallResult",
     "ImageJFijiRuntimeManifest",
     "LocalEngineConfig",

@@ -3,7 +3,9 @@ from __future__ import annotations
 try:
     import html
     import json
+    import subprocess
     from pathlib import Path
+    from collections.abc import Callable
 
     from PySide6.QtWidgets import (
         QCheckBox,
@@ -662,6 +664,8 @@ if QWidget is not None:
             primary_actions: tuple[str, ...],
             parameter_defaults: dict[str, str | bool],
             task_store: ImageAnalysisTaskStore | None = None,
+            imagej_bridge: ImageJFijiBridge | None = None,
+            imagej_runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
         ) -> None:
             super().__init__()
             self.setObjectName("imageAnalysisWorkbench")
@@ -677,8 +681,11 @@ if QWidget is not None:
             self._primary_actions = primary_actions
             self._parameter_defaults = parameter_defaults
             self._task_store = task_store or ImageAnalysisTaskStore()
+            self._imagej_bridge = imagej_bridge or ImageJFijiBridge()
+            self._imagej_runner = imagej_runner
             self._image_paths: list[str] = []
             self._latest_workspace: ImageAnalysisTaskWorkspace | None = None
+            self._latest_macro_draft_path: Path | None = None
             self._macro_template = default_macro_for_analysis(experiment_module, analysis_type)
             self._parameter_widgets: dict[str, QLineEdit | QCheckBox | QComboBox] = {}
             self._build_ui()
@@ -724,12 +731,23 @@ if QWidget is not None:
             root.addWidget(header)
             root.addWidget(engine_notice)
             root.addWidget(review)
+            if self._experiment_module == "cell_experiment":
+                root.addWidget(
+                    LabToolsImageJFijiStatusPanel(
+                        workflow_name=f"{self._title} ImageJ macro workflow",
+                        bridge=self._imagej_bridge,
+                        can_continue_without_engine=True,
+                        runner=self._imagej_runner,
+                    )
+                )
 
             workbench_row = QHBoxLayout()
             workbench_row.addWidget(self._build_image_list_panel(), 2)
             workbench_row.addWidget(self._build_preview_panel(), 3)
             workbench_row.addWidget(self._build_parameter_panel(), 2)
             root.addLayout(workbench_row, 3)
+            if self._experiment_module == "cell_experiment":
+                root.addWidget(self._build_macro_editor_panel())
 
             self._result_panel = QTextEdit()
             self._result_panel.setObjectName("imageWorkbenchResultPanel")
@@ -842,6 +860,41 @@ if QWidget is not None:
             layout.addWidget(self._diagnostics)
             return frame
 
+        def _build_macro_editor_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("cellImageJMacroEditorPanel")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["sm"])
+            heading = QLabel("ImageJ macro 准备区")
+            heading.setObjectName("imageCardTitle")
+            note = QLabel("本区用于检测、下载/配置后的 ImageJ 调用验证和 macro 草稿写入准备；当前不内置具体细胞识别 macro，不生成正式测量结论。")
+            note.setObjectName("imageTaskStatus")
+            note.setWordWrap(True)
+            self._macro_editor = QTextEdit()
+            self._macro_editor.setObjectName("cellImageJMacroEditor")
+            self._macro_editor.setMinimumHeight(150)
+            self._macro_editor.setPlainText(self._default_macro_draft_text())
+            actions = QHBoxLayout()
+            write_button = QPushButton("写入 macro 草稿")
+            write_button.setObjectName("cellImageJWriteMacroDraftButton")
+            write_button.setProperty("buttonBehavior", "writes_user_macro_draft_for_imagej_call_preparation")
+            write_button.setProperty("formalActionEnabled", False)
+            write_button.clicked.connect(self._handle_write_macro_draft)
+            run_button = QPushButton("调用 ImageJ 运行草稿")
+            run_button.setObjectName("cellImageJRunMacroDraftButton")
+            run_button.setProperty("buttonBehavior", "runs_user_macro_draft_through_configured_imagej_engine")
+            run_button.setProperty("formalActionEnabled", False)
+            run_button.clicked.connect(self._handle_run_macro_draft)
+            for button in (write_button, run_button):
+                actions.addWidget(button)
+            actions.addStretch(1)
+            layout.addWidget(heading)
+            layout.addWidget(note)
+            layout.addWidget(self._macro_editor)
+            layout.addLayout(actions)
+            return frame
+
         def _handle_import_files(self) -> None:
             paths, _selected_filter = QFileDialog.getOpenFileNames(
                 self,
@@ -942,6 +995,123 @@ if QWidget is not None:
             self._result_panel.setText(self._workspace_result_text(workspace, action_manifest))
             self._diagnostics.setText(self._diagnostic_text(workspace.macro_template, workspace))
 
+        def _handle_write_macro_draft(self) -> None:
+            if not self._image_paths:
+                self._result_panel.setText("请先导入图片或文件夹，再写入 ImageJ macro 草稿。")
+                return
+            try:
+                workspace = self._ensure_workspace_for_macro_editor()
+                macro_path = workspace.task_dir / "macros" / "user_macro_draft.ijm"
+                macro_text = self._macro_editor.toPlainText().strip() or self._default_macro_draft_text()
+                macro_path.write_text(macro_text + "\n", encoding="utf-8")
+                manifest_path = self._write_macro_editor_manifest(workspace, macro_path, execution_result=None)
+            except ImageAnalysisError as exc:
+                self._result_panel.setText(str(exc))
+                return
+            self._latest_workspace = workspace
+            self._latest_macro_draft_path = macro_path
+            self._result_panel.setText(
+                "\n".join(
+                    [
+                        "ImageJ macro 草稿已写入",
+                        f"任务目录：{workspace.task_dir}",
+                        f"Macro 草稿：{macro_path}",
+                        f"Macro manifest：{manifest_path}",
+                        "状态：ready_for_external_engine_call",
+                        "边界：这是 macro 编辑与调用准备，不是正式细胞识别算法。",
+                    ]
+                )
+            )
+
+        def _handle_run_macro_draft(self) -> None:
+            if self._latest_macro_draft_path is None or not self._latest_macro_draft_path.exists():
+                self._handle_write_macro_draft()
+                if self._latest_macro_draft_path is None or not self._latest_macro_draft_path.exists():
+                    return
+            workspace = self._latest_workspace
+            if workspace is None:
+                self._result_panel.setText("请先写入 macro 草稿。")
+                return
+            output_path = workspace.output_dir / "macro_editor_call_result.txt"
+            try:
+                result = self._imagej_bridge.run_macro(
+                    macro_path=self._latest_macro_draft_path,
+                    argument=output_path,
+                    runner=self._imagej_runner,
+                )
+                manifest_path = self._write_macro_editor_manifest(workspace, self._latest_macro_draft_path, execution_result=result.to_dict())
+            except Exception as exc:
+                error_manifest = self._write_macro_editor_manifest(
+                    workspace,
+                    self._latest_macro_draft_path,
+                    execution_result={"status": "not_run", "error": str(exc), "succeeded": False},
+                )
+                self._result_panel.setText(
+                    "\n".join(
+                        [
+                            "ImageJ macro 调用未完成",
+                            str(exc),
+                            f"Macro 草稿：{self._latest_macro_draft_path}",
+                            f"调用 manifest：{error_manifest}",
+                            "请先在本页或设置中心完成 ImageJ/Fiji 检测、下载或路径配置。",
+                        ]
+                    )
+                )
+                return
+            output_preview = ""
+            if output_path.exists():
+                output_preview = output_path.read_text(encoding="utf-8", errors="replace")[:800]
+            self._result_panel.setText(
+                "\n".join(
+                    [
+                        "ImageJ macro 调用完成" if result.succeeded else "ImageJ macro 调用失败",
+                        f"returncode：{result.returncode}",
+                        f"executable：{result.executable_path}",
+                        f"Macro 草稿：{self._latest_macro_draft_path}",
+                        f"输出文件：{output_path}",
+                        f"调用 manifest：{manifest_path}",
+                        "",
+                        "输出预览",
+                        output_preview or "(无输出文件内容)",
+                        "",
+                        "边界：当前只验证 ImageJ 可调用和 macro 草稿写入；未声明具体细胞识别 macro 已完成。",
+                    ]
+                )
+            )
+
+        def _ensure_workspace_for_macro_editor(self) -> ImageAnalysisTaskWorkspace:
+            if self._latest_workspace is not None:
+                return self._latest_workspace
+            workspace = self._task_store.create_workspace(
+                task_name=self._title,
+                experiment_module=self._experiment_module,
+                analysis_type=self._analysis_type,
+                image_paths=tuple(self._image_paths),
+                import_mode="reference_original_path",
+                parameters=self._collect_parameters("macro_editor_prepare"),
+            )
+            return workspace
+
+        def _write_macro_editor_manifest(self, workspace: ImageAnalysisTaskWorkspace, macro_path: Path, execution_result: dict | None) -> Path:
+            payload = {
+                "schema_version": "biomedpilot.labtools.cell_imagej_macro_editor.v1",
+                "experiment_module": self._experiment_module,
+                "analysis_type": self._analysis_type,
+                "image_paths": list(self._image_paths),
+                "macro_path": str(macro_path),
+                "run_request_path": str(workspace.run_request_path),
+                "output_dir": str(workspace.output_dir),
+                "external_engine_execution_enabled": execution_result is not None,
+                "macro_is_user_editable_draft": True,
+                "formal_analysis_macro_ready": False,
+                "manual_review_required": True,
+                "execution_result": execution_result or {},
+            }
+            path = workspace.task_dir / "review" / "macro_editor_manifest.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            return path
+
         def _write_image_action_manifest(self, workspace: ImageAnalysisTaskWorkspace, action_text: str) -> Path:
             overlay_hint = "cell_count_overlay" if "细胞" in action_text or "count" in self._analysis_type else "roi_or_measurement_overlay"
             if "lane" in action_text.lower() or "Lane" in action_text:
@@ -986,6 +1156,7 @@ if QWidget is not None:
                     "- review/manual_review.json",
                     "",
                     "尚未生成真实图像分析结果。请在外部引擎配置完成并实现对应 Macro 后运行分析。",
+                    "细胞图片页可先使用 ImageJ macro 准备区写入草稿并验证外部引擎调用。",
                     "",
                     "人工复核提示",
                     "自动图像识别和测量结果仅用于辅助分析，请人工复核 ROI、阈值和输出结果。",
@@ -997,7 +1168,20 @@ if QWidget is not None:
                 [
                     "尚未生成 RunRequest。",
                     "结果区将显示任务状态、输出目录、预期结果文件、日志路径和人工复核提示。",
-                    "尚未生成真实图像分析结果。请在外部引擎配置完成并实现对应 Macro 后运行分析。",
+                    "尚未生成真实图像分析结果。细胞图片页可先写入 ImageJ macro 草稿并验证外部引擎调用。",
+                ]
+            )
+
+        def _default_macro_draft_text(self) -> str:
+            return "\n".join(
+                [
+                    "// BioMedPilot ImageJ macro draft scaffold.",
+                    "// Purpose: verify ImageJ/Fiji can be called from LabTools after image import.",
+                    "// This is not a formal cell-recognition macro and does not produce measurement results.",
+                    "output = getArgument();",
+                    'File.saveString("status=macro_editor_ready\\nanalysis=not_started\\n", output);',
+                    'print("BioMedPilot macro editor draft executed");',
+                    "",
                 ]
             )
 
@@ -1052,12 +1236,12 @@ if QWidget is not None:
             QLabel#imageTaskStatus {{
                 color: {COLORS["muted"]};
             }}
-            QFrame#labToolsCard {{
+            QFrame#labToolsCard, QFrame#cellImageJMacroEditorPanel {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["sm"]}px;
             }}
-            QTextEdit#imageWorkbenchPreviewPanel, QTextEdit#imageWorkbenchResultPanel, QTextEdit#imageWorkbenchDiagnosticsPanel, QTableWidget#imageWorkbenchImageTable, QLineEdit, QComboBox {{
+            QTextEdit#imageWorkbenchPreviewPanel, QTextEdit#imageWorkbenchResultPanel, QTextEdit#imageWorkbenchDiagnosticsPanel, QTextEdit#cellImageJMacroEditor, QTableWidget#imageWorkbenchImageTable, QLineEdit, QComboBox {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["sm"]}px;
@@ -1071,7 +1255,7 @@ if QWidget is not None:
                 padding: 8px 12px;
                 font-weight: 700;
             }}
-            QPushButton#imageWorkbenchImportFilesButton, QPushButton#imageWorkbenchImportFolderButton, QPushButton#imageWorkbenchRemoveImageButton, QPushButton#imageWorkbenchExportPlaceholderButton {{
+            QPushButton#imageWorkbenchImportFilesButton, QPushButton#imageWorkbenchImportFolderButton, QPushButton#imageWorkbenchRemoveImageButton, QPushButton#imageWorkbenchExportPlaceholderButton, QPushButton#cellImageJWriteMacroDraftButton, QPushButton#cellImageJRunMacroDraftButton {{
                 color: {COLORS["bio"]};
                 background: {COLORS["bio_soft"]};
                 border: 1px solid {COLORS["border"]};
@@ -1099,7 +1283,11 @@ if QWidget is not None:
             },
         )
 
-    def scratch_area_workbench_widget() -> ImageAnalysisWorkbenchWidget:
+    def scratch_area_workbench_widget(
+        *,
+        imagej_bridge: ImageJFijiBridge | None = None,
+        imagej_runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    ) -> ImageAnalysisWorkbenchWidget:
         return ImageAnalysisWorkbenchWidget(
             experiment_module="cell_experiment",
             analysis_type="scratch_area",
@@ -1114,9 +1302,15 @@ if QWidget is not None:
                 "是否计算愈合率": True,
                 "输出格式": "CSV",
             },
+            imagej_bridge=imagej_bridge,
+            imagej_runner=imagej_runner,
         )
 
-    def transwell_workbench_widget() -> ImageAnalysisWorkbenchWidget:
+    def transwell_workbench_widget(
+        *,
+        imagej_bridge: ImageJFijiBridge | None = None,
+        imagej_runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    ) -> ImageAnalysisWorkbenchWidget:
         return ImageAnalysisWorkbenchWidget(
             experiment_module="cell_experiment",
             analysis_type="transwell_count",
@@ -1132,9 +1326,15 @@ if QWidget is not None:
                 "输出指标": "细胞数",
                 "输出格式": "CSV",
             },
+            imagej_bridge=imagej_bridge,
+            imagej_runner=imagej_runner,
         )
 
-    def fluorescence_workbench_widget() -> ImageAnalysisWorkbenchWidget:
+    def fluorescence_workbench_widget(
+        *,
+        imagej_bridge: ImageJFijiBridge | None = None,
+        imagej_runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    ) -> ImageAnalysisWorkbenchWidget:
         return ImageAnalysisWorkbenchWidget(
             experiment_module="cell_experiment",
             analysis_type="fluorescence_intensity",
@@ -1148,6 +1348,8 @@ if QWidget is not None:
                 "输出指标": "mean intensity",
                 "输出格式": "CSV",
             },
+            imagej_bridge=imagej_bridge,
+            imagej_runner=imagej_runner,
         )
 
 else:  # pragma: no cover

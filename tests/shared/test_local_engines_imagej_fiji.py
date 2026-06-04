@@ -38,9 +38,10 @@ def _successful_runner(command, **kwargs):
     return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
 
-def test_missing_path_returns_not_configured_when_no_common_path(monkeypatch) -> None:
+def test_missing_path_returns_not_configured_when_no_common_path(tmp_path, monkeypatch) -> None:
     import app.shared.local_engines.imagej_fiji_detector as detector
 
+    monkeypatch.setattr(detector, "default_imagej_fiji_runtime_root", lambda: tmp_path / "missing_runtime")
     monkeypatch.setattr(detector, "detect_common_imagej_fiji_paths", lambda: ())
 
     status = detect_imagej_fiji_status()
@@ -116,6 +117,34 @@ def test_config_store_and_bridge_round_trip(tmp_path) -> None:
 
     assert status.status == ENGINE_STATUS_AVAILABLE
     assert bridge.load_config().last_status.status == ENGINE_STATUS_AVAILABLE
+
+
+def test_bridge_runs_macro_after_detection(tmp_path) -> None:
+    store = LocalEngineConfigStore(IMAGEJ_FIJI_ENGINE_ID, tmp_path / "imagej_fiji.json")
+    bridge = ImageJFijiBridge(store)
+    executable = _fake_executable(tmp_path)
+    macro_path = tmp_path / "draft.ijm"
+    output_path = tmp_path / "macro_result.txt"
+    macro_path.write_text('File.saveString("status=macro_ready\\n", getArgument());\n', encoding="utf-8")
+
+    bridge.configure_path(executable)
+    result = bridge.run_macro(macro_path=macro_path, argument=output_path, runner=_successful_runner)
+
+    assert result.succeeded
+    assert result.returncode == 0
+    assert result.executable_path == str(executable)
+    assert result.macro_path == str(macro_path)
+    assert output_path.read_text(encoding="utf-8") == "status=ok\n"
+
+
+def test_bridge_refuses_macro_when_engine_is_unavailable(tmp_path) -> None:
+    bridge = ImageJFijiBridge(LocalEngineConfigStore(IMAGEJ_FIJI_ENGINE_ID, tmp_path / "imagej_fiji.json"))
+    bridge.configure_path(tmp_path / "missing_imagej")
+    macro_path = tmp_path / "draft.ijm"
+    macro_path.write_text('print("draft");\n', encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="imagej_fiji_engine_not_available"):
+        bridge.run_macro(macro_path=macro_path, runner=_successful_runner)
 
 
 def test_version_parser_and_prompt_text_are_user_readable() -> None:
