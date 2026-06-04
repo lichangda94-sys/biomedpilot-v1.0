@@ -515,6 +515,123 @@ Stop after audit documents. Do not begin migration, branch convergence, UI repla
 
 ## Phase 2.5 Refresh: Full Branch Inventory and Migration Candidate Audit
 
+Date: 2026-06-05
+
+### Scope
+
+This refresh updated the full branch, legacy, and migration-candidate inventory against current `dev/bioinformatics` at `2fefc2c5e47b285683fbbbc304176fa73135bba7`.
+
+This was audit-only:
+
+- No branch was checked out.
+- No branch was merged.
+- No cherry-pick was performed.
+- No UI code was changed.
+- No analysis algorithm was changed.
+- No legacy code was migrated.
+- No mock, placeholder, dry-run, testing-level, branch-only, or legacy-only output was promoted to completed functionality.
+
+### Current Baseline
+
+```text
+branch: dev/bioinformatics
+HEAD: 2fefc2c5e47b285683fbbbc304176fa73135bba7
+subject: block standard payload schema drift
+```
+
+The worktree already contained non-report changes before this refresh. They were preserved and excluded from this Phase 2.5 audit:
+
+```text
+ M analysis/modules/correlation/module.json
+ M analysis/modules/deg/module.json
+ M analysis/modules/docking/module.json
+ M analysis/modules/enrichment/module.json
+ M analysis/modules/immune_infiltration/module.json
+ M analysis/modules/molecular_dynamics/module.json
+ M analysis/modules/multivariate/module.json
+ M analysis/modules/spatial_transcriptomics/module.json
+ M analysis/modules/survival/module.json
+ M analysis/modules/univariate/module.json
+ M analysis/registry/analysis_modules.json
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+### Reports Refreshed
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Findings
+
+The branch and legacy inventory still supports the same hard boundary:
+
+```text
+Current UI is the only mainline.
+Old branches and legacy directories are material libraries only.
+No branch-only or legacy-only feature is current-available without a current UI path,
+current contract mapping, current tests, and real output evidence.
+```
+
+High-value candidate libraries remain:
+
+- `dev/release-internal-test` for Bio DEG/enrichment/survival/risk/report history.
+- `codex/releasebuild-formal-deg-carryover` for older formal DEG ReleaseBuild gate material.
+- `codex/mainline-survival-clinical-carryover` for survival/clinical convergence history.
+- `dev/meta-analysis` for Meta OCR/fulltext/package history only.
+- `dev/ui-shell` and integration UI shell branches for design references only.
+
+Direct migration remains blocked because sampled high-relevance branches show large divergence from current paths:
+
+| Branch | Shortstat in audited paths |
+| --- | --- |
+| `dev/release-internal-test` | 2130 files changed, 135504 insertions, 85272 deletions |
+| `codex/releasebuild-formal-deg-carryover` | 1104 files changed, 91914 insertions, 78237 deletions |
+| `codex/mainline-survival-clinical-carryover` | 744 files changed, 15914 insertions, 69529 deletions |
+| `stable/mainline` | 801 files changed, 14358 insertions, 80408 deletions |
+| `feature/meta-l3-ui-loop` | 165 files changed, 334 insertions, 8997 deletions |
+| `dev/meta-analysis` | 617 files changed, 20790 insertions, 78060 deletions |
+| `dev/ui-shell` | 2128 files changed, 66130 insertions, 170085 deletions |
+
+Legacy directories remain quarantined:
+
+- `app/bioinformatics/legacy/**`
+- `app/meta_analysis/legacy/**`
+- `archive/legacy_sources/**`
+
+The audited legacy/archive boundary currently contains 920 files.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,220p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed; migration guide read |
+| `sed -n '1,220p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed; real-loop guide read |
+| `git status --short --branch` | Passed; dirty worktree recorded |
+| `git branch --show-current` | Passed; `dev/bioinformatics` |
+| `git rev-parse HEAD` | Passed; `2fefc2c5e47b285683fbbbc304176fa73135bba7` |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads refs/remotes` | Passed; branch heads inventoried |
+| `git log --all --decorate --oneline --max-count=120` | Passed; recent branch history sampled |
+| `find . -path ./.git -prune -o -type d \( -name 'legacy' -o -name 'Legacy' -o -name 'legacy_*' -o -name '*legacy*' \) -print` | Passed; legacy directories located |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -type f \| wc -l` | Passed; 920 files |
+| `git diff --shortstat HEAD..<branch> -- ...` | Passed for sampled high-relevance branches |
+| `git ls-tree -r --name-only <branch> -- ...` | Passed for sampled Bio/Meta/UI candidate files |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|Meta\|Bioinformatics" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Passed; current UI/action/test surfaces sampled |
+
+No functional tests were run because this phase was audit-only and changed documentation only.
+
+### Stop Point
+
+Stop after audit documents. Do not begin migration, branch convergence, UI replacement, algorithm changes, or legacy runtime migration until the next explicit instruction selects one candidate feature and one current UI path.
+
+## Phase 2.5 Refresh: Full Branch Inventory and Migration Candidate Audit
+
 Date: 2026-06-04
 
 ### Scope
