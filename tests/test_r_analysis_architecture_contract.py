@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from app.analysis_runtime.standard_package import validate_standard_result_package
 from app.analysis_runtime.resources import full_mode_resource_blockers, validate_analysis_resource_manifest
 
 
@@ -243,6 +244,8 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "runtime_install_policy" in invocation_schema["required"]
     assert invocation_schema["properties"]["runtime_install_policy"]["const"] == "forbidden"  # type: ignore[index]
     assert invocation_schema["properties"]["resource_download_policy"]["const"] == "forbidden"  # type: ignore[index]
+    task_invocation_enum = invocation_schema["properties"]["worker_boundary"]["properties"]["task_system_invocation"]["enum"]  # type: ignore[index]
+    assert {"task_center_registered", "standard_worker_direct_cli"} <= set(task_invocation_enum)
     assert result["mode"] == "mock"
     assert result["status"] == "passed"
     assert provenance["mode"] == "mock"
@@ -322,6 +325,7 @@ def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Pat
     assert (output_dir / "tables" / "mock_summary.tsv").is_file()
     assert (output_dir / "reports" / "README_mock.md").is_file()
     assert (output_dir / "logs" / "worker.log").is_file()
+    assert (output_dir / "logs" / "worker_invocation.json").is_file()
     assert provenance["module_id"] == "enrichment"
     assert provenance["task_id"] == "enrichment-mock-fixture"
     assert provenance["runtime"]["r_version"] != "not_required_for_mock"  # type: ignore[index]
@@ -330,6 +334,15 @@ def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Pat
     assert provenance["parameter_hash"] != "fixture"
     assert provenance["parameter_hash"] != provenance["input_hash"]
     assert "analysis/runners/run_module.R" in provenance["command"]
+    validation = validate_standard_result_package(
+        output_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-fixture",
+        expected_mode="mock",
+    )
+    invocation = read_json(output_dir / "logs" / "worker_invocation.json")
+    assert validation["status"] == "passed"
+    assert invocation["worker_boundary"]["task_system_invocation"] == "standard_worker_direct_cli"  # type: ignore[index]
 
 
 def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_path: Path) -> None:
@@ -354,9 +367,26 @@ def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_pa
     assert result["mode"] == "full"
     assert result["status"] == "blocked"
     assert "standard_worker_mode_not_enabled:full" in result["blockers"]
+    assert "analysis_resource_not_locked:reactome_full" in result["blockers"]
+    assert "analysis_resource_not_locked:msigdb_full" in result["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
+    assert provenance["analysis_environment"]["environment_id"] == "r-bio-full"  # type: ignore[index]
+    assert provenance["analysis_environment"]["dockerfile"] == "docker/Dockerfile.r-bio-full"  # type: ignore[index]
+    assert provenance["analysis_environment"]["renv_lock"] == "renv/renv.bio-full.lock"  # type: ignore[index]
+    assert provenance["analysis_environment"]["resource_lock_status"]["blockers"]  # type: ignore[index]
     assert provenance["parameter_hash"] != provenance["input_hash"]
     assert (output_dir / "logs" / "worker.log").is_file()
+    assert (output_dir / "logs" / "worker_invocation.json").is_file()
+    validation = validate_standard_result_package(
+        output_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-fixture",
+        expected_mode="full",
+    )
+    invocation = read_json(output_dir / "logs" / "worker_invocation.json")
+    assert validation["status"] == "passed"
+    assert invocation["invocation_status"] == "not_invoked_mode_gate"
+    assert invocation["worker_boundary"]["task_system_invocation"] == "standard_worker_direct_cli"  # type: ignore[index]
 
 
 def test_standard_r_runner_enrichment_lite_mode_writes_real_fixture_ora_package(tmp_path: Path) -> None:

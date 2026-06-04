@@ -115,6 +115,8 @@ Update: environment boundaries are now centralized in `analysis/registry/analysi
 
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 
+Update: direct `analysis/runners/run_module.R` outputs now also write `logs/worker_invocation.json` with `worker_boundary.task_system_invocation=standard_worker_direct_cli`. Focused tests validate direct mock and blocked full runner packages through the same Python standard package validator. The blocked full direct-runner package records target environment/resource-lock snapshots and remains non-executing.
+
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.
 
 Update: the standard package catalog now exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`. Analysis Center can display these diagnostics from the standard package catalog instead of reading module-private R outputs.
@@ -153,6 +155,7 @@ Acceptance:
 - Full-mode standard packages are blocked by validation if target environment/resource-lock snapshots are missing or malformed. **Completed for validator/catalog gate.**
 - All standard task-bridge outcomes write a worker invocation manifest and register it in result-index log artifacts. **Completed for task-bridge paths.**
 - Task-bridge and standard-worker packages are blocked if their worker invocation manifest is missing or violates the schema/policy contract. **Completed for validator gate.**
+- Direct standard R runner mock and blocked full outputs validate as standard packages without requiring heavy R packages or enabling full execution. **Completed for direct runner contract.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.

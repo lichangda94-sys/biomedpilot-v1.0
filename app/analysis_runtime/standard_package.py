@@ -242,7 +242,7 @@ def _worker_invocation_blockers(
         for field in ("boundary_type", "task_system_invocation", "migration_status"):
             if not boundary.get(field):
                 blockers.append(f"worker_invocation_worker_boundary_{field}_missing")
-        if boundary.get("task_system_invocation") != "task_center_registered":
+        if boundary.get("task_system_invocation") not in {"task_center_registered", "standard_worker_direct_cli"}:
             blockers.append("worker_invocation_task_system_invocation_invalid")
     return blockers
 

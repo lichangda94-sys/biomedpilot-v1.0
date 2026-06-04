@@ -37,6 +37,13 @@ json_string <- function(value) {
   paste0('"', escaped, '"')
 }
 
+json_array <- function(values) {
+  if (length(values) < 1) {
+    return("[]")
+  }
+  paste0("[", paste(vapply(values, json_string, character(1)), collapse = ", "), "]")
+}
+
 read_string_field <- function(text, field, default = "") {
   pattern <- paste0('"', field, '"[[:space:]]*:[[:space:]]*"[^"]+"')
   match <- regmatches(text, regexpr(pattern, text))
@@ -1133,6 +1140,7 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
   input_hash <- as.character(tools::md5sum(input_json))
   parameter_hash <- hash_string(read_object_field_text(input_text, "parameters", "{}"))
+  analysis_environment_json <- analysis_environment_snapshot_json(module_id, mode)
   provenance <- paste0(
     "{\n",
     '  "schema_version": "biomedpilot.analysis.provenance.v1",\n',
@@ -1146,10 +1154,124 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
     '  "random_seed": ', seed_value, ",\n",
     '  "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},\n',
     '  "runtime": {"r_version": ', json_string(r_version), ', "bioconductor_version": ', json_string(bioc_version), ', "package_versions": {}, "external_tool_versions": ', external_tool_versions_json, '},\n',
+    '  "analysis_environment": ', analysis_environment_json, ",\n",
     '  "command": ', json_string(command), "\n",
     "}\n"
   )
   writeLines(provenance, file.path(output_dir, "provenance.json"))
+  default_status <- if (r_version == "not_executed") "blocked_before_process" else "completed"
+  default_returncode <- if (r_version == "not_executed") 2 else 0
+  write_worker_invocation(module_id, task_id, mode, default_status, default_returncode, command_vector, character(0))
+}
+
+full_environment_id <- function(module_id) {
+  if (module_id == "spatial_transcriptomics") {
+    return("r-spatial-full")
+  }
+  if (module_id == "docking") {
+    return("r-chem-full")
+  }
+  if (module_id == "molecular_dynamics") {
+    return("r-chem-gpu")
+  }
+  "r-bio-full"
+}
+
+full_environment_dockerfile <- function(environment_id) {
+  switch(
+    environment_id,
+    "r-spatial-full" = "docker/Dockerfile.r-spatial-full",
+    "r-chem-full" = "docker/Dockerfile.r-chem-full",
+    "r-chem-gpu" = "docker/Dockerfile.r-chem-gpu",
+    "docker/Dockerfile.r-bio-full"
+  )
+}
+
+full_environment_renv <- function(environment_id) {
+  switch(
+    environment_id,
+    "r-spatial-full" = "renv/renv.spatial-full.lock",
+    "r-chem-full" = "renv/renv.chem-full.lock",
+    "r-chem-gpu" = "renv/renv.chem-full.lock",
+    "renv/renv.bio-full.lock"
+  )
+}
+
+full_required_resources <- function(module_id) {
+  switch(
+    module_id,
+    "enrichment" = c("reactome_full", "msigdb_full", "go_full", "kegg_full", "orgdb_human_full"),
+    "immune_infiltration" = c("go_full", "orgdb_human_full"),
+    "spatial_transcriptomics" = c("spatial_reference_full", "cellchatdb_full"),
+    "docking" = c("autodock_vina_tool", "docking_template_bundle"),
+    "molecular_dynamics" = c("gromacs_tool", "md_forcefield_template_bundle"),
+    character(0)
+  )
+}
+
+analysis_environment_snapshot_json <- function(module_id, mode) {
+  if (mode != "full") {
+    return("null")
+  }
+  environment_id <- full_environment_id(module_id)
+  required_resources <- full_required_resources(module_id)
+  resource_blockers <- if (length(required_resources) > 0) paste0("analysis_resource_not_locked:", required_resources) else character(0)
+  environment_status <- if (length(resource_blockers) > 0) "blocked_full_mode_resource_or_tool_lock" else "blocked_full_mode_worker_not_enabled"
+  paste0(
+    "{\n",
+    '    "schema_version": "biomedpilot.analysis_environment_snapshot.v1",\n',
+    '    "status": ', json_string(environment_status), ",\n",
+    '    "mode": "full",\n',
+    '    "module_id": ', json_string(module_id), ",\n",
+    '    "environment_id": ', json_string(environment_id), ",\n",
+    '    "dockerfile": ', json_string(full_environment_dockerfile(environment_id)), ",\n",
+    '    "renv_lock": ', json_string(full_environment_renv(environment_id)), ",\n",
+    '    "r_runtime": "R 4.4.2",\n',
+    '    "allows_heavy_analysis_dependencies": true,\n',
+    '    "resource_lock_required": true,\n',
+    '    "external_tool_lock_required": ', if (environment_id %in% c("r-chem-full", "r-chem-gpu")) "true" else "false", ",\n",
+    '    "allowed_module_ids": ', json_array(c(module_id)), ",\n",
+    '    "full_mode_requires_isolated_environment": true,\n',
+    '    "environment_registry_is_authoritative": true,\n',
+    '    "runtime_package_install": "forbidden",\n',
+    '    "runtime_resource_download": "forbidden",\n',
+    '    "module_manifest": ', json_string(file.path("analysis", "modules", module_id, "module.json")), ",\n",
+    '    "resource_lock_status": {\n',
+    '      "full_mode_ready": false,\n',
+    '      "required_resource_ids": ', json_array(required_resources), ",\n",
+    '      "blocked_resource_ids": ', json_array(required_resources), ",\n",
+    '      "blockers": ', json_array(resource_blockers), ",\n",
+    '      "warnings": []\n',
+    "    }\n",
+    "  }"
+  )
+}
+
+write_worker_invocation <- function(module_id, task_id, mode, invocation_status, returncode_value, command_vector, blockers) {
+  returncode_json <- if (is.na(returncode_value)) "null" else as.character(returncode_value)
+  manifest <- paste0(
+    "{\n",
+    '  "schema_version": "biomedpilot.analysis.worker_invocation.v1",\n',
+    '  "created_at": ', json_string(timestamp), ",\n",
+    '  "module_id": ', json_string(module_id), ",\n",
+    '  "mode": ', json_string(mode), ",\n",
+    '  "task_id": ', json_string(task_id), ",\n",
+    '  "worker_backend": "rscript",\n',
+    '  "invocation_status": ', json_string(invocation_status), ",\n",
+    '  "standard_worker_entrypoint": "analysis/runners/run_module.R",\n',
+    '  "input_manifest": ', json_string(input_json), ",\n",
+    '  "output_contract": "standard_result_package",\n',
+    '  "runtime_install_policy": "forbidden",\n',
+    '  "resource_download_policy": "forbidden",\n',
+    '  "returncode": ', returncode_json, ",\n",
+    '  "command": ', json_array(command_vector), ",\n",
+    '  "stdout": "",\n',
+    '  "stderr": "",\n',
+    '  "blockers": ', json_array(blockers), ",\n",
+    '  "worker_boundary": {"boundary_type": "standard_r_worker", "task_system_invocation": "standard_worker_direct_cli", "migration_status": "standard_worker_direct_cli_contract"}\n',
+    "}\n"
+  )
+  writeLines(manifest, file.path(output_dir, "logs", "worker_invocation.json"))
 }
 
 timestamp <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
@@ -1157,6 +1279,7 @@ task_id <- read_string_field(input_text, "task_id", "unknown-task")
 module_id <- read_string_field(input_text, "module_id", "unknown-module")
 input_mode <- read_string_field(input_text, "mode", mode)
 command <- paste(c("Rscript", "analysis/runners/run_module.R", input_json, output_dir, mode), collapse = " ")
+command_vector <- c("Rscript", "analysis/runners/run_module.R", input_json, output_dir, mode)
 
 if (input_mode != mode) {
   blocker <- paste0("module_input_mode_arg_mismatch:input=", input_mode, ",arg=", mode)
@@ -1170,6 +1293,7 @@ if (input_mode != mode) {
     "Standard R worker blocked because CLI mode and input manifest mode differ."
   )
   write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+  write_worker_invocation(module_id, task_id, mode, "not_invoked_mode_gate", 2, command_vector, c(blocker))
   writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), blocker), file.path(output_dir, "logs", "worker.log"))
   quit(status = 2)
 }
@@ -1212,16 +1336,19 @@ if (mode == "lite" && module_id == "molecular_dynamics") {
 
 if (mode != "mock") {
   blocker <- paste0("standard_worker_mode_not_enabled:", mode)
+  resource_blockers <- if (mode == "full") paste0("analysis_resource_not_locked:", full_required_resources(module_id)) else character(0)
+  blockers <- c(blocker, resource_blockers)
   write_result(
     module_id,
     task_id,
     mode,
     "blocked",
-    c(blocker),
+    blockers,
     c(),
     "Standard R worker blocked before lite/full execution."
   )
   write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+  write_worker_invocation(module_id, task_id, mode, "not_invoked_mode_gate", 2, command_vector, blockers)
   writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste0("mode=", mode), blocker), file.path(output_dir, "logs", "worker.log"))
   quit(status = 2)
 }

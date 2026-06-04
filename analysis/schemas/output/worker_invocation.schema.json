@@ -55,7 +55,7 @@
       "required": ["boundary_type", "task_system_invocation", "migration_status"],
       "properties": {
         "boundary_type": {"type": "string"},
-        "task_system_invocation": {"const": "task_center_registered"},
+        "task_system_invocation": {"enum": ["task_center_registered", "standard_worker_direct_cli"]},
         "migration_status": {"type": "string"}
       },
       "additionalProperties": true
