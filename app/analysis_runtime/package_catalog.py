@@ -6,7 +6,7 @@ from typing import Any
 
 from app.bioinformatics.results.registry import load_registry
 
-from .registry import build_result_index_task_type_module_map
+from .registry import build_result_index_task_type_module_map, get_analysis_module
 from .standard_package import validate_standard_result_package
 
 
@@ -25,6 +25,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
         for artifact in _standard_package_artifacts(entry):
             package_dir = _resolve_artifact_path(root, artifact.get("path"))
             expected_module_id = _module_id_from_entry(entry)
+            payload_schemas = _payload_schemas_for_module(expected_module_id)
             validation = validate_standard_result_package(
                 package_dir,
                 expected_module_id=expected_module_id,
@@ -60,6 +61,9 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "mode": str(result_payload.get("mode") or (entry.get("dependency_snapshot") or {}).get("mode") or ""),
                     "status": str(result_payload.get("status") or validation.get("result_status") or ""),
                     "validation_status": str(validation.get("status") or "blocked"),
+                    "payload_schemas": payload_schemas,
+                    "result_payload_schema": payload_schemas.get("result.json", ""),
+                    "provenance_payload_schema": payload_schemas.get("provenance.json", ""),
                     "engine_name": str((provenance_payload.get("engine") or {}).get("name") or entry.get("engine_name") or ""),
                     "engine_version": str((provenance_payload.get("engine") or {}).get("version") or entry.get("engine_version") or ""),
                     "runtime": provenance_payload.get("runtime") if isinstance(provenance_payload.get("runtime"), dict) else {},
@@ -129,6 +133,7 @@ def build_standard_analysis_package_detail(
     provenance = provenance_payload if provenance_payload is not None else _read_json(package / "provenance.json")
     invocation = invocation_payload if invocation_payload is not None else _read_json(package / "logs" / "worker_invocation.json")
     package_validation = validation or validate_standard_result_package(package)
+    payload_schemas = _payload_schemas_for_module(str(result.get("module_id") or ""))
     artifact_manifest = {
         "schema_version": "biomedpilot.analysis.standard_package_artifact_manifest.v1",
         "source_policy": "standard_result_package_declared_artifacts_and_logs_only",
@@ -142,6 +147,9 @@ def build_standard_analysis_package_detail(
         "package_path": str(package),
         "package_path_relative": _relative_or_absolute(root, package),
         "validation_status": str(package_validation.get("status") or "blocked"),
+        "payload_schemas": payload_schemas,
+        "result_payload_schema": payload_schemas.get("result.json", ""),
+        "provenance_payload_schema": payload_schemas.get("provenance.json", ""),
         "result": {
             "schema_version": str(result.get("schema_version") or ""),
             "module_id": str(result.get("module_id") or ""),
@@ -222,6 +230,19 @@ def _result_index_module_resolution_blockers(entry: dict[str, Any], module_id: s
         return []
     task_type = str(entry.get("task_type") or "missing")
     return [f"result_index_task_type_not_registered:{task_type}"]
+
+
+def _payload_schemas_for_module(module_id: str) -> dict[str, str]:
+    if not module_id:
+        return {}
+    try:
+        module = get_analysis_module(module_id)
+    except ValueError:
+        return {}
+    return {
+        "result.json": str(module.get("result_payload_schema") or ""),
+        "provenance.json": str(module.get("provenance_payload_schema") or ""),
+    }
 
 
 def _default_worker_boundary_type(provenance: dict[str, Any]) -> str:

@@ -200,6 +200,7 @@ The standard result payload schema contract is now explicit in the module regist
 - `analysis/registry/analysis_modules.json` declares `standard_result_package.payload_schemas` for `result.json` and `provenance.json`.
 - Every registry module entry declares `result_payload_schema=analysis/schemas/output/result.schema.json` and `provenance_payload_schema=analysis/schemas/output/provenance.schema.json`.
 - Every `analysis/modules/<module_id>/module.json` manifest declares the same payload schema files.
+- `build_standard_analysis_package_catalog()` and `build_standard_analysis_package_detail()` now expose those payload schema paths in UI-safe catalog/detail payloads.
 - `tests/test_r_analysis_architecture_contract.py` verifies these paths exist and remain consistent across registry and manifests.
 
 This closes a schema-discovery gap for future UI/catalog consumers: they no longer have to infer the payload schema from the package validator or from module-private conventions.
@@ -214,6 +215,7 @@ This closes a schema-discovery gap for future UI/catalog consumers: they no long
 | Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; every module that declares lite support is covered by a registry-driven bridge test; every module that declares full mode is covered by a registry-driven blocked-package bridge test; full activation remains blocked pending migration. |
 | Unified input/output schema | PASS | Added input, result payload, provenance payload, worker invocation, and result package schemas. |
 | Registry/manifest payload schema declaration | PASS | `analysis/registry/analysis_modules.json` and every `analysis/modules/<module_id>/module.json` now explicitly declare the result and provenance payload schemas; architecture tests guard consistency and file existence. |
+| UI-safe payload schema discovery | PASS | Standard package catalog rows and package detail payloads now expose result/provenance payload schema paths for consumers. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, exploratory immune/TME scoring, and local correlation results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog and standard-package gate rows from result-index artifacts, worker invocation diagnostics, worker-boundary metadata, full-mode environment snapshots, and a standard artifact manifest; package validation blocks declared table/plot/report artifacts that are missing or escape the standard package directories. Existing detailed result views still consume module-specific result indexes and service payloads. |

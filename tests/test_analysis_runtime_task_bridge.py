@@ -219,6 +219,12 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["mode"] == "mock"
     assert row["status"] == "passed"
     assert row["validation_status"] == "passed"
+    assert row["payload_schemas"] == {
+        "result.json": "analysis/schemas/output/result.schema.json",
+        "provenance.json": "analysis/schemas/output/provenance.schema.json",
+    }
+    assert row["result_payload_schema"] == "analysis/schemas/output/result.schema.json"
+    assert row["provenance_payload_schema"] == "analysis/schemas/output/provenance.schema.json"
     assert row["engine_name"] == "biomedpilot_analysis_task_bridge"
     assert row["package_path_relative"] == "analysis_results/enrichment-mock-task"
     assert row["worker_backend"] == "python_fixture"
@@ -290,6 +296,12 @@ def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(
 
     assert detail["schema_version"] == "biomedpilot.analysis.standard_package_detail.v1"
     assert detail["validation_status"] == "passed"
+    assert detail["payload_schemas"] == {
+        "result.json": "analysis/schemas/output/result.schema.json",
+        "provenance.json": "analysis/schemas/output/provenance.schema.json",
+    }
+    assert detail["result_payload_schema"] == "analysis/schemas/output/result.schema.json"
+    assert detail["provenance_payload_schema"] == "analysis/schemas/output/provenance.schema.json"
     assert detail["result"]["module_id"] == "enrichment"
     assert detail["result"]["result_semantics"] == "testing_level"
     assert detail["provenance"]["engine"]["name"] == "biomedpilot_analysis_task_bridge"  # type: ignore[index]
