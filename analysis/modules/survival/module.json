@@ -6,9 +6,25 @@
   "input_schema": "analysis/schemas/input/module_input.schema.json",
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
-    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/survival/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/survival/mock_result_package"},
-    "lite": {"supported": false, "blocker": "lite_r_worker_not_migrated"},
-    "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
+    "mock": {
+      "supported": true,
+      "fixture_input": "analysis/fixtures/inputs/survival/module_input.json",
+      "fixture_output_package": "analysis/fixtures/outputs/survival/mock_result_package"
+    },
+    "lite": {
+      "supported": true,
+      "fixture_input": "analysis/fixtures/inputs/survival/module_input_lite.json",
+      "runner": "analysis/runners/run_module.R",
+      "worker_backend": "rscript",
+      "environment": "r-bio-core",
+      "result_semantics": "testing_level",
+      "capability": "base_r_km_logrank_fixture",
+      "clinical_conclusion_policy": "not_generated"
+    },
+    "full": {
+      "supported": false,
+      "blocker": "full_r_worker_container_not_available"
+    }
   },
   "environment": {
     "app_dev": "docker/Dockerfile.app-dev",

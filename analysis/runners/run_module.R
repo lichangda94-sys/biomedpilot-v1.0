@@ -83,12 +83,28 @@ copy_fixture_package <- function(source, target) {
   TRUE
 }
 
+table_artifact_type <- function(module_id, mode, table_file) {
+  if (table_file == "mock_summary.tsv") {
+    return("mock_summary_table")
+  }
+  if (module_id == "enrichment" && mode == "lite" && table_file == "lite_ora_result.tsv") {
+    return("lite_enrichment_ora_result_table")
+  }
+  if (module_id == "survival" && mode == "lite" && table_file == "lite_km_curve.tsv") {
+    return("lite_survival_km_curve_table")
+  }
+  if (module_id == "survival" && mode == "lite" && table_file == "lite_logrank_result.tsv") {
+    return("lite_survival_logrank_result_table")
+  }
+  "analysis_table"
+}
+
 write_result <- function(module_id, task_id, mode, status, blockers, warnings, message) {
   table_files <- list.files(file.path(output_dir, "tables"), full.names = FALSE)
   report_files <- list.files(file.path(output_dir, "reports"), full.names = FALSE)
   table_entries_vector <- character(0)
   for (table_file in table_files) {
-    artifact_type <- if (table_file == "mock_summary.tsv") "mock_summary_table" else "lite_enrichment_ora_result_table"
+    artifact_type <- table_artifact_type(module_id, mode, table_file)
     table_entries_vector <- c(table_entries_vector, paste0('    {"artifact_type": ', json_string(artifact_type), ', "path": ', json_string(file.path("tables", table_file)), '}'))
   }
   report_entries_vector <- character(0)
@@ -209,6 +225,117 @@ run_lite_enrichment_ora <- function() {
   quit(status = 0)
 }
 
+km_curve_for_group <- function(data, group_name) {
+  group_data <- data[data$group == group_name, , drop = FALSE]
+  event_times <- sort(unique(group_data$time[group_data$event == 1]))
+  survival <- 1
+  rows <- list(data.frame(group = group_name, time = 0, n_risk = nrow(group_data), n_event = 0, survival = survival))
+  for (time in event_times) {
+    n_risk <- sum(group_data$time >= time)
+    n_event <- sum(group_data$time == time & group_data$event == 1)
+    if (n_risk > 0) {
+      survival <- survival * (1 - n_event / n_risk)
+    }
+    rows[[length(rows) + 1]] <- data.frame(group = group_name, time = time, n_risk = n_risk, n_event = n_event, survival = survival)
+  }
+  do.call(rbind, rows)
+}
+
+logrank_two_group <- function(data, group_a, group_b) {
+  event_times <- sort(unique(data$time[data$event == 1]))
+  observed_a <- 0
+  expected_a <- 0
+  variance_a <- 0
+  for (time in event_times) {
+    at_risk_a <- sum(data$group == group_a & data$time >= time)
+    at_risk_b <- sum(data$group == group_b & data$time >= time)
+    events_a <- sum(data$group == group_a & data$time == time & data$event == 1)
+    events_b <- sum(data$group == group_b & data$time == time & data$event == 1)
+    at_risk_total <- at_risk_a + at_risk_b
+    events_total <- events_a + events_b
+    if (at_risk_total <= 0 || events_total <= 0) {
+      next
+    }
+    observed_a <- observed_a + events_a
+    expected_a <- expected_a + events_total * at_risk_a / at_risk_total
+    if (at_risk_total > 1) {
+      variance_a <- variance_a + (at_risk_a * at_risk_b * events_total * (at_risk_total - events_total)) / (at_risk_total^2 * (at_risk_total - 1))
+    }
+  }
+  statistic <- if (variance_a > 0) ((observed_a - expected_a)^2 / variance_a) else NA_real_
+  pvalue <- if (!is.na(statistic)) pchisq(statistic, df = 1, lower.tail = FALSE) else NA_real_
+  data.frame(
+    group_a = group_a,
+    group_b = group_b,
+    observed_events_group_a = observed_a,
+    expected_events_group_a = expected_a,
+    chi_square = statistic,
+    p_value = pvalue,
+    method = "base_r_logrank_fixture",
+    stringsAsFactors = FALSE
+  )
+}
+
+run_lite_survival_km_logrank <- function() {
+  survival_table_path <- resolve_input_path(read_string_field(input_text, "survival_table_path", ""))
+  blockers <- character(0)
+  if (survival_table_path == "" || !file.exists(survival_table_path)) {
+    blockers <- c(blockers, "lite_survival_table_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite survival analysis blocked because required fixture input is missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  survival_data <- read.delim(survival_table_path, stringsAsFactors = FALSE)
+  required_columns <- c("sample_id", "time", "event", "group")
+  if (!all(required_columns %in% colnames(survival_data))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_survival_table_schema_invalid"), c(), "Lite survival analysis blocked because survival table columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "survival_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  survival_data$time <- as.numeric(survival_data$time)
+  survival_data$event <- as.integer(survival_data$event)
+  survival_data$group <- as.character(survival_data$group)
+  if (any(is.na(survival_data$time)) || any(is.na(survival_data$event))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_survival_table_non_numeric_time_or_event"), c(), "Lite survival analysis blocked because time/event values are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "survival_non_numeric"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  groups <- sort(unique(survival_data$group))
+  if (length(groups) != 2) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_survival_requires_two_groups"), c(), "Lite survival analysis blocked because exactly two groups are required.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "survival_group_count_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  km_table <- do.call(rbind, lapply(groups, function(group_name) km_curve_for_group(survival_data, group_name)))
+  logrank_table <- logrank_two_group(survival_data, groups[[1]], groups[[2]])
+  write.table(km_table, file = file.path(output_dir, "tables", "lite_km_curve.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  write.table(logrank_table, file = file.path(output_dir, "tables", "lite_logrank_result.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  writeLines(c(
+    "# Lite survival limitations",
+    "",
+    "This is a lightweight fixture KM/log-rank result for worker and package-contract validation.",
+    "It is not a clinical prognosis, treatment recommendation, or report-ready survival analysis."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "clinical_conclusion_not_generated", "base_r_fixture_only_no_heavy_resources"),
+    "Lite survival KM/log-rank completed with base R fixture data."
+  )
+  write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "clinical_conclusion=not_generated"), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
 write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version) {
   seed <- read_integer_field(input_text, "random_seed")
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
@@ -256,6 +383,10 @@ if (input_mode != mode) {
 
 if (mode == "lite" && module_id == "enrichment") {
   run_lite_enrichment_ora()
+}
+
+if (mode == "lite" && module_id == "survival") {
+  run_lite_survival_km_logrank()
 }
 
 if (mode != "mock") {

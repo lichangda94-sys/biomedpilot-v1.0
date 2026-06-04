@@ -24,7 +24,7 @@ R and external tools are not default frontend or main-backend runtime dependenci
 | Mode | Purpose | Dependency policy |
 | --- | --- | --- |
 | `mock` | Frontend, API, task-flow, and result-display development | No heavy R packages; fixed fixture input/output. |
-| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. Enrichment now has a base R ORA fixture through the standard runner. |
+| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. Enrichment and survival now have base R fixtures through the standard runner. |
 | `full` | Formal analysis and full integration testing | Dedicated analysis container, renv lock, or isolated analysis environment. |
 
 ## Repository Contract
@@ -88,7 +88,7 @@ Resource governance is centralized in `analysis/resources/manifest.json` and val
 
 `app/analysis_runtime/package_catalog.py` builds a read-only catalog from result-index `standard_result_package` artifacts. `build_analysis_center_state()` exposes this catalog as `standard_analysis_packages`, so Analysis Center can discover standard packages without reading R package internals or scanning arbitrary output folders. Existing module-specific result views still need staged migration.
 
-The first `lite` worker path is enrichment ORA. `analysis/runners/run_module.R` can run `module_id=enrichment`, `mode=lite` using base R and fixed repository TERM2GENE fixtures. It writes `tables/lite_ora_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`. This remains `testing_level`; it does not enable full enrichment, Reactome/MSigDB resources, plot/report-ready export, or clinical interpretation.
+The first `lite` worker paths are enrichment ORA and survival KM/log-rank. `analysis/runners/run_module.R` can run `module_id=enrichment`, `mode=lite` using base R and fixed repository TERM2GENE fixtures. It can also run `module_id=survival`, `mode=lite` using fixed survival fixture data. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`. They remain `testing_level`; they do not enable full resources, plot/report-ready export, prognosis, treatment guidance, or clinical interpretation.
 
 ## Module Manifests
 
@@ -156,6 +156,7 @@ logs/
 | Standard R runner | Present for mock mode, enrichment lite ORA fixture, and blocked full standard packages. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
+| Survival lite worker | Present for base R KM/log-rank fixture only; testing-level standard package with no clinical conclusion. |
 | Standard package catalog | Present; Analysis Center state exposes result-index-derived package summaries. |
 | Other lite workers | Not enabled. |
 | Full worker | Not enabled. |

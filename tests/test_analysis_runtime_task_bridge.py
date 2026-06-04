@@ -41,6 +41,18 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
         }
         payload["parameters"] = {"analysis_family": "enrichment", "method": "base_r_hypergeometric_ora"}
         payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
+    if module_id == "survival" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-survival-lite-input",
+            "source_dataset_id": "fixture-survival-lite-dataset",
+            "survival_table_path": "analysis/fixtures/inputs/survival/lite_survival.tsv",
+        }
+        payload["parameters"] = {
+            "analysis_family": "survival",
+            "method": "base_r_km_logrank",
+            "clinical_conclusion_policy": "not_generated",
+        }
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
     return payload
 
 
@@ -204,6 +216,39 @@ def test_enrichment_lite_mode_runs_through_standard_r_worker_and_catalog(tmp_pat
     assert registry["results"][0]["engine_name"] == "biomedpilot_standard_r_worker"
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+
+
+def test_survival_lite_mode_runs_through_standard_r_worker_without_clinical_upgrade(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite", module_id="survival"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    assert result["status"] == "passed"
+    assert result_json["module_id"] == "survival"
+    assert result_json["mode"] == "lite"
+    assert result_json["result_semantics"] == "testing_level"
+    assert result_json["summary"]["clinical_conclusion_status"] == "not_generated"  # type: ignore[index]
+    assert "clinical_conclusion_not_generated" in result_json["warnings"]
+    assert (package_dir / "tables" / "lite_km_curve.tsv").is_file()
+    assert (package_dir / "tables" / "lite_logrank_result.tsv").is_file()
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["report_ready_eligible"] is False
+    assert catalog["rows"][0]["module_id"] == "survival"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 2
 
 
 def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execution(tmp_path: Path) -> None:

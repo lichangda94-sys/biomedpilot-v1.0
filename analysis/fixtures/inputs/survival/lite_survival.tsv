@@ -1,0 +1,7 @@
+sample_id	time	event	group
+S1	5	1	case
+S2	8	1	case
+S3	10	0	case
+S4	4	1	control
+S5	7	0	control
+S6	9	1	control

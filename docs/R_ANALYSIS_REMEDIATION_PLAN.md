@@ -63,6 +63,8 @@ Update: the standard package catalog now reads result-index `standard_result_pac
 
 Update: enrichment now has the first `lite` standard worker path. `run_module.R` can execute a base R hypergeometric ORA fixture with local TERM2GENE files and write a testing-level standard result package. It does not use Reactome/MSigDB/full resources and does not enable report-ready output.
 
+Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -78,6 +80,7 @@ Acceptance:
 - The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for first lite worker.**
+- Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 
@@ -106,10 +109,25 @@ Scope:
 - Keep clinical conclusion disabled.
 - Require standard result package outputs.
 
+Status: started with base R lite fixture.
+
+Completed:
+
+- Survival `mock` remains available without R.
+- Survival `lite` can run a fixed KM/log-rank fixture through `analysis/runners/run_module.R`.
+- Standard result package includes `result.json`, `provenance.json`, `tables/lite_km_curve.tsv`, `tables/lite_logrank_result.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
+- Clinical conclusion remains disabled.
+
+Remaining:
+
+- Migrate existing controlled KM/Cox runtime behind the standard worker.
+- Add univariate and multivariate clinical association lite workers.
+- Keep full clinical analysis blocked until environment/resource locks are approved.
+
 Acceptance:
 
 - `mock` passes without R.
-- `lite` passes with lightweight R packages/data.
+- `lite` passes with lightweight R packages/data. **Completed for survival fixture only.**
 - `full` blocked until container/renv is approved.
 
 ## Phase R4: DEG R Worker Alignment
