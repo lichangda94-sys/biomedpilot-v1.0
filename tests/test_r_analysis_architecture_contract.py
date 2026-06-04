@@ -80,7 +80,7 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
         assert modes["mock"]["supported"] is True
         assert (ROOT / modes["mock"]["fixture_input"]).is_file()
         assert (ROOT / modes["mock"]["fixture_output_package"]).is_dir()
-        if module_id in {"deg", "enrichment", "survival", "univariate", "multivariate", "immune_infiltration", "docking", "molecular_dynamics"}:
+        if module_id in {"deg", "enrichment", "survival", "univariate", "multivariate", "immune_infiltration", "spatial_transcriptomics", "docking", "molecular_dynamics"}:
             assert modes["lite"]["supported"] is True
             assert modes["lite"]["worker_backend"] == "rscript"
             assert (ROOT / modes["lite"]["fixture_input"]).is_file()

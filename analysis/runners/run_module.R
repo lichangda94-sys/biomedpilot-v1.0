@@ -160,6 +160,12 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "immune_infiltration" && mode == "lite" && table_file == "lite_immune_scores.tsv") {
     return("lite_immune_infiltration_score_table")
   }
+  if (module_id == "spatial_transcriptomics" && mode == "lite" && table_file == "lite_spatial_spot_metrics.tsv") {
+    return("lite_spatial_transcriptomics_spot_metrics_table")
+  }
+  if (module_id == "spatial_transcriptomics" && mode == "lite" && table_file == "lite_spatial_qc_summary.tsv") {
+    return("lite_spatial_transcriptomics_qc_summary_table")
+  }
   if (module_id == "docking" && mode == "lite" && table_file == "lite_docking_command_manifest.tsv") {
     return("lite_docking_external_tool_command_manifest")
   }
@@ -172,6 +178,9 @@ table_artifact_type <- function(module_id, mode, table_file) {
 plot_artifact_type <- function(module_id, mode, plot_file) {
   if (module_id == "immune_infiltration" && mode == "lite" && plot_file == "lite_immune_heatmap.svg") {
     return("lite_immune_infiltration_heatmap_svg")
+  }
+  if (module_id == "spatial_transcriptomics" && mode == "lite" && plot_file == "lite_spatial_spot_qc.svg") {
+    return("lite_spatial_transcriptomics_spot_qc_svg")
   }
   "analysis_plot"
 }
@@ -822,6 +831,151 @@ run_lite_immune_infiltration <- function() {
   quit(status = 0)
 }
 
+run_lite_spatial_transcriptomics <- function() {
+  expression_matrix_path <- resolve_input_path(read_string_field(input_text, "expression_matrix_path", ""))
+  coordinate_table_path <- resolve_input_path(read_string_field(input_text, "coordinate_table_path", ""))
+  blockers <- character(0)
+  if (expression_matrix_path == "" || !file.exists(expression_matrix_path)) {
+    blockers <- c(blockers, "lite_spatial_expression_matrix_missing")
+  }
+  if (coordinate_table_path == "" || !file.exists(coordinate_table_path)) {
+    blockers <- c(blockers, "lite_spatial_coordinate_table_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite spatial transcriptomics blocked because required fixture inputs are missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  expression <- read.delim(expression_matrix_path, stringsAsFactors = FALSE, check.names = FALSE)
+  coordinates <- read.delim(coordinate_table_path, stringsAsFactors = FALSE)
+  if (!("gene" %in% colnames(expression)) || ncol(expression) < 2) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_spatial_expression_matrix_schema_invalid"), c(), "Lite spatial transcriptomics blocked because expression matrix columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "spatial_expression_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  if (!all(c("spot_id", "x", "y") %in% colnames(coordinates))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_spatial_coordinate_table_schema_invalid"), c(), "Lite spatial transcriptomics blocked because coordinate table columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "spatial_coordinate_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  spot_ids <- setdiff(colnames(expression), "gene")
+  expression_values <- as.data.frame(lapply(expression[, spot_ids, drop = FALSE], as.numeric), check.names = FALSE)
+  coordinates$x <- as.numeric(coordinates$x)
+  coordinates$y <- as.numeric(coordinates$y)
+  if (any(is.na(as.matrix(expression_values))) || any(is.na(coordinates$x)) || any(is.na(coordinates$y))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_spatial_non_numeric_values"), c(), "Lite spatial transcriptomics blocked because fixture values are not numeric.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "spatial_non_numeric"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  expression_matrix <- as.matrix(expression_values)
+  if (any(expression_matrix < 0)) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_spatial_negative_counts"), c(), "Lite spatial transcriptomics blocked because expression counts contain negative values.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "spatial_negative_counts"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  missing_coordinates <- setdiff(spot_ids, as.character(coordinates$spot_id))
+  if (length(missing_coordinates) > 0) {
+    write_result(module_id, task_id, mode, "blocked", c(paste0("lite_spatial_coordinates_missing_for_spots:", paste(missing_coordinates, collapse = ","))), c(), "Lite spatial transcriptomics blocked because coordinates are missing for expression spots.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "spatial_coordinate_alignment_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  total_counts <- colSums(expression_matrix)
+  detected_genes <- colSums(expression_matrix > 0)
+  metrics <- data.frame(
+    spot_id = spot_ids,
+    total_counts = as.numeric(total_counts[spot_ids]),
+    detected_genes = as.numeric(detected_genes[spot_ids]),
+    method = "base_r_spot_qc_fixture",
+    spatial_interpretation = "not_generated",
+    stringsAsFactors = FALSE
+  )
+  metrics <- merge(metrics, coordinates[, c("spot_id", "x", "y")], by = "spot_id", all.x = TRUE, sort = FALSE)
+  metrics <- metrics[, c("spot_id", "x", "y", "total_counts", "detected_genes", "method", "spatial_interpretation")]
+  qc_summary <- data.frame(
+    metric = c("gene_count", "spot_count", "min_total_counts", "median_total_counts", "max_total_counts", "min_detected_genes", "median_detected_genes", "max_detected_genes"),
+    value = c(
+      nrow(expression),
+      length(spot_ids),
+      min(metrics$total_counts),
+      stats::median(metrics$total_counts),
+      max(metrics$total_counts),
+      min(metrics$detected_genes),
+      stats::median(metrics$detected_genes),
+      max(metrics$detected_genes)
+    ),
+    method = "base_r_spot_qc_fixture",
+    stringsAsFactors = FALSE
+  )
+  write.table(metrics, file = file.path(output_dir, "tables", "lite_spatial_spot_metrics.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  write.table(qc_summary, file = file.path(output_dir, "tables", "lite_spatial_qc_summary.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  plot_path <- file.path(output_dir, "plots", "lite_spatial_spot_qc.svg")
+  width <- 420
+  height <- 320
+  left_pad <- 60
+  top_pad <- 45
+  plot_width <- 300
+  plot_height <- 220
+  x_range <- range(metrics$x)
+  y_range <- range(metrics$y)
+  if (diff(x_range) == 0) {
+    x_range <- x_range + c(-0.5, 0.5)
+  }
+  if (diff(y_range) == 0) {
+    y_range <- y_range + c(-0.5, 0.5)
+  }
+  count_range <- range(metrics$total_counts)
+  if (diff(count_range) == 0) {
+    count_range <- count_range + c(-0.5, 0.5)
+  }
+  scale_x <- function(value) left_pad + (value - x_range[[1]]) / diff(x_range) * plot_width
+  scale_y <- function(value) top_pad + plot_height - (value - y_range[[1]]) / diff(y_range) * plot_height
+  scale_radius <- function(value) 7 + (value - count_range[[1]]) / diff(count_range) * 9
+  palette <- c("#2b8cbe", "#7bccc4", "#a8ddb5", "#edf8b1", "#f03b20")
+  svg_lines <- c(
+    paste0('<svg xmlns="http://www.w3.org/2000/svg" width="', width, '" height="', height, '" viewBox="0 0 ', width, ' ', height, '">'),
+    '<rect width="100%" height="100%" fill="#ffffff"/>',
+    '<text x="16" y="24" font-family="Arial" font-size="16" font-weight="700">Lite spatial spot QC</text>',
+    paste0('<rect x="', left_pad, '" y="', top_pad, '" width="', plot_width, '" height="', plot_height, '" fill="#f8fafc" stroke="#cbd5e1"/>')
+  )
+  for (index in seq_len(nrow(metrics))) {
+    row <- metrics[index, ]
+    color_index <- max(1, min(length(palette), 1 + floor((row$total_counts - count_range[[1]]) / diff(count_range) * (length(palette) - 1))))
+    svg_lines <- c(svg_lines, paste0('<circle cx="', round(scale_x(row$x), 1), '" cy="', round(scale_y(row$y), 1), '" r="', round(scale_radius(row$total_counts), 1), '" fill="', palette[[color_index]], '" stroke="#1e293b" stroke-width="1"/>'))
+    svg_lines <- c(svg_lines, paste0('<text x="', round(scale_x(row$x), 1), '" y="', round(scale_y(row$y) + 4, 1), '" text-anchor="middle" font-family="Arial" font-size="10" fill="#111827">', row$spot_id, '</text>'))
+  }
+  svg_lines <- c(
+    svg_lines,
+    '<text x="16" y="292" font-family="Arial" font-size="11" fill="#475569">Base R fixture only. No Seurat, CellChat, clustering, deconvolution, spatial domain calling, or report-ready interpretation.</text>',
+    "</svg>"
+  )
+  writeLines(svg_lines, plot_path)
+  writeLines(c(
+    "# Lite spatial transcriptomics limitations",
+    "",
+    "This is a lightweight fixture spot QC and coordinate preview package for worker and package-contract validation.",
+    "It does not use Seurat, CellChat, spacexr, spatial reference resources, or large databases.",
+    "It does not generate clustering, deconvolution, spatial domain calling, cell-cell communication, clinical interpretation, or report-ready spatial analysis."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "base_r_fixture_only_no_heavy_spatial_packages", "spatial_interpretation_not_generated"),
+    "Lite spatial transcriptomics spot QC completed with base R fixture data."
+  )
+  write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "heavy_spatial_packages=not_used", "spatial_interpretation=not_generated"), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
 run_lite_docking_adapter_contract <- function() {
   receptor_path <- resolve_input_path(read_string_field(input_text, "receptor_path", ""))
   ligand_path <- resolve_input_path(read_string_field(input_text, "ligand_path", ""))
@@ -1042,6 +1196,10 @@ if (mode == "lite" && module_id == "multivariate") {
 
 if (mode == "lite" && module_id == "immune_infiltration") {
   run_lite_immune_infiltration()
+}
+
+if (mode == "lite" && module_id == "spatial_transcriptomics") {
+  run_lite_spatial_transcriptomics()
 }
 
 if (mode == "lite" && module_id == "docking") {

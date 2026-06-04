@@ -109,6 +109,20 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
             "clinical_conclusion_policy": "not_generated",
         }
         payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
+    if module_id == "spatial_transcriptomics" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-spatial-lite-input",
+            "source_dataset_id": "fixture-spatial-lite-dataset",
+            "expression_matrix_path": "analysis/fixtures/inputs/spatial_transcriptomics/lite_expression.tsv",
+            "coordinate_table_path": "analysis/fixtures/inputs/spatial_transcriptomics/lite_coordinates.tsv",
+        }
+        payload["parameters"] = {
+            "analysis_family": "spatial_transcriptomics",
+            "method": "base_r_spot_qc_fixture",
+            "execute_heavy_spatial_methods": False,
+            "spatial_interpretation_policy": "not_generated_in_lite_mode",
+        }
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-spatial-lite-contract"}
     if module_id == "docking" and mode == "lite":
         payload["inputs"] = {
             "input_package_id": "fixture-docking-lite-input",
@@ -602,6 +616,48 @@ def test_docking_lite_mode_writes_external_tool_command_manifest_without_executi
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 0
+
+
+def test_spatial_transcriptomics_lite_mode_writes_base_r_qc_package_without_heavy_spatial_packages(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite", module_id="spatial_transcriptomics"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    spot_metrics = (package_dir / "tables" / "lite_spatial_spot_metrics.tsv").read_text(encoding="utf-8")
+    qc_summary = (package_dir / "tables" / "lite_spatial_qc_summary.tsv").read_text(encoding="utf-8")
+    svg = (package_dir / "plots" / "lite_spatial_spot_qc.svg").read_text(encoding="utf-8")
+    readme = (package_dir / "reports" / "README_lite.md").read_text(encoding="utf-8")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    assert result["status"] == "passed"
+    assert result_json["module_id"] == "spatial_transcriptomics"
+    assert result_json["mode"] == "lite"
+    assert result_json["result_semantics"] == "testing_level"
+    assert "base_r_fixture_only_no_heavy_spatial_packages" in result_json["warnings"]
+    assert "spatial_interpretation_not_generated" in result_json["warnings"]
+    assert "spot_A" in spot_metrics
+    assert "total_counts" in spot_metrics.splitlines()[0]
+    assert "gene_count" in qc_summary
+    assert "Lite spatial spot QC" in svg
+    assert "No Seurat" in svg
+    assert "does not use Seurat, CellChat, spacexr" in readme
+    assert provenance["runtime"]["package_versions"] == {}  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["report_ready_eligible"] is False
+    assert catalog["rows"][0]["module_id"] == "spatial_transcriptomics"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 2
+    assert catalog["rows"][0]["artifact_counts"]["plots"] == 1
 
 
 def test_molecular_dynamics_lite_mode_writes_gromacs_command_manifest_without_execution(tmp_path: Path) -> None:

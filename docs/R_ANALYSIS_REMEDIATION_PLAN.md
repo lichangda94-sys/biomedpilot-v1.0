@@ -89,6 +89,8 @@ Update: multivariate clinical association now has a `lite` standard worker path.
 
 Update: immune infiltration now has a `lite` standard worker path. `run_module.R` can execute base R signature mean scoring on fixed local expression/signature fixture data and write a testing-level standard result package with a real SVG heatmap fixture. It does not use GSVA, CellChat, Seurat, large signature databases, report-ready immune interpretation, diagnosis, prognosis, or treatment guidance.
 
+Update: spatial transcriptomics now has a `lite` standard worker path. `run_module.R` can execute base R spot QC and coordinate SVG preview on fixed local expression/coordinate fixture data and write a testing-level standard result package. It does not use Seurat, CellChat, spacexr, spatial references, clustering, deconvolution, spatial domain calling, cell-cell communication, or report-ready spatial interpretation.
+
 Update: docking now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local receptor/ligand/config fixtures and write `tables/lite_docking_command_manifest.tsv` plus provenance and limitations. It does not execute AutoDock Vina, does not generate docking poses/scores/affinities, and does not enable full molecular docking.
 
 Update: molecular dynamics now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local topology/coordinate/mdp fixtures and write `tables/lite_md_command_manifest.tsv` plus provenance and limitations. It does not execute GROMACS, does not generate trajectory/energy/RMSD/simulation outputs, and does not enable full molecular dynamics.
@@ -114,6 +116,7 @@ Acceptance:
 - Univariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for third lite worker.**
 - Multivariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for fourth lite worker.**
 - Immune infiltration can run `lite` mode through the standard R worker using fixed local expression/signature fixture data and generate a real SVG heatmap fixture. **Completed for fifth lite worker.**
+- Spatial transcriptomics can run `lite` mode through the standard R worker using fixed local expression/coordinate fixture data and generate a real SVG spot QC preview. **Completed for sixth lite worker.**
 - Docking can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing AutoDock Vina. **Completed for docking adapter boundary fixture.**
 - Molecular dynamics can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing GROMACS. **Completed for MD adapter boundary fixture.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
@@ -340,6 +343,9 @@ Status:
 - Immune infiltration `lite` can run fixed base R signature mean scoring through `analysis/runners/run_module.R`.
 - Immune infiltration standard result package includes `result.json`, `provenance.json`, `tables/lite_immune_scores.tsv`, `plots/lite_immune_heatmap.svg`, `reports/README_lite.md`, and `logs/worker.log`.
 - Full immune analysis remains blocked until GSVA/CellChat/Seurat/signature resource locks and isolated worker environments are approved.
+- Spatial transcriptomics `lite` can run fixed base R spot QC and coordinate SVG preview through `analysis/runners/run_module.R`.
+- Spatial transcriptomics standard result package includes `result.json`, `provenance.json`, `tables/lite_spatial_spot_metrics.tsv`, `tables/lite_spatial_qc_summary.tsv`, `plots/lite_spatial_spot_qc.svg`, `reports/README_lite.md`, and `logs/worker.log`.
+- Full spatial analysis remains blocked until Seurat/CellChat/spacexr/spatial reference locks and isolated worker environments are approved.
 - Docking `lite` can run a command-manifest adapter contract through `analysis/runners/run_module.R` without executing AutoDock Vina or generating scientific docking results.
 - Molecular dynamics `lite` can run a command-manifest adapter contract through `analysis/runners/run_module.R` without executing GROMACS or generating trajectory, energy, RMSD, simulation metrics, or scientific MD results.
 

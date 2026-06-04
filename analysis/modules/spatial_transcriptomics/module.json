@@ -7,7 +7,7 @@
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
     "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/spatial_transcriptomics/mock_result_package"},
-    "lite": {"supported": false, "blocker": "lite_spatial_worker_not_defined"},
+    "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-spatial-full", "result_semantics": "testing_level", "capability": "base_r_spatial_spot_qc_fixture_no_heavy_spatial_packages", "heavy_spatial_packages": "not_used_in_lite_mode"},
     "full": {"supported": false, "blocker": "r_spatial_full_container_not_available"}
   },
   "environment": {
