@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import os
-import subprocess
-import sys
 from pathlib import Path
 
 from labtools.cell_culture import (
@@ -77,6 +75,9 @@ def test_migration_streak_roi_macro_is_software_driven_and_resets_roi_state(tmp_
     assert "roiManager(\"reset\");" in bundle.macro_text
     assert "no_streak_roi" in bundle.macro_text
     assert "residual_streak_area_px,residual_fraction" in bundle.macro_text
+    assert "streak_polarity = \"bright\";" in render_cell_imagej_macro("migration_streak_roi", tmp_path / "images", tmp_path / "out").macro_text
+    assert "streak_blur_sigma = 2.0;" in render_cell_imagej_macro("migration_streak_roi", tmp_path / "images", tmp_path / "out").macro_text
+    assert "streak_min_area_px = 500;" in render_cell_imagej_macro("migration_streak_roi", tmp_path / "images", tmp_path / "out").macro_text
     assert "signal_max_area_px = 9000;" in bundle.macro_text
 
 
@@ -108,6 +109,9 @@ def test_roi_intensity_macro_uses_software_roi_zip_and_background_correction(tmp
     assert "getDirectory(" not in bundle.macro_text
     assert "roiManager(\"Open\", roiZip);" in bundle.macro_text
     assert "background_roi_index = 2;" in bundle.macro_text
+    assert "roi_original_name" in bundle.macro_text
+    assert "getRoiOriginalName(roiIndex)" in bundle.macro_text
+    assert "ROI_\" + (roiIndex + 1)" in bundle.macro_text
     assert "corrected_integrated_density" in bundle.macro_text
     assert "missing_roi_zip" in bundle.macro_text
 
@@ -157,30 +161,3 @@ def test_run_cell_imagej_macro_invokes_explicit_executable(tmp_path: Path) -> No
     assert "--headless" in logged_args
     assert str(result.macro_path) in logged_args
     assert os.access(result.macro_path, os.R_OK)
-
-
-def test_cell_imagej_cli_macro_accepts_parameter_overrides(tmp_path: Path) -> None:
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "labtools",
-            "cell-imagej",
-            "macro",
-            "wound_scratch",
-            "--input-dir",
-            str(tmp_path / "images"),
-            "--output-dir",
-            str(tmp_path / "out"),
-            "--param",
-            "threshold_method=Otsu",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-
-    macro_path = tmp_path / "out" / "macros" / "wound_scratch_analysis.ijm"
-    assert completed.returncode == 0
-    assert str(macro_path) in completed.stdout
-    assert "threshold_method = \"Otsu\";" in macro_path.read_text(encoding="utf-8")

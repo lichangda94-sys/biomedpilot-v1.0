@@ -143,9 +143,8 @@
 |---|---|---|
 | `labtools.pcr_qpcr` | `stable_for_ui` | 目前只公开 qPCR mix。 |
 | `labtools.cell_culture` | `stable_for_ui` | 公开 cell seeding，并开放七类细胞图片实验 ImageJ/Fiji macro 工作流。 |
-| `labtools.western_blot` ImageJ APIs | `stable_for_ui` | 公开 Dot blot 固定网格强度测量 macro 工作流；作为蛋白图像入口，不混入细胞实验入口。 |
 | `labtools.elisa` | `planned_shell_only` | 仅预留命名空间，`__all__` 为空。 |
-| ImageJ/Fiji APIs | `adapter_ready_for_image_workflows` | 可用于划痕实验、Transwell、通用颗粒、ROI 强度、迁移 / 划痕 ROI、骨架形态、免疫组化和 Dot blot 图片处理的 macro 生成和 ImageJ/Fiji 调用；实验记录保存仍未接。 |
+| ImageJ/Fiji APIs | `adapter_ready_for_cell_image_workflows` | 可用于划痕实验、Transwell、通用颗粒、ROI 强度、迁移 / 划痕 ROI、骨架形态和免疫组化图片处理的 macro 生成和 ImageJ/Fiji 调用；实验记录保存仍未接。 |
 
 ## 4. UI 调用规则
 
@@ -162,8 +161,10 @@
 
 用户输入中记录的旧基线是：
 
-- `python3 -m pytest`: `224 passed`
+- `python3 -m pytest`: `219 passed, 1 skipped`
 - `python3 -m labtools --smoke-test`: passed
+
+跳过项为 Fiji/ImageJ 真实样本骨架验证门；Integration 测试环境提供 Fiji/ImageJ 可执行文件时会实际运行 `cell_skeleton_morphology` 合成样本验证。
 
 当前 checkout 已新增公式展示元数据测试，本阶段验证结果为：
 

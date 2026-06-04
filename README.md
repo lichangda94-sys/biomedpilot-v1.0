@@ -25,7 +25,6 @@ The current package includes:
 - Western Blot loading calculator
 - Western Blot protein loading helpers
 - Western Blot loading record export helpers
-- Protein assay ImageJ/Fiji dot blot fixed-grid intensity workflow
 - BCA assay helper for plate parsing, annotations, curve fitting, and review warnings
 - SDS-PAGE gel template helper for user-defined gel templates and batch calculations
 - Package-level smoke test via `python -m labtools --smoke-test`
@@ -44,40 +43,34 @@ LabTools can generate ImageJ/Fiji macros for seven cell experiment image workflo
 - `cell_skeleton_morphology`: batch binary skeleton generation and Fiji Analyze Skeleton output export.
 - `immunohistochemistry`: batch positive-area fraction and mean-gray summary for IHC/DAB images.
 
-Generate a macro only:
+Generate a macro from application code:
 
-```bash
-python3 -m labtools cell-imagej macro wound_scratch \
-  --input-dir ./images \
-  --output-dir ./imagej-output \
-  --param threshold_method=Otsu
+```python
+from labtools.cell_culture import write_cell_imagej_macro
+
+bundle = write_cell_imagej_macro(
+    "wound_scratch",
+    "./images",
+    "./imagej-output",
+    parameters={"threshold_method": "Otsu"},
+)
 ```
 
-Generate and run with local ImageJ/Fiji:
+Generate and run with local ImageJ/Fiji from application code:
 
-```bash
-python3 -m labtools cell-imagej run transwell \
-  --input-dir ./images \
-  --output-dir ./imagej-output \
-  --imagej /Applications/Fiji.app \
-  --param min_particle_area_px=40
+```python
+from labtools.cell_culture import run_cell_imagej_macro
+
+result = run_cell_imagej_macro(
+    "transwell",
+    "./images",
+    "./imagej-output",
+    imagej_executable="/Applications/Fiji.app",
+    parameters={"min_particle_area_px": 40},
+)
 ```
 
 Generated image-analysis CSV files require human review against the original images, microscope settings, staining conditions, and laboratory SOPs before scientific use.
-
-## Protein ImageJ/Fiji Workflows
-
-LabTools also exposes protein assay image workflows through `protein-imagej`:
-
-- `dot_blot_grid`: fixed-grid circular ROI measurement for dot blot / protein array images.
-
-```bash
-python3 -m labtools protein-imagej macro dot_blot_grid \
-  --input-dir ./dot-blot-images \
-  --output-dir ./imagej-output \
-  --param rows=8 \
-  --param columns=12
-```
 
 ## Safety Boundaries
 
@@ -111,9 +104,11 @@ python -m labtools --smoke-test
 Current known validation status:
 
 ```text
-python3 -m pytest: 224 passed
+python3 -m pytest: 219 passed, 1 skipped
 python3 -m labtools --smoke-test: passed
 ```
+
+The skipped test is the Fiji/ImageJ real-sample skeleton validation gate. It runs a synthetic sample through `cell_skeleton_morphology` when a Fiji/ImageJ executable is available.
 
 ## Project Structure
 

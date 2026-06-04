@@ -10,7 +10,7 @@ BioMedPilot-LabTools 是 **BioMedPilot / 医研智析** 的开源实验工具模
 
 Developer Preview / 开发预览版。
 
-当前代码已经作为独立公开包整理，支持本地安装、测试、smoke test，以及面向细胞图片实验和蛋白图像实验的 ImageJ/Fiji macro 生成与调用封装。
+当前代码已经作为独立公开包整理，支持本地安装、测试、smoke test，以及面向细胞图片实验的 ImageJ/Fiji macro 生成与调用封装。
 
 当前验证状态：
 
@@ -22,9 +22,11 @@ python -m labtools --smoke-test
 最近公开包验证结果：
 
 ```text
-python3 -m pytest: 224 passed
+python3 -m pytest: 219 passed, 1 skipped
 python3 -m labtools --smoke-test: passed
 ```
+
+跳过项是 Fiji/ImageJ 真实样本骨架验证门；当环境中存在 Fiji/ImageJ 可执行文件时，会用合成样本实际运行 `cell_skeleton_morphology`。
 
 ## 功能范围
 
@@ -45,7 +47,6 @@ python3 -m labtools --smoke-test: passed
 - qPCR mix calculator
 - Cell seeding calculator
 - 细胞实验图片处理 ImageJ/Fiji macro 工作流（划痕实验、Transwell 实验、通用颗粒识别、ROI 强度测量、迁移 / 划痕 ROI、细胞骨架形态、免疫组化 / IHC-DAB）
-- 蛋白图像 ImageJ/Fiji macro 工作流（Dot blot 固定网格强度测量）
 - 单位换算工具
 - package smoke test
 - 测试用例
@@ -62,42 +63,34 @@ python3 -m labtools --smoke-test: passed
 - `cell_skeleton_morphology`：批量生成二值骨架并调用 Fiji Analyze Skeleton，导出 summary / branch CSV 路径。
 - `immunohistochemistry`：免疫组化 / IHC-DAB 图片批量估算阳性染色面积比例和平均灰度。
 
-只导出 macro：
+从应用代码导出 macro：
 
-```bash
-python3 -m labtools cell-imagej macro wound_scratch \
-  --input-dir ./images \
-  --output-dir ./imagej-output \
-  --param threshold_method=Otsu
+```python
+from labtools.cell_culture import write_cell_imagej_macro
+
+bundle = write_cell_imagej_macro(
+    "wound_scratch",
+    "./images",
+    "./imagej-output",
+    parameters={"threshold_method": "Otsu"},
+)
 ```
 
-调用本机 ImageJ/Fiji 运行：
+从应用代码调用本机 ImageJ/Fiji 运行：
 
-```bash
-python3 -m labtools cell-imagej run transwell \
-  --input-dir ./images \
-  --output-dir ./imagej-output \
-  --imagej /Applications/Fiji.app \
-  --param min_particle_area_px=40
+```python
+from labtools.cell_culture import run_cell_imagej_macro
+
+result = run_cell_imagej_macro(
+    "transwell",
+    "./images",
+    "./imagej-output",
+    imagej_executable="/Applications/Fiji.app",
+    parameters={"min_particle_area_px": 40},
+)
 ```
 
 这些工作流用于科研图片处理辅助。阈值、ROI、批量结果和 CSV 输出必须由实验人员结合显微镜设置、染色条件、实验室 SOP 和原始图片人工复核。
-
-## 蛋白图像处理 / ImageJ-Fiji
-
-当前 `labtools.western_blot` 已开放：
-
-- `dot_blot_grid`：对 Dot blot / protein array 图片按固定点阵生成圆形 ROI，批量测量平均灰度和积分强度。
-
-只导出 macro：
-
-```bash
-python3 -m labtools protein-imagej macro dot_blot_grid \
-  --input-dir ./dot-blot-images \
-  --output-dir ./imagej-output \
-  --param rows=8 \
-  --param columns=12
-```
 
 ## 安装与开发
 
