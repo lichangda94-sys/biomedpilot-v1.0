@@ -53,6 +53,7 @@ def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report
     assert entry["report_artifacts"] == []
     assert entry["report_ready_eligible"] is False
     assert entry["validation_status"] == "passed"
+    assert any(item["artifact_type"] == "analysis_worker_invocation_manifest" for item in entry["log_artifacts"])
     assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
     catalog = build_standard_analysis_package_catalog(tmp_path)
     assert catalog["status"] == "passed"
@@ -89,6 +90,7 @@ def test_controlled_gsea_r_fixture_registers_formal_result_without_plot_or_repor
     assert entry["plot_artifacts"] == []
     assert entry["report_artifacts"] == []
     assert entry["report_ready_eligible"] is False
+    assert any(item["artifact_type"] == "analysis_worker_invocation_manifest" for item in entry["log_artifacts"])
     assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
     catalog = build_standard_analysis_package_catalog(tmp_path)
     assert catalog["package_count"] == 1

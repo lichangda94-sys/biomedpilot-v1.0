@@ -424,6 +424,11 @@ def _register_result(root: Path, manifest: dict[str, Any], score_path: Path, cov
         log_artifacts=(
             {"artifact_type": "immune_scoring_manifest", "path": str(Path(str(score_path)).with_name("immune_scoring_manifest.json").relative_to(root))},
             {"artifact_type": "immune_scoring_receipt", "path": str(Path(str(score_path)).with_name("immune_scoring_receipt.json").relative_to(root))},
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": str((standard_package_dir / "logs" / "worker_invocation.json").relative_to(root)),
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            },
         ),
         failure_reason="",
         created_at=str(manifest.get("generated_at") or now),

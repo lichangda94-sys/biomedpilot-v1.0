@@ -144,7 +144,14 @@ def _register_standard_correlation_result(root: Path, summary: dict[str, object]
         validation_status="passed",
         warnings=("testing_level_local_pearson_correlation", "clinical_conclusion_not_generated"),
         blockers=(),
-        log_artifacts=({"artifact_type": "correlation_summary", "path": _relative_or_absolute(root, summary_path)},),
+        log_artifacts=(
+            {"artifact_type": "correlation_summary", "path": _relative_or_absolute(root, summary_path)},
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": _relative_or_absolute(root, standard_package_dir / "logs" / "worker_invocation.json"),
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            },
+        ),
         failure_reason="",
         created_at=now,
         updated_at=now,

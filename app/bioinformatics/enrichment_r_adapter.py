@@ -189,7 +189,14 @@ def _register_enrichment_result(
         validation_status="passed",
         warnings=tuple(str(item) for item in dependency_snapshot.get("warnings", []) or []),
         blockers=(),
-        log_artifacts=({"artifact_type": "controlled_enrichment_r_run_log", "path": str(log_path.relative_to(root))},),
+        log_artifacts=(
+            {"artifact_type": "controlled_enrichment_r_run_log", "path": str(log_path.relative_to(root))},
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": str((standard_package_dir / "logs" / "worker_invocation.json").relative_to(root)),
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            },
+        ),
         failure_reason="",
         created_at=now,
         updated_at=now,

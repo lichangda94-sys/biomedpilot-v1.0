@@ -64,6 +64,7 @@ def test_controlled_multifactor_limma_fixture_registers_formal_result(tmp_path: 
     assert entry["plot_artifacts"] == []
     assert entry["report_artifacts"] == []
     assert entry["report_ready_eligible"] is False
+    assert any(item["artifact_type"] == "analysis_worker_invocation_manifest" for item in entry["log_artifacts"])
     assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
     assert validate_multifactor_deg_result_index_entry(entry)["status"] == "passed"
     catalog = build_standard_analysis_package_catalog(tmp_path)

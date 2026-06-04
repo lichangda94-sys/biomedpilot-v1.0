@@ -90,6 +90,7 @@ def test_scoring_outputs_manifest_receipt_and_result_index(tmp_path: Path) -> No
     entry = next(entry for entry in index["results"] if entry["result_id"] == result.run_id)
     assert entry["result_semantics"] == "testing_level"
     assert entry["report_ready_eligible"] is False
+    assert any(item["artifact_type"] == "analysis_worker_invocation_manifest" for item in entry["log_artifacts"])
     assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
     catalog = build_standard_analysis_package_catalog(tmp_path)
     row = next(item for item in catalog["rows"] if item["result_id"] == result.run_id)

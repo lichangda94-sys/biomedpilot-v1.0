@@ -143,7 +143,14 @@ def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[s
         validation_status="passed",
         warnings=tuple(str(item) for item in bundle.get("warnings", []) or []),
         blockers=(),
-        log_artifacts=({"artifact_type": "multifactor_deg_run_log", "path": str(log_path.relative_to(root))},),
+        log_artifacts=(
+            {"artifact_type": "multifactor_deg_run_log", "path": str(log_path.relative_to(root))},
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": str((standard_package_dir / "logs" / "worker_invocation.json").relative_to(root)),
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            },
+        ),
         failure_reason="",
         created_at=now,
         updated_at=now,
@@ -259,7 +266,14 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
         validation_status="passed",
         warnings=tuple(str(item) for item in bundle.get("warnings", []) or []),
         blockers=(),
-        log_artifacts=({"artifact_type": "multifactor_deg_run_log", "path": str(log_path.relative_to(root))},),
+        log_artifacts=(
+            {"artifact_type": "multifactor_deg_run_log", "path": str(log_path.relative_to(root))},
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": str((standard_package_dir / "logs" / "worker_invocation.json").relative_to(root)),
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            },
+        ),
         failure_reason="",
         created_at=now,
         updated_at=now,
@@ -375,7 +389,14 @@ def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_
         validation_status="passed",
         warnings=tuple(str(item) for item in bundle.get("warnings", []) or []),
         blockers=(),
-        log_artifacts=({"artifact_type": "multifactor_deg_run_log", "path": str(log_path.relative_to(root))},),
+        log_artifacts=(
+            {"artifact_type": "multifactor_deg_run_log", "path": str(log_path.relative_to(root))},
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": str((standard_package_dir / "logs" / "worker_invocation.json").relative_to(root)),
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            },
+        ),
         failure_reason="",
         created_at=now,
         updated_at=now,

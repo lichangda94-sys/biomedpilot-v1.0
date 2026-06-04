@@ -60,6 +60,7 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     assert entry["report_ready_eligible"] is False
     assert entry["plot_artifacts"] == []
     assert entry["report_artifacts"] == []
+    assert any(item["artifact_type"] == "analysis_worker_invocation_manifest" for item in entry["log_artifacts"])
     assert (tmp_path / entry["output_artifacts"][0]["path"]).is_file()
     assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
     catalog = build_standard_analysis_package_catalog(tmp_path)
