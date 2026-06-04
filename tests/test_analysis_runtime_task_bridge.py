@@ -284,6 +284,34 @@ def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(
     assert len(detail["artifact_manifest"]["logs"]) == 2
 
 
+def test_standard_package_validation_blocks_missing_or_outside_declared_artifacts(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    result_path = package_dir / "result.json"
+    result_json = read_json(result_path)
+    result_json["tables"] = [
+        {"artifact_type": "valid_table", "path": "tables/mock_summary.tsv"},
+        {"artifact_type": "missing_table", "path": "tables/missing.tsv"},
+        {"artifact_type": "outside_table", "path": "../outside.tsv"},
+    ]
+    result_json["plots"] = [{"artifact_type": "wrong_group_plot", "path": "tables/mock_summary.tsv"}]
+    result_json["reports"] = ["not-an-artifact"]
+    result_path.write_text(json.dumps(result_json, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "declared_artifact_tables_1_file_missing" in validation["blockers"]
+    assert "declared_artifact_tables_2_path_outside_standard_group" in validation["blockers"]
+    assert "declared_artifact_plots_0_path_outside_standard_group" in validation["blockers"]
+    assert "declared_artifact_reports_0_invalid" in validation["blockers"]
+
+
 def test_task_bridge_standard_package_validation_requires_worker_invocation_manifest(tmp_path: Path) -> None:
     result = run_analysis_module_task(tmp_path, module_input(tmp_path))
     package_dir = Path(result["result_package_dir"])

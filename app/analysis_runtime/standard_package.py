@@ -112,6 +112,7 @@ def validate_standard_result_package(
         warnings.append("provenance_parameter_hash_missing")
     if not provenance.get("command"):
         warnings.append("provenance_command_missing")
+    blockers.extend(_declared_artifact_blockers(root, result))
     formal_blockers = _formal_package_provenance_blockers(result, provenance, expected_mode=expected_mode)
     blockers.extend(formal_blockers)
     blockers.extend(_analysis_environment_blockers(result, provenance, expected_mode=expected_mode))
@@ -167,6 +168,37 @@ def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict
     engine_name = str(engine.get("name") or "")
     if engine_name != "biomedpilot_standard_r_worker" and not worker_boundary.get("boundary_type"):
         blockers.append("formal_provenance_worker_boundary_missing")
+    return blockers
+
+
+def _declared_artifact_blockers(root: Path, result: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for group in ("tables", "plots", "reports"):
+        artifacts = result.get(group)
+        if artifacts is None:
+            continue
+        if not isinstance(artifacts, list):
+            blockers.append(f"declared_artifacts_{group}_invalid")
+            continue
+        for index, artifact in enumerate(artifacts):
+            if not isinstance(artifact, dict):
+                blockers.append(f"declared_artifact_{group}_{index}_invalid")
+                continue
+            declared_path = artifact.get("path")
+            if not isinstance(declared_path, str) or not declared_path.strip():
+                blockers.append(f"declared_artifact_{group}_{index}_path_missing")
+                continue
+            path = Path(declared_path)
+            if path.is_absolute():
+                blockers.append(f"declared_artifact_{group}_{index}_path_absolute")
+                continue
+            resolved = (root / path).resolve()
+            group_root = (root / group).resolve()
+            if not _is_relative_to(resolved, group_root):
+                blockers.append(f"declared_artifact_{group}_{index}_path_outside_standard_group")
+                continue
+            if not resolved.is_file():
+                blockers.append(f"declared_artifact_{group}_{index}_file_missing")
     return blockers
 
 
@@ -234,6 +266,14 @@ def _analysis_environment_blockers(result: dict[str, Any], provenance: dict[str,
         if status == "blocked_full_mode_resource_or_tool_lock" and not resource_lock_status.get("blockers"):
             blockers.append("analysis_environment_resource_lock_blockers_missing")
     return blockers
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 def _worker_invocation_blockers(

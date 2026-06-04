@@ -131,6 +131,8 @@ Update: the standard package catalog now exposes `worker_invocation`, `worker_ba
 
 Update: `build_standard_analysis_package_detail()` now exposes a UI-safe `artifact_manifest` for declared standard-package tables, plots, reports, and package logs. Catalog rows include this manifest so Analysis Center can discover artifact paths from the standard package contract instead of module-private output conventions.
 
+Update: standard package validation now blocks malformed, missing, absolute, package-external, or wrong-group `tables`/`plots`/`reports` artifact declarations. This turns artifact manifest drift into a contract blocker instead of leaving UI consumers to discover missing files later.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -149,6 +151,7 @@ Acceptance:
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
 - Analysis Center can read worker invocation diagnostics from the standard package catalog. **Completed for task-bridge standard packages.**
 - Analysis Center can read declared standard-package artifact paths for tables, plots, reports, and logs without module-private output coupling. **Completed for catalog artifact manifest.**
+- Standard package validation blocks declared table/plot/report artifacts that are missing or outside their standard package directories. **Completed for artifact declaration gate.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
