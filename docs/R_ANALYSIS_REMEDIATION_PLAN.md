@@ -200,6 +200,7 @@ Completed:
 - Standard result package includes `result.json`, `provenance.json`, `tables/lite_km_curve.tsv`, `tables/lite_logrank_result.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
 - Controlled KM/log-rank formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
 - Controlled Cox univariate formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
+- Controlled KM/log-rank and Cox univariate sidecars now write `logs/worker_invocation.json` and register it in result index v2 as `analysis_worker_invocation_manifest`.
 - Univariate `mock` remains available without R.
 - Univariate `lite` can run a fixed base R clinical association fixture through `analysis/runners/run_module.R`.
 - Univariate standard result package includes `result.json`, `provenance.json`, `tables/lite_univariate_association.tsv`, `reports/README_lite.md`, and `logs/worker.log`.

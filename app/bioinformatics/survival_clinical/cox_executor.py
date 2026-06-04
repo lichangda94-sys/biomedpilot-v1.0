@@ -90,7 +90,14 @@ def run_controlled_cox_univariate(project_root: str | Path, parameter_manifest: 
         validation_status="passed",
         warnings=tuple(warnings),
         blockers=(),
-        log_artifacts=({"artifact_type": "task_run_log", "path": str(log_path)},),
+        log_artifacts=(
+            {"artifact_type": "task_run_log", "path": str(log_path)},
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": str((standard_package_dir / "logs" / "worker_invocation.json").relative_to(root)),
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            },
+        ),
         report_ready_eligible=False,
     ).to_dict()
     entry["survival_clinical_input_id"] = str(parameter_manifest.get("survival_clinical_input_id") or "")

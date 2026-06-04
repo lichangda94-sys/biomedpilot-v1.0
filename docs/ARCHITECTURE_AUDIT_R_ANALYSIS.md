@@ -116,6 +116,7 @@ Existing controlled survival/clinical executors now write a standard result pack
 - The sidecars include `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
 - The sidecar provenance records `worker_boundary.boundary_type=legacy_service_adapter_sidecar` and `migration_status=sidecar_only_not_isolated_standard_worker`.
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
+- The sidecar also writes `logs/worker_invocation.json` and the current result index registers it as `analysis_worker_invocation_manifest`.
 - This is a package-contract migration step, not a claim that survival/clinical execution has been fully migrated into the isolated standard worker, and it does not enable clinical conclusions, risk grouping, plot artifacts, or report-ready output.
 
 Existing exploratory immune / TME scoring now writes a standard result package sidecar:
@@ -344,7 +345,7 @@ New architecture boundary files:
 - Added docking and molecular dynamics lite external-tool adapter contract fixtures that produce standard command-manifest packages without executing AutoDock Vina/GROMACS or generating scientific docking/MD results.
 - Added controlled enrichment ORA/GSEA standard result package sidecars registered in result index v2.
 - Added controlled DEG standard result package sidecars for successful two-group Python formal DEG and multi-factor limma/DESeq2/edgeR fixture results, registered in result index v2 without enabling new execution, plot/report-ready output, or clinical interpretation.
-- Added controlled KM/log-rank and Cox univariate standard result package sidecars registered in result index v2 without enabling clinical conclusions, risk grouping, plot/report-ready output, or isolated worker claims.
+- Added controlled KM/log-rank and Cox univariate standard result package sidecars plus indexed worker invocation manifests registered in result index v2 without enabling clinical conclusions, risk grouping, plot/report-ready output, or isolated worker claims.
 - Added exploratory immune/TME scoring standard result package sidecars registered in result index v2 without enabling GSVA/CellChat/Seurat, report-ready output, clinical interpretation, or isolated worker claims.
 - Added local Pearson correlation standard result package sidecars registered in result index v2 without enabling report-ready output, causal interpretation, clinical interpretation, or isolated worker claims.
 - Added per-module manifest scaffolds for all target modules.
