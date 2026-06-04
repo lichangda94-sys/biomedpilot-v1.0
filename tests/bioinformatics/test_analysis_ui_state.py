@@ -146,6 +146,11 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert row["mode"] == "mock"
     assert row["result_semantics"] == "testing_level"
     assert row["validation_status"] == "passed"
+    assert row["worker_backend"] == "python_fixture"
+    assert row["worker_invocation_status"] == "fixture_copy_completed"
+    assert row["worker_boundary_type"] == "analysis_task_bridge_fixture"
+    assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
+    assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
     assert row["artifact_counts"]["tables"] == 1
     assert state["developer_diagnostics"]["standard_analysis_package_catalog"]["package_count"] == 1
     result_row = next(item for item in state["result_rows"] if item["result_id"] == "analysis-package-enrichment-mock-task")

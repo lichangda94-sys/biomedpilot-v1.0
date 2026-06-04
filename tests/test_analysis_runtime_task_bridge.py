@@ -220,6 +220,12 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["validation_status"] == "passed"
     assert row["engine_name"] == "biomedpilot_analysis_task_bridge"
     assert row["package_path_relative"] == "analysis_results/enrichment-mock-task"
+    assert row["worker_backend"] == "python_fixture"
+    assert row["worker_invocation_status"] == "fixture_copy_completed"
+    assert row["worker_boundary_type"] == "analysis_task_bridge_fixture"
+    assert row["worker_migration_status"] == "mock_fixture_contract"
+    assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
+    assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
     assert "mock_result_not_scientific_output" in row["warnings"]
 
 

@@ -82,6 +82,7 @@ Standard package discovery is now available to the UI state layer:
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
 - The catalog now exposes `worker_boundary_type` and `worker_migration_status`, so standard R worker packages can be distinguished from legacy service-adapter sidecars.
+- The catalog also exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`, so Analysis Center diagnostics can use standard package audit metadata rather than module-private R outputs.
 - `validate_standard_result_package()` now blocks passed full/formal packages if they are missing required provenance fields, runtime/package/tool version containers, command, hashes, random seed field, engine metadata, or worker-boundary metadata for non-standard-worker sidecars.
 - Testing-level mock packages remain testing-level and do not become formal/report-ready results.
 
@@ -155,7 +156,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified input/output schema | PASS | Added input and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
-| Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts and worker-boundary metadata; existing detailed result views still consume module-specific result indexes and service payloads. |
+| Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts, worker invocation diagnostics, and worker-boundary metadata; existing detailed result views still consume module-specific result indexes and service payloads. |
 | Main backend task-system invocation | WARN | A mock/lite/full-blocking bridge now creates `TaskCenter` entries and result-index entries; registry-declared lite modules are covered through the standard R runner, result package validator, result index, and catalog, while registry-declared full modules are blocked before worker execution with standard package provenance. Existing controlled enrichment and multi-factor DEG sidecars are now labeled as legacy service-adapter sidecars; direct service subprocess calls still remain. |
 | Worker invocation audit trail | WARN | All standard task-bridge outcomes now persist `logs/worker_invocation.json` and register it as `analysis_worker_invocation_manifest`; legacy service-adapter sidecars still have their own log shapes. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
@@ -299,6 +300,7 @@ New architecture boundary files:
 - Split standard R worker provenance hashing so `input_hash` tracks the full input manifest and `parameter_hash` tracks the `parameters` object separately.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
+- Exposed worker invocation diagnostics in the standard package catalog and Analysis Center state.
 - Added the first standard worker lite paths: DEG base R two-group fixture, enrichment base R ORA, survival base R KM/log-rank, univariate base R clinical association, multivariate base R linear model, immune infiltration base R signature mean heatmap, and spatial transcriptomics base R spot QC/coordinate SVG fixtures producing testing-level standard result packages.
 - Added docking and molecular dynamics lite external-tool adapter contract fixtures that produce standard command-manifest packages without executing AutoDock Vina/GROMACS or generating scientific docking/MD results.
 - Added controlled enrichment ORA/GSEA standard result package sidecars registered in result index v2.
