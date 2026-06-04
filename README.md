@@ -20,7 +20,7 @@ The current package includes:
 - Calculation record serialization helpers
 - qPCR mix calculator
 - Cell seeding calculator
-- Cell experiment ImageJ/Fiji macro workflows for wound scratch, Transwell, and immunohistochemistry / IHC-DAB image batches
+- Cell experiment ImageJ/Fiji macro workflows for wound scratch, Transwell, migration/scratch ROI, and immunohistochemistry / IHC-DAB image batches
 - Reagent template models, validation, preparation calculator, and local JSON store
 - Western Blot loading calculator
 - Western Blot protein loading helpers
@@ -33,10 +33,11 @@ The package is intended for reusable calculation and model logic first. UI code 
 
 ## Cell ImageJ/Fiji Workflows
 
-LabTools can generate ImageJ/Fiji macros for three cell experiment image workflows:
+LabTools can generate ImageJ/Fiji macros for four cell experiment image workflows:
 
 - `wound_scratch`: batch wound/scratch gap area and fraction estimation.
 - `transwell`: batch particle counting and particle-area summary for stained Transwell images.
+- `migration_streak_roi`: batch large streak ROI detection with signal-particle area and residual open-area summary.
 - `immunohistochemistry`: batch positive-area fraction and mean-gray summary for IHC/DAB images.
 
 Generate a macro only:
@@ -92,7 +93,7 @@ python -m labtools --smoke-test
 Current known validation status:
 
 ```text
-python3 -m pytest: 216 passed
+python3 -m pytest: 217 passed
 python3 -m labtools --smoke-test: passed
 ```
 

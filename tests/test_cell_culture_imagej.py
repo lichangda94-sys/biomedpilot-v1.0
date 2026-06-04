@@ -19,8 +19,9 @@ from labtools.cell_culture import (
 def test_cell_imagej_experiment_catalog_exposes_requested_workflows() -> None:
     experiment_ids = {spec.experiment_id for spec in list_cell_imagej_experiments()}
 
-    assert experiment_ids == {"wound_scratch", "transwell", "immunohistochemistry"}
+    assert experiment_ids == {"wound_scratch", "transwell", "migration_streak_roi", "immunohistochemistry"}
     assert get_cell_imagej_experiment("划痕实验").experiment_id == "wound_scratch"
+    assert get_cell_imagej_experiment("划痕roi").experiment_id == "migration_streak_roi"
     assert get_cell_imagej_experiment("ihc").experiment_id == "immunohistochemistry"
 
 
@@ -49,6 +50,23 @@ def test_transwell_and_ihc_macros_expose_real_imagej_workflows(tmp_path: Path) -
     assert "run(\"Watershed\")" in transwell.macro_text
     assert "positive_area_px,total_area_px,positive_fraction" in ihc.macro_text
     assert "mean_gray" in ihc.macro_text
+
+
+def test_migration_streak_roi_macro_is_software_driven_and_resets_roi_state(tmp_path: Path) -> None:
+    bundle = render_cell_imagej_macro(
+        "migration_streak_roi",
+        tmp_path / "images",
+        tmp_path / "out",
+        parameters={"streak_threshold_method": "Minimum", "signal_max_area_px": 9000},
+    )
+
+    assert bundle.output_csv_path == tmp_path / "out" / "migration_streak_roi_results.csv"
+    assert "getDirectory(" not in bundle.macro_text
+    assert "open(imagePath);" in bundle.macro_text
+    assert "roiManager(\"reset\");" in bundle.macro_text
+    assert "no_streak_roi" in bundle.macro_text
+    assert "residual_streak_area_px,residual_fraction" in bundle.macro_text
+    assert "signal_max_area_px = 9000;" in bundle.macro_text
 
 
 def test_write_cell_imagej_macro_creates_default_macro_path(tmp_path: Path) -> None:

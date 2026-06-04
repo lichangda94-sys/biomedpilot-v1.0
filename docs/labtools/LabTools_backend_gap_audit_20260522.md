@@ -2,7 +2,7 @@
 
 日期：2026-05-22
 
-范围：评估当前 LabTools 后端相对于 BioMedPilot 桌面 UI mockup 和 integration 的缺口。2026-06-04 更新：细胞图片实验 ImageJ/Fiji macro adapter 已补入。
+范围：评估当前 LabTools 后端相对于 BioMedPilot 桌面 UI mockup 和 integration 的缺口。2026-06-04 更新：细胞图片实验 ImageJ/Fiji macro adapter 已补入，并加入迁移 / 划痕 ROI 自有模板。
 
 ## 1. 功能状态矩阵
 
@@ -20,9 +20,9 @@
 | BCA helper | OD parser, annotation, linear fit, warnings | `mockup_only` to `ui_adapter_needed` | P0 mockup 可做；正式保存前补 record store。 |
 | qPCR mix | `QpcrMixInput`, `calculate_qpcr_mix_v1` | `active_backend_ready` | 当前只保留 mix calculator。 |
 | cell plating | `CellSeedingInput`, `calculate_cell_seeding_v1` | `active_backend_ready` | P1 独立页，P0 可在快速计算出现。 |
-| 细胞实验记录 | no record model/store；细胞图片实验已有 ImageJ/Fiji macro adapter | `image_processing_backend_ready` + `record_store_blocked` | 可开放划痕 / Transwell / 免疫组化图片处理入口；记录保存仍需补 store。 |
+| 细胞实验记录 | no record model/store；细胞图片实验已有 ImageJ/Fiji macro adapter | `image_processing_backend_ready` + `record_store_blocked` | 可开放划痕 / Transwell / 迁移 ROI / 免疫组化图片处理入口；记录保存仍需补 store。 |
 | ELISA / 吸光度 | `labtools.elisa` empty | `blocked_until_backend` | 需要先做 MVP，不能接真实 ELISA 页面。 |
-| ImageJ/Fiji 图像分析入口 | executable discovery、macro generator、macro writer、headless runner wrapper | `adapter_ready_for_cell_image_workflows` | 可接三类细胞实验图片处理；UI 必须暴露阈值参数和人工复核提示。 |
+| ImageJ/Fiji 图像分析入口 | executable discovery、macro generator、macro writer、headless runner wrapper | `adapter_ready_for_cell_image_workflows` | 可接四类细胞实验图片处理；UI 必须暴露阈值参数和人工复核提示。 |
 
 ## 2. 缺口评估
 
@@ -82,6 +82,7 @@
 
 - 划痕实验：批量估算 gap area / gap fraction。
 - Transwell：批量 particle count / particle area。
+- 迁移 / 划痕 ROI：批量识别大面积 streak ROI，输出 signal particle area、residual streak area 和 residual fraction。
 - 免疫组化 / IHC-DAB：批量 positive area fraction / mean gray。
 
 仍不应做：

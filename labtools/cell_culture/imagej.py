@@ -79,6 +79,24 @@ CELL_IMAGEJ_EXPERIMENTS: tuple[CellImageJExperimentSpec, ...] = (
         },
     ),
     CellImageJExperimentSpec(
+        experiment_id="migration_streak_roi",
+        aliases=("streak_roi", "migration_streak", "scratch_roi", "迁移划痕", "划痕roi"),
+        title="迁移/划痕 ROI 图片处理",
+        description="批量识别迁移或划痕图像中的大面积 streak ROI，并估算 ROI 内信号颗粒面积和残余空白面积。",
+        result_csv_name="migration_streak_roi_results.csv",
+        macro_file_name="migration_streak_roi_analysis.ijm",
+        default_parameters={
+            "streak_threshold_method": "Minimum",
+            "streak_polarity": "dark",
+            "streak_blur_sigma": 10.0,
+            "streak_min_area_px": 10000,
+            "signal_threshold_method": "Default",
+            "signal_polarity": "dark",
+            "signal_min_area_px": 3000,
+            "signal_max_area_px": 8000,
+        },
+    ),
+    CellImageJExperimentSpec(
         experiment_id="immunohistochemistry",
         aliases=("ihc", "dab", "免疫组化", "免疫组化实验"),
         title="免疫组化实验图片处理",
@@ -131,6 +149,8 @@ def render_cell_imagej_macro(
         macro_text = _render_wound_scratch_macro(input_path, output_path, merged_parameters, experiment.result_csv_name)
     elif experiment.experiment_id == "transwell":
         macro_text = _render_transwell_macro(input_path, output_path, merged_parameters, experiment.result_csv_name)
+    elif experiment.experiment_id == "migration_streak_roi":
+        macro_text = _render_migration_streak_roi_macro(input_path, output_path, merged_parameters, experiment.result_csv_name)
     elif experiment.experiment_id == "immunohistochemistry":
         macro_text = _render_ihc_macro(input_path, output_path, merged_parameters, experiment.result_csv_name)
     else:  # pragma: no cover - guarded by get_cell_imagej_experiment.
@@ -342,6 +362,74 @@ for (i = 0; i < list.length; i++) {
     File.append(csvEscape(list[i]) + "," + positiveArea + "," + totalArea + "," + positiveFraction + "," + meanGray + "\\n", outputCsv);
     close("*");
 }
+"""
+
+
+def _render_migration_streak_roi_macro(
+    input_dir: Path,
+    output_dir: Path,
+    parameters: Mapping[str, str | int | float | bool],
+    result_csv_name: str,
+) -> str:
+    return _macro_header(input_dir, output_dir, result_csv_name, parameters) + """
+File.saveString("image,status,streak_roi_count,streak_area_px,signal_particle_count,signal_area_px,residual_streak_area_px,residual_fraction\\n", outputCsv);
+for (i = 0; i < list.length; i++) {
+    if (!isImageFile(list[i])) continue;
+    roiManager("reset");
+    imagePath = inputDir + list[i];
+    open(imagePath);
+    sourceTitle = getTitle();
+    run("Duplicate...", "title=streak_mask");
+    selectWindow("streak_mask");
+    run("8-bit");
+    run("Gaussian Blur...", "sigma=" + streak_blur_sigma);
+    if (streak_polarity == "dark")
+        setAutoThreshold(streak_threshold_method + " dark");
+    else
+        setAutoThreshold(streak_threshold_method + " light");
+    run("Convert to Mask");
+    run("Clear Results");
+    run("Analyze Particles...", "size=" + streak_min_area_px + "-Infinity add clear");
+    streakRoiCount = roiManager("count");
+    if (streakRoiCount == 0) {
+        File.append(csvEscape(list[i]) + ",no_streak_roi,0,0,0,0,0,0\\n", outputCsv);
+        close("*");
+        continue;
+    }
+    streakArea = 0;
+    for (roiIndex = 0; roiIndex < streakRoiCount; roiIndex++) {
+        roiManager("select", roiIndex);
+        getStatistics(area);
+        streakArea = streakArea + area;
+    }
+    selectWindow(sourceTitle);
+    run("Duplicate...", "title=signal_mask");
+    selectWindow("signal_mask");
+    run("8-bit");
+    roiManager("select", Array.getSequence(streakRoiCount));
+    roiManager("Combine");
+    run("Clear Outside");
+    if (signal_polarity == "dark")
+        setAutoThreshold(signal_threshold_method + " dark");
+    else
+        setAutoThreshold(signal_threshold_method + " light");
+    run("Convert to Mask");
+    run("Clear Results");
+    run("Analyze Particles...", "size=" + signal_min_area_px + "-" + signal_max_area_px + " display clear");
+    signalArea = 0;
+    for (row = 0; row < nResults; row++)
+        signalArea = signalArea + getResult("Area", row);
+    signalCount = nResults;
+    residualArea = streakArea - signalArea;
+    if (residualArea < 0)
+        residualArea = 0;
+    residualFraction = 0;
+    if (streakArea > 0)
+        residualFraction = residualArea / streakArea;
+    File.append(csvEscape(list[i]) + ",ok," + streakRoiCount + "," + streakArea + "," + signalCount + "," + signalArea + "," + residualArea + "," + residualFraction + "\\n", outputCsv);
+    close("*");
+}
+roiManager("reset");
 """
 
 

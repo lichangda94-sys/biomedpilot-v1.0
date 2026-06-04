@@ -22,7 +22,7 @@ python -m labtools --smoke-test
 最近公开包验证结果：
 
 ```text
-python3 -m pytest: 216 passed
+python3 -m pytest: 217 passed
 python3 -m labtools --smoke-test: passed
 ```
 
@@ -44,17 +44,18 @@ python3 -m labtools --smoke-test: passed
 - SDS-PAGE gel template helper
 - qPCR mix calculator
 - Cell seeding calculator
-- 细胞实验图片处理 ImageJ/Fiji macro 工作流（划痕实验、Transwell 实验、免疫组化 / IHC-DAB）
+- 细胞实验图片处理 ImageJ/Fiji macro 工作流（划痕实验、Transwell 实验、迁移 / 划痕 ROI、免疫组化 / IHC-DAB）
 - 单位换算工具
 - package smoke test
 - 测试用例
 
 ## 细胞实验图片处理 / ImageJ-Fiji
 
-当前 `labtools.cell_culture` 已开放三类 ImageJ/Fiji macro 工作流：
+当前 `labtools.cell_culture` 已开放四类 ImageJ/Fiji macro 工作流：
 
 - `wound_scratch`：划痕实验图片批量估算划痕空白区域面积和比例。
 - `transwell`：Transwell 染色图片批量统计颗粒数量和颗粒面积。
+- `migration_streak_roi`：迁移 / 划痕图像批量识别大面积 streak ROI，并估算 ROI 内信号颗粒面积和残余空白面积。
 - `immunohistochemistry`：免疫组化 / IHC-DAB 图片批量估算阳性染色面积比例和平均灰度。
 
 只导出 macro：
