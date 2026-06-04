@@ -583,3 +583,81 @@ No migration candidate is approved for direct carry-over. Future work must selec
 ### Stop Point
 
 Stop after the Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `9436f03`
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the branch inventory reports against the current `dev/bioinformatics` HEAD:
+
+```text
+9436f03aa0ea3d926f44e3aceef5320bfb0e2781
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Current Worktree State
+
+The refresh observed and preserved unrelated pre-existing untracked files:
+
+```text
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `git status --short --branch` | Passed; confirmed current branch and unrelated untracked files |
+| `git branch --all --verbose --no-abbrev` | Passed; enumerated local branch refs and linked worktree markers |
+| `git rev-parse HEAD` | Passed; current HEAD `9436f03aa0ea3d926f44e3aceef5320bfb0e2781` |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads --sort=refname` | Passed; recorded branch tips |
+| `git log --oneline --decorate --max-count=60 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed; reviewed current-line feature history |
+| `find analysis -maxdepth 4 -type f \| sort` | Passed; inventoried standard analysis runtime files |
+| `find app/analysis_runtime -maxdepth 3 -type f \| sort` | Passed; inventoried analysis runtime bridge files |
+| `find app/bioinformatics app/meta_analysis -maxdepth 3 -type f \| sort` | Passed; inventoried current Bio/Meta feature files |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive -maxdepth 4 -type f \| sort` | Passed; inventoried legacy/archive material |
+| `rg --files tests/bioinformatics tests/meta_analysis tests/ui \| sort` | Passed; inventoried test surfaces |
+| `git diff --name-status HEAD..<branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/bioinformatics docs/reports docs/ui scripts analysis app/analysis_runtime` | Passed for selected high-relevance branches; no checkout or merge was performed |
+
+No functional tests were run for this refresh because it was documentation-only and audit-only. `git diff --check` was run after editing.
+
+### Findings
+
+Current Bioinformatics and Meta Analysis contain substantial non-legacy implementations and tests. Since the previous inventory baseline, current `dev/bioinformatics` added standard analysis runtime material:
+
+- DEG standard module contract and DEG lite worker fixture.
+- Multi-factor DEG standard result package sidecar.
+- Standard R worker provenance hardening with separate input and parameter hashes.
+
+These are current-line scaffolds and sidecars, not old-branch migrations and not production availability claims. Mock/lite/testing-level output remains excluded from completed-feature claims.
+
+Legacy directories remain quarantined:
+
+```text
+app/bioinformatics/legacy/**
+app/meta_analysis/legacy/**
+archive/legacy_sources/**
+```
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one candidate and one current UI entry, then adapt or rewrite against current contracts with real output proof. Current UI remains the only mainline.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.

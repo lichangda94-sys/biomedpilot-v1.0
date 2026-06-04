@@ -6,19 +6,15 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `3509f627a343c0e4290b0e1d86b0a5287462c7f3`
+Current HEAD: `9436f03aa0ea3d926f44e3aceef5320bfb0e2781`
 
 ## Audit Boundary
 
 This Phase 2.5 inventory is read-only. No legacy branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. The current UI remains the only mainline. Old branches, `legacy/` directories, and `archive/legacy_sources/**` are material libraries only.
 
-The worktree had pre-existing unrelated modified and untracked files before this audit and they were preserved. They are not part of this Phase 2.5 inventory:
+The worktree had pre-existing unrelated untracked files before this audit and they were preserved. They are not part of this Phase 2.5 inventory:
 
 ```text
- M app/bioinformatics/deg_engine/multifactor_r_runner.py
- M tests/bioinformatics/test_multifactor_deg_deseq2_runner.py
- M tests/bioinformatics/test_multifactor_deg_edger_runner.py
- M tests/bioinformatics/test_multifactor_deg_limma_runner.py
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
@@ -46,6 +42,11 @@ No validation test suite was run because this task is an audit-only branch and l
 The current branch contains recent standard analysis runtime scaffold work after the earlier Phase 2.5 reports:
 
 ```text
+9436f03 separate standard R worker parameter provenance hash
+02f9acb add DEG lite standard worker fixture
+6c059ef add DEG standard analysis module contract
+6bdc6e2 add multifactor DEG standard result package sidecar
+c89b5cc docs: refresh Phase 2.5 branch inventory audit
 3509f62 docs: refresh branch inventory migration audit
 0aa6793 add enrichment standard result package sidecar
 8a78a59 add immune infiltration lite standard worker fixture
@@ -71,7 +72,7 @@ These commits are current-branch work, not old-branch migration. The standard ru
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Audit disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `3509f62` | 2026-06-04 | docs: refresh branch inventory migration audit | Current source of truth for this worktree; includes current Bio/Meta modules and analysis runtime scaffolds | Source of truth |
+| `dev/bioinformatics` | `9436f03` | 2026-06-04 | separate standard R worker parameter provenance hash | Current source of truth for this worktree; includes current Bio/Meta modules, standard R worker scaffolds, DEG lite worker, and package sidecars | Source of truth |
 | `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | High-value Bio ReleaseBuild candidate with R DEG, ORA/GSEA, survival/risk, renderer/report history | Candidate library only |
 | `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | DEG/risk/report/ReleaseBuild gate material | Candidate library only |
 | `codex/mainline-survival-clinical-carryover` | `74775fe` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Survival/clinical and enrichment convergence material | Candidate library only |
@@ -83,8 +84,8 @@ These commits are current-branch work, not old-branch migration. The standard ru
 | `dev/ui-shell` | `6d5dca5` | 2026-06-01 | docs(project-control): add high fidelity UI integration handoff | UI shell/design/material branch | UI design reference only |
 | `integration/release-ui-shell-scoped-migration` | `610cc20` | 2026-05-31 | feat(ui): restore scoped UI shell baseline | UI shell baseline and screenshots | UI design reference only |
 | `integration/release-labtools-c1-module-nav` | `ef526dc` | 2026-06-01 | feat(ui): gate bio report exports | Cross-module UI shell gates and LabTools material | UI reference only |
-| `integration/release-bio-c1-ui-shell` | `6cf4da5` | 2026-06-04 | fix(labtools): enable imagej engine macro preparation | LabTools/UI shell integration work | Out of Bio/Meta analysis migration scope |
-| `dev/labtools` | `f77bfe4` | 2026-06-04 | Add planned ImageJ image workflows | LabTools feature work | Out of Bio/Meta scope |
+| `integration/release-bio-c1-ui-shell` | `dee35e5` | 2026-06-04 | fix(labtools): integrate gated cell imagej macros | LabTools/UI shell integration work | Out of Bio/Meta analysis migration scope |
+| `dev/labtools` | `c418eba` | 2026-06-04 | Fix gated cell ImageJ macro integration scope | LabTools feature work | Out of Bio/Meta scope |
 | `dev/integration` | `056a1f3` | 2026-05-29 | docs(integration): add Phase 4 scoped integration audit | Integration audit branch | Reference only |
 | `audit/integration-bioinformatics-merge-plan` | `d6a5914` | 2026-05-29 | docs(integration): add bioinformatics merge plan audit | Integration merge planning audit | Reference only |
 | `audit/mainline-phase4-meta-l3-scope-plan` | `be8c924` | 2026-05-21 | carry over Bioinformatics formal DEG MVP to MainLine | MainLine baseline pointer | Historical |
@@ -109,7 +110,7 @@ These commits are current-branch work, not old-branch migration. The standard ru
 
 | Branch/path | Observed files/areas | Developed material | Current availability | Risk |
 | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `app/bioinformatics/**`, `app/meta_analysis/**`, `app/analysis_runtime/**`, `analysis/**`, current tests | Current Bio DEG/enrichment/survival/plot/report modules, current Meta result contract, standard mock/lite runtime scaffolds | Current source of truth | Current scaffolds must not be overstated as production R/Bioc or full L3 |
+| `dev/bioinformatics` | `app/bioinformatics/**`, `app/meta_analysis/**`, `app/analysis_runtime/**`, `analysis/**`, current tests | Current Bio DEG/enrichment/survival/plot/report modules, current Meta result contract, standard mock/lite runtime scaffolds, DEG standard module contract and DEG lite worker | Current source of truth | Current scaffolds must not be overstated as production R/Bioc or full L3 |
 | `dev/release-internal-test` | structured `app/bioinformatics/enrichment/**`, `gsea/**`, R DEG files, renderer/report policy files | Rich ReleaseBuild material across DEG, ORA/GSEA, plots, reports, survival/risk | Branch-only; current branch uses different flat/module layout in several places | Whole-branch merge would delete/replace current contracts |
 | `codex/releasebuild-formal-deg-carryover` | R DEG runtime, risk score, report gates, ReleaseBuild test script history | Formal DEG/risk/report candidate material | Branch-only | Clinical/risk overclaim and ReleaseBuild state coupling |
 | `codex/mainline-survival-clinical-carryover` | survival clinical, enrichment convergence docs/files | Survival/clinical and enrichment carry-over history | Candidate only | Needs current contract adapter |
@@ -122,6 +123,19 @@ These commits are current-branch work, not old-branch migration. The standard ru
 ## Audit Conclusion
 
 The repository contains substantial historical UI, Bioinformatics, Meta Analysis, plot, report, export, test, and helper material. No old branch is safe to merge wholesale. The only safe post-audit path is selecting one candidate feature and one current UI entry, then adapting or rewriting against current contracts with focused proof. Mock, placeholder, testing-level, branch-only, and legacy-only outputs remain excluded from completion claims.
+
+## 2026-06-04 Refresh at `9436f03`
+
+This refresh re-read the current branch and branch refs after the standard R worker and DEG lite worker commits. The new current-line evidence is:
+
+- `analysis/modules/deg/module.json`
+- `analysis/fixtures/inputs/deg/module_input_lite.json`
+- `analysis/fixtures/inputs/deg/lite_counts.tsv`
+- `analysis/fixtures/inputs/deg/lite_metadata.tsv`
+- `analysis/runners/run_module.R`
+- `app/analysis_runtime/{registry.py,r_worker.py,task_bridge.py,package_catalog.py,standard_package.py,resources.py}`
+
+These files are current scaffolding and testing-level worker material. They do not make old branches current, and they do not turn mock/lite/full-mode blockers into production analysis availability.
 
 ## Phase 2.5 Stop Point
 

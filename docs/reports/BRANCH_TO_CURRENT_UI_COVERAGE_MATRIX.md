@@ -6,7 +6,7 @@ Current audit baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 3509f627a343c0e4290b0e1d86b0a5287462c7f3
+HEAD: 9436f03aa0ea3d926f44e3aceef5320bfb0e2781
 audit mode: Phase 2.5 read-only inventory
 ```
 
@@ -32,7 +32,7 @@ This matrix maps historical branch/legacy functionality to current UI pages and 
 | Immune infiltration | Immune/TME scoring pages and package scaffold | Current `immune_infiltration/**`, `tests/ui/test_bioinformatics_immune_infiltration_pages.py`, lite worker fixture | No stronger legacy branch found | Current candidate/scaffold coverage | Must remain research-only |
 | Plot actions | Formal result-driven SVG/spec artifacts | Current `plots/**` | Branch `plots/real_svg.py`, `plots/ora.py`, `plots/gsea.py`, `plots/survival_real.py` | Partial current coverage | Branch split can inform adapter, not direct copy |
 | Report/export controls | Section package, report-ready gates, renderer status | Current `reports/**` | Branch `reports/integrated.py`, renderer capability/runtime policy | Partial | Adapter candidate; no placeholder report promotion |
-| Standard analysis runtime bridge | Mock/lite standard package task bridge and package catalog discovery | Current `app/analysis_runtime/**`, `analysis/**`, committed lite workers | No old equivalent | Current scaffold only | Do not show as full R/Bioc analysis execution without selected module proof |
+| Standard analysis runtime bridge | Mock/lite standard package task bridge, package catalog discovery, resource governance, separated input/parameter hashes | Current `app/analysis_runtime/**`, `analysis/**`, committed lite workers including DEG | No old equivalent | Current scaffold only | Do not show as full R/Bioc analysis execution without selected module proof |
 
 ## Meta Analysis UI Coverage
 
@@ -72,7 +72,7 @@ This matrix maps historical branch/legacy functionality to current UI pages and 
 | Bio survival/Cox/risk | Controlled current survival/Cox; risk branch/current evidence mixed | Clinical/risk artifacts | Strict rewrite/adapt with clinical boundary |
 | Bio immune infiltration | Current module and lite worker scaffold | Limited branch value | Reuse current with proof if selected |
 | Bio plots/reports | Current section packages and SVG artifacts for supported modules | Broader renderer split and integrated report policy | Adapter only, no placeholder promotion |
-| Standard analysis runtime | Current mock/lite bridge and package catalog | No old equivalent | Keep scaffold; prove modules one at a time |
+| Standard analysis runtime | Current mock/lite bridge, package catalog, DEG/enrichment/survival/univariate/multivariate/immune lite workers | No old equivalent | Keep scaffold; prove modules one at a time |
 | Meta statistics/table/plot/report | Current services and contract bridge exist | Legacy workbench/reporting mostly superseded | Reuse current bridge; OCR/fulltext future adapter |
 | UI shell/design | Current UI is active; UI shell branches have visual assets | Design and component material | UI owner selection required before any migration |
 | Legacy standalone UI | Historical only | UI inspiration | Deprecated as runtime |

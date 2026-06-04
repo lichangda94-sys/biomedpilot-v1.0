@@ -6,7 +6,7 @@ Current baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 3509f627a343c0e4290b0e1d86b0a5287462c7f3
+HEAD: 9436f03aa0ea3d926f44e3aceef5320bfb0e2781
 mode: Phase 2.5 read-only inventory
 ```
 
@@ -36,9 +36,11 @@ This catalog covers current non-legacy feature surfaces, `app/bioinformatics/leg
 | Immune infiltration | `immune_infiltration/**` | Signature scoring/readiness/report candidates | Current source/tests | Research only |
 | Plot artifacts | `plots/basic_renderers.py`, `formal_deg.py`, `survival.py`, `cox.py`, `schema.py`, `registry.py` | SVG/spec-driven plot artifacts for supported results | Current plot tests | Not a full plotting platform |
 | Report/export packages | `reports/**` | Section/package report gates, project report builder, export packages | Current report tests | Statistical package only; no clinical conclusion |
-| Standard analysis runtime bridge | `app/analysis_runtime/**`, `analysis/registry/**`, `analysis/runners/run_module.R` | Mock/lite/full-mode runner contract and package catalog foundation | Current recent commits/tests | Current scaffold only |
-| Lite standard workers | `analysis/modules/{enrichment,survival,univariate,multivariate,immune_infiltration}/**`, corresponding fixtures | Base R lite fixture workers writing standard result packages | Current recent commits | Lite/testing-level only |
+| Standard analysis runtime bridge | `app/analysis_runtime/**`, `analysis/registry/**`, `analysis/runners/run_module.R` | Mock/lite/full-mode runner contract, package catalog foundation, resource governance, and separate input/parameter provenance hashes | Current recent commits/tests | Current scaffold only |
+| Lite standard workers | `analysis/modules/{deg,enrichment,survival,univariate,multivariate,immune_infiltration}/**`, corresponding fixtures | Base R lite fixture workers writing standard result packages | Current recent commits | Lite/testing-level only |
+| DEG standard module contract | `analysis/modules/deg/module.json`, `analysis/fixtures/inputs/deg/**`, `analysis/runners/run_module.R` | Standard worker DEG mock/lite contract and base R lite fixture output | Current recent commits/tests | Lite/testing-level only; separate from formal DEG engine |
 | Enrichment standard package sidecar | `enrichment_r_adapter.py`, `app/analysis_runtime/standard_package.py` | Adds standard package sidecar to controlled ORA/GSEA adapter output | Current-line evidence from `0aa6793`; not rerun in this audit | Sidecar/audit infrastructure; does not make full production ORA/GSEA |
+| Multi-factor DEG standard package sidecar | `deg_engine/multifactor_r_runner.py`, `app/analysis_runtime/standard_package.py` | Registers standard package sidecars for controlled multi-factor limma/DESeq2/edgeR fixture outputs | Current-line evidence from `6bdc6e2`; not rerun in this audit | Sidecar/audit infrastructure; does not expand user-facing execution |
 
 ## Bioinformatics Legacy Catalog
 
@@ -93,6 +95,17 @@ This catalog covers current non-legacy feature surfaces, `app/bioinformatics/leg
 ## Evidence Boundary
 
 Mock outputs, placeholder reports, no-op task runners, fake preflight, legacy-only tests, branch-only tests, and testing-level exports must never be listed as completed current functionality. Current scaffold items are useful architecture material but are not proof of full Bioinformatics or Meta Analysis module closure.
+
+## 2026-06-04 Refresh Notes
+
+Current `dev/bioinformatics` has advanced to `9436f03` since the previous catalog baseline. The only newly promoted catalog items are current-line scaffolds:
+
+- DEG standard analysis module contract.
+- DEG lite standard worker fixture.
+- Multi-factor DEG standard package sidecar.
+- Standard R worker provenance hardening with separate `input_hash` and `parameter_hash`.
+
+These are not legacy migrations and are not production claims. They remain testing-level or controlled-sidecar evidence unless a later scoped phase proves a current UI path, current contract mapping, real output, and tests.
 
 ## Phase 2.5 Stop Point
 

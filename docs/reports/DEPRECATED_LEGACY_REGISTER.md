@@ -6,7 +6,7 @@ Current audit baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 3509f627a343c0e4290b0e1d86b0a5287462c7f3
+HEAD: 9436f03aa0ea3d926f44e3aceef5320bfb0e2781
 audit mode: Phase 2.5 read-only inventory
 ```
 
@@ -49,8 +49,9 @@ The following are current or current-adjacent, but still require focused proof b
 - Current Bio immune infiltration candidates.
 - Current Meta v2 statistics engine.
 - Current Meta result contract bridge.
-- Current analysis runtime mock/lite bridge.
-- Current standard analysis lite workers for enrichment, survival, univariate, multivariate, and immune infiltration.
+- Current analysis runtime mock/lite bridge, package catalog, resource governance, and separated input/parameter provenance hashes.
+- Current standard analysis lite workers for DEG, enrichment, survival, univariate, multivariate, and immune infiltration.
+- Current multi-factor DEG standard package sidecar.
 - Current enrichment standard result package sidecar.
 
 None of these should be described as clinical-grade, public-release ready, or full production analysis unless a later phase proves that standard with current UI, current contracts, real outputs, and tests.
