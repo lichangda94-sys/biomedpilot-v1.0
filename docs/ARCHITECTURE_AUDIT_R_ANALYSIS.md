@@ -60,6 +60,13 @@ The main-backend bridge now has two mock-safe paths:
 - `worker_backend="rscript"` writes `module_input.json`, invokes the standard R runner, validates the package, and registers result-index entries from worker provenance.
 - Missing `Rscript` produces a blocked standard result package, not a traceback or installer path.
 
+External R command execution for transitional controlled adapters is now centralized:
+
+- `app/analysis_runtime/r_worker.py` exposes `run_external_r_command()`.
+- Existing controlled enrichment and multi-factor DEG adapters use this shared runtime boundary for Rscript commands instead of directly owning `subprocess.run`.
+- The returned invocation payload includes owner, command, stdout/stderr, return code, blockers, and `worker_boundary.boundary_type=analysis_runtime_external_r_command`.
+- This reduces scattered R execution logic, but it is still a transition boundary; it does not yet make those adapters isolated standard-worker tasks.
+
 Resource governance now has a programmatic gate:
 
 - `analysis/resources/manifest.json` records mock fixture resources and full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
@@ -152,7 +159,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 ## 3. Top 5 Architecture Risks
 
-1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a standard bridge exists for mock, DEG lite, enrichment lite, survival lite, univariate lite, multivariate lite, and immune lite, but most existing formal algorithms are not migrated yet.
+1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current controlled R adapters now call a shared `analysis_runtime` external R command boundary instead of owning direct `subprocess.run`, and a standard bridge exists for mock, DEG lite, enrichment lite, survival lite, univariate lite, multivariate lite, and immune lite. Most existing formal algorithms are still not migrated into isolated standard-worker tasks.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA and controlled multi-factor DEG R fixture results are now partially remediated with sidecar packages that are explicitly labeled as legacy service-adapter sidecars.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, and fake `locked` entries with placeholder values are rejected, but resources still need real version, source, hash, license, and cache-path locks.
@@ -166,7 +173,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | --- | --- | --- |
 | No unified mock-mode analysis module framework | No top-level `analysis/registry` before this audit | Partially fixed with registry, mock fixture, and mock runner. |
 | No standard result package contract | Existing modules emit varied outputs | Partially fixed at schema and mock task bridge level; algorithm migration pending. |
-| R analysis logic scattered in main backend services | `app/bioinformatics/enrichment_r_adapter.py`, `app/bioinformatics/deg_engine/multifactor_r_runner.py` | Partially fixed for enrichment and controlled multi-factor DEG output packaging only; staged worker migration still pending. |
+| R analysis logic scattered in main backend services | `app/bioinformatics/enrichment_r_adapter.py`, `app/bioinformatics/deg_engine/multifactor_r_runner.py` | Partially fixed by routing controlled enrichment and multi-factor DEG R commands through `app/analysis_runtime/r_worker.py`; staged isolated worker migration still pending. |
 
 ### P1
 

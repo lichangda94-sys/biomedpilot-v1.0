@@ -61,6 +61,8 @@ Update: standard R worker provenance now computes `input_hash` from the full inp
 
 Update: the main-backend task bridge now has an explicit `worker_backend="rscript"` path. It materializes `module_input.json`, invokes the standard R runner, validates the standard package, and registers worker provenance in the result index. Missing `Rscript` is a graceful blocked package.
 
+Update: transitional controlled adapters now route external R commands through `app/analysis_runtime/r_worker.py::run_external_r_command()`. This centralizes subprocess behavior and worker-boundary metadata for enrichment and multi-factor DEG adapters, but still leaves full isolated standard-worker migration pending.
+
 Update: the resource manifest now declares required full-mode resources for enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics. `app/analysis_runtime/resources.py` validates the manifest and adds module-specific full-mode blockers until real locks exist.
 
 Update: resource validation now rejects any resource marked `locked` while version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`. Partially prepared blocked resources may carry warnings, but full mode remains blocked until the lock is complete.
@@ -100,6 +102,7 @@ Acceptance:
 - Every registered module can run `mock` mode through the task system using its fixed fixture package. **Completed for mock mode.**
 - The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
 - The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
+- Transitional controlled R adapters route Rscript commands through the shared analysis runtime boundary instead of owning direct R subprocess calls. **Completed for enrichment and multi-factor DEG adapters.**
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
@@ -190,6 +193,7 @@ Completed:
 Remaining:
 
 - Move long-running limma/DESeq2/edgeR Rscript execution behind the standard task worker instead of service-level subprocess calls.
+- Replace the transitional `run_external_r_command()` sidecar boundary with isolated standard-worker task execution.
 - Add isolated full worker environment proof before claiming complete DEG R worker migration.
 - Keep plot/report-ready output and clinical interpretation disabled unless their existing gates pass.
 

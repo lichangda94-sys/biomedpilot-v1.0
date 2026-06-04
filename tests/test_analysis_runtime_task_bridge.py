@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 
-from app.analysis_runtime import build_standard_analysis_package_catalog, run_analysis_module_task, validate_standard_result_package
+from app.analysis_runtime import build_standard_analysis_package_catalog, run_analysis_module_task, run_external_r_command, validate_standard_result_package
 from app.analysis_runtime.registry import load_analysis_module_registry
 from app.bioinformatics.results.registry import load_registry
 from app.shared.task_center.service import TaskCenter, TaskStatus
@@ -217,6 +218,31 @@ def test_formal_standard_package_validation_blocks_missing_worker_boundary(tmp_p
 
     assert validation["status"] == "blocked"
     assert "formal_provenance_worker_boundary_missing" in validation["blockers"]
+
+
+def test_external_r_command_runs_through_shared_runtime_boundary() -> None:
+    def fake_runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+    result = run_external_r_command(
+        ["/fake/Rscript", "--vanilla", "-e", "cat('ok')"],
+        owner="tests.fake_r_owner",
+        timeout_seconds=5,
+        failure_blocker="fake_r_failed",
+        runner=fake_runner,
+    )
+
+    assert result["schema_version"] == "biomedpilot.analysis.external_r_command_invocation.v1"
+    assert result["status"] == "passed"
+    assert result["owner"] == "tests.fake_r_owner"
+    assert result["stdout"] == "ok"
+    assert result["worker_boundary"] == {
+        "boundary_type": "analysis_runtime_external_r_command",
+        "standard_worker_entrypoint": "not_used",
+        "subprocess_owner": "tests.fake_r_owner",
+        "migration_status": "shared_subprocess_boundary_not_isolated_standard_worker",
+        "task_system_invocation": "not_yet_migrated",
+    }
 
 
 def test_all_registered_modules_run_mock_bridge_with_standard_package(tmp_path: Path) -> None:

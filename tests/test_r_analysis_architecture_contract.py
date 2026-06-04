@@ -216,6 +216,18 @@ def test_standard_r_runner_has_no_runtime_package_installer_or_library_imports()
     assert "provenance.json" in runner
 
 
+def test_active_bioinformatics_r_subprocess_invocation_is_centralized_in_analysis_runtime() -> None:
+    offenders: list[str] = []
+    for path in (ROOT / "app" / "bioinformatics").rglob("*.py"):
+        if "__pycache__" in path.parts or "legacy" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "subprocess.run(" in text and ("--vanilla" in text or "Rscript" in text or "library(" in text):
+            offenders.append(str(path.relative_to(ROOT)))
+
+    assert offenders == []
+
+
 def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Path) -> None:
     rscript = rscript_path()
     output_dir = tmp_path / "r-runner-output"

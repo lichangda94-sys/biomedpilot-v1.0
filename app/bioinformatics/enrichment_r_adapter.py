@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 from uuid import uuid4
 
+from app.analysis_runtime.r_worker import run_external_r_command
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
 from app.bioinformatics.enrichment_result_schema import build_enrichment_statistical_policy
 from app.bioinformatics.results.models import ResultIndexEntry
@@ -215,21 +216,13 @@ def _register_enrichment_result(
 
 def _run_rscript(rscript_path: str, script: str, args: list[Path], *, runner: SubprocessRunner) -> dict[str, Any]:
     command = [rscript_path, "--vanilla", "-e", script, *[str(arg) for arg in args]]
-    try:
-        result = runner(command, check=False, capture_output=True, text=True, timeout=90)
-    except Exception as exc:  # pragma: no cover - defensive boundary around external runtime
-        return {"status": "blocked", "command": command, "stdout": "", "stderr": str(exc), "blockers": ["r_enrichment_rscript_execution_failed"]}
-    stdout = str(getattr(result, "stdout", "") or "")
-    stderr = str(getattr(result, "stderr", "") or "")
-    returncode = int(getattr(result, "returncode", 1) or 0)
-    return {
-        "status": "passed" if returncode == 0 else "blocked",
-        "command": command,
-        "returncode": returncode,
-        "stdout": stdout,
-        "stderr": stderr,
-        "blockers": [] if returncode == 0 else ["r_enrichment_rscript_execution_failed"],
-    }
+    return run_external_r_command(
+        command,
+        owner="app.bioinformatics.enrichment_r_adapter",
+        timeout_seconds=90,
+        failure_blocker="r_enrichment_rscript_execution_failed",
+        runner=runner,
+    )
 
 
 def _write_ora_fixture_inputs(work: Path) -> tuple[Path, Path, Path]:

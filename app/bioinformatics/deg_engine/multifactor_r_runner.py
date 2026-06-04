@@ -4,13 +4,13 @@ import csv
 import hashlib
 import json
 import shutil
-import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from app.analysis_runtime.r_worker import run_external_r_command
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 
@@ -418,13 +418,16 @@ design <- model.matrix(~ batch + group, data=meta)
 fit <- lmFit(as.matrix(expr), design)
 fit <- eBayes(fit)
 result <- topTable(fit, coef="groupcase", number=Inf, sort.by="none")
-result$feature_id <- rownames(result)
+    result$feature_id <- rownames(result)
 write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
 """
     command = [rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)]
-    proc = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
-    blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"limma_rscript_failed:{proc.returncode}"]
-    return {"status": "blocked" if blockers else "passed", "command": command, "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
+    return _run_multifactor_r_command(
+        command,
+        output_path=output_path,
+        timeout_seconds=60,
+        failure_blocker="limma_rscript_failed",
+    )
 
 
 def _run_deseq2_rscript(rscript: str, matrix_path: Path, metadata_path: Path, output_path: Path) -> dict[str, Any]:
@@ -445,13 +448,16 @@ dds <- estimateDispersionsGeneEst(dds)
 dispersions(dds) <- mcols(dds)$dispGeneEst
 dds <- nbinomWaldTest(dds)
 result <- as.data.frame(results(dds, name="group_case_vs_control"))
-result$feature_id <- rownames(result)
+    result$feature_id <- rownames(result)
 write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
 """
     command = [rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)]
-    proc = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
-    blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"deseq2_rscript_failed:{proc.returncode}"]
-    return {"status": "blocked" if blockers else "passed", "command": command, "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
+    return _run_multifactor_r_command(
+        command,
+        output_path=output_path,
+        timeout_seconds=120,
+        failure_blocker="deseq2_rscript_failed",
+    )
 
 
 def _run_edger_rscript(rscript: str, matrix_path: Path, metadata_path: Path, output_path: Path) -> dict[str, Any]:
@@ -473,25 +479,67 @@ y <- estimateDisp(y, design)
 fit <- glmQLFit(y, design)
 test <- glmQLFTest(fit, coef="groupcase")
 result <- topTags(test, n=Inf, sort.by="none")$table
-result$feature_id <- rownames(result)
+    result$feature_id <- rownames(result)
 write.table(result, file=output_path, sep="\\t", quote=FALSE, row.names=FALSE)
 """
     command = [rscript, "--vanilla", "-e", script, str(matrix_path), str(metadata_path), str(output_path)]
-    proc = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
-    blockers = [] if proc.returncode == 0 and output_path.is_file() else [f"edger_rscript_failed:{proc.returncode}"]
-    return {"status": "blocked" if blockers else "passed", "command": command, "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr, "blockers": blockers}
+    return _run_multifactor_r_command(
+        command,
+        output_path=output_path,
+        timeout_seconds=120,
+        failure_blocker="edger_rscript_failed",
+    )
 
 
 def _detect_r_package(rscript: str, package: str) -> dict[str, Any]:
     script = f"suppressPackageStartupMessages(library({package})); cat(as.character(packageVersion('{package}')))"
-    proc = subprocess.run([rscript, "--vanilla", "-e", script], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=30)
-    available = proc.returncode == 0
-    return {"available": available, "installed": available, "importable": available, "version": proc.stdout.strip() if available else "", "missing_reason": "" if available else proc.stderr.strip()}
+    result = run_external_r_command(
+        [rscript, "--vanilla", "-e", script],
+        owner="app.bioinformatics.deg_engine.multifactor_r_runner",
+        timeout_seconds=30,
+        failure_blocker=f"r_package_detection_failed:{package}",
+    )
+    available = result["status"] == "passed"
+    return {
+        "available": available,
+        "installed": available,
+        "importable": available,
+        "version": str(result.get("stdout", "")).strip() if available else "",
+        "missing_reason": "" if available else str(result.get("stderr", "")).strip(),
+    }
 
 
 def _run_version_command(command: list[str]) -> str:
-    proc = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=10)
-    return (proc.stdout or proc.stderr).splitlines()[0] if (proc.stdout or proc.stderr).strip() else ""
+    result = run_external_r_command(
+        command,
+        owner="app.bioinformatics.deg_engine.multifactor_r_runner",
+        timeout_seconds=10,
+        failure_blocker="r_version_detection_failed",
+    )
+    text = str(result.get("stdout") or result.get("stderr") or "")
+    return text.splitlines()[0] if text.strip() else ""
+
+
+def _run_multifactor_r_command(
+    command: list[str],
+    *,
+    output_path: Path,
+    timeout_seconds: int,
+    failure_blocker: str,
+) -> dict[str, Any]:
+    result = run_external_r_command(
+        command,
+        owner="app.bioinformatics.deg_engine.multifactor_r_runner",
+        timeout_seconds=timeout_seconds,
+        failure_blocker=failure_blocker,
+    )
+    blockers = list(result.get("blockers", []) or [])
+    if result["status"] == "passed" and not output_path.is_file():
+        blockers.append(f"{failure_blocker}:output_missing")
+    if blockers:
+        result["status"] = "blocked"
+        result["blockers"] = blockers
+    return result
 
 
 def _fixture_deg_ready_package(value_type: str) -> dict[str, Any]:
