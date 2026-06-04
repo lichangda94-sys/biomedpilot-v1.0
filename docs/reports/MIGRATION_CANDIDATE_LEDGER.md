@@ -6,7 +6,7 @@ Current audit baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 0aa6793f460f79a78036c352f918a5acfc7a522b
+HEAD: 3509f627a343c0e4290b0e1d86b0a5287462c7f3
 audit mode: Phase 2.5 read-only inventory
 ```
 
@@ -65,3 +65,7 @@ No candidate below is marked current available solely because it exists on a bra
 3. Treat branch-only R/enrichment/report/renderer/risk/OCR work as adapter or rewrite candidates only.
 4. Treat old standalone workbenches, fake GEO preflights, no-op task runners, and placeholder reporting as deprecated.
 5. Require a current UI button/path mapping, current contract mapping, current tests, and real output evidence before marking any candidate usable.
+
+## Phase 2.5 Stop Point
+
+This ledger is a planning artifact, not a migration approval. No `reuse`, `adapter`, or `rewrite` recommendation changes current runtime availability. Each row still needs a later scoped task before any code is moved, rewritten, or exposed through the current UI.

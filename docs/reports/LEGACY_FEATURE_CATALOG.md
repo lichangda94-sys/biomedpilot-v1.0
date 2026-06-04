@@ -6,7 +6,7 @@ Current baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 0aa6793f460f79a78036c352f918a5acfc7a522b
+HEAD: 3509f627a343c0e4290b0e1d86b0a5287462c7f3
 mode: Phase 2.5 read-only inventory
 ```
 
@@ -38,7 +38,7 @@ This catalog covers current non-legacy feature surfaces, `app/bioinformatics/leg
 | Report/export packages | `reports/**` | Section/package report gates, project report builder, export packages | Current report tests | Statistical package only; no clinical conclusion |
 | Standard analysis runtime bridge | `app/analysis_runtime/**`, `analysis/registry/**`, `analysis/runners/run_module.R` | Mock/lite/full-mode runner contract and package catalog foundation | Current recent commits/tests | Current scaffold only |
 | Lite standard workers | `analysis/modules/{enrichment,survival,univariate,multivariate,immune_infiltration}/**`, corresponding fixtures | Base R lite fixture workers writing standard result packages | Current recent commits | Lite/testing-level only |
-| Enrichment standard package sidecar | `enrichment_r_adapter.py`, `app/analysis_runtime/standard_package.py` | Adds standard package sidecar to controlled ORA/GSEA adapter output | Current HEAD `0aa6793`; focused tests in recent work | Sidecar/audit infrastructure; does not make full production ORA/GSEA |
+| Enrichment standard package sidecar | `enrichment_r_adapter.py`, `app/analysis_runtime/standard_package.py` | Adds standard package sidecar to controlled ORA/GSEA adapter output | Current-line evidence from `0aa6793`; not rerun in this audit | Sidecar/audit infrastructure; does not make full production ORA/GSEA |
 
 ## Bioinformatics Legacy Catalog
 
@@ -93,3 +93,7 @@ This catalog covers current non-legacy feature surfaces, `app/bioinformatics/leg
 ## Evidence Boundary
 
 Mock outputs, placeholder reports, no-op task runners, fake preflight, legacy-only tests, branch-only tests, and testing-level exports must never be listed as completed current functionality. Current scaffold items are useful architecture material but are not proof of full Bioinformatics or Meta Analysis module closure.
+
+## Phase 2.5 Stop Point
+
+No item in this catalog was migrated or promoted during this audit. Legacy entries remain quarantined. Branch-only features require a current UI handler, current input/result contract mapping, current tests, and real output evidence before they can move from catalog entry to implementation candidate.

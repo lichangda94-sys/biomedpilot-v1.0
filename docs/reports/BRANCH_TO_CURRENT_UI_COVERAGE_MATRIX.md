@@ -6,7 +6,7 @@ Current audit baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 0aa6793f460f79a78036c352f918a5acfc7a522b
+HEAD: 3509f627a343c0e4290b0e1d86b0a5287462c7f3
 audit mode: Phase 2.5 read-only inventory
 ```
 
@@ -76,3 +76,7 @@ This matrix maps historical branch/legacy functionality to current UI pages and 
 | Meta statistics/table/plot/report | Current services and contract bridge exist | Legacy workbench/reporting mostly superseded | Reuse current bridge; OCR/fulltext future adapter |
 | UI shell/design | Current UI is active; UI shell branches have visual assets | Design and component material | UI owner selection required before any migration |
 | Legacy standalone UI | Historical only | UI inspiration | Deprecated as runtime |
+
+## Phase 2.5 Stop Point
+
+No UI page, button, handler, or shell was modified during this audit. Coverage labels describe where historical material might map conceptually, not what is currently available to users. The current UI remains the only mainline.

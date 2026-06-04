@@ -6,7 +6,7 @@ Current audit baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 0aa6793f460f79a78036c352f918a5acfc7a522b
+HEAD: 3509f627a343c0e4290b0e1d86b0a5287462c7f3
 audit mode: Phase 2.5 read-only inventory
 ```
 
@@ -54,3 +54,7 @@ The following are current or current-adjacent, but still require focused proof b
 - Current enrichment standard result package sidecar.
 
 None of these should be described as clinical-grade, public-release ready, or full production analysis unless a later phase proves that standard with current UI, current contracts, real outputs, and tests.
+
+## Phase 2.5 Stop Point
+
+This register is intentionally conservative. Deprecated entries are blocked from direct migration even when they contain useful algorithms, UI copy, tests, or fixtures. Any future reuse must be through a new scoped adapter or rewrite against current contracts.

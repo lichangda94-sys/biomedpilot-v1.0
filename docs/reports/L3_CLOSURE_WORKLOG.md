@@ -512,3 +512,74 @@ No tests were run because this phase was audit-only and made documentation chang
 ### Stop Point
 
 Stop after audit documents. Do not begin migration, branch convergence, UI replacement, or algorithm work until the next explicit instruction selects one candidate feature and one current UI path.
+
+## Phase 2.5 Refresh: Full Branch Inventory and Migration Candidate Audit
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the Phase 2.5 branch inventory against the current `dev/bioinformatics` HEAD:
+
+```text
+3509f627a343c0e4290b0e1d86b0a5287462c7f3
+```
+
+The task was audit-only. No old branch was checked out, merged, cherry-picked, or used to modify current UI or analysis algorithms. Legacy directories and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Preserved Pre-existing Worktree State
+
+The audit observed existing unrelated worktree changes and left them untouched:
+
+```text
+ M app/bioinformatics/deg_engine/multifactor_r_runner.py
+ M tests/bioinformatics/test_multifactor_deg_deseq2_runner.py
+ M tests/bioinformatics/test_multifactor_deg_edger_runner.py
+ M tests/bioinformatics/test_multifactor_deg_limma_runner.py
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `git status --short --branch` | Passed; confirmed current branch and unrelated dirty files |
+| `git branch --all --verbose --no-abbrev` | Passed; enumerated local branch refs and linked worktree markers |
+| `git rev-parse HEAD` | Passed; current HEAD `3509f627a343c0e4290b0e1d86b0a5287462c7f3` |
+| `rg --files docs/reports app tests \| sort` | Passed; inventoried current report/code/test surfaces |
+| `sed -n ... docs/reports/*.md` | Passed; reviewed existing Phase 2.5 reports |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy -maxdepth 3 -type f \| sort` | Passed; inventoried legacy Bio/Meta files |
+| `git log --oneline --decorate --max-count=35 -- app/bioinformatics app/meta_analysis app/analysis_runtime analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts` | Passed; reviewed current-line feature history |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads --sort=refname` | Passed; recorded branch tips |
+| `git diff --name-status HEAD..<branch> -- ...` | Passed for selected high-relevance branches; no checkout or merge was performed |
+
+### Findings
+
+Current Bioinformatics and Meta Analysis already contain substantial non-legacy implementations and tests. Historical branches still contain useful material for UI design, enrichment/R adapters, report/rendering policy, survival/risk candidates, OCR/fulltext, and older shell work. None of that branch-only material is current availability evidence.
+
+Legacy directories remain quarantined:
+
+```text
+app/bioinformatics/legacy/**
+app/meta_analysis/legacy/**
+```
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one candidate and one current UI entry, then adapt or rewrite against current contracts with real output proof. Mock, placeholder, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after the Phase 2.5 audit refresh. Do not proceed into development, branch merge, UI replacement, or legacy code migration without the next explicit instruction.
