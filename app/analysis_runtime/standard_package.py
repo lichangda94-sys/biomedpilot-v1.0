@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Any
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RESULT_PAYLOAD_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "result.schema.json"
+PROVENANCE_PAYLOAD_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json"
 REQUIRED_FILES = ("result.json", "provenance.json")
 REQUIRED_DIRECTORIES = ("tables", "plots", "reports", "logs")
 TASK_BRIDGE_ENGINES = {"biomedpilot_analysis_task_bridge", "biomedpilot_standard_r_worker"}
@@ -101,6 +104,8 @@ def validate_standard_result_package(
         blockers.append("result_schema_version_mismatch")
     if provenance.get("schema_version") != "biomedpilot.analysis.provenance.v1":
         blockers.append("provenance_schema_version_mismatch")
+    blockers.extend(_payload_required_field_blockers("result", result, RESULT_PAYLOAD_SCHEMA_PATH))
+    blockers.extend(_payload_required_field_blockers("provenance", provenance, PROVENANCE_PAYLOAD_SCHEMA_PATH))
     for payload_name, payload in (("result", result), ("provenance", provenance)):
         if expected_module_id and payload.get("module_id") != expected_module_id:
             blockers.append(f"{payload_name}_module_id_mismatch")
@@ -166,6 +171,27 @@ def _passed_package_provenance_blockers(result: dict[str, Any], provenance: dict
     if not isinstance(runtime.get("external_tool_versions"), dict):
         blockers.append("passed_provenance_runtime_external_tool_versions_invalid")
     return blockers
+
+
+def _payload_required_field_blockers(payload_name: str, payload: dict[str, Any], schema_path: Path) -> list[str]:
+    schema = _load_schema(schema_path)
+    required = schema.get("required")
+    if not isinstance(required, list):
+        return [f"{payload_name}_payload_schema_required_fields_missing"]
+    blockers: list[str] = []
+    for field in required:
+        if not isinstance(field, str):
+            continue
+        if field not in payload:
+            blockers.append(f"{payload_name}_schema_required_field_missing:{field}")
+    return blockers
+
+
+def _load_schema(path: Path) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
 def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict[str, Any], *, expected_mode: str) -> list[str]:

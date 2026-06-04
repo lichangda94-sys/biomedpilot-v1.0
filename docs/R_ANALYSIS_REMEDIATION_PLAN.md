@@ -141,6 +141,8 @@ Update: result/provenance payload schema discovery is now explicit. `analysis/re
 
 Update: standard package catalog and detail payloads now expose the result/provenance payload schema paths from the module registry. UI and report consumers can discover the correct schema through `build_standard_analysis_package_catalog()` or `build_standard_analysis_package_detail()` instead of inferring it from validator internals or module-private output conventions.
 
+Update: standard package validation now enforces required fields from the declared result/provenance payload schema files. Packages missing schema-required result fields such as `result_semantics` or `created_at`, or schema-required provenance fields such as `engine` or `command`, are blocked. Main-backend task-bridge blocked packages now write `result_semantics=blocked`, keeping blocked outputs schema-complete.
+
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.
@@ -190,6 +192,7 @@ Acceptance:
 - Results Browser displays standard package provenance and worker-boundary rows including runtime, engine, command, hashes, seed, worker backend, invocation status, boundary type, and migration status. **Completed for current provenance/worker preview.**
 - Results Browser displays standard package artifact manifest rows for declared tables, plots, reports, and logs without scanning module-private output folders. **Completed for current artifact manifest preview.**
 - Standard package catalog/detail payloads expose result/provenance payload schema paths for UI/report consumers. **Completed for UI-safe schema discovery.**
+- Standard package validation blocks result/provenance payloads that omit schema-required fields, and task-bridge blocked packages now include `result_semantics=blocked`. **Completed for schema-required payload gate.**
 - Bioinformatics R package requirement config remains a detect-first capability inventory, not a runtime install manifest or default app dependency source. **Completed for dependency policy guard.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
