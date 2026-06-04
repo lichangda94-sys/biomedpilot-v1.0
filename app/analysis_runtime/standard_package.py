@@ -56,6 +56,7 @@ def validate_standard_result_package(
         warnings.append("provenance_command_missing")
     formal_blockers = _formal_package_provenance_blockers(result, provenance, expected_mode=expected_mode)
     blockers.extend(formal_blockers)
+    blockers.extend(_analysis_environment_blockers(result, provenance, expected_mode=expected_mode))
     blockers.extend(
         _worker_invocation_blockers(
             invocation,
@@ -108,6 +109,69 @@ def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict
     engine_name = str(engine.get("name") or "")
     if engine_name != "biomedpilot_standard_r_worker" and not worker_boundary.get("boundary_type"):
         blockers.append("formal_provenance_worker_boundary_missing")
+    return blockers
+
+
+def _analysis_environment_blockers(result: dict[str, Any], provenance: dict[str, Any], *, expected_mode: str) -> list[str]:
+    mode = str(result.get("mode") or provenance.get("mode") or expected_mode or "")
+    environment = provenance.get("analysis_environment")
+    if mode != "full" and environment is None:
+        return []
+    if not isinstance(environment, dict):
+        return ["analysis_environment_snapshot_missing_or_invalid"]
+
+    blockers: list[str] = []
+    required_fields = (
+        "schema_version",
+        "status",
+        "mode",
+        "module_id",
+        "environment_id",
+        "dockerfile",
+        "renv_lock",
+        "allows_heavy_analysis_dependencies",
+        "resource_lock_required",
+        "external_tool_lock_required",
+        "full_mode_requires_isolated_environment",
+        "environment_registry_is_authoritative",
+        "runtime_package_install",
+        "runtime_resource_download",
+        "module_manifest",
+        "resource_lock_status",
+    )
+    missing = [field for field in required_fields if field not in environment]
+    if missing:
+        blockers.append(f"analysis_environment_required_fields_missing:{','.join(missing)}")
+    if environment.get("schema_version") != "biomedpilot.analysis_environment_snapshot.v1":
+        blockers.append("analysis_environment_schema_version_mismatch")
+    if environment.get("mode") != mode:
+        blockers.append("analysis_environment_mode_mismatch")
+    if result.get("module_id") and environment.get("module_id") != result.get("module_id"):
+        blockers.append("analysis_environment_module_id_mismatch")
+    if mode == "full":
+        for field in ("environment_id", "dockerfile", "renv_lock", "module_manifest"):
+            if not environment.get(field):
+                blockers.append(f"analysis_environment_{field}_missing")
+        if environment.get("full_mode_requires_isolated_environment") is not True:
+            blockers.append("analysis_environment_full_mode_isolation_policy_invalid")
+        if environment.get("environment_registry_is_authoritative") is not True:
+            blockers.append("analysis_environment_registry_policy_invalid")
+    if environment.get("runtime_package_install") != "forbidden":
+        blockers.append("analysis_environment_runtime_package_install_policy_invalid")
+    if environment.get("runtime_resource_download") != "forbidden":
+        blockers.append("analysis_environment_runtime_resource_download_policy_invalid")
+    resource_lock_status = environment.get("resource_lock_status")
+    if not isinstance(resource_lock_status, dict):
+        blockers.append("analysis_environment_resource_lock_status_invalid")
+    else:
+        if "full_mode_ready" not in resource_lock_status:
+            blockers.append("analysis_environment_resource_lock_status_full_mode_ready_missing")
+        for field in ("required_resource_ids", "blocked_resource_ids", "blockers", "warnings"):
+            if not isinstance(resource_lock_status.get(field), list):
+                blockers.append(f"analysis_environment_resource_lock_status_{field}_invalid")
+        status = str(environment.get("status") or "")
+        if status == "blocked_full_mode_resource_or_tool_lock" and not resource_lock_status.get("blockers"):
+            blockers.append("analysis_environment_resource_lock_blockers_missing")
     return blockers
 
 

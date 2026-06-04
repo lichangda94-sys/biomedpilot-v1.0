@@ -353,6 +353,96 @@ def test_formal_standard_package_validation_blocks_missing_worker_boundary(tmp_p
 
     assert validation["status"] == "blocked"
     assert "formal_provenance_worker_boundary_missing" in validation["blockers"]
+    assert "analysis_environment_snapshot_missing_or_invalid" in validation["blockers"]
+
+
+def test_full_standard_package_validation_requires_analysis_environment_snapshot(tmp_path: Path) -> None:
+    package_dir = tmp_path / "blocked-full-package"
+    for dirname in ("tables", "plots", "reports", "logs"):
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+    (package_dir / "result.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis.result.v1",
+                "module_id": "enrichment",
+                "mode": "full",
+                "task_id": "blocked-full-task",
+                "status": "blocked",
+                "result_semantics": "testing_level",
+                "summary": {},
+                "tables": [],
+                "plots": [],
+                "reports": [],
+                "blockers": ["full_resource_manifest_and_container_not_available"],
+                "warnings": [],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (package_dir / "provenance.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis.provenance.v1",
+                "module_id": "enrichment",
+                "mode": "full",
+                "task_id": "blocked-full-task",
+                "input_hash": "abc",
+                "parameter_hash": "def",
+                "random_seed": None,
+                "engine": {"name": "biomedpilot_analysis_task_bridge", "version": "v1"},
+                "runtime": {
+                    "r_version": "not_executed",
+                    "bioconductor_version": "not_executed",
+                    "package_versions": {},
+                    "external_tool_versions": {},
+                },
+                "command": "analysis_task_bridge_mode_gate",
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (package_dir / "logs" / "worker_invocation.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis.worker_invocation.v1",
+                "created_at": "2026-06-04T00:00:00Z",
+                "module_id": "enrichment",
+                "mode": "full",
+                "task_id": "blocked-full-task",
+                "worker_backend": "rscript",
+                "invocation_status": "not_invoked_mode_gate",
+                "standard_worker_entrypoint": "analysis/runners/run_module.R",
+                "input_manifest": "not_materialized",
+                "output_contract": "standard_result_package",
+                "runtime_install_policy": "forbidden",
+                "resource_download_policy": "forbidden",
+                "returncode": None,
+                "command": [],
+                "stdout": "",
+                "stderr": "",
+                "blockers": ["full_resource_manifest_and_container_not_available"],
+                "worker_boundary": {
+                    "boundary_type": "analysis_task_bridge_gate",
+                    "task_system_invocation": "task_center_registered",
+                    "migration_status": "blocked_before_worker_execution",
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="blocked-full-task",
+        expected_mode="full",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_snapshot_missing_or_invalid" in validation["blockers"]
 
 
 def test_external_r_command_runs_through_shared_runtime_boundary() -> None:
@@ -948,6 +1038,7 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert catalog["status"] == "blocked"
         assert catalog["rows"][0]["module_id"] == module_id
         assert catalog["rows"][0]["mode"] == "full"
+        assert catalog["rows"][0]["analysis_environment"]["environment_id"] == module["full_environment"]
         assert full_mode_blocker in catalog["rows"][0]["blockers"]
 
 
@@ -974,6 +1065,9 @@ def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execu
     assert registry["results"][0]["result_semantics"] == "blocked"
     assert registry["results"][0]["dependency_snapshot"]["analysis_environment"]["environment_id"] == "r-bio-full"
     assert registry["results"][0]["report_ready_eligible"] is False
+    detail = build_standard_analysis_package_detail(package_dir, project_root=tmp_path)
+    assert detail["provenance"]["analysis_environment"]["environment_id"] == "r-bio-full"
+    assert detail["provenance"]["analysis_environment"]["resource_lock_status"]["blockers"]
 
 
 def test_invalid_module_input_is_blocked_but_still_has_standard_package(tmp_path: Path) -> None:

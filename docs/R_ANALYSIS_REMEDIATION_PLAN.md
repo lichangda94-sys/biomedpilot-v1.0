@@ -109,6 +109,8 @@ Update: full-mode blocking is now enforced by a registry-driven bridge test. Eve
 
 Update: blocked full-mode standard packages now include an `analysis_environment` snapshot in `provenance.json` and in the result-index dependency snapshot. The snapshot records the target isolated environment id, Dockerfile, renv lock, heavy-dependency allowance, resource-lock requirement, external-tool-lock requirement, no runtime-install/resource-download policies, module manifest path, required resource ids, and current resource/tool lock blockers. This makes a blocked full request auditable without enabling full execution.
 
+Update: `validate_standard_result_package()` now validates the `analysis_environment` snapshot for `full` packages and any package that declares one. Missing snapshots, schema-version drift, mode/module mismatch, missing Dockerfile/renv/module manifest fields, invalid full-mode isolation policy, invalid runtime-install/resource-download policy, or malformed resource-lock status block the standard package. `build_standard_analysis_package_catalog()` and `build_standard_analysis_package_detail()` expose this snapshot for UI diagnostics.
+
 Update: environment boundaries are now centralized in `analysis/registry/analysis_environments.json`. The registry declares `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`, including Dockerfile, renv lock, allowed modules, heavy-dependency policy, resource/tool lock policy, and no runtime-install policy. Tests verify module manifests match this registry and cannot point analysis execution at `app-dev` or unregistered worker environments.
 
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
@@ -148,6 +150,7 @@ Acceptance:
 - Every registered `lite` module can run through the same main-backend task bridge and standard R worker package contract. **Completed with registry-driven focused test.**
 - Every registered `full` module is blocked through the same main-backend task bridge with a standard result package, result-index entry, catalog row, and non-executed provenance. **Completed with registry-driven focused test.**
 - Every registered `full` module records target isolated environment and resource/tool lock status in the blocked standard package and result-index dependency snapshot. **Completed for full-mode bridge gate.**
+- Full-mode standard packages are blocked by validation if target environment/resource-lock snapshots are missing or malformed. **Completed for validator/catalog gate.**
 - All standard task-bridge outcomes write a worker invocation manifest and register it in result-index log artifacts. **Completed for task-bridge paths.**
 - Task-bridge and standard-worker packages are blocked if their worker invocation manifest is missing or violates the schema/policy contract. **Completed for validator gate.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
