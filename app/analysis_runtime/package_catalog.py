@@ -6,6 +6,7 @@ from typing import Any
 
 from app.bioinformatics.results.registry import load_registry
 
+from .registry import build_result_index_task_type_module_map
 from .standard_package import validate_standard_result_package
 
 
@@ -200,20 +201,7 @@ def _module_id_from_entry(entry: dict[str, Any]) -> str:
     if task_type.startswith("analysis:"):
         return task_type.split(":", 1)[1]
     task_type_normalized = task_type.lower()
-    task_type_to_module = {
-        "deg": "deg",
-        "recomputed_deg": "deg",
-        "ora": "enrichment",
-        "gsea": "enrichment",
-        "gsea_preranked": "enrichment",
-        "survival": "survival",
-        "survival_km_logrank": "survival",
-        "cox_univariate": "survival",
-        "immune_tme_scoring": "immune_infiltration",
-        "immune_infiltration": "immune_infiltration",
-        "correlation": "correlation",
-    }
-    return task_type_to_module.get(task_type_normalized, "")
+    return build_result_index_task_type_module_map().get(task_type_normalized, "")
 
 
 def _default_worker_boundary_type(provenance: dict[str, Any]) -> str:

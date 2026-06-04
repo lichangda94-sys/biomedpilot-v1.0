@@ -33,6 +33,7 @@
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
       "module_manifest": "analysis/modules/deg/module.json",
+      "result_index_task_types": ["deg", "recomputed_deg", "differential_expression"],
       "heavy_dependencies": ["limma", "DESeq2", "edgeR", "statsmodels", "scipy"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -48,6 +49,7 @@
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
       "module_manifest": "analysis/modules/survival/module.json",
+      "result_index_task_types": ["survival", "survival_km_logrank", "cox_univariate"],
       "heavy_dependencies": ["survival", "survminer"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -63,6 +65,7 @@
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
       "module_manifest": "analysis/modules/univariate/module.json",
+      "result_index_task_types": ["univariate", "clinical_association"],
       "heavy_dependencies": ["survival"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -78,6 +81,7 @@
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
       "module_manifest": "analysis/modules/multivariate/module.json",
+      "result_index_task_types": ["multivariate"],
       "heavy_dependencies": ["survival", "glmnet"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -93,6 +97,7 @@
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
       "module_manifest": "analysis/modules/enrichment/module.json",
+      "result_index_task_types": ["enrichment", "ora", "gsea", "gsea_preranked"],
       "heavy_dependencies": ["clusterProfiler", "fgsea", "ReactomePA", "reactome.db", "msigdbr"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -108,6 +113,7 @@
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
       "module_manifest": "analysis/modules/immune_infiltration/module.json",
+      "result_index_task_types": ["immune_infiltration", "immune_tme_scoring"],
       "heavy_dependencies": ["GSVA", "GSEABase", "limma"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -123,6 +129,7 @@
       "analysis_environment": "r-bio-core",
       "full_environment": "r-bio-full",
       "module_manifest": "analysis/modules/correlation/module.json",
+      "result_index_task_types": ["correlation"],
       "heavy_dependencies": [],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -138,6 +145,7 @@
       "analysis_environment": "r-spatial-full",
       "full_environment": "r-spatial-full",
       "module_manifest": "analysis/modules/spatial_transcriptomics/module.json",
+      "result_index_task_types": ["spatial_transcriptomics"],
       "heavy_dependencies": ["Seurat", "CellChat", "spacexr"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -153,6 +161,7 @@
       "analysis_environment": "r-chem-full",
       "full_environment": "r-chem-full",
       "module_manifest": "analysis/modules/docking/module.json",
+      "result_index_task_types": ["docking"],
       "external_tools": ["AutoDock Vina"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
@@ -168,6 +177,7 @@
       "analysis_environment": "r-chem-gpu",
       "full_environment": "r-chem-gpu",
       "module_manifest": "analysis/modules/molecular_dynamics/module.json",
+      "result_index_task_types": ["molecular_dynamics"],
       "external_tools": ["GROMACS"],
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     }

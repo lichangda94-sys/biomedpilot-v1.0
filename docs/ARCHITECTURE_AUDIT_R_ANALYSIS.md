@@ -86,6 +86,7 @@ Resource governance now has a programmatic gate:
 Standard package discovery is now available to the UI state layer:
 
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
+- Result-index `task_type` to standard module mapping is now owned by `analysis/registry/analysis_modules.json` through `result_index_task_types`; the catalog no longer carries its own hard-coded Bioinformatics task-type map.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
 - `build_analysis_center_state()` now also exposes `standard_package_gate_rows`, giving the UI direct gate rows for catalog source policy, package validation status, and artifact-manifest validity without inspecting module-private output folders.
 - `build_result_gate_rows()` now joins result-index rows with the standard package catalog by `result_id`, so Analysis Center result rows can show standard package registration status, validation status, package path, and artifact counts without reading module-specific R outputs.

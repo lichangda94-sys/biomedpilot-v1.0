@@ -10,6 +10,7 @@ import pytest
 
 from app.analysis_runtime.standard_package import validate_standard_result_package
 from app.analysis_runtime.resources import full_mode_resource_blockers, validate_analysis_resource_manifest
+from app.analysis_runtime.registry import build_result_index_task_type_module_map
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,6 +60,24 @@ def test_analysis_registry_declares_standard_modules_modes_and_package_contract(
         assert module["result_package_contract"] == "analysis/schemas/output/result_package.schema.json"
         assert module["analysis_environment"]
         assert (ROOT / module["module_manifest"]).exists()
+
+
+def test_analysis_registry_owns_result_index_task_type_aliases() -> None:
+    registry = read_json(ROOT / "analysis" / "registry" / "analysis_modules.json")
+    modules = {item["module_id"]: item for item in registry["modules"]}  # type: ignore[index]
+    task_type_map = build_result_index_task_type_module_map(registry=registry)
+
+    assert task_type_map["deg"] == "deg"
+    assert task_type_map["recomputed_deg"] == "deg"
+    assert task_type_map["ora"] == "enrichment"
+    assert task_type_map["gsea_preranked"] == "enrichment"
+    assert task_type_map["survival_km_logrank"] == "survival"
+    assert task_type_map["cox_univariate"] == "survival"
+    assert task_type_map["immune_tme_scoring"] == "immune_infiltration"
+    assert task_type_map["correlation"] == "correlation"
+    for task_type, module_id in task_type_map.items():
+        assert task_type == task_type.lower()
+        assert module_id in modules
 
 
 def test_registered_module_manifests_declare_worker_environment_and_package_contract() -> None:
