@@ -65,6 +65,8 @@ Update: the main-backend task bridge now has an explicit `worker_backend="rscrip
 
 Update: transitional controlled adapters now route external R commands through `app/analysis_runtime/r_worker.py::run_external_r_command()`. This centralizes subprocess behavior and worker-boundary metadata for enrichment and multi-factor DEG adapters, but still leaves full isolated standard-worker migration pending.
 
+Update: transitional R adapters no longer import `subprocess` or set `subprocess.run` as their own default runner. Optional test runners are still injectable, but the default subprocess owner is now only `app/analysis_runtime/r_worker.py`; an architecture test guards this boundary for enrichment and multi-factor DEG adapters.
+
 Update: the resource manifest now declares required full-mode resources for enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics. `app/analysis_runtime/resources.py` validates the manifest and adds module-specific full-mode blockers until real locks exist.
 
 Update: resource validation now rejects any resource marked `locked` while version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`. Partially prepared blocked resources may carry warnings, but full mode remains blocked until the lock is complete.
@@ -143,6 +145,7 @@ Acceptance:
 - The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
 - The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
 - Transitional controlled R adapters route Rscript commands through the shared analysis runtime boundary instead of owning direct R subprocess calls. **Completed for enrichment and multi-factor DEG adapters.**
+- Transitional controlled R adapters do not own subprocess imports or `subprocess.run` defaults. **Completed for enrichment and multi-factor DEG adapters.**
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
 - Analysis Center can read worker invocation diagnostics from the standard package catalog. **Completed for task-bridge standard packages.**
 - Analysis Center can read declared standard-package artifact paths for tables, plots, reports, and logs without module-private output coupling. **Completed for catalog artifact manifest.**

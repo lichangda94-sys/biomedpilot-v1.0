@@ -3,14 +3,13 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
-from app.analysis_runtime.r_worker import run_external_r_command
+from app.analysis_runtime.r_worker import SubprocessRunner, run_external_r_command
 from app.analysis_runtime.standard_package import write_legacy_service_adapter_invocation_manifest
 from app.bioinformatics.enrichment_backend import build_enrichment_backend_gate
 from app.bioinformatics.enrichment_result_schema import build_enrichment_statistical_policy
@@ -21,14 +20,13 @@ from app.bioinformatics.results.registry import register_result
 CONTROLLED_ENRICHMENT_R_RUN_SCHEMA_VERSION = "biomedpilot.controlled_enrichment_r_run.v1"
 CONTROLLED_ORA_COLUMNS = ("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", "qvalue", "geneID", "Count")
 CONTROLLED_GSEA_COLUMNS = ("pathway", "ES", "NES", "pval", "padj", "leadingEdge", "size")
-SubprocessRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 def run_controlled_ora_r_fixture(
     project_root: str | Path,
     *,
     detection_path: str | Path | None = None,
-    runner: SubprocessRunner = subprocess.run,
+    runner: SubprocessRunner | None = None,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     gate = build_enrichment_backend_gate(root, analysis_type="ora", detection_path=detection_path)
@@ -91,7 +89,7 @@ def run_controlled_gsea_preranked_r_fixture(
     project_root: str | Path,
     *,
     detection_path: str | Path | None = None,
-    runner: SubprocessRunner = subprocess.run,
+    runner: SubprocessRunner | None = None,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     gate = build_enrichment_backend_gate(root, analysis_type="gsea_preranked", detection_path=detection_path)
@@ -222,7 +220,7 @@ def _register_enrichment_result(
     }
 
 
-def _run_rscript(rscript_path: str, script: str, args: list[Path], *, runner: SubprocessRunner) -> dict[str, Any]:
+def _run_rscript(rscript_path: str, script: str, args: list[Path], *, runner: SubprocessRunner | None) -> dict[str, Any]:
     command = [rscript_path, "--vanilla", "-e", script, *[str(arg) for arg in args]]
     return run_external_r_command(
         command,

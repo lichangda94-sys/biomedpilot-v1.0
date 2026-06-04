@@ -81,7 +81,7 @@ def run_external_r_command(
     owner: str,
     timeout_seconds: int,
     failure_blocker: str,
-    runner: SubprocessRunner = subprocess.run,
+    runner: SubprocessRunner | None = None,
 ) -> dict[str, Any]:
     """Run an external R command through the shared analysis runtime boundary.
 
@@ -109,8 +109,9 @@ def run_external_r_command(
                 "task_system_invocation": "not_yet_migrated",
             },
         }
+    actual_runner = runner or subprocess.run
     try:
-        completed = runner(
+        completed = actual_runner(
             command,
             check=False,
             capture_output=True,

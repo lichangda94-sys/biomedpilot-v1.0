@@ -304,6 +304,20 @@ def test_active_bioinformatics_r_subprocess_invocation_is_centralized_in_analysi
     assert offenders == []
 
 
+def test_transition_r_adapters_do_not_own_subprocess_defaults() -> None:
+    adapter_paths = [
+        ROOT / "app" / "bioinformatics" / "enrichment_r_adapter.py",
+        ROOT / "app" / "bioinformatics" / "deg_engine" / "multifactor_r_runner.py",
+    ]
+
+    for path in adapter_paths:
+        text = path.read_text(encoding="utf-8")
+        assert "import subprocess" not in text
+        assert "subprocess.run" not in text
+        assert "Popen(" not in text
+        assert "run_external_r_command" in text
+
+
 def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Path) -> None:
     rscript = rscript_path()
     output_dir = tmp_path / "r-runner-output"
