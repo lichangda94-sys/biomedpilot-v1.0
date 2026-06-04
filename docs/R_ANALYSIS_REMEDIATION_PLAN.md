@@ -137,6 +137,8 @@ Update: Analysis Center state now exposes `standard_package_gate_rows` for stand
 
 Update: Analysis Center result rows now join current result-index entries with the standard package catalog by `result_id`, showing standard package registration status, validation status, package path, and artifact counts. Missing standard packages remain visible as `missing_standard_result_package` instead of being silently treated as valid result output.
 
+Update: the current Bioinformatics Results Browser table now displays standard package contract status for each result row, including registration, validation state, relative package path, and artifact counts. This is a UI consumption step only; it does not change result semantics or make testing/imported/preflight outputs formal.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -158,6 +160,7 @@ Acceptance:
 - Standard package validation blocks declared table/plot/report artifacts that are missing or outside their standard package directories. **Completed for artifact declaration gate.**
 - Analysis Center exposes standard package validation/artifact blockers as gate rows. **Completed for UI gate preview.**
 - Analysis Center result rows expose per-result standard package registration, validation, path, and artifact-count status. **Completed for result-row package preview.**
+- Results Browser displays per-result standard package registration, validation, path, and artifact-count status in the user-visible result table. **Completed for current results table preview.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**

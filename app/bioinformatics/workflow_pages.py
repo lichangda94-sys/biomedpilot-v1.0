@@ -6563,11 +6563,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         actions.addWidget(_button("查看报告草稿", "primaryButton", self.continue_to_report))
         actions.addStretch(1)
         root.addLayout(actions)
-        self._results = _table(["结果名称", "结果类型", "来源", "状态", "可用于报告", "生成时间", "简短说明", "查看详情"])
+        self._results = _table(["结果名称", "结果类型", "来源", "状态", "标准结果包", "可用于报告", "生成时间", "简短说明", "查看详情"])
         self._results.setObjectName("resultsUserTable")
         root.addWidget(self._results)
-        _set_table_widths(self._results, [170, 110, 170, 120, 120, 160, 280, 100])
-        self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+        _set_table_widths(self._results, [170, 110, 170, 120, 170, 120, 160, 280, 100])
+        self._results.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
 
         review_card, review_layout = _card("Formal DEG result review")
         self._formal_deg_guard_label = _muted("Formal DEG review shows statistical analysis results only. It is not a clinical conclusion or treatment recommendation.")
@@ -6659,7 +6659,8 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         root.addWidget(_button("继续：报告查看", "primaryButton", self.continue_to_report), alignment=Qt.AlignLeft)
 
     def _render(self, payload: dict[str, object]) -> None:
-        entries = _result_entries_for_display(self._project_root, payload)
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
+        entries = _result_entries_with_standard_packages(_result_entries_for_display(self._project_root, payload), analysis_state)
         records = load_task_records(self._project_root) if self._project_root else []
         warnings = [str(item) for item in payload.get("warnings", []) or []]
         if not entries and not records:
@@ -6692,7 +6693,6 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             allow_table_only_report=bool(self._formal_deg_table_only_report.isChecked()),
         ) if self._project_root else {}
         self._render_formal_deg_report_gate(report_gate)
-        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state}))
 
@@ -11050,6 +11050,34 @@ def _result_entries_for_display(project_root: Path | None, payload: dict[str, ob
     return entries
 
 
+def _result_entries_with_standard_packages(entries: list[dict[str, object]], analysis_state: dict[str, object]) -> list[dict[str, object]]:
+    rows = analysis_state.get("result_rows", [])
+    if not isinstance(rows, list | tuple):
+        return entries
+    by_result_id = {
+        str(row.get("result_id") or ""): row
+        for row in rows
+        if isinstance(row, dict) and str(row.get("result_id") or "")
+    }
+    enriched: list[dict[str, object]] = []
+    for entry in entries:
+        result_key = str(entry.get("result_id") or entry.get("result_name") or entry.get("name") or "")
+        standard_package = by_result_id.get(result_key)
+        if not standard_package:
+            enriched.append(entry)
+            continue
+        merged = dict(entry)
+        for key in (
+            "standard_package_status",
+            "standard_package_validation_status",
+            "standard_package_path",
+            "standard_package_artifacts",
+        ):
+            merged[key] = standard_package.get(key, "")
+        enriched.append(merged)
+    return enriched
+
+
 def _results_user_rows(project_root: Path | None, entries: list[dict[str, object]], records: list[dict[str, object]]) -> list[list[object]]:
     rows = [
         [
@@ -11057,6 +11085,7 @@ def _results_user_rows(project_root: Path | None, entries: list[dict[str, object
             _result_type_label(entry),
             _result_source_label(entry),
             _result_status_label(entry),
+            _result_standard_package_label(entry),
             _result_report_label(entry),
             _result_generated_at_label(entry),
             _result_short_description_label(entry),
@@ -11071,6 +11100,7 @@ def _results_user_rows(project_root: Path | None, entries: list[dict[str, object
                 "配置草稿",
                 _task_record_source_label(record),
                 _task_record_status_label(record),
+                "不适用",
                 "否",
                 str(record.get("created_at") or ""),
                 "任务已配置但尚未执行。",
@@ -11081,7 +11111,7 @@ def _results_user_rows(project_root: Path | None, entries: list[dict[str, object
 
 
 def _result_display_name(entry: dict[str, object]) -> str:
-    return str(entry.get("result_name") or entry.get("name") or "未命名结果")
+    return str(entry.get("result_name") or entry.get("name") or entry.get("result_id") or "未命名结果")
 
 
 def _result_type_label(entry: dict[str, object]) -> str:
@@ -11130,6 +11160,27 @@ def _result_status_label(entry: dict[str, object]) -> str:
         "configured-not-run": "已配置未运行",
         "real computed result": "真实计算结果",
     }.get(semantics, "待确认")
+
+
+def _result_standard_package_label(entry: dict[str, object]) -> str:
+    status = str(entry.get("standard_package_status") or "")
+    validation = str(entry.get("standard_package_validation_status") or "")
+    artifacts = str(entry.get("standard_package_artifacts") or "")
+    package_path = str(entry.get("standard_package_path") or "")
+    if status == "registered":
+        parts = ["已注册标准结果包"]
+        if validation:
+            parts.append(f"validation={validation}")
+        if artifacts and artifacts != "None":
+            parts.append(artifacts)
+        if package_path:
+            parts.append(f"path={package_path}")
+        return "；".join(parts)
+    if status == "missing_standard_result_package":
+        return "未注册标准结果包"
+    if status == "missing":
+        return "暂无标准结果包"
+    return "未注册标准结果包"
 
 
 def _result_openable_label(project_root: Path | None, entry: dict[str, object]) -> str:

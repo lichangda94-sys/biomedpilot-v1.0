@@ -52,6 +52,8 @@ except Exception as exc:  # pragma: no cover - depends on optional local GUI run
 else:
     IMPORT_ERROR = None
 
+from app.analysis_runtime import run_analysis_module_task
+
 
 def _table_text(table: QTableWidget) -> str:
     values: list[str] = []
@@ -4092,7 +4094,7 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     table = widget.findChild(QTableWidget, "resultsUserTable")
     assert table is not None
     headers = [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())]
-    assert headers == ["结果名称", "结果类型", "来源", "状态", "可用于报告", "生成时间", "简短说明", "查看详情"]
+    assert headers == ["结果名称", "结果类型", "来源", "状态", "标准结果包", "可用于报告", "生成时间", "简短说明", "查看详情"]
     table_text = "\n".join(
         table.item(row, col).text()
         for row in range(table.rowCount())
@@ -4104,6 +4106,7 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     assert "流程记录 / dry-run，未执行真实分析" in table_text
     assert "已配置，尚未运行" in table_text
     assert "查看详情" in table_text
+    assert "未注册标准结果包" in table_text
     assert "真实计算结果" not in table_text
     assert str(imported_path) not in table_text
     assert "differential_expression" not in table_text
@@ -4118,6 +4121,40 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     assert "schema_version" in diagnostics_text
     assert str(imported_path) in diagnostics_text
     assert "analysis_center_state" in diagnostics_text
+
+
+def test_results_browser_displays_standard_package_contract_status(qt_app, project_summary) -> None:
+    result = run_analysis_module_task(
+        project_summary.project_root,
+        {
+            "schema_version": "biomedpilot.analysis.module_input.v1",
+            "module_id": "enrichment",
+            "mode": "mock",
+            "task_id": "enrichment-mock-task",
+            "project_id": project_summary.project_root.name,
+            "inputs": {
+                "input_package_id": "input-package-001",
+                "source_dataset_id": "dataset-001",
+                "fixture_matrix": "analysis/fixtures/inputs/mock_analysis_input.json",
+            },
+            "parameters": {"comparison": "case_vs_control"},
+            "runtime": {"random_seed": 7, "requested_environment": "app-dev"},
+        },
+    )
+    assert result["status"] == "passed"
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    table = widget.findChild(QTableWidget, "resultsUserTable")
+    assert table is not None
+    table_text = _table_text(table)
+
+    assert "analysis-package-enrichment-mock-task" in table_text
+    assert "已注册标准结果包" in table_text
+    assert "validation=passed" in table_text
+    assert "tables=1; plots=0; reports=1; logs=2" in table_text
+    assert "path=analysis_results/enrichment-mock-task" in table_text
 
     gate = widget.findChild(QTableWidget, "resultsGatePreviewTable")
     assert gate is not None
