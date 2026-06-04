@@ -1,0 +1,4 @@
+REMARK BioMedPilot lite docking ligand fixture.
+REMARK This file is not a scientific ligand model.
+ATOM      1  C   LIG A   1       1.000   1.000   1.000  0.00  0.00      A    C
+ENDMDL

@@ -160,6 +160,9 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "immune_infiltration" && mode == "lite" && table_file == "lite_immune_scores.tsv") {
     return("lite_immune_infiltration_score_table")
   }
+  if (module_id == "docking" && mode == "lite" && table_file == "lite_docking_command_manifest.tsv") {
+    return("lite_docking_external_tool_command_manifest")
+  }
   "analysis_table"
 }
 
@@ -816,7 +819,79 @@ run_lite_immune_infiltration <- function() {
   quit(status = 0)
 }
 
-write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version) {
+run_lite_docking_adapter_contract <- function() {
+  receptor_path <- resolve_input_path(read_string_field(input_text, "receptor_path", ""))
+  ligand_path <- resolve_input_path(read_string_field(input_text, "ligand_path", ""))
+  config_path <- resolve_input_path(read_string_field(input_text, "config_path", ""))
+  blockers <- character(0)
+  if (receptor_path == "" || !file.exists(receptor_path)) {
+    blockers <- c(blockers, "lite_docking_receptor_missing")
+  }
+  if (ligand_path == "" || !file.exists(ligand_path)) {
+    blockers <- c(blockers, "lite_docking_ligand_missing")
+  }
+  if (config_path == "" || !file.exists(config_path)) {
+    blockers <- c(blockers, "lite_docking_config_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite docking adapter contract blocked because required fixture inputs are missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  command_preview <- paste(
+    "vina",
+    "--receptor", receptor_path,
+    "--ligand", ligand_path,
+    "--config", config_path,
+    "--out", file.path(output_dir, "tables", "lite_docking_output_not_generated.pdbqt")
+  )
+  manifest <- data.frame(
+    external_tool = "AutoDock Vina",
+    execution_status = "not_executed_lite_contract",
+    adapter_boundary = "r_chem_full_external_tool_adapter_required_for_full_mode",
+    receptor_path = receptor_path,
+    receptor_md5 = as.character(tools::md5sum(receptor_path)),
+    ligand_path = ligand_path,
+    ligand_md5 = as.character(tools::md5sum(ligand_path)),
+    config_path = config_path,
+    config_md5 = as.character(tools::md5sum(config_path)),
+    command_preview = command_preview,
+    scientific_result = "not_generated",
+    stringsAsFactors = FALSE
+  )
+  write.table(manifest, file = file.path(output_dir, "tables", "lite_docking_command_manifest.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  writeLines(c(
+    "# Lite docking adapter limitations",
+    "",
+    "This is a lightweight external-tool adapter contract package for standard worker and result-package validation.",
+    "AutoDock Vina is not executed in lite mode.",
+    "No docking score, pose, binding affinity, or scientific docking result is generated.",
+    "Full molecular docking must run in the isolated r-chem-full environment with locked tool/resource versions."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "external_tool_not_executed_in_lite_mode", "scientific_docking_result_not_generated"),
+    "Lite docking adapter contract completed without executing AutoDock Vina."
+  )
+  write_provenance(
+    module_id,
+    task_id,
+    mode,
+    command,
+    R.version.string,
+    "not_required_for_lite_external_tool_contract",
+    '{"AutoDock Vina": "not_executed_lite_contract"}'
+  )
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "external_tool=AutoDock_Vina", "execution=not_executed"), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
+write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version, external_tool_versions_json = "{}") {
   seed <- read_integer_field(input_text, "random_seed")
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
   input_hash <- as.character(tools::md5sum(input_json))
@@ -833,7 +908,7 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
     '  "parameter_hash": ', json_string(parameter_hash), ",\n",
     '  "random_seed": ', seed_value, ",\n",
     '  "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},\n',
-    '  "runtime": {"r_version": ', json_string(r_version), ', "bioconductor_version": ', json_string(bioc_version), ', "package_versions": {}, "external_tool_versions": {}},\n',
+    '  "runtime": {"r_version": ', json_string(r_version), ', "bioconductor_version": ', json_string(bioc_version), ', "package_versions": {}, "external_tool_versions": ', external_tool_versions_json, '},\n',
     '  "command": ', json_string(command), "\n",
     "}\n"
   )
@@ -884,6 +959,10 @@ if (mode == "lite" && module_id == "multivariate") {
 
 if (mode == "lite" && module_id == "immune_infiltration") {
   run_lite_immune_infiltration()
+}
+
+if (mode == "lite" && module_id == "docking") {
+  run_lite_docking_adapter_contract()
 }
 
 if (mode != "mock") {

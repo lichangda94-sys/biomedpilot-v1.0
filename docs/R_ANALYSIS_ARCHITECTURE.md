@@ -24,7 +24,7 @@ R and external tools are not default frontend or main-backend runtime dependenci
 | Mode | Purpose | Dependency policy |
 | --- | --- | --- |
 | `mock` | Frontend, API, task-flow, and result-display development | No heavy R packages; fixed fixture input/output. |
-| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. DEG, enrichment, survival, univariate, multivariate clinical association, and immune infiltration now have base R fixtures through the standard runner. |
+| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. DEG, enrichment, survival, univariate, multivariate clinical association, and immune infiltration now have base R fixtures through the standard runner. Docking has an external-tool command-manifest contract fixture that does not execute AutoDock Vina or generate scientific docking results. |
 | `full` | Formal analysis and full integration testing | Dedicated analysis container, renv lock, or isolated analysis environment. |
 
 ## Repository Contract
@@ -94,7 +94,7 @@ Existing controlled enrichment ORA/GSEA R adapters now also write a standard res
 
 Existing controlled multi-factor DEG R adapters for limma, DESeq2, and edgeR now also write standard result package sidecars for successful fixture-proven formal results. The sidecar preserves the result table, task log, parameter manifest, dependency snapshot, formula, contrast, covariates, batch variables, hashes, R/package versions, command provenance, and `worker_boundary.boundary_type=legacy_service_adapter_sidecar`. It is registered in result index v2 as a `standard_result_package` output artifact. This is a package-contract migration step only: it does not enable new DEG execution, plot artifacts, report-ready output, clinical interpretation, or complete migration into the isolated standard worker.
 
-The first `lite` worker paths are DEG two-group testing, enrichment ORA, survival KM/log-rank, univariate clinical association, multivariate clinical association, and immune infiltration signature scoring. `analysis/runners/run_module.R` can run these modules in `mode=lite` using base R and fixed repository fixtures. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`; immune infiltration also writes a real fixture SVG heatmap without relying on an R graphics device. They remain `testing_level`; they do not enable formal DEG, limma/DESeq2/edgeR, full resources, GSVA/CellChat/Seurat, plot/report-ready export, prognosis, treatment guidance, diagnosis, or clinical interpretation.
+The first `lite` worker paths are DEG two-group testing, enrichment ORA, survival KM/log-rank, univariate clinical association, multivariate clinical association, immune infiltration signature scoring, and a docking external-tool adapter contract. `analysis/runners/run_module.R` can run these modules in `mode=lite` using base R and fixed repository fixtures. These paths write standard packages with `result.json`, `provenance.json`, `tables/`, `reports/`, and `logs/`; immune infiltration also writes a real fixture SVG heatmap without relying on an R graphics device. The docking lite path writes only `tables/lite_docking_command_manifest.tsv` plus limitations/provenance, records `AutoDock Vina` as `not_executed_lite_contract`, and deliberately does not generate docking scores, poses, affinities, or scientific docking results. They remain `testing_level`; they do not enable formal DEG, limma/DESeq2/edgeR, full resources, GSVA/CellChat/Seurat, AutoDock Vina execution, plot/report-ready export, prognosis, treatment guidance, diagnosis, or clinical interpretation.
 
 ## Module Manifests
 
@@ -165,7 +165,7 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | Registry/schema | Present. |
 | Per-module mock result packages | Present for all registered modules. |
 | DEG module contract | Present as a registered standard module with mock input/output package and base R lite fixture; full standard worker execution remains blocked. |
-| Standard R runner | Present for mock mode, DEG/enrichment/survival/univariate/multivariate/immune lite fixtures, and blocked full standard packages. |
+| Standard R runner | Present for mock mode, DEG/enrichment/survival/univariate/multivariate/immune lite fixtures, docking external-tool command-manifest lite fixture, and blocked full standard packages. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Shared external R command boundary | Present for transitional controlled adapters; reduces scattered subprocess handling but does not complete isolated standard-worker migration. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
@@ -173,11 +173,12 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | Univariate lite worker | Present for base R clinical association fixture only; testing-level standard package with no clinical conclusion. |
 | Multivariate lite worker | Present for base R linear model fixture only; testing-level standard package with no clinical conclusion. |
 | Immune infiltration lite worker | Present for base R signature mean score fixture plus real SVG heatmap; testing-level standard package with no clinical interpretation. |
+| Docking lite adapter contract | Present for AutoDock Vina command-manifest fixture only; testing-level standard package with no external tool execution and no scientific docking output. |
 | Standard package catalog | Present; Analysis Center state exposes result-index-derived package summaries and worker-boundary metadata. |
 | Full/formal package provenance gate | Present; passed full/formal packages with incomplete provenance or missing worker-boundary metadata are blocked by standard package validation. |
 | Controlled enrichment standard package sidecar | Present for ORA/GSEA R fixture results with `legacy_service_adapter_sidecar` boundary metadata; does not enable plot/report-ready output or complete isolated worker migration. |
 | Controlled multi-factor DEG R standard package sidecar | Present for successful limma/DESeq2/edgeR fixture results with `legacy_service_adapter_sidecar` boundary metadata; does not enable new execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration. |
-| Other lite workers | Not enabled. |
+| Other lite workers | Spatial transcriptomics and molecular dynamics are not enabled. |
 | Full worker | Not enabled. |
 | Docker/renv split | Scaffolded only; not build/restoration proven. |
 | Resource manifest gate | Present as blocked full-mode resource ledger with validator; fake `locked` placeholder fields are rejected; real locks pending. |

@@ -7,7 +7,7 @@
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
     "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/docking/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/docking/mock_result_package"},
-    "lite": {"supported": false, "blocker": "lite_chem_worker_not_defined"},
+    "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/docking/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-chem-full", "result_semantics": "testing_level", "capability": "autodock_vina_command_manifest_fixture_no_execution", "external_tool_execution": "not_executed_in_lite_mode"},
     "full": {"supported": false, "blocker": "r_chem_full_container_not_available"}
   },
   "environment": {

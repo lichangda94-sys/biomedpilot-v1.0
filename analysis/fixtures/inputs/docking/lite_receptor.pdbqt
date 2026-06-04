@@ -1,0 +1,4 @@
+REMARK BioMedPilot lite docking receptor fixture.
+REMARK This file is not a scientific receptor model.
+ATOM      1  C   LIG A   1       0.000   0.000   0.000  0.00  0.00      A    C
+ENDMDL

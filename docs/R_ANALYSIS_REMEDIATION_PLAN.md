@@ -89,6 +89,8 @@ Update: multivariate clinical association now has a `lite` standard worker path.
 
 Update: immune infiltration now has a `lite` standard worker path. `run_module.R` can execute base R signature mean scoring on fixed local expression/signature fixture data and write a testing-level standard result package with a real SVG heatmap fixture. It does not use GSVA, CellChat, Seurat, large signature databases, report-ready immune interpretation, diagnosis, prognosis, or treatment guidance.
 
+Update: docking now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local receptor/ligand/config fixtures and write `tables/lite_docking_command_manifest.tsv` plus provenance and limitations. It does not execute AutoDock Vina, does not generate docking poses/scores/affinities, and does not enable full molecular docking.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -110,6 +112,7 @@ Acceptance:
 - Univariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for third lite worker.**
 - Multivariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for fourth lite worker.**
 - Immune infiltration can run `lite` mode through the standard R worker using fixed local expression/signature fixture data and generate a real SVG heatmap fixture. **Completed for fifth lite worker.**
+- Docking can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing AutoDock Vina. **Completed for docking adapter boundary fixture.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.
@@ -236,6 +239,35 @@ Acceptance:
 - Full image contains full R/Bioconductor dependencies and resource locks.
 - Chem/spatial dependencies are separated from bio-core.
 
+## Phase R5a: Docking External Tool Adapter Boundary
+
+Scope:
+
+- Keep AutoDock Vina outside app-dev and ordinary R bio-core environments.
+- Prove a standard result package can describe the external-tool command boundary before full tool execution exists.
+- Do not generate scientific docking results in lite mode.
+
+Status: started with command-manifest contract fixture.
+
+Completed:
+
+- Docking `mock` remains available without R.
+- Docking `lite` can run through `analysis/runners/run_module.R` using fixed receptor, ligand, and config fixture files.
+- The lite package includes `result.json`, `provenance.json`, `tables/lite_docking_command_manifest.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
+- Provenance records `external_tool_versions.AutoDock Vina=not_executed_lite_contract`.
+- The result warnings explicitly state that the external tool was not executed and no scientific docking result was generated.
+
+Remaining:
+
+- Full AutoDock Vina execution remains blocked until `r-chem-full` image/tool/resource locks are approved.
+- Molecular dynamics still has no lite adapter contract.
+
+Acceptance:
+
+- Lite command-manifest package is testing-level only.
+- No AutoDock Vina binary is required in app-dev.
+- No runtime tool install/download is performed.
+
 ## Phase R6: Resource Governance
 
 Scope:
@@ -277,6 +309,7 @@ Status:
 - Immune infiltration `lite` can run fixed base R signature mean scoring through `analysis/runners/run_module.R`.
 - Immune infiltration standard result package includes `result.json`, `provenance.json`, `tables/lite_immune_scores.tsv`, `plots/lite_immune_heatmap.svg`, `reports/README_lite.md`, and `logs/worker.log`.
 - Full immune analysis remains blocked until GSVA/CellChat/Seurat/signature resource locks and isolated worker environments are approved.
+- Docking `lite` can run a command-manifest adapter contract through `analysis/runners/run_module.R` without executing AutoDock Vina or generating scientific docking results.
 
 Rules:
 
