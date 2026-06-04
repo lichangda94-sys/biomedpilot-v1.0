@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.worker_invocation.v1",
+  "title": "BioMedPilot analysis worker invocation manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "created_at",
+    "module_id",
+    "mode",
+    "task_id",
+    "worker_backend",
+    "invocation_status",
+    "standard_worker_entrypoint",
+    "input_manifest",
+    "output_contract",
+    "runtime_install_policy",
+    "resource_download_policy",
+    "returncode",
+    "command",
+    "stdout",
+    "stderr",
+    "blockers",
+    "worker_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.worker_invocation.v1"},
+    "created_at": {"type": "string"},
+    "module_id": {"type": "string"},
+    "mode": {"enum": ["mock", "lite", "full"]},
+    "task_id": {"type": "string"},
+    "worker_backend": {"enum": ["python_fixture", "rscript"]},
+    "invocation_status": {
+      "enum": [
+        "fixture_copy_completed",
+        "fixture_copy_blocked",
+        "blocked_validation_gate",
+        "not_invoked_mode_gate",
+        "blocked_before_process",
+        "completed"
+      ]
+    },
+    "standard_worker_entrypoint": {"type": "string"},
+    "input_manifest": {"type": "string"},
+    "output_contract": {"const": "standard_result_package"},
+    "runtime_install_policy": {"const": "forbidden"},
+    "resource_download_policy": {"const": "forbidden"},
+    "returncode": {"type": ["integer", "null"]},
+    "command": {"type": "array", "items": {"type": "string"}},
+    "stdout": {"type": "string"},
+    "stderr": {"type": "string"},
+    "blockers": {"type": "array", "items": {"type": "string"}},
+    "worker_boundary": {
+      "type": "object",
+      "required": ["boundary_type", "task_system_invocation", "migration_status"],
+      "properties": {
+        "boundary_type": {"type": "string"},
+        "task_system_invocation": {"const": "task_center_registered"},
+        "migration_status": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

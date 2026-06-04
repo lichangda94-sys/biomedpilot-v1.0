@@ -37,6 +37,7 @@ analysis/
   registry/analysis_environments.json
   schemas/input/module_input.schema.json
   schemas/output/result_package.schema.json
+  schemas/output/worker_invocation.schema.json
   modules/<module_id>/module.json
   runners/run_module.R
   fixtures/inputs/<module_id>/module_input.json
@@ -90,6 +91,8 @@ In default mock mode, the bridge copies the module-specific fixed standard resul
 For worker-boundary validation, the bridge also supports an explicit `worker_backend="rscript"` path. That path writes `module_input.json`, invokes `analysis/runners/run_module.R`, validates the resulting standard package, and registers the package using the worker provenance. If `Rscript` is unavailable, it writes a blocked standard package instead of raising a traceback or installing R.
 
 Standard task-bridge outcomes now persist `logs/worker_invocation.json` alongside `logs/worker.log`. The invocation manifest records the module, mode, task id, backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, runtime-install/resource-download policy, and worker-boundary migration status for mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates. The result index keeps `worker.log` as the first log artifact for compatibility and appends the invocation manifest as `analysis_worker_invocation_manifest`.
+
+`analysis/schemas/output/worker_invocation.schema.json` defines the invocation manifest contract. `validate_standard_result_package()` validates this manifest when present and requires it for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`; missing manifests, invalid schemas, non-forbidden runtime install/resource download policy, invalid backend/status values, or missing task-system boundary metadata block standard package validation.
 
 For transitional controlled adapters that still need module-specific R scripts, `app/analysis_runtime/r_worker.py` exposes `run_external_r_command()`. This helper centralizes external R subprocess behavior, timeout handling, blocker payloads, and worker-boundary metadata. It is not the final isolated standard worker interface; adapter-generated packages remain labeled as sidecars until their algorithms are moved behind `analysis/runners/run_module.R` or an equivalent isolated worker service.
 
@@ -182,6 +185,7 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | Registered lite bridge acceptance | Present; all registry-declared lite modules are exercised through the same task bridge, standard R worker, standard result package validator, result index, and catalog path. |
 | Registered full bridge block gate | Present; all registry-declared full modules are blocked before worker execution and still emit standard package, result-index, catalog, and non-executed provenance records. |
 | Worker invocation manifest | Present for all standard task-bridge outcomes; stored as `logs/worker_invocation.json` and registered in result index log artifacts. |
+| Worker invocation validation | Present for task-bridge and standard-worker packages; missing or invalid invocation manifests block standard package validation. |
 | Shared external R command boundary | Present for transitional controlled adapters; reduces scattered subprocess handling but does not complete isolated standard-worker migration. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
 | Survival lite worker | Present for base R KM/log-rank fixture only; testing-level standard package with no clinical conclusion. |

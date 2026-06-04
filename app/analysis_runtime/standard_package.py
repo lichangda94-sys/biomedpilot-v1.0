@@ -7,6 +7,15 @@ from typing import Any
 
 REQUIRED_FILES = ("result.json", "provenance.json")
 REQUIRED_DIRECTORIES = ("tables", "plots", "reports", "logs")
+TASK_BRIDGE_ENGINES = {"biomedpilot_analysis_task_bridge", "biomedpilot_standard_r_worker"}
+WORKER_INVOCATION_STATUSES = {
+    "fixture_copy_completed",
+    "fixture_copy_blocked",
+    "blocked_validation_gate",
+    "not_invoked_mode_gate",
+    "blocked_before_process",
+    "completed",
+}
 
 
 def validate_standard_result_package(
@@ -28,6 +37,8 @@ def validate_standard_result_package(
 
     result = _load_json(root / "result.json") if (root / "result.json").is_file() else {}
     provenance = _load_json(root / "provenance.json") if (root / "provenance.json").is_file() else {}
+    invocation_path = root / "logs" / "worker_invocation.json"
+    invocation = _load_json(invocation_path) if invocation_path.is_file() else {}
     for payload_name, payload in (("result", result), ("provenance", provenance)):
         if expected_module_id and payload.get("module_id") != expected_module_id:
             blockers.append(f"{payload_name}_module_id_mismatch")
@@ -45,6 +56,15 @@ def validate_standard_result_package(
         warnings.append("provenance_command_missing")
     formal_blockers = _formal_package_provenance_blockers(result, provenance, expected_mode=expected_mode)
     blockers.extend(formal_blockers)
+    blockers.extend(
+        _worker_invocation_blockers(
+            invocation,
+            provenance,
+            expected_module_id=expected_module_id,
+            expected_task_id=expected_task_id,
+            expected_mode=expected_mode,
+        )
+    )
     return {
         "schema_version": "biomedpilot.analysis.result_package_validation.v1",
         "status": "blocked" if blockers else "passed",
@@ -88,6 +108,78 @@ def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict
     engine_name = str(engine.get("name") or "")
     if engine_name != "biomedpilot_standard_r_worker" and not worker_boundary.get("boundary_type"):
         blockers.append("formal_provenance_worker_boundary_missing")
+    return blockers
+
+
+def _worker_invocation_blockers(
+    invocation: dict[str, Any],
+    provenance: dict[str, Any],
+    *,
+    expected_module_id: str,
+    expected_task_id: str,
+    expected_mode: str,
+) -> list[str]:
+    engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
+    engine_name = str(engine.get("name") or "")
+    invocation_required = engine_name in TASK_BRIDGE_ENGINES
+    if not invocation:
+        return ["worker_invocation_manifest_missing"] if invocation_required else []
+
+    blockers: list[str] = []
+    required_fields = (
+        "schema_version",
+        "created_at",
+        "module_id",
+        "mode",
+        "task_id",
+        "worker_backend",
+        "invocation_status",
+        "standard_worker_entrypoint",
+        "input_manifest",
+        "output_contract",
+        "runtime_install_policy",
+        "resource_download_policy",
+        "returncode",
+        "command",
+        "stdout",
+        "stderr",
+        "blockers",
+        "worker_boundary",
+    )
+    missing = [field for field in required_fields if field not in invocation]
+    if missing:
+        blockers.append(f"worker_invocation_required_fields_missing:{','.join(missing)}")
+    if invocation.get("schema_version") != "biomedpilot.analysis.worker_invocation.v1":
+        blockers.append("worker_invocation_schema_version_mismatch")
+    if expected_module_id and invocation.get("module_id") != expected_module_id:
+        blockers.append("worker_invocation_module_id_mismatch")
+    if expected_task_id and invocation.get("task_id") != expected_task_id:
+        blockers.append("worker_invocation_task_id_mismatch")
+    if expected_mode and invocation.get("mode") != expected_mode:
+        blockers.append("worker_invocation_mode_mismatch")
+    if invocation.get("worker_backend") not in {"python_fixture", "rscript"}:
+        blockers.append("worker_invocation_worker_backend_invalid")
+    if invocation.get("invocation_status") not in WORKER_INVOCATION_STATUSES:
+        blockers.append("worker_invocation_status_invalid")
+    if invocation.get("output_contract") != "standard_result_package":
+        blockers.append("worker_invocation_output_contract_invalid")
+    if invocation.get("runtime_install_policy") != "forbidden":
+        blockers.append("worker_invocation_runtime_install_policy_invalid")
+    if invocation.get("resource_download_policy") != "forbidden":
+        blockers.append("worker_invocation_resource_download_policy_invalid")
+    if not isinstance(invocation.get("command"), list):
+        blockers.append("worker_invocation_command_invalid")
+    if not isinstance(invocation.get("blockers"), list):
+        blockers.append("worker_invocation_blockers_invalid")
+    boundary = invocation.get("worker_boundary")
+    if not isinstance(boundary, dict):
+        blockers.append("worker_invocation_worker_boundary_invalid")
+    else:
+        for field in ("boundary_type", "task_system_invocation", "migration_status"):
+            if not boundary.get(field):
+                blockers.append(f"worker_invocation_worker_boundary_{field}_missing")
+        if boundary.get("task_system_invocation") != "task_center_registered":
+            blockers.append("worker_invocation_task_system_invocation_invalid")
     return blockers
 
 

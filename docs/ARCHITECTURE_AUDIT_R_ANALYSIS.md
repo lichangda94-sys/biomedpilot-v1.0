@@ -20,6 +20,7 @@ This audit added a minimal boundary scaffold:
 - `analysis/registry/analysis_environments.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
+- `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
@@ -61,6 +62,7 @@ The main-backend bridge now has two mock-safe paths:
 - `worker_backend="rscript"` writes `module_input.json`, invokes the standard R runner, validates the package, and registers result-index entries from worker provenance.
 - Missing `Rscript` produces a blocked standard result package, not a traceback or installer path.
 - All standard task-bridge outcomes now write `logs/worker_invocation.json`, recording backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, and no runtime-install/resource-download policies. The result index keeps `worker.log` first for compatibility and appends the invocation manifest as a second log artifact.
+- `logs/worker_invocation.json` now has an explicit schema in `analysis/schemas/output/worker_invocation.schema.json`; `validate_standard_result_package()` requires and validates it for task-bridge and standard-worker packages. Missing manifests, schema-version drift, non-forbidden runtime install/resource download policy, invalid backend/status values, invalid command/blocker shapes, or missing task-system worker-boundary metadata block standard package validation.
 
 External R command execution for transitional controlled adapters is now centralized:
 
@@ -159,6 +161,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts, worker invocation diagnostics, and worker-boundary metadata; existing detailed result views still consume module-specific result indexes and service payloads. |
 | Main backend task-system invocation | WARN | A mock/lite/full-blocking bridge now creates `TaskCenter` entries and result-index entries; registry-declared lite modules are covered through the standard R runner, result package validator, result index, and catalog, while registry-declared full modules are blocked before worker execution with standard package provenance. Existing controlled enrichment and multi-factor DEG sidecars are now labeled as legacy service-adapter sidecars; direct service subprocess calls still remain. |
 | Worker invocation audit trail | WARN | All standard task-bridge outcomes now persist `logs/worker_invocation.json` and register it as `analysis_worker_invocation_manifest`; legacy service-adapter sidecars still have their own log shapes. |
+| Worker invocation schema validation | PASS | Added `analysis/schemas/output/worker_invocation.schema.json`; standard package validation blocks missing or invalid invocation manifests for task-bridge and standard-worker packages while preserving legacy sidecar compatibility. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
 | Environment split | WARN | Docker/renv scaffold and `analysis/registry/analysis_environments.json` exist for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; module manifests are tested against this registry, but images/lock restoration are not build proven. |
@@ -204,6 +207,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | --- | --- |
 | Full modules are not yet proven through isolated full-worker environments | Static tests and bridge tests now prove all registered modules can run mock through one interface, every registry-declared lite module can run through the same R worker/result-index/catalog path, and every registry-declared full module is blocked through the same task bridge with non-executed provenance; isolated full execution remains unavailable. |
 | Logs/provenance differ by module | All standard task-bridge packages now have `worker.log` plus `worker_invocation.json`; existing formal sidecars still have custom log artifacts and result indexes; full/formal standard package sidecars now have a stricter provenance gate. |
+| Worker invocation manifest was diagnostic-only | Task-bridge packages now require schema-valid `logs/worker_invocation.json`; invalid policy, backend/status, command, blockers, or task-system boundary fields block standard package validation. |
 | Example data is incomplete for every declared module | Generic and per-module mock fixtures exist for all registered modules; lite fixtures exist for DEG, enrichment, survival, univariate, multivariate, immune infiltration, spatial transcriptomics, docking command-manifest contract, and molecular dynamics command-manifest contract only. |
 
 ### P3
@@ -297,6 +301,7 @@ New architecture boundary files:
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
 - Added `logs/worker_invocation.json` for all standard task-bridge outcomes, and registered it in result-index log artifacts after `worker.log`.
+- Added `analysis/schemas/output/worker_invocation.schema.json` and validation blockers for missing or invalid task-bridge/standard-worker invocation manifests.
 - Split standard R worker provenance hashing so `input_hash` tracks the full input manifest and `parameter_hash` tracks the `parameters` object separately.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.

@@ -22,6 +22,7 @@ Completed in this audit:
 - `analysis/registry/analysis_environments.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
+- `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
@@ -104,6 +105,8 @@ Update: environment boundaries are now centralized in `analysis/registry/analysi
 
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 
+Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.
+
 Update: the standard package catalog now exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`. Analysis Center can display these diagnostics from the standard package catalog instead of reading module-private R outputs.
 
 ## Phase R1: Task-System Bridge
@@ -134,6 +137,7 @@ Acceptance:
 - Every registered `lite` module can run through the same main-backend task bridge and standard R worker package contract. **Completed with registry-driven focused test.**
 - Every registered `full` module is blocked through the same main-backend task bridge with a standard result package, result-index entry, catalog row, and non-executed provenance. **Completed with registry-driven focused test.**
 - All standard task-bridge outcomes write a worker invocation manifest and register it in result-index log artifacts. **Completed for task-bridge paths.**
+- Task-bridge and standard-worker packages are blocked if their worker invocation manifest is missing or violates the schema/policy contract. **Completed for validator gate.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.

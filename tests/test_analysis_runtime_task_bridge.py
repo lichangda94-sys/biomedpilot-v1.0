@@ -229,6 +229,45 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert "mock_result_not_scientific_output" in row["warnings"]
 
 
+def test_task_bridge_standard_package_validation_requires_worker_invocation_manifest(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    (package_dir / "logs" / "worker_invocation.json").unlink()
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "worker_invocation_manifest_missing" in validation["blockers"]
+
+
+def test_worker_invocation_manifest_schema_and_policy_are_validated(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    invocation_path = package_dir / "logs" / "worker_invocation.json"
+    invocation = read_json(invocation_path)
+    invocation["schema_version"] = "wrong"
+    invocation["runtime_install_policy"] = "install_allowed"
+    invocation["worker_boundary"]["task_system_invocation"] = "direct_ui_call"  # type: ignore[index]
+    invocation_path.write_text(json.dumps(invocation, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "worker_invocation_schema_version_mismatch" in validation["blockers"]
+    assert "worker_invocation_runtime_install_policy_invalid" in validation["blockers"]
+    assert "worker_invocation_task_system_invocation_invalid" in validation["blockers"]
+
+
 def test_formal_standard_package_validation_blocks_missing_worker_boundary(tmp_path: Path) -> None:
     package_dir = tmp_path / "formal-package"
     for dirname in ("tables", "plots", "reports", "logs"):

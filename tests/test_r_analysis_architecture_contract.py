@@ -230,12 +230,19 @@ def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> No
 def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -> None:
     input_schema = read_json(ROOT / "analysis" / "schemas" / "input" / "module_input.schema.json")
     output_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "result_package.schema.json")
+    invocation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
     provenance = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "provenance.json")
 
     assert "module_id" in input_schema["required"]
     assert "result_json" in output_schema["required"]
     assert "provenance_json" in output_schema["required"]
+    assert invocation_schema["$id"] == "biomedpilot.analysis.worker_invocation.v1"
+    assert "worker_backend" in invocation_schema["required"]
+    assert "invocation_status" in invocation_schema["required"]
+    assert "runtime_install_policy" in invocation_schema["required"]
+    assert invocation_schema["properties"]["runtime_install_policy"]["const"] == "forbidden"  # type: ignore[index]
+    assert invocation_schema["properties"]["resource_download_policy"]["const"] == "forbidden"  # type: ignore[index]
     assert result["mode"] == "mock"
     assert result["status"] == "passed"
     assert provenance["mode"] == "mock"
