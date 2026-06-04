@@ -63,6 +63,8 @@ Update: the standard package catalog now reads result-index `standard_result_pac
 
 Update: enrichment now has the first `lite` standard worker path. `run_module.R` can execute a base R hypergeometric ORA fixture with local TERM2GENE files and write a testing-level standard result package. It does not use Reactome/MSigDB/full resources and does not enable report-ready output.
 
+Update: controlled ORA/GSEA R adapters now mirror successful formal enrichment fixture results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This does not change the algorithms, does not enable plot/report-ready output, and does not complete isolated worker migration.
+
 Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
 
 Update: univariate clinical association now has a `lite` standard worker path. `run_module.R` can execute base R Welch t-test and Pearson correlation calculations on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
@@ -106,9 +108,11 @@ Scope:
 Acceptance:
 
 - `mock` and base R ORA `lite` pass through the standard worker. **Completed for fixture ORA.**
+- Controlled ORA/GSEA R fixture results are mirrored into standard package sidecars and indexed as `standard_result_package`. **Completed for package sidecar.**
 - `full` remains blocked until resource locks and full env exist. **Still required.**
 - Provenance records R version, input hash, parameter hash, seed, and command. **Completed for fixture ORA.**
 - Package-version capture for non-base R lite/full workers remains pending.
+- Existing controlled enrichment R adapters still need full task-worker isolation instead of direct service-level subprocess execution.
 
 ## Phase R3: Survival / Clinical R-Native Worker
 

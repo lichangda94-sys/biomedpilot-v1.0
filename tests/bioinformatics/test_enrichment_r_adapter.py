@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app.bioinformatics.enrichment_r_adapter import run_controlled_gsea_preranked_r_fixture, run_controlled_ora_r_fixture
 from app.bioinformatics.results.registry import load_registry
+from app.analysis_runtime import build_standard_analysis_package_catalog, validate_standard_result_package
 
 
 def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report(tmp_path: Path) -> None:
@@ -19,8 +20,17 @@ def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report
     assert result["report_artifacts"] == []
     assert result["report_ready_eligible"] is False
     result_path = Path(result["result_table_path"])
+    standard_package_dir = Path(result["standard_result_package_dir"])
     assert result_path.is_file()
+    assert standard_package_dir.is_dir()
     assert "DNA_DAMAGE" in result_path.read_text(encoding="utf-8")
+    validation = validate_standard_result_package(
+        standard_package_dir,
+        expected_module_id="enrichment",
+        expected_task_id=str(result["task_run_id"]),
+        expected_mode="full",
+    )
+    assert validation["status"] == "passed"
     registry = load_registry(tmp_path)
     entry = registry["results"][0]
     assert entry["task_type"] == "ora"
@@ -31,6 +41,15 @@ def test_controlled_ora_r_fixture_registers_formal_result_without_plot_or_report
     assert entry["report_artifacts"] == []
     assert entry["report_ready_eligible"] is False
     assert entry["validation_status"] == "passed"
+    assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    assert catalog["status"] == "passed"
+    assert catalog["package_count"] == 1
+    assert catalog["rows"][0]["module_id"] == "enrichment"
+    assert catalog["rows"][0]["mode"] == "full"
+    assert catalog["rows"][0]["result_semantics"] == "formal_computed_result"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+    assert catalog["rows"][0]["artifact_counts"]["plots"] == 0
 
 
 def test_controlled_gsea_r_fixture_registers_formal_result_without_plot_or_report(tmp_path: Path) -> None:
@@ -41,7 +60,9 @@ def test_controlled_gsea_r_fixture_registers_formal_result_without_plot_or_repor
     assert result["status"] == "passed"
     assert result["analysis_type"] == "gsea_preranked"
     result_path = Path(result["result_table_path"])
+    standard_package_dir = Path(result["standard_result_package_dir"])
     assert result_path.is_file()
+    assert standard_package_dir.is_dir()
     assert "NES" in result_path.read_text(encoding="utf-8")
     registry = load_registry(tmp_path)
     entry = registry["results"][0]
@@ -52,6 +73,11 @@ def test_controlled_gsea_r_fixture_registers_formal_result_without_plot_or_repor
     assert entry["plot_artifacts"] == []
     assert entry["report_artifacts"] == []
     assert entry["report_ready_eligible"] is False
+    assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    assert catalog["package_count"] == 1
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+    assert catalog["rows"][0]["artifact_counts"]["reports"] == 1
 
 
 def test_controlled_enrichment_r_fixture_blocks_when_backend_gate_fails(tmp_path: Path) -> None:

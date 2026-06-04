@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -52,6 +53,21 @@ def run_controlled_ora_r_fixture(
         result_path = _copy_result_table(root, result_id, raw_output)
     log_path = _write_run_log(root, result_id, task_run_id, "ora", parameter_manifest, gate, run_log)
     manifest_path = _write_parameter_manifest(root, result_id, parameter_manifest)
+    standard_package_dir = _write_standard_enrichment_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        analysis_type="ora",
+        result_path=result_path,
+        parameter_manifest_path=manifest_path,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=gate,
+        engine_name="r_clusterProfiler_enricher",
+        engine_version=_package_version(gate, "clusterProfiler"),
+        command=run_log.get("command") if isinstance(run_log.get("command"), list) else [],
+        artifact_type="ora_result_table",
+    )
     return _register_enrichment_result(
         root,
         result_id=result_id,
@@ -65,6 +81,7 @@ def run_controlled_ora_r_fixture(
         engine_name="r_clusterProfiler_enricher",
         engine_version=_package_version(gate, "clusterProfiler"),
         artifact_type="ora_result_table",
+        standard_package_dir=standard_package_dir,
     )
 
 
@@ -99,6 +116,21 @@ def run_controlled_gsea_preranked_r_fixture(
         result_path = _copy_result_table(root, result_id, raw_output)
     log_path = _write_run_log(root, result_id, task_run_id, "gsea_preranked", parameter_manifest, gate, run_log)
     manifest_path = _write_parameter_manifest(root, result_id, parameter_manifest)
+    standard_package_dir = _write_standard_enrichment_result_package(
+        root,
+        result_id=result_id,
+        task_run_id=task_run_id,
+        analysis_type="gsea_preranked",
+        result_path=result_path,
+        parameter_manifest_path=manifest_path,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=gate,
+        engine_name="r_fgsea_preranked",
+        engine_version=_package_version(gate, "fgsea"),
+        command=run_log.get("command") if isinstance(run_log.get("command"), list) else [],
+        artifact_type="gsea_preranked_result_table",
+    )
     return _register_enrichment_result(
         root,
         result_id=result_id,
@@ -112,6 +144,7 @@ def run_controlled_gsea_preranked_r_fixture(
         engine_name="r_fgsea_preranked",
         engine_version=_package_version(gate, "fgsea"),
         artifact_type="gsea_preranked_result_table",
+        standard_package_dir=standard_package_dir,
     )
 
 
@@ -129,6 +162,7 @@ def _register_enrichment_result(
     engine_name: str,
     engine_version: str,
     artifact_type: str,
+    standard_package_dir: Path,
 ) -> dict[str, Any]:
     now = _now()
     entry = ResultIndexEntry(
@@ -146,6 +180,7 @@ def _register_enrichment_result(
         output_artifacts=(
             {"artifact_type": artifact_type, "path": str(result_path.relative_to(root)), "schema": f"biomedpilot.{artifact_type}.v1"},
             {"artifact_type": "enrichment_parameter_manifest", "path": str(parameter_manifest_path.relative_to(root)), "schema": "biomedpilot.enrichment_parameter_manifest.v1"},
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
         ),
         plot_artifacts=(),
         report_artifacts=(),
@@ -168,6 +203,7 @@ def _register_enrichment_result(
         "result_entry": registered,
         "result_table_path": str(result_path),
         "parameter_manifest_path": str(parameter_manifest_path),
+        "standard_result_package_dir": str(standard_package_dir),
         "dependency_snapshot": dependency_snapshot,
         "plot_artifacts": [],
         "report_artifacts": [],
@@ -322,6 +358,92 @@ def _write_run_log(root: Path, result_id: str, task_run_id: str, analysis_type: 
     return path
 
 
+def _write_standard_enrichment_result_package(
+    root: Path,
+    *,
+    result_id: str,
+    task_run_id: str,
+    analysis_type: str,
+    result_path: Path,
+    parameter_manifest_path: Path,
+    log_path: Path,
+    parameter_manifest: dict[str, Any],
+    dependency_snapshot: dict[str, Any],
+    engine_name: str,
+    engine_version: str,
+    command: list[Any],
+    artifact_type: str,
+) -> Path:
+    package_dir = root / "analysis" / "standard_packages" / result_id
+    for dirname in ("tables", "plots", "reports", "logs"):
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+    table_name = result_path.name
+    package_table = package_dir / "tables" / table_name
+    package_table.write_text(result_path.read_text(encoding="utf-8"), encoding="utf-8")
+    package_log = package_dir / "logs" / log_path.name
+    package_log.write_text(log_path.read_text(encoding="utf-8"), encoding="utf-8")
+    (package_dir / "reports" / "README_limitations.md").write_text(
+        "\n".join(
+            [
+                "# Controlled enrichment standard package",
+                "",
+                "This standard result package mirrors the controlled ORA/GSEA result table for package-contract validation.",
+                "It does not create plot artifacts, report-ready output, clinical interpretation, diagnosis, prognosis, or treatment recommendations.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    now = _now()
+    result_payload = {
+        "schema_version": "biomedpilot.analysis.result.v1",
+        "module_id": "enrichment",
+        "mode": "full",
+        "task_id": task_run_id,
+        "status": "passed",
+        "result_semantics": "formal_computed_result",
+        "summary": {
+            "message": f"Controlled {analysis_type} R result mirrored into a standard result package.",
+            "clinical_conclusion_status": "not_generated",
+            "analysis_type": analysis_type,
+            "source_result_id": result_id,
+        },
+        "tables": [{"artifact_type": artifact_type, "path": f"tables/{table_name}"}],
+        "plots": [],
+        "reports": [{"artifact_type": "standard_package_limitations_report", "path": "reports/README_limitations.md"}],
+        "blockers": [],
+        "warnings": [
+            "standard_package_sidecar_for_existing_controlled_enrichment_adapter",
+            "report_ready_not_enabled_by_standard_package",
+        ],
+        "created_at": now,
+    }
+    provenance_payload = {
+        "schema_version": "biomedpilot.analysis.provenance.v1",
+        "module_id": "enrichment",
+        "mode": "full",
+        "task_id": task_run_id,
+        "created_at": now,
+        "input_path": str(parameter_manifest_path),
+        "input_hash": _sha256_file(parameter_manifest_path),
+        "parameter_hash": _sha256_json(parameter_manifest),
+        "random_seed": None,
+        "engine": {"name": engine_name, "version": engine_version},
+        "runtime": {
+            "r_version": str(((dependency_snapshot.get("rscript") or {}) if isinstance(dependency_snapshot.get("rscript"), dict) else {}).get("version") or ""),
+            "bioconductor_version": str(dependency_snapshot.get("bioconductor_version") or ""),
+            "package_versions": _package_versions(dependency_snapshot),
+            "external_tool_versions": {},
+        },
+        "command": " ".join(str(item) for item in command),
+        "source_result_id": result_id,
+        "source_result_table_hash": _sha256_file(result_path),
+    }
+    (package_dir / "result.json").write_text(json.dumps(result_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    (package_dir / "provenance.json").write_text(json.dumps(provenance_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return package_dir
+
+
 def _parameter_manifest(analysis_type: str, *, result_id: str, task_run_id: str, dependency_snapshot: dict[str, Any]) -> dict[str, Any]:
     capability = "ora_enricher" if analysis_type == "ora" else "gsea_preranked_fgsea"
     return {
@@ -349,6 +471,28 @@ def _package_version(gate: dict[str, Any], package: str) -> str:
     packages = gate.get("packages") if isinstance(gate.get("packages"), dict) else {}
     status = packages.get(package) if isinstance(packages.get(package), dict) else {}
     return str(status.get("version") or "unknown")
+
+
+def _package_versions(gate: dict[str, Any]) -> dict[str, str]:
+    packages = gate.get("packages") if isinstance(gate.get("packages"), dict) else {}
+    versions: dict[str, str] = {}
+    for name, status in packages.items():
+        if isinstance(status, dict) and status.get("version"):
+            versions[str(name)] = str(status.get("version"))
+    return versions
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _sha256_json(payload: dict[str, Any]) -> str:
+    normalized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(normalized).hexdigest()
 
 
 def _blocked(analysis_type: str, *blockers: str, **payload: Any) -> dict[str, Any]:
