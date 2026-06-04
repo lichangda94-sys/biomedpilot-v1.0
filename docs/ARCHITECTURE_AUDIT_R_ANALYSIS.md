@@ -19,6 +19,8 @@ This audit added a minimal boundary scaffold:
 - `analysis/registry/analysis_modules.json`
 - `analysis/registry/analysis_environments.json`
 - `analysis/schemas/input/module_input.schema.json`
+- `analysis/schemas/output/result.schema.json`
+- `analysis/schemas/output/provenance.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/runners/run_module.R`
@@ -200,7 +202,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Module registry | PASS | Added `analysis/registry/analysis_modules.json`. |
 | Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock, every registry-declared lite standard package, docking/MD lite command-manifest packages, and validator-passing blocked unsupported/full standard packages; every registry-declared full mode is bridge-blocked with a standard package; existing formal real modules do not call it yet. |
 | Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; every module that declares lite support is covered by a registry-driven bridge test; every module that declares full mode is covered by a registry-driven blocked-package bridge test; full activation remains blocked pending migration. |
-| Unified input/output schema | PASS | Added input and result package schemas. |
+| Unified input/output schema | PASS | Added input, result payload, provenance payload, worker invocation, and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, exploratory immune/TME scoring, and local correlation results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog and standard-package gate rows from result-index artifacts, worker invocation diagnostics, worker-boundary metadata, full-mode environment snapshots, and a standard artifact manifest; package validation blocks declared table/plot/report artifacts that are missing or escape the standard package directories. Existing detailed result views still consume module-specific result indexes and service payloads. |

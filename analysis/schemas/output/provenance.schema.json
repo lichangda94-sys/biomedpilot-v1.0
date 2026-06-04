@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.provenance.v1",
+  "title": "BioMedPilot standard analysis provenance payload",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "module_id",
+    "mode",
+    "task_id",
+    "created_at",
+    "input_hash",
+    "parameter_hash",
+    "random_seed",
+    "engine",
+    "runtime",
+    "command"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.provenance.v1"},
+    "module_id": {"type": "string", "minLength": 1},
+    "mode": {"enum": ["mock", "lite", "full"]},
+    "task_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string"},
+    "input_hash": {"type": "string", "minLength": 1},
+    "parameter_hash": {"type": "string", "minLength": 1},
+    "random_seed": {},
+    "engine": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "r_version",
+        "bioconductor_version",
+        "package_versions",
+        "external_tool_versions"
+      ],
+      "properties": {
+        "r_version": {"type": "string"},
+        "bioconductor_version": {"type": "string"},
+        "package_versions": {"type": "object"},
+        "external_tool_versions": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "command": {"type": "string", "minLength": 1},
+    "worker_boundary": {"type": "object"},
+    "analysis_environment": {"type": "object"}
+  },
+  "additionalProperties": true
+}

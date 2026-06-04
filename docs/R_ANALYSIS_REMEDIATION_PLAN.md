@@ -21,6 +21,8 @@ Completed in this audit:
 - `analysis/registry/analysis_modules.json`
 - `analysis/registry/analysis_environments.json`
 - `analysis/schemas/input/module_input.schema.json`
+- `analysis/schemas/output/result.schema.json`
+- `analysis/schemas/output/provenance.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/runners/run_module.R`
@@ -130,6 +132,8 @@ Update: transitional service-adapter sidecar packages now write `logs/worker_inv
 Update: standard package validation now requires `logs/worker_invocation.json` for legacy service-adapter sidecar packages as well as task-bridge and standard-worker packages. A sidecar without the invocation manifest is blocked instead of being accepted as a valid standard package.
 
 Update: passed standard result packages now require reproducibility provenance. `validate_standard_result_package()` blocks passed packages missing input hash, parameter hash, random seed field, command, engine name/version, R version, Bioconductor version, R package-version container, or external-tool-version container.
+
+Update: content-level schemas now exist for `result.json` and `provenance.json` under `analysis/schemas/output/result.schema.json` and `analysis/schemas/output/provenance.schema.json`. These schemas mirror the core validator contract for result semantics, artifact declarations, reproducibility hashes, runtime version containers, engine metadata, seed, and command provenance.
 
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 

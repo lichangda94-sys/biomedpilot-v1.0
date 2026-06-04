@@ -251,6 +251,8 @@ def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> No
 def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -> None:
     input_schema = read_json(ROOT / "analysis" / "schemas" / "input" / "module_input.schema.json")
     output_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "result_package.schema.json")
+    result_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "result.schema.json")
+    provenance_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json")
     invocation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
     provenance = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "provenance.json")
@@ -258,6 +260,13 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "module_id" in input_schema["required"]
     assert "result_json" in output_schema["required"]
     assert "provenance_json" in output_schema["required"]
+    assert result_schema["$id"] == "biomedpilot.analysis.result.v1"
+    assert provenance_schema["$id"] == "biomedpilot.analysis.provenance.v1"
+    assert {"result_semantics", "tables", "plots", "reports", "blockers", "warnings"} <= set(result_schema["required"])
+    assert {"input_hash", "parameter_hash", "random_seed", "engine", "runtime", "command"} <= set(provenance_schema["required"])
+    assert {"name", "version"} <= set(provenance_schema["properties"]["engine"]["required"])  # type: ignore[index]
+    runtime_required = set(provenance_schema["properties"]["runtime"]["required"])  # type: ignore[index]
+    assert {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"} <= runtime_required
     assert invocation_schema["$id"] == "biomedpilot.analysis.worker_invocation.v1"
     assert "worker_backend" in invocation_schema["required"]
     assert "invocation_status" in invocation_schema["required"]
