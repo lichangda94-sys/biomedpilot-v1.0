@@ -142,6 +142,7 @@ Existing local expression correlation now writes a standard result package sidec
 - The sidecar includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
 - The sidecar records `mode=lite`, `result_semantics=testing_level`, and `worker_boundary.boundary_type=legacy_service_adapter_sidecar`.
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
+- Correlation is now registered in `analysis/registry/analysis_modules.json` and `analysis/modules/correlation/module.json` with a fixed mock package and full-mode blocking. Its existing runtime remains a legacy service-adapter sidecar until migrated behind the standard worker.
 - This is a package-contract migration step, not a claim that correlation has been migrated into the isolated standard worker or that report-ready output, causal interpretation, or clinical interpretation are enabled.
 
 The first lightweight worker paths are now available:
@@ -212,7 +213,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; gene-set runtime downloads are blocked by default; real resource locks are incomplete. |
 | Provenance captures versions/hashes/seed/command | WARN | The standard R worker records separate input and parameter hashes plus seed and command; bridge-blocked full packages now record and validate target environment Dockerfile/renv/resource-lock snapshots; full/formal standard package validation blocks missing provenance containers, but package/tool version capture is still incomplete for unmigrated formal/full modules. |
-| DEG/survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, first R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, immune infiltration, and spatial transcriptomics, and docking/MD have lite external-tool command-manifest contract fixtures; formal/full migration remains pending. |
+| DEG/survival/univariate/multivariate/enrichment/immune/correlation/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, first R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, immune infiltration, and spatial transcriptomics, and docking/MD have lite external-tool command-manifest contract fixtures. Correlation is registered with mock/full-blocked contract while its current runtime remains a testing-level legacy service-adapter sidecar; formal/full migration remains pending. |
 | Docking/MD external tool adapters | WARN | Docking and molecular dynamics have testing-level command-manifest adapter contracts that do not execute AutoDock Vina or GROMACS and do not generate scientific docking or MD outputs. |
 | Default dev can start without full analysis deps | PASS | Current source smoke historically works without requiring full R environments; scaffold test does not require R. |
 

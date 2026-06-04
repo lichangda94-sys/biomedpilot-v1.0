@@ -45,7 +45,8 @@
         "univariate",
         "multivariate",
         "enrichment",
-        "immune_infiltration"
+        "immune_infiltration",
+        "correlation"
       ]
     },
     {
@@ -64,7 +65,8 @@
         "univariate",
         "multivariate",
         "enrichment",
-        "immune_infiltration"
+        "immune_infiltration",
+        "correlation"
       ]
     },
     {

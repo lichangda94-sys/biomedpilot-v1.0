@@ -1,0 +1,3 @@
+target_gene	compared_gene	pearson_r	p_value	notes
+TP53	EGFR	1.0	not_computed_mock	mock_fixture_not_scientific_output
+TP53	GAPDH	-1.0	not_computed_mock	mock_fixture_not_scientific_output

@@ -20,6 +20,7 @@ REQUIRED_MODULES = {
     "multivariate",
     "enrichment",
     "immune_infiltration",
+    "correlation",
     "spatial_transcriptomics",
     "docking",
     "molecular_dynamics",

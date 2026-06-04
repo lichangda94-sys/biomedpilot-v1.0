@@ -112,6 +112,21 @@
       "result_package_contract": "analysis/schemas/output/result_package.schema.json"
     },
     {
+      "module_id": "correlation",
+      "title": "Expression correlation analysis",
+      "current_adapter_status": "existing_python_testing_level_sidecar_pending_standard_worker_migration",
+      "modes": {
+        "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/correlation/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/correlation/mock_result_package"},
+        "lite": {"supported": false, "blocker": "correlation_lite_standard_r_worker_not_enabled"},
+        "full": {"supported": false, "blocker": "full_r_worker_container_not_available"}
+      },
+      "analysis_environment": "r-bio-core",
+      "full_environment": "r-bio-full",
+      "module_manifest": "analysis/modules/correlation/module.json",
+      "heavy_dependencies": [],
+      "result_package_contract": "analysis/schemas/output/result_package.schema.json"
+    },
+    {
       "module_id": "spatial_transcriptomics",
       "title": "Spatial transcriptomics",
       "current_adapter_status": "planned_not_current_runtime",

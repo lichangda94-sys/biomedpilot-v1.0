@@ -93,6 +93,8 @@ Update: exploratory immune / TME scoring now mirrors score matrix, signature cov
 
 Update: local expression correlation now mirrors Pearson correlation result tables and summary logs into a standard result package sidecar and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable report-ready output, causal interpretation, clinical interpretation, or complete isolated worker migration.
 
+Update: correlation is now registered as a standard analysis module with a fixed mock input/output package and full-mode blocking. The existing runtime remains a testing-level legacy service-adapter sidecar until a standard worker migration is implemented.
+
 Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
 
 Update: univariate clinical association now has a `lite` standard worker path. `run_module.R` can execute base R Welch t-test and Pearson correlation calculations on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
