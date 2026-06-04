@@ -2,109 +2,94 @@
 
 Date: 2026-06-04
 
-## Scope
-
-This catalog covers current `app/bioinformatics/legacy/**`, `app/meta_analysis/legacy/**`, `archive/legacy_sources/**`, and branch-discovered historical implementation areas. It is not a current capability claim.
-
-Current audit baseline:
+Current baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15
-mode: read-only Phase 2.5 inventory refresh
+HEAD: 0aa6793f460f79a78036c352f918a5acfc7a522b
+mode: Phase 2.5 read-only inventory
 ```
 
-Uncommitted R analysis worker / univariate lite fixture files were present before this refresh and are not counted here as completed legacy migration or production capability.
+This catalog covers current non-legacy feature surfaces, `app/bioinformatics/legacy/**`, `app/meta_analysis/legacy/**`, `archive/legacy_sources/**`, and branch-discovered historical implementation areas. It is not a current capability claim.
 
-Classification used:
+## Evidence Labels
 
-| Evidence class | Meaning |
+| Label | Meaning |
 | --- | --- |
-| Current | Present in current non-legacy source and supported by current tests or recent current-line reports. |
-| Branch evidence | Present on a local branch by file/log evidence only. Not proven in current UI. |
-| Legacy tests only | Present under `legacy/` or `archive/legacy_sources/**` with historical tests/docs. Not current runtime evidence. |
-| Deprecated | Historical, placeholder, mock, no-op, fake preflight, or old shell path that should not be migrated directly. |
+| Current | Present in current non-legacy source and supported by current tests or recent current-line proof. |
+| Current scaffold | Present in current source but mock/lite/testing-level or not wired as ordinary user completion. |
+| Branch evidence | Present on a local branch by read-only branch/file/diff evidence only. |
+| Legacy tests only | Present under `legacy/` or `archive/legacy_sources/**` with historical tests/docs only. |
+| Deprecated | Historical, placeholder, fake, no-op, old shell path, or boundary-violating code that must not be migrated directly. |
 
 ## Bioinformatics Current Non-Legacy Feature Areas
 
 | Feature area | Current files | Description | Evidence | Production claim allowed? |
 | --- | --- | --- | --- | --- |
-| Recognition / standardization / resolver | `project_recognition.py`, `project_standardization.py`, `standardized_asset_selection.py`, `analysis_inputs/**`, `deg_ready/**` | Current input contract layer for downstream analysis | Current source and tests | No; input contract only |
-| Controlled formal DEG | `deg_engine/formal_runner.py`, `parameter_gate.py`, `result_schema.py`, `python_backend.py`, `runtime_validation.py` | Controlled DEG execution and result schema gates | Current tests under `tests/bioinformatics/test_formal_*`, `test_deg_*` | No clinical/public production claim |
-| Multi-factor DEG | `deg_engine/multifactor_*`, `multifactor_r_runner.py` | Controlled multi-factor schema, confirmation, R fixture runners | Current tests under `test_multifactor_deg_*` | Controlled only |
-| DEG hardening gates | `input_adaptation.py`, `design_quality.py`, `data_quality.py`, `method_recommendation.py`, `audit_package.py`, `cross_project_acceptance.py` | Real project adaptation, design/data quality, method recommendation, audit package | Current tests under `test_deg_*_gate.py` | Candidate only |
-| ORA/GSEA enrichment | flat `enrichment_*`, `gene_set_resources.py`, `services/enrichment_*` | Controlled ORA/GSEA input/resource/result/review/plot/report/audit gates | Current tests under `test_enrichment_*` | MVP/research only |
-| Survival / Cox | `survival_clinical/**`, `clinical_analysis/**`, `plots/survival.py`, `plots/cox.py` | Controlled KM/log-rank and Cox univariate; partial multivariate design/runtime history | Current tests under survival/cox names | Statistical research only |
-| Risk score | `survival_clinical/risk_score_*` on some branch/current inventories | Controlled risk score gates and review candidates | Branch/current file evidence varies; not rerun here | Not clinical risk system |
-| Plot artifacts | `plots/basic_renderers.py`, `formal_deg.py`, `survival.py`, `cox.py`, `schema.py`, `registry.py` | SVG/spec-driven plot artifacts for supported current analysis results | Current plot tests | Not a full plotting platform |
-| Report/export packages | `reports/formal_deg.py`, `reports/export_package.py`, `reports/readiness.py`, `reports/project_report_builder.py` | Section/package report gates and export packages | Current report tests | Statistical package only, no clinical conclusion |
-| Analysis runtime mock bridge | `app/analysis_runtime/**`, `analysis/**` | Mock-mode standard result package bridge | Current recent commits and tests | Mock only; not full R analysis execution |
-| Standard analysis lite worker scaffold | `analysis/registry/analysis_modules.json`, `analysis/runners/run_module.R`, `analysis/modules/**`, `analysis/fixtures/**` | Current-line mock/lite standard package worker material for selected modules | Current branch commits through survival lite; uncommitted univariate work not counted | Lite/testing-level only; not production or full R/Bioc execution |
+| Recognition / standardization / resolver | `project_recognition.py`, `project_standardization.py`, `standardized_asset_selection.py`, `analysis_inputs/**`, `deg_ready/**` | Input contract layer for downstream analysis | Current source/tests | No; input contract only |
+| TCGA/GTEx/local assets | `data_sources/**`, `tcga/**`, `standard_assets/**`, `search_center/**` | Data source preview/download/build/standardized packages | Current source/tests | No; upstream data preparation only |
+| Controlled formal DEG | `deg_engine/formal_runner.py`, `parameter_gate.py`, `result_schema.py`, `python_backend.py`, `runtime_validation.py` | Gated two-group DEG result execution and schema | Current tests and L3 proof reports | Research/statistical only; not clinical/public production |
+| DEG production hardening gates | `deg_engine/input_adaptation.py`, `design_quality.py`, `data_quality.py`, `method_recommendation.py`, `audit_package.py`, `cross_project_acceptance.py` | Real project input adaptation, design/data QA, method explanation, audit package | Current tests by file inventory | Candidate; must still be proven per project |
+| Multi-factor DEG | `deg_engine/multifactor_*`, `multifactor_r_runner.py` | Controlled multi-factor schema/confirmation/R fixture runners | Current tests under `test_multifactor_deg_*` | Controlled only |
+| ORA/GSEA enrichment | flat `enrichment_*`, `gene_set_resources.py`, `services/enrichment_*` | Controlled ORA/GSEA gates, execution/review/plot/report/audit | Current tests under `test_enrichment_*` | MVP/research only |
+| Survival / Cox | `survival_clinical/**`, `clinical_analysis/**`, `plots/survival.py`, `plots/cox.py` | Controlled KM/log-rank and Cox univariate; multivariate design/runtime candidates | Current tests under KM/Cox names | Statistical research only |
+| Immune infiltration | `immune_infiltration/**` | Signature scoring/readiness/report candidates | Current source/tests | Research only |
+| Plot artifacts | `plots/basic_renderers.py`, `formal_deg.py`, `survival.py`, `cox.py`, `schema.py`, `registry.py` | SVG/spec-driven plot artifacts for supported results | Current plot tests | Not a full plotting platform |
+| Report/export packages | `reports/**` | Section/package report gates, project report builder, export packages | Current report tests | Statistical package only; no clinical conclusion |
+| Standard analysis runtime bridge | `app/analysis_runtime/**`, `analysis/registry/**`, `analysis/runners/run_module.R` | Mock/lite/full-mode runner contract and package catalog foundation | Current recent commits/tests | Current scaffold only |
+| Lite standard workers | `analysis/modules/{enrichment,survival,univariate,multivariate,immune_infiltration}/**`, corresponding fixtures | Base R lite fixture workers writing standard result packages | Current recent commits | Lite/testing-level only |
+| Enrichment standard package sidecar | `enrichment_r_adapter.py`, `app/analysis_runtime/standard_package.py` | Adds standard package sidecar to controlled ORA/GSEA adapter output | Current HEAD `0aa6793`; focused tests in recent work | Sidecar/audit infrastructure; does not make full production ORA/GSEA |
 
 ## Bioinformatics Legacy Catalog
 
 | Feature area | Source files | Description | Evidence | Current equivalent | Status |
 | --- | --- | --- | --- | --- | --- |
-| GEO desktop tool | `app/bioinformatics/legacy/geo_tool/**`, `archive/legacy_sources/bioinformatics_project/geo_tool/**` | Standalone GEO GUI, query helpers, MeSH term helpers, workflow wrappers | Legacy README and tests | Current Bio UI plus search/recognition/standardization/resolver | Deprecated as runtime; reference only |
-| GEO pipeline and processors | `legacy/geo_pipeline/**`, `legacy/geo_processing/**`, archive copies | Download/process GEO SOFT, detector, matrix classifier, validators | Legacy tests such as `test_geo_downloader`, `test_geo_detector` | Current `search_center`, `download`, `project_recognition`, `analysis_inputs` | Adapter/rewrite only |
-| Module 3 sandbox | `legacy/ui/**` | Sandbox formatting/UI for data assets | Legacy tests | Current standardized assets and Analysis Center | UI material only |
-| TCGA/GTEx facade | `legacy/tcga_gtex/**` | Query/adapters/facade/lexicon for TCGA/GTEx | Legacy tests and docs | Current `data_sources`, `tcga`, `standard_assets` | Rewrite/reference only |
-| Literature CLI/GUI | `legacy/literature_cli.py`, `legacy/literature_gui.py` | Old literature utilities kept with GEO snapshot | Legacy README boundary warning | Current Meta owns literature workflows | Deprecated for Bio |
-| Legacy GEO scripts | `download_geo_full_only.py`, `process_geo_family_soft.py`, `download_supplement_and_sra.py` | Compatibility download/process scripts | Legacy README and archive duplicate | Current downloader/recognition services | Deprecated/direct-use forbidden |
-| Lexicon resources | `legacy/tcga_gtex/lexicon/**`, `configs/rules/**` | Chinese/English medical term resources and source mappings | Legacy coverage audit files | Shared vocabulary/search center | Reuse only as governed resources |
-| Legacy test harness | `legacy/tests/**`, `scripts/run_smoke_tests.py` | Old unittest gates | Legacy only | Current `tests/bioinformatics` | Do not count as current tests |
+| Standalone GEO desktop tool | `app/bioinformatics/legacy/geo_tool/**`, archive copy | Old GEO GUI, query helpers, MeSH builders, workflow wrappers | Legacy tests/docs | Current Bio UI plus search/recognition/standardization/resolver | Deprecated runtime; reference only |
+| GEO pipeline/processors | `legacy/geo_pipeline/**`, `legacy/geo_processing/**`, archive copy | Old GEO SOFT/download/detector/matrix classifier/validators | Legacy tests | Current downloader, recognition, resolver and standardized assets | Adapter/rewrite only |
+| Module 3 sandbox UI | `legacy/ui/**` | Historical asset formatting sandbox | Legacy tests | Current standardized assets and Analysis Center | UI material only |
+| TCGA/GTEx facade | `legacy/tcga_gtex/**` | Old adapters/facade/lexicon for TCGA/GTEx | Legacy tests/docs | Current `data_sources`, `tcga`, `standard_assets` | Rewrite/reference only |
+| Bio literature CLI/GUI | `legacy/literature_cli.py`, `legacy/literature_gui.py` | Old literature utilities | Legacy only | Current Meta owns literature workflows | Deprecated for Bio |
+| Compatibility download scripts | `download_geo_full_only.py`, `process_geo_family_soft.py`, `download_supplement_and_sra.py` | Old direct scripts | Legacy README/tests | Current task/downloader contracts | Deprecated/direct-use forbidden |
+| Lexicon resources | `legacy/tcga_gtex/lexicon/**`, `configs/rules/**` | Chinese/English terms and mappings | Legacy coverage audits | Shared vocabulary/search resources | Reuse only through governed resource path |
+| Legacy Bio tests | `legacy/tests/**` | Historical unit tests | Legacy tests only | Current `tests/bioinformatics` | Do not count as current tests |
 
 ## Meta Analysis Current Non-Legacy Feature Areas
 
 | Feature area | Current files | Description | Evidence | Production claim allowed? |
 | --- | --- | --- | --- | --- |
-| Protocol/search/literature import | `pages/protocol_page.py`, `search/**`, `services/literature_*` | Current systematic review setup, PubMed/search, import | Current tests under `tests/meta_analysis` | Developer/internal level unless separately proven |
-| Dedup/screening/fulltext/extraction/quality | `pages/*`, `services/*`, `models/*` | Current workflow services and pages | Current test suite includes stage and service tests | Not full production claim |
-| Meta statistics v2 | `services/meta_statistics_engine_service.py`, `stats/**` | Current v2 statistics run | Current tests `test_meta_statistics_engine_v2.py` | Current proof is focused, not full production |
-| Result contract bridge | `services/meta_result_contract_adapter.py`, `pages/analysis_page.py` | One v2 run can drive table, forest plot, and testing markdown artifact with one hash | Current Phase 3/4 tests | Do not claim full Meta L3 beyond focused proof |
+| Protocol/search/literature import | `pages/protocol_page.py`, `search/**`, `services/literature_*` | Current systematic review setup/search/import | Current tests | Internal/developer level unless separately proven |
+| Dedup/screening/fulltext/extraction/quality | `pages/**`, `services/**`, `models/**` | Current workflow pages/services | Current test inventory | Not full production claim |
+| Meta statistics v2 | `services/meta_statistics_engine_service.py`, `stats/**` | Current v2 statistics run | Current tests | Focused proof only |
+| Meta result contract bridge | `services/meta_result_contract_adapter.py`, `pages/analysis_page.py` | One v2 run can drive table, forest plot, and testing markdown artifact with one hash | Current Phase 3/4 reports/tests | Do not claim full Meta L3 beyond focused proof |
 | Figure/table/export services | `figure_result_service.py`, `publication_export_service.py`, `formal_report_service.py` | Forest/table/export artifact services | Current tests | Testing-level report/export unless gated |
-| Workflow dashboard | `pages/workflow_dashboard_page.py` | Current workflow status discovery | Current UI tests | Status UI only |
+| Workflow dashboard | `pages/workflow_dashboard_page.py` | Workflow status discovery | Current UI tests | Status UI only |
 
 ## Meta Analysis Legacy Catalog
 
 | Feature area | Source files | Description | Evidence | Current equivalent | Status |
 | --- | --- | --- | --- | --- | --- |
-| Old workbench shell | `app/meta_analysis/legacy/app/**`, `app_meta/**`, archive `model9/app/**` | Standalone PySide workbench/dashboard/sidebar/pages | Legacy tests and docs | Current `app/meta_analysis/pages/**` and `workflow_pages.py` | Deprecated as runtime; UI reference only |
-| Literature import/dedup/screening | `legacy/literature/**` | RIS/NBIB/CSV parsing, dedup, screening services | Legacy tests | Current literature import, library, dedup, screening services | Mostly superseded |
-| Extraction rules | `legacy/extraction/**` | Rule models/store/service | Legacy tests | Current extraction schema registry/form/validation services | Reference only |
-| Fulltext and bias services | `legacy/fulltext/**`, `legacy/bias/**` | Fulltext store/service and bias service | Legacy tests | Current fulltext, eligibility, quality services | Adapter/rewrite only |
-| Reporting service | `legacy/reporting/**` | Reporting/profile readiness services | Legacy tests | Current reporting, formal report, publication export services | Adapter/rewrite only |
-| Analysis profiles and task runner | `legacy/analysis_profiles/**`, `legacy/core/task_*` | Profile config, task lifecycle, no-op/manual runner foundation | Legacy README dry-run/no-op boundaries | Current task/result contracts only if reimplemented | Conceptual reference only |
-| Fake GEO readiness / DEG | `legacy/geo_readiness/**`, `legacy/analysis/deg_ready_matrix.py`, archive copies | Fake/controlled GEO readiness and DEG-ready reports inside Meta snapshot | Legacy README labels fake preflight and metadata-only | Current Bioinformatics owns GEO/DEG | Deprecated for Meta current runtime |
-| Legacy icons/assets | `legacy/assets/**` | Icons, contact sheets, app icons | File inventory | Current UI shell assets and design docs | Reuse only through design review |
-| Legacy package scripts | `legacy/packaging/**`, `legacy/scripts/**` | Standalone packaging/dev checks | Legacy docs | Current root `scripts/package_app.py` | Deprecated for current app packaging |
+| Old workbench shell | `app/meta_analysis/legacy/app/**`, `app_meta/**`, archive `model9/app/**` | Standalone old dashboard/sidebar/pages | Legacy tests/docs | Current `app/meta_analysis/pages/**` and `workflow_pages.py` | Deprecated runtime; UI reference only |
+| Literature import/dedup/screening | `legacy/literature/**` | RIS/NBIB/CSV parsing, dedup, screening | Legacy tests | Current literature/import/dedup/screening services | Mostly superseded |
+| Extraction rules | `legacy/extraction/**` | Rule models/store/service | Legacy tests | Current extraction schema registry/form/validation | Reference only |
+| Fulltext and bias services | `legacy/fulltext/**`, `legacy/bias/**` | Old fulltext/bias services | Legacy tests | Current fulltext, eligibility, quality services | Adapter/rewrite only |
+| Reporting service | `legacy/reporting/**` | Reporting/profile readiness | Legacy tests | Current formal report/publication export services | Adapter/rewrite only |
+| Analysis profiles/task runner | `legacy/analysis_profiles/**`, `legacy/core/task_*` | Historical profile/task lifecycle/no-op runner foundation | Legacy docs/tests | Current result/task contracts only if reimplemented | Conceptual reference only |
+| Fake GEO readiness / DEG | `legacy/geo_readiness/**`, `legacy/analysis/deg_ready_matrix.py` | Fake/controlled GEO readiness and DEG-ready reports inside Meta snapshot | Legacy labels/docs | Current Bio owns GEO/DEG | Deprecated for Meta |
+| Legacy icons/assets | `legacy/assets/**` | Icons/contact sheets/app icons | File inventory | UI design review only | Visual reference |
+| Legacy package scripts | `legacy/packaging/**`, `legacy/scripts/**` | Standalone packaging/dev checks | Legacy docs | Current root packaging scripts | Deprecated |
 
 ## Branch-Only Feature Catalog
 
 | Feature area | Source branch | Files/areas | Description | Evidence | Current equivalent/status |
 | --- | --- | --- | --- | --- | --- |
-| Structured R DEG adapters | `dev/release-internal-test`, `codex/releasebuild-formal-deg-carryover` | `deg_engine/rscript_adapter.py`, `r_limma_*`, `r_deseq2_*`, `r_edger_*` | limma/DESeq2/edgeR runtime planning/validation/adapters | Branch file evidence | Current has multi-factor R runner files; branch structure may be richer |
-| Packaged ORA/GSEA modules | `dev/release-internal-test` | `app/bioinformatics/enrichment/**`, `gsea/**` | Structured package layout for ORA/GSEA gates | Branch file evidence | Current has flat enrichment modules; adapter/rewrite candidate |
-| Real SVG plot split | `dev/release-internal-test` | `plots/real_svg.py`, `plots/ora.py`, `plots/gsea.py`, `plots/survival_real.py` | Broader plot renderer split | Branch file evidence | Current has formal DEG/survival/cox/basic renderer modules; parity unverified |
-| Integrated report renderer policy | `dev/release-internal-test` | `reports/integrated.py`, `renderer_capability.py`, `renderer_runtime_policy.py` | Renderer capability and runtime policy | Branch evidence | Current report/export modules exist; exact parity unverified |
-| Risk score / nomogram / calibration / DCA | `codex/releasebuild-formal-deg-carryover`, `dev/release-internal-test` | `risk_score_*`, calibration/DCA docs/tests by branch evidence | Risk score and advanced clinical visualization gates | Branch/current mixed evidence | Must remain non-clinical and gated if revisited |
-| Meta OCR fulltext | `dev/meta-analysis` | `fulltext/image_ocr_worker.py`, `pdf_ocr_worker.py`, `ocr_runtime_service.py`, `paddleocr_subprocess_runner.py` | OCR worker/runtime/package history | Branch file and test evidence | Not current-proven; future adapter only |
-| UI shell/icon/result export surfaces | `dev/ui-shell`, `integration/release-ui-shell-scoped-migration` | `docs/ui/**`, `app/shared/ui_components/**`, screenshot assets | UI design and shell material | Branch evidence | Design reference only; not analysis runtime |
+| Structured R DEG adapters | `dev/release-internal-test`, `codex/releasebuild-formal-deg-carryover` | `rscript_adapter.py`, `r_limma_*`, `r_deseq2_*`, `r_edger_*` | limma/DESeq2/edgeR runtime planning and adapters | Branch evidence | Current has `multifactor_r_runner.py`; adapter candidate |
+| Packaged ORA/GSEA modules | `dev/release-internal-test` | `app/bioinformatics/enrichment/**`, `gsea/**` | Structured package layout for ORA/GSEA gates | Branch evidence | Current has flat enrichment modules; adapter/rewrite only |
+| Real SVG renderer split | `dev/release-internal-test` | `plots/real_svg.py`, `plots/ora.py`, `plots/gsea.py`, `plots/survival_real.py` | Broader split of plot renderers | Branch evidence | Current has formal DEG/survival/cox/basic renderers; parity unverified |
+| Integrated report renderer policy | `dev/release-internal-test` | `reports/integrated.py`, `renderer_capability.py`, `renderer_runtime_policy.py` | Renderer capability and runtime policy | Branch evidence | Current report/export modules exist; parity unverified |
+| Risk score / nomogram / calibration / DCA | ReleaseBuild/internal-test branches | `risk_score_*`, calibration/DCA files/tests | Risk score and advanced visualization gates | Branch/current mixed evidence | Must remain non-clinical and gated if revisited |
+| Meta OCR fulltext | `dev/meta-analysis` | OCR workers and PaddleOCR subprocess runner | OCR worker/runtime/package history | Branch evidence | Not current-proven; adapter later |
+| UI shell/result export surfaces | `dev/ui-shell`, `integration/*ui*` | `docs/ui/**`, screenshots, shell tests | UI design and shell material | Branch evidence | Design reference only |
 
-## Evidence Boundary Refresh
+## Evidence Boundary
 
-The following labels must be used consistently in future migration work:
-
-| Label | Allowed claim | Disallowed claim |
-| --- | --- | --- |
-| Current | Exists in current non-legacy source and has current tests or recent current-line proof | Full production capability unless the proof specifically covers that level |
-| Current scaffold | Exists in current source but is mock/lite/testing-level or not wired to current UI | Real analysis closure |
-| Branch evidence | Exists on a branch by `git ls-tree`, `git diff`, or `git log` evidence | Current availability |
-| Legacy tests only | Has historical tests under `legacy/` or `archive/legacy_sources/**` | Current test coverage |
-| Deprecated | Historical standalone, fake, placeholder, no-op, old path, or boundary-violating code | Reuse without rewrite/adapter |
-
-Current scaffold items include the standard analysis runtime bridge and standard result package catalog. They are useful architecture material, but they do not convert old Bio/Meta legacy functionality into current completed features.
-
-## Deprecated Legacy Register Cross-Reference
-
-Hard-deprecated items are listed in `docs/reports/DEPRECATED_LEGACY_REGISTER.md`. This catalog intentionally does not recommend direct use of old standalone workbenches, fake GEO preflight, no-op runners, old package scripts, or placeholder reporting.
+Mock outputs, placeholder reports, no-op task runners, fake preflight, legacy-only tests, branch-only tests, and testing-level exports must never be listed as completed current functionality. Current scaffold items are useful architecture material but are not proof of full Bioinformatics or Meta Analysis module closure.

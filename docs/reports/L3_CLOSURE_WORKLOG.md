@@ -419,3 +419,96 @@ No old branch is safe to merge wholesale. Any future migration must select one c
 ### Stop Point
 
 Stop after audit documents. Do not begin migration, branch convergence, UI replacement, or algorithm work until the next explicit instruction selects a candidate.
+
+## Phase 2.5 Refresh: Full Branch Inventory and Migration Candidate Audit
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh updated the branch/legacy inventory against current `dev/bioinformatics` at `0aa6793f460f79a78036c352f918a5acfc7a522b`.
+
+This was audit-only:
+
+- No branch was checked out.
+- No branch was merged.
+- No cherry-pick was performed.
+- No UI code was changed.
+- No analysis algorithm was changed.
+- No legacy code was migrated.
+- No mock, placeholder, or testing-level output was promoted to completed functionality.
+
+### Current Baseline
+
+```text
+branch: dev/bioinformatics
+HEAD: 0aa6793f460f79a78036c352f918a5acfc7a522b
+subject: add enrichment standard result package sidecar
+```
+
+Pre-existing unrelated untracked files were preserved:
+
+```text
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+### Reports Refreshed
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Findings
+
+The current line has advanced since the previous Phase 2.5 refresh. It now includes a standard analysis runtime scaffold, lite workers for enrichment/survival/univariate/multivariate/immune infiltration, and an enrichment standard result package sidecar. These are current-branch materials, not old-branch migrations.
+
+The boundary remains unchanged:
+
+```text
+Old branches and legacy directories are material libraries only.
+Current UI is the only mainline.
+No branch-only or legacy-only feature is current-available without a current UI path,
+current contract mapping, current tests, and real output evidence.
+```
+
+Highest-value candidate libraries remain:
+
+- `dev/release-internal-test`
+- `codex/releasebuild-formal-deg-carryover`
+- `codex/mainline-survival-clinical-carryover`
+- `dev/meta-analysis`
+- `dev/ui-shell` and integration UI shell branches as design references only
+
+Quarantined legacy directories remain:
+
+- `app/bioinformatics/legacy/**`
+- `app/meta_analysis/legacy/**`
+- `archive/legacy_sources/**`
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `git status --short` | Passed; only pre-existing untracked handoff/project_storage items present |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git for-each-ref --format='%(refname:short)\|%(objectname)\|%(committerdate:short)\|%(subject)' refs/heads refs/remotes` | Passed |
+| `git rev-parse HEAD` | Passed; `0aa6793f460f79a78036c352f918a5acfc7a522b` |
+| `git log --oneline --decorate --max-count=40 -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/reports scripts app/analysis_runtime analysis` | Passed |
+| `find analysis -maxdepth 4 -type f` | Passed |
+| `find app/analysis_runtime -maxdepth 3 -type f` | Passed |
+| `find app/bioinformatics -maxdepth 3 -type f ...` | Passed |
+| `find app/meta_analysis -maxdepth 3 -type f ...` | Passed |
+| `git diff --name-status HEAD..<branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/bioinformatics docs/reports docs/ui scripts analysis app/analysis_runtime` | Passed for sampled high-relevance branches |
+| `rg --files \| rg '(^\|/)(legacy\|Legacy\|old\|archive\|deprecated)(/\|$)'` | Passed |
+
+No tests were run because this phase was audit-only and made documentation changes only.
+
+### Stop Point
+
+Stop after audit documents. Do not begin migration, branch convergence, UI replacement, or algorithm work until the next explicit instruction selects one candidate feature and one current UI path.
