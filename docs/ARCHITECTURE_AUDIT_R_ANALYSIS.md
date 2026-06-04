@@ -209,6 +209,7 @@ The standard package validator now uses the result/provenance payload schema fil
 
 - `validate_standard_result_package()` reads `analysis/schemas/output/result.schema.json` and blocks packages missing required result fields such as `result_semantics` or `created_at`.
 - It reads `analysis/schemas/output/provenance.schema.json` and blocks packages missing required provenance fields such as `engine` or `command`.
+- It now also enforces top-level schema shape for declared `type`, `enum`, `const`, `minLength`, array item types, and one-level nested object properties such as `engine.version` and `runtime.package_versions`.
 - Main-backend task-bridge blocked packages now write `result_semantics=blocked`, keeping blocked outputs schema-complete instead of relying on result-index semantics alone.
 
 ## 2. PASS / WARN / FAIL Table
@@ -223,6 +224,7 @@ The standard package validator now uses the result/provenance payload schema fil
 | Registry/manifest payload schema declaration | PASS | `analysis/registry/analysis_modules.json` and every `analysis/modules/<module_id>/module.json` now explicitly declare the result and provenance payload schemas; architecture tests guard consistency and file existence. |
 | UI-safe payload schema discovery | PASS | Standard package catalog rows and package detail payloads now expose result/provenance payload schema paths for consumers. |
 | Payload schema required-field validation | PASS | `validate_standard_result_package()` now blocks result/provenance payloads missing fields required by their schema files; task-bridge blocked packages include `result_semantics=blocked`. |
+| Payload schema shape validation | PASS | `validate_standard_result_package()` now blocks result/provenance payload enum/type/minLength drift, array item type drift, and declared one-level nested object shape drift. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, exploratory immune/TME scoring, and local correlation results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog and standard-package gate rows from result-index artifacts, worker invocation diagnostics, worker-boundary metadata, full-mode environment snapshots, and a standard artifact manifest; package validation blocks declared table/plot/report artifacts that are missing or escape the standard package directories. Existing detailed result views still consume module-specific result indexes and service payloads. |

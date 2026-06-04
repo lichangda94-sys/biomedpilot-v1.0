@@ -1141,6 +1141,10 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
   input_hash <- as.character(tools::md5sum(input_json))
   parameter_hash <- hash_string(read_object_field_text(input_text, "parameters", "{}"))
   analysis_environment_json <- analysis_environment_snapshot_json(module_id, mode)
+  analysis_environment_line <- ""
+  if (!identical(analysis_environment_json, "null")) {
+    analysis_environment_line <- paste0('  "analysis_environment": ', analysis_environment_json, ",\n")
+  }
   provenance <- paste0(
     "{\n",
     '  "schema_version": "biomedpilot.analysis.provenance.v1",\n',
@@ -1154,7 +1158,7 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
     '  "random_seed": ', seed_value, ",\n",
     '  "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},\n',
     '  "runtime": {"r_version": ', json_string(r_version), ', "bioconductor_version": ', json_string(bioc_version), ', "package_versions": {}, "external_tool_versions": ', external_tool_versions_json, '},\n',
-    '  "analysis_environment": ', analysis_environment_json, ",\n",
+    analysis_environment_line,
     '  "command": ', json_string(command), "\n",
     "}\n"
   )

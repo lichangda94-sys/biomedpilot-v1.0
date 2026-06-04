@@ -392,6 +392,36 @@ def test_standard_package_validation_blocks_payload_required_field_drift(tmp_pat
     assert "provenance_schema_required_field_missing:command" in validation["blockers"]
 
 
+def test_standard_package_validation_blocks_payload_schema_shape_drift(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    result_path = package_dir / "result.json"
+    provenance_path = package_dir / "provenance.json"
+    result_json = read_json(result_path)
+    provenance = read_json(provenance_path)
+    result_json["mode"] = "developer_preview"
+    result_json["tables"] = "not-a-list"
+    result_json["warnings"] = [7]
+    provenance["runtime"]["package_versions"] = "not-an-object"  # type: ignore[index]
+    provenance["engine"]["version"] = 7  # type: ignore[index]
+    result_path.write_text(json.dumps(result_json, indent=2), encoding="utf-8")
+    provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "result_schema_field_enum_invalid:mode" in validation["blockers"]
+    assert "result_schema_field_type_invalid:tables" in validation["blockers"]
+    assert "result_schema_field_type_invalid:warnings[0]" in validation["blockers"]
+    assert "provenance_schema_field_type_invalid:runtime.package_versions" in validation["blockers"]
+    assert "provenance_schema_field_type_invalid:engine.version" in validation["blockers"]
+
+
 def test_task_bridge_standard_package_validation_requires_worker_invocation_manifest(tmp_path: Path) -> None:
     result = run_analysis_module_task(tmp_path, module_input(tmp_path))
     package_dir = Path(result["result_package_dir"])

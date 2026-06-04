@@ -106,6 +106,8 @@ def validate_standard_result_package(
         blockers.append("provenance_schema_version_mismatch")
     blockers.extend(_payload_required_field_blockers("result", result, RESULT_PAYLOAD_SCHEMA_PATH))
     blockers.extend(_payload_required_field_blockers("provenance", provenance, PROVENANCE_PAYLOAD_SCHEMA_PATH))
+    blockers.extend(_payload_schema_shape_blockers("result", result, RESULT_PAYLOAD_SCHEMA_PATH))
+    blockers.extend(_payload_schema_shape_blockers("provenance", provenance, PROVENANCE_PAYLOAD_SCHEMA_PATH))
     for payload_name, payload in (("result", result), ("provenance", provenance)):
         if expected_module_id and payload.get("module_id") != expected_module_id:
             blockers.append(f"{payload_name}_module_id_mismatch")
@@ -185,6 +187,85 @@ def _payload_required_field_blockers(payload_name: str, payload: dict[str, Any],
         if field not in payload:
             blockers.append(f"{payload_name}_schema_required_field_missing:{field}")
     return blockers
+
+
+def _payload_schema_shape_blockers(payload_name: str, payload: dict[str, Any], schema_path: Path) -> list[str]:
+    schema = _load_schema(schema_path)
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return [f"{payload_name}_payload_schema_properties_missing"]
+    blockers: list[str] = []
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        blockers.extend(_schema_value_blockers(payload_name, field, payload[field], field_schema))
+    return blockers
+
+
+def _schema_value_blockers(payload_name: str, field_path: str, value: Any, schema: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if "const" in schema and value != schema["const"]:
+        blockers.append(f"{payload_name}_schema_field_const_mismatch:{field_path}")
+    enum = schema.get("enum")
+    if isinstance(enum, list) and value not in enum:
+        blockers.append(f"{payload_name}_schema_field_enum_invalid:{field_path}")
+    expected_type = schema.get("type")
+    if isinstance(expected_type, str) and not _value_matches_schema_type(value, expected_type):
+        blockers.append(f"{payload_name}_schema_field_type_invalid:{field_path}")
+        return blockers
+    min_length = schema.get("minLength")
+    if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+        blockers.append(f"{payload_name}_schema_field_min_length_invalid:{field_path}")
+    if expected_type == "array" and isinstance(value, list):
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            blockers.extend(_array_item_blockers(payload_name, field_path, value, item_schema))
+    if expected_type == "object" and isinstance(value, dict):
+        blockers.extend(_object_nested_blockers(payload_name, field_path, value, schema))
+    return blockers
+
+
+def _object_nested_blockers(payload_name: str, field_path: str, value: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    required = schema.get("required")
+    if isinstance(required, list):
+        for item in required:
+            if isinstance(item, str) and item not in value:
+                blockers.append(f"{payload_name}_schema_required_field_missing:{field_path}.{item}")
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        for field, field_schema in properties.items():
+            if isinstance(field, str) and field in value and isinstance(field_schema, dict):
+                blockers.extend(_schema_value_blockers(payload_name, f"{field_path}.{field}", value[field], field_schema))
+    return blockers
+
+
+def _array_item_blockers(payload_name: str, field_path: str, values: list[Any], item_schema: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    item_type = item_schema.get("type")
+    if not isinstance(item_type, str):
+        return blockers
+    for index, item in enumerate(values):
+        item_path = f"{field_path}[{index}]"
+        if not _value_matches_schema_type(item, item_type):
+            blockers.append(f"{payload_name}_schema_field_type_invalid:{item_path}")
+    return blockers
+
+
+def _value_matches_schema_type(value: Any, expected_type: str) -> bool:
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "array":
+        return isinstance(value, list)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    if expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == "number":
+        return isinstance(value, int | float) and not isinstance(value, bool)
+    return True
 
 
 def _load_schema(path: Path) -> dict[str, Any]:
