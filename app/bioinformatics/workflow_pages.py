@@ -6569,6 +6569,15 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         _set_table_widths(self._results, [170, 110, 170, 120, 170, 120, 160, 280, 100])
         self._results.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
 
+        package_card, package_layout = _card("Standard result package artifacts")
+        package_layout.addWidget(_muted("只展示标准结果包声明的 tables / plots / reports / logs，不扫描模块私有输出目录。"))
+        self._standard_package_artifacts = _table(["Result", "Validation", "Group", "Artifact", "Package path", "Exists", "Size"])
+        self._standard_package_artifacts.setObjectName("resultsStandardPackageArtifactTable")
+        package_layout.addWidget(self._standard_package_artifacts)
+        root.addWidget(package_card)
+        _set_table_widths(self._standard_package_artifacts, [190, 110, 90, 210, 260, 80, 80])
+        self._standard_package_artifacts.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
         review_card, review_layout = _card("Formal DEG result review")
         self._formal_deg_guard_label = _muted("Formal DEG review shows statistical analysis results only. It is not a clinical conclusion or treatment recommendation.")
         self._formal_deg_guard_label.setObjectName("formalDegReviewGuard")
@@ -6674,6 +6683,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._results,
             _results_user_rows(self._project_root, entries, records),
         )
+        _fill_table(self._standard_package_artifacts, _standard_package_artifact_rows(analysis_state))
         review = build_formal_deg_result_review(
             self._project_root,
             sort_by=self._formal_deg_sort_input.currentText(),
@@ -11076,6 +11086,40 @@ def _result_entries_with_standard_packages(entries: list[dict[str, object]], ana
             merged[key] = standard_package.get(key, "")
         enriched.append(merged)
     return enriched
+
+
+def _standard_package_artifact_rows(analysis_state: dict[str, object]) -> list[list[object]]:
+    catalog = analysis_state.get("standard_analysis_packages")
+    package_rows = catalog.get("rows", []) if isinstance(catalog, dict) else []
+    rows: list[list[object]] = []
+    iterable_rows = package_rows if isinstance(package_rows, list | tuple) else []
+    for package_row in iterable_rows:
+        if not isinstance(package_row, dict):
+            continue
+        manifest = package_row.get("artifact_manifest")
+        if not isinstance(manifest, dict):
+            continue
+        result_id = str(package_row.get("result_id") or "")
+        validation = str(package_row.get("validation_status") or "")
+        for group in ("tables", "plots", "reports", "logs"):
+            artifacts = manifest.get(group)
+            if not isinstance(artifacts, list | tuple):
+                continue
+            for artifact in artifacts:
+                if not isinstance(artifact, dict):
+                    continue
+                rows.append(
+                    [
+                        result_id,
+                        validation,
+                        group,
+                        str(artifact.get("artifact_type") or ""),
+                        str(artifact.get("package_relative_path") or artifact.get("declared_path") or ""),
+                        "是" if bool(artifact.get("exists")) else "否",
+                        str(artifact.get("size_bytes") or 0),
+                    ]
+                )
+    return rows
 
 
 def _results_user_rows(project_root: Path | None, entries: list[dict[str, object]], records: list[dict[str, object]]) -> list[list[object]]:

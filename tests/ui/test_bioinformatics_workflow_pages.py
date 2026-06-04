@@ -4156,6 +4156,19 @@ def test_results_browser_displays_standard_package_contract_status(qt_app, proje
     assert "tables=1; plots=0; reports=1; logs=2" in table_text
     assert "path=analysis_results/enrichment-mock-task" in table_text
 
+    artifact_table = widget.findChild(QTableWidget, "resultsStandardPackageArtifactTable")
+    assert artifact_table is not None
+    artifact_headers = [artifact_table.horizontalHeaderItem(index).text() for index in range(artifact_table.columnCount())]
+    assert artifact_headers == ["Result", "Validation", "Group", "Artifact", "Package path", "Exists", "Size"]
+    artifact_text = _table_text(artifact_table)
+    assert "analysis-package-enrichment-mock-task" in artifact_text
+    assert "mock_summary" in artifact_text
+    assert "tables/mock_summary.tsv" in artifact_text
+    assert "reports/README_mock.md" in artifact_text
+    assert "logs/worker.log" in artifact_text
+    assert "logs/worker_invocation.json" in artifact_text
+    assert "是" in artifact_text
+
     gate = widget.findChild(QTableWidget, "resultsGatePreviewTable")
     assert gate is not None
     gate_text = _table_text(gate)
