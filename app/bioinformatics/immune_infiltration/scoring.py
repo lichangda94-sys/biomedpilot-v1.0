@@ -11,9 +11,12 @@ from typing import Any
 from uuid import uuid4
 
 from app.bioinformatics.results.project_results import load_result_index, write_result_index
+from app.bioinformatics.results.models import ResultIndexEntry
+from app.bioinformatics.results.registry import register_result
 
 from .signature_models import ImmuneSignature, normalize_gene
 from .signature_resources import load_builtin_signatures
+from .standard_package import write_immune_scoring_standard_result_package
 from .validators import read_expression_matrix, value_type_policy
 
 
@@ -34,6 +37,7 @@ class ImmuneScoringRunResult:
     manifest_path: str
     receipt_path: str
     report_path: str
+    standard_result_package_dir: str
     result_index_path: str
     signature_count: int
     scored_signature_count: int
@@ -156,7 +160,18 @@ def run_immune_scoring(
     }
     _write_json(manifest_path, manifest)
     _write_json(receipt_path, receipt)
-    result_index_path = _register_result(root, manifest, score_path)
+    standard_package_dir = write_immune_scoring_standard_result_package(
+        root,
+        result_id=run_id,
+        score_matrix_path=score_path,
+        coverage_path=coverage_path,
+        sample_summary_path=sample_summary_path,
+        manifest_path=manifest_path,
+        receipt_path=receipt_path,
+        manifest=manifest,
+        receipt=receipt,
+    )
+    result_index_path = _register_result(root, manifest, score_path, coverage_path, sample_summary_path, standard_package_dir)
     return ImmuneScoringRunResult(
         status="completed",
         message="免疫浸润 / TME signature 评分已完成（探索性 bulk score）。",
@@ -169,6 +184,7 @@ def run_immune_scoring(
         manifest_path=str(manifest_path),
         receipt_path=str(receipt_path),
         report_path=str(report_path),
+        standard_result_package_dir=str(standard_package_dir),
         result_index_path=str(result_index_path),
         signature_count=len(signatures),
         scored_signature_count=scored_count,
@@ -349,7 +365,7 @@ def _write_tsv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) ->
         writer.writerows(rows)
 
 
-def _register_result(root: Path, manifest: dict[str, Any], score_path: Path) -> Path:
+def _register_result(root: Path, manifest: dict[str, Any], score_path: Path, coverage_path: Path, sample_summary_path: Path, standard_package_dir: Path) -> Path:
     result_index = load_result_index(root)
     entries = [item for item in result_index.get("entries", []) if isinstance(item, dict)]
     run_id = str(manifest.get("run_id") or "")
@@ -363,6 +379,7 @@ def _register_result(root: Path, manifest: dict[str, Any], score_path: Path) -> 
             "label": "免疫浸润 / TME评分",
             "path": str(score_path),
             "manifest_path": str(Path(str(score_path)).with_name("immune_scoring_manifest.json")),
+            "standard_result_package_dir": str(standard_package_dir),
             "created_at": manifest.get("generated_at"),
             "status": "completed",
             "result_semantics": "testing-level exploratory score",
@@ -371,7 +388,65 @@ def _register_result(root: Path, manifest: dict[str, Any], score_path: Path) -> 
             "warning": "Bulk signature score 不等同于真实免疫细胞比例；不可作为临床结论。",
         }
     )
-    return write_result_index(root, entries)
+    result_index_path = write_result_index(root, entries)
+    now = _now()
+    v2_entry = ResultIndexEntry(
+        result_id=run_id,
+        task_run_id=run_id,
+        task_type="analysis:immune_infiltration",
+        result_semantics="testing_level",
+        input_package_id=str(manifest.get("dataset_id") or ""),
+        source_dataset_id=str(manifest.get("dataset_id") or ""),
+        source_repository_manifest=str(manifest.get("input_expression_matrix_path") or ""),
+        parameters_manifest={
+            "schema_version": manifest.get("schema_version"),
+            "run_id": run_id,
+            "dataset_id": manifest.get("dataset_id") or "",
+            "input_value_type": manifest.get("input_value_type") or "",
+            "scoring_method": manifest.get("scoring_method") or "",
+            "value_transform": manifest.get("value_transform") or "",
+            "signature_count": manifest.get("signature_count") or 0,
+        },
+        engine_name="biomedpilot_bulk_signature_scoring",
+        engine_version="1",
+        dependency_snapshot={"mode": "lite", "runtime": "python_standard_library", "heavy_r_dependencies": "not_used"},
+        output_artifacts=(
+            {"artifact_type": "immune_score_matrix", "path": str(score_path.relative_to(root)), "schema": "biomedpilot.immune_score_matrix.v1"},
+            {"artifact_type": "immune_signature_coverage", "path": str(coverage_path.relative_to(root)), "schema": "biomedpilot.immune_signature_coverage.v1"},
+            {"artifact_type": "immune_sample_score_summary", "path": str(sample_summary_path.relative_to(root)), "schema": "biomedpilot.immune_sample_score_summary.v1"},
+            {"artifact_type": "standard_result_package", "path": str(standard_package_dir.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+        ),
+        plot_artifacts=(),
+        report_artifacts=(),
+        validation_status="passed",
+        warnings=tuple(str(item) for item in manifest.get("warnings", []) or []),
+        blockers=(),
+        log_artifacts=(
+            {"artifact_type": "immune_scoring_manifest", "path": str(Path(str(score_path)).with_name("immune_scoring_manifest.json").relative_to(root))},
+            {"artifact_type": "immune_scoring_receipt", "path": str(Path(str(score_path)).with_name("immune_scoring_receipt.json").relative_to(root))},
+        ),
+        failure_reason="",
+        created_at=str(manifest.get("generated_at") or now),
+        updated_at=now,
+        report_ready_eligible=False,
+        migration_status="legacy_service_adapter_sidecar",
+    ).to_dict()
+    v2_entry.update(
+        {
+            "analysis_type": "immune_tme_scoring",
+            "result_name": "免疫浸润 / TME signature score",
+            "result_type": "探索性 bulk signature score",
+            "label": "免疫浸润 / TME评分",
+            "path": str(score_path),
+            "manifest_path": str(Path(str(score_path)).with_name("immune_scoring_manifest.json")),
+            "standard_result_package_dir": str(standard_package_dir),
+            "status": "completed",
+            "short_description": "基于 bulk 表达矩阵的 immune / TME signature score，不等同于真实免疫细胞比例。",
+            "warning": "Bulk signature score 不等同于真实免疫细胞比例；不可作为临床结论。",
+        }
+    )
+    register_result(root, v2_entry)
+    return result_index_path
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:

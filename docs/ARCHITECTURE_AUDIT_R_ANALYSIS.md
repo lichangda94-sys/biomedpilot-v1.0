@@ -116,6 +116,14 @@ Existing controlled survival/clinical executors now write a standard result pack
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
 - This is a package-contract migration step, not a claim that survival/clinical execution has been fully migrated into the isolated standard worker, and it does not enable clinical conclusions, risk grouping, plot artifacts, or report-ready output.
 
+Existing exploratory immune / TME scoring now writes a standard result package sidecar:
+
+- `app/bioinformatics/immune_infiltration/scoring.py` mirrors score matrix, signature coverage, sample summary, scoring manifest, and receipt artifacts into `analysis/standard_packages/<result_id>/`.
+- The sidecar includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
+- The sidecar records `mode=lite`, `result_semantics=testing_level`, and `worker_boundary.boundary_type=legacy_service_adapter_sidecar`.
+- The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
+- This is a package-contract migration step, not a claim that immune/TME scoring has been migrated into the isolated standard worker or that GSVA/CellChat/Seurat, report-ready output, or clinical interpretation are enabled.
+
 The first lightweight worker paths are now available:
 
 - `analysis/runners/run_module.R` supports `module_id=deg`, `mode=lite` using base R Welch t-tests and fixed repository count/metadata fixtures.
@@ -167,7 +175,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock, every registry-declared lite standard package, docking/MD lite command-manifest packages, and blocked unsupported/full standard packages; every registry-declared full mode is bridge-blocked with a standard package; existing formal real modules do not call it yet. |
 | Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; every module that declares lite support is covered by a registry-driven bridge test; every module that declares full mode is covered by a registry-driven blocked-package bridge test; full activation remains blocked pending migration. |
 | Unified input/output schema | PASS | Added input and result package schemas. |
-| Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, and controlled Cox univariate results now write standard sidecar packages; other existing real algorithms still use varied structures. |
+| Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, and exploratory immune/TME scoring results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts, worker invocation diagnostics, worker-boundary metadata, and a standard artifact manifest; existing detailed result views still consume module-specific result indexes and service payloads. |
 | Main backend task-system invocation | WARN | A mock/lite/full-blocking bridge now creates `TaskCenter` entries and result-index entries; registry-declared lite modules are covered through the standard R runner, result package validator, result index, and catalog, while registry-declared full modules are blocked before worker execution with standard package provenance. Existing controlled enrichment and multi-factor DEG sidecars are now labeled as legacy service-adapter sidecars; direct service subprocess calls still remain. |
@@ -188,7 +196,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current controlled R adapters now call a shared `analysis_runtime` external R command boundary instead of owning direct `subprocess.run`, and a standard bridge exists for mock, DEG lite, enrichment lite, survival lite, univariate lite, multivariate lite, immune lite, spatial lite, docking lite, and MD lite command-manifest packages. Most existing formal algorithms are still not migrated into isolated standard-worker tasks.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
-3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, and controlled Cox univariate results are now partially remediated with sidecar packages that are explicitly labeled as legacy service-adapter sidecars.
+3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, and exploratory immune/TME scoring results are now partially remediated with sidecar packages that are explicitly labeled as legacy service-adapter sidecars.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, and fake `locked` entries with placeholder values are rejected, but resources still need real version, source, hash, license, and cache-path locks.
 5. **P2/P3: UI and backend are still aware of module-specific payloads.** Analysis Center state has a standard package catalog, but detailed result views should eventually consume standard result package metadata rather than individual R package output shapes.
 
@@ -323,6 +331,7 @@ New architecture boundary files:
 - Added controlled enrichment ORA/GSEA standard result package sidecars registered in result index v2.
 - Added controlled DEG standard result package sidecars for successful two-group Python formal DEG and multi-factor limma/DESeq2/edgeR fixture results, registered in result index v2 without enabling new execution, plot/report-ready output, or clinical interpretation.
 - Added controlled KM/log-rank and Cox univariate standard result package sidecars registered in result index v2 without enabling clinical conclusions, risk grouping, plot/report-ready output, or isolated worker claims.
+- Added exploratory immune/TME scoring standard result package sidecars registered in result index v2 without enabling GSVA/CellChat/Seurat, report-ready output, clinical interpretation, or isolated worker claims.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added `analysis/registry/analysis_environments.json` as the central environment boundary registry, with tests that module manifests match registered Dockerfiles, renv locks, allowed-module lists, heavy-dependency policy, and runtime-install policy.

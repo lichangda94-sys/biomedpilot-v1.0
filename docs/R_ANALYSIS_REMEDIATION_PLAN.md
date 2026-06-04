@@ -85,6 +85,8 @@ Update: controlled DEG executors now mirror successful formal results into stand
 
 Update: controlled KM/log-rank and Cox univariate executors now mirror successful controlled formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result tables, task logs, parameter manifests, dependency snapshots, hashes, engine metadata, and sidecar-only worker-boundary metadata. This does not enable clinical conclusions, risk grouping, plot artifacts, report-ready survival/clinical output, or complete isolated worker migration.
 
+Update: exploratory immune / TME scoring now mirrors score matrix, signature coverage, sample summary, scoring manifest, and receipt artifacts into a standard result package sidecar and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable GSVA/CellChat/Seurat, report-ready output, clinical interpretation, or complete isolated worker migration.
+
 Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
 
 Update: univariate clinical association now has a `lite` standard worker path. `run_module.R` can execute base R Welch t-test and Pearson correlation calculations on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
@@ -371,6 +373,7 @@ Status:
 - Immune infiltration `mock` remains available without R.
 - Immune infiltration `lite` can run fixed base R signature mean scoring through `analysis/runners/run_module.R`.
 - Immune infiltration standard result package includes `result.json`, `provenance.json`, `tables/lite_immune_scores.tsv`, `plots/lite_immune_heatmap.svg`, `reports/README_lite.md`, and `logs/worker.log`.
+- Existing exploratory immune/TME scoring service outputs now also mirror into a standard package sidecar with score matrix, coverage, sample summary, manifest, receipt, and limitations artifacts.
 - Full immune analysis remains blocked until GSVA/CellChat/Seurat/signature resource locks and isolated worker environments are approved.
 - Spatial transcriptomics `lite` can run fixed base R spot QC and coordinate SVG preview through `analysis/runners/run_module.R`.
 - Spatial transcriptomics standard result package includes `result.json`, `provenance.json`, `tables/lite_spatial_spot_metrics.tsv`, `tables/lite_spatial_qc_summary.tsv`, `plots/lite_spatial_spot_qc.svg`, `reports/README_lite.md`, and `logs/worker.log`.

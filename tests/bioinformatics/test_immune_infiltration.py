@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from app.analysis_runtime import build_standard_analysis_package_catalog, validate_standard_result_package
 from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
 from app.bioinformatics.immune_infiltration import (
     build_immune_infiltration_readiness,
@@ -67,12 +68,35 @@ def test_scoring_outputs_manifest_receipt_and_result_index(tmp_path: Path) -> No
     assert Path(result.score_matrix_path).is_file()
     assert Path(result.coverage_path).is_file()
     assert Path(result.sample_summary_path).is_file()
+    standard_package_dir = Path(result.standard_result_package_dir)
+    assert standard_package_dir.is_dir()
+    validation = validate_standard_result_package(
+        standard_package_dir,
+        expected_module_id="immune_infiltration",
+        expected_task_id=result.run_id,
+        expected_mode="lite",
+    )
+    assert validation["status"] == "passed"
     manifest = json.loads(Path(result.manifest_path).read_text(encoding="utf-8"))
     assert manifest["schema_version"] == "biomedpilot.immune_tme_scoring_manifest.v1"
     assert manifest["scored_signature_count"] >= 1
     assert "KM/Cox/log-rank" in " ".join(manifest["blocked_downstream"])
     index = json.loads((tmp_path / "results" / "summaries" / "result_index.json").read_text(encoding="utf-8"))
     assert any(entry["analysis_type"] == "immune_tme_scoring" for entry in index["results"])
+    entry = next(entry for entry in index["results"] if entry["result_id"] == result.run_id)
+    assert entry["result_semantics"] == "testing_level"
+    assert entry["report_ready_eligible"] is False
+    assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = next(item for item in catalog["rows"] if item["result_id"] == result.run_id)
+    assert row["module_id"] == "immune_infiltration"
+    assert row["mode"] == "lite"
+    assert row["result_semantics"] == "testing_level"
+    assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
+    assert row["artifact_counts"]["tables"] == 3
+    assert row["artifact_counts"]["reports"] == 1
+    assert row["artifact_manifest"]["tables"][0]["exists"] is True
+    assert "clinical_conclusion_not_generated" in row["warnings"]
 
 
 def test_scoring_blocks_unknown_or_raw_value_type(tmp_path: Path) -> None:
