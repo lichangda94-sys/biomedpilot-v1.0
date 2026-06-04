@@ -493,6 +493,38 @@ def test_legacy_sidecar_standard_package_validation_requires_worker_invocation_m
     assert "worker_invocation_manifest_missing" in validation["blockers"]
 
 
+def test_passed_standard_package_validation_requires_reproducibility_provenance(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    provenance_path = package_dir / "provenance.json"
+    provenance = read_json(provenance_path)
+    provenance.pop("input_hash")
+    provenance.pop("parameter_hash")
+    provenance.pop("random_seed")
+    provenance.pop("command")
+    provenance["engine"] = {}
+    provenance["runtime"] = {"r_version": "not_required_for_mock"}
+    provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "passed_provenance_input_hash_missing" in validation["blockers"]
+    assert "passed_provenance_parameter_hash_missing" in validation["blockers"]
+    assert "passed_provenance_random_seed_missing" in validation["blockers"]
+    assert "passed_provenance_command_missing" in validation["blockers"]
+    assert "passed_provenance_engine_name_missing" in validation["blockers"]
+    assert "passed_provenance_engine_version_missing" in validation["blockers"]
+    assert "passed_provenance_runtime_bioconductor_version_missing" in validation["blockers"]
+    assert "passed_provenance_runtime_package_versions_missing" in validation["blockers"]
+    assert "passed_provenance_runtime_external_tool_versions_missing" in validation["blockers"]
+
+
 def test_full_standard_package_validation_requires_analysis_environment_snapshot(tmp_path: Path) -> None:
     package_dir = tmp_path / "blocked-full-package"
     for dirname in ("tables", "plots", "reports", "logs"):

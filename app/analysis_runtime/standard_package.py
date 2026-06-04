@@ -113,6 +113,7 @@ def validate_standard_result_package(
     if not provenance.get("command"):
         warnings.append("provenance_command_missing")
     blockers.extend(_declared_artifact_blockers(root, result))
+    blockers.extend(_passed_package_provenance_blockers(result, provenance))
     formal_blockers = _formal_package_provenance_blockers(result, provenance, expected_mode=expected_mode)
     blockers.extend(formal_blockers)
     blockers.extend(_analysis_environment_blockers(result, provenance, expected_mode=expected_mode))
@@ -135,6 +136,32 @@ def validate_standard_result_package(
         "required_files": list(REQUIRED_FILES),
         "required_directories": list(REQUIRED_DIRECTORIES),
     }
+
+
+def _passed_package_provenance_blockers(result: dict[str, Any], provenance: dict[str, Any]) -> list[str]:
+    if result.get("status") != "passed":
+        return []
+
+    blockers: list[str] = []
+    engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
+    runtime = provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {}
+
+    for field in ("input_hash", "parameter_hash", "command"):
+        if not provenance.get(field):
+            blockers.append(f"passed_provenance_{field}_missing")
+    if "random_seed" not in provenance:
+        blockers.append("passed_provenance_random_seed_missing")
+    for field in ("name", "version"):
+        if not engine.get(field):
+            blockers.append(f"passed_provenance_engine_{field}_missing")
+    for field in ("r_version", "bioconductor_version", "package_versions", "external_tool_versions"):
+        if field not in runtime:
+            blockers.append(f"passed_provenance_runtime_{field}_missing")
+    if not isinstance(runtime.get("package_versions"), dict):
+        blockers.append("passed_provenance_runtime_package_versions_invalid")
+    if not isinstance(runtime.get("external_tool_versions"), dict):
+        blockers.append("passed_provenance_runtime_external_tool_versions_invalid")
+    return blockers
 
 
 def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict[str, Any], *, expected_mode: str) -> list[str]:

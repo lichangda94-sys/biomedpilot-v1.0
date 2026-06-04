@@ -129,6 +129,8 @@ Update: transitional service-adapter sidecar packages now write `logs/worker_inv
 
 Update: standard package validation now requires `logs/worker_invocation.json` for legacy service-adapter sidecar packages as well as task-bridge and standard-worker packages. A sidecar without the invocation manifest is blocked instead of being accepted as a valid standard package.
 
+Update: passed standard result packages now require reproducibility provenance. `validate_standard_result_package()` blocks passed packages missing input hash, parameter hash, random seed field, command, engine name/version, R version, Bioconductor version, R package-version container, or external-tool-version container.
+
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.
