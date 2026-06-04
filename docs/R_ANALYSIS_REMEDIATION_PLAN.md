@@ -127,6 +127,8 @@ Update: direct `analysis/runners/run_module.R` outputs now also write `logs/work
 
 Update: transitional service-adapter sidecar packages now write `logs/worker_invocation.json` with `worker_backend=legacy_service_adapter`, `invocation_status=sidecar_recorded`, and `task_system_invocation=legacy_service_adapter_direct_call`. This covers current formal DEG, multifactor DEG, controlled enrichment, controlled survival/KM/Cox, immune scoring, and correlation sidecar packages while preserving the explicit `sidecar_only_not_isolated_standard_worker` migration status.
 
+Update: standard package validation now requires `logs/worker_invocation.json` for legacy service-adapter sidecar packages as well as task-bridge and standard-worker packages. A sidecar without the invocation manifest is blocked instead of being accepted as a valid standard package.
+
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.

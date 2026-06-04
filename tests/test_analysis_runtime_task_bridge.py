@@ -427,6 +427,72 @@ def test_formal_standard_package_validation_blocks_missing_worker_boundary(tmp_p
     assert "analysis_environment_snapshot_missing_or_invalid" in validation["blockers"]
 
 
+def test_legacy_sidecar_standard_package_validation_requires_worker_invocation_manifest(tmp_path: Path) -> None:
+    package_dir = tmp_path / "legacy-sidecar-package"
+    for dirname in ("tables", "plots", "reports", "logs"):
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+    (package_dir / "result.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis.result.v1",
+                "module_id": "correlation",
+                "mode": "lite",
+                "task_id": "legacy-sidecar-task",
+                "status": "passed",
+                "result_semantics": "testing_level",
+                "summary": {},
+                "tables": [],
+                "plots": [],
+                "reports": [],
+                "blockers": [],
+                "warnings": ["standard_package_sidecar_for_existing_service"],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (package_dir / "provenance.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis.provenance.v1",
+                "module_id": "correlation",
+                "mode": "lite",
+                "task_id": "legacy-sidecar-task",
+                "input_hash": "abc",
+                "parameter_hash": "def",
+                "random_seed": None,
+                "engine": {"name": "biomedpilot_correlation_service", "version": "v1"},
+                "runtime": {
+                    "r_version": "not_used_python_controlled_executor",
+                    "bioconductor_version": "not_used_python_controlled_executor",
+                    "package_versions": {},
+                    "external_tool_versions": {},
+                },
+                "command": "app.bioinformatics.services.correlation_runner.run_expression_correlation",
+                "worker_boundary": {
+                    "boundary_type": "legacy_service_adapter_sidecar",
+                    "standard_worker_entrypoint": "not_used",
+                    "subprocess_owner": "app.bioinformatics.services.correlation_runner",
+                    "migration_status": "sidecar_only_not_isolated_standard_worker",
+                    "task_system_invocation": "not_yet_migrated",
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="correlation",
+        expected_task_id="legacy-sidecar-task",
+        expected_mode="lite",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "worker_invocation_manifest_missing" in validation["blockers"]
+
+
 def test_full_standard_package_validation_requires_analysis_environment_snapshot(tmp_path: Path) -> None:
     package_dir = tmp_path / "blocked-full-package"
     for dirname in ("tables", "plots", "reports", "logs"):

@@ -285,8 +285,9 @@ def _worker_invocation_blockers(
     expected_mode: str,
 ) -> list[str]:
     engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
+    worker_boundary = provenance.get("worker_boundary") if isinstance(provenance.get("worker_boundary"), dict) else {}
     engine_name = str(engine.get("name") or "")
-    invocation_required = engine_name in TASK_BRIDGE_ENGINES
+    invocation_required = engine_name in TASK_BRIDGE_ENGINES or worker_boundary.get("boundary_type") == "legacy_service_adapter_sidecar"
     if not invocation:
         return ["worker_invocation_manifest_missing"] if invocation_required else []
 
