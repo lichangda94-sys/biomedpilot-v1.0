@@ -32,6 +32,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             result_payload = _read_json(package_dir / "result.json")
             provenance_payload = _read_json(package_dir / "provenance.json")
             invocation_payload = _read_json(package_dir / "logs" / "worker_invocation.json")
+            result_index_log_blockers = _result_index_worker_invocation_blockers(entry, root, package_dir)
             detail = build_standard_analysis_package_detail(
                 package_dir,
                 project_root=root,
@@ -74,7 +75,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                         "logs": len(detail["artifact_manifest"]["logs"]),
                     },
                     "artifact_manifest": detail["artifact_manifest"],
-                    "blockers": list(dict.fromkeys([*validation.get("blockers", []), *result_payload.get("blockers", [])])),
+                    "blockers": list(dict.fromkeys([*validation.get("blockers", []), *result_payload.get("blockers", []), *result_index_log_blockers])),
                     "warnings": list(dict.fromkeys([*validation.get("warnings", []), *result_payload.get("warnings", [])])),
                 }
             )
@@ -158,6 +159,32 @@ def _standard_package_artifacts(entry: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(artifacts, list | tuple):
         return []
     return [item for item in artifacts if isinstance(item, dict) and item.get("artifact_type") == "standard_result_package" and item.get("path")]
+
+
+def _result_index_worker_invocation_blockers(entry: dict[str, Any], root: Path, package_dir: Path) -> list[str]:
+    invocation_path = package_dir / "logs" / "worker_invocation.json"
+    if not invocation_path.is_file():
+        return []
+    log_artifacts = entry.get("log_artifacts")
+    if not isinstance(log_artifacts, list | tuple):
+        return ["result_index_log_artifacts_invalid"]
+    invocation_artifacts = [
+        item
+        for item in log_artifacts
+        if isinstance(item, dict) and item.get("artifact_type") == "analysis_worker_invocation_manifest"
+    ]
+    if not invocation_artifacts:
+        return ["result_index_worker_invocation_manifest_missing"]
+    blockers: list[str] = []
+    for artifact in invocation_artifacts:
+        if artifact.get("schema") != "biomedpilot.analysis.worker_invocation.v1":
+            blockers.append("result_index_worker_invocation_manifest_schema_invalid")
+        declared = _resolve_artifact_path(root, artifact.get("path"))
+        if declared != invocation_path.resolve():
+            blockers.append("result_index_worker_invocation_manifest_path_mismatch")
+        if not declared.is_file():
+            blockers.append("result_index_worker_invocation_manifest_file_missing")
+    return list(dict.fromkeys(blockers))
 
 
 def _resolve_artifact_path(root: Path, value: object) -> Path:

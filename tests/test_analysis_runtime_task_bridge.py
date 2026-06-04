@@ -16,7 +16,7 @@ from app.analysis_runtime import (
     validate_standard_result_package,
 )
 from app.analysis_runtime.registry import load_analysis_module_registry
-from app.bioinformatics.results.registry import load_registry
+from app.bioinformatics.results.registry import load_registry, save_registry
 from app.shared.task_center.service import TaskCenter, TaskStatus
 
 
@@ -237,6 +237,19 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert {item["artifact_type"] for item in manifest["logs"]} == {"analysis_worker_log", "analysis_worker_invocation_manifest"}
     assert all(item["source_policy"] == "standard_result_package_only" for group in ("tables", "reports", "logs") for item in manifest[group])
     assert "mock_result_not_scientific_output" in row["warnings"]
+
+
+def test_standard_analysis_package_catalog_requires_result_index_worker_invocation_log_artifact(tmp_path: Path) -> None:
+    run_analysis_module_task(tmp_path, module_input(tmp_path))
+    registry = load_registry(tmp_path)
+    entry = registry["results"][0]
+    entry["log_artifacts"] = [item for item in entry["log_artifacts"] if item["artifact_type"] != "analysis_worker_invocation_manifest"]
+    save_registry(tmp_path, [entry])
+
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+
+    assert catalog["status"] == "blocked"
+    assert any("result_index_worker_invocation_manifest_missing" in item for item in catalog["blockers"])
 
 
 def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(tmp_path: Path) -> None:
