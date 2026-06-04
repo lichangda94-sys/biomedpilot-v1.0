@@ -219,6 +219,81 @@ Old branches and legacy directories are material libraries only. Candidate featu
 
 Stop after audit documents. No migration execution should begin until the next explicit instruction selects one candidate and one current UI path.
 
+## Phase 2.5 Refresh: Full Branch Inventory and Migration Candidate Audit
+
+Date: 2026-06-04
+
+### Scope
+
+This refresh repeated the Phase 2.5 inventory against the current `dev/bioinformatics` branch at `b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15`.
+
+This was audit-only:
+
+- No branch was checked out.
+- No branch was merged.
+- No cherry-pick was performed.
+- No UI code was changed.
+- No analysis algorithm was changed.
+- No legacy code was migrated.
+
+### Pre-existing Dirty Worktree
+
+The following pre-existing files were preserved and excluded from Phase 2.5 completion claims:
+
+```text
+ M analysis/modules/univariate/module.json
+ M analysis/registry/analysis_modules.json
+ M analysis/runners/run_module.R
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M tests/test_analysis_runtime_task_bridge.py
+ M tests/test_r_analysis_architecture_contract.py
+?? analysis/fixtures/inputs/univariate/lite_clinical.tsv
+?? analysis/fixtures/inputs/univariate/module_input_lite.json
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `git status --short` | Passed; pre-existing dirty files recorded |
+| `git branch --all --verbose --no-abbrev` | Passed; local branch inventory refreshed |
+| `git rev-parse HEAD` | Passed; current HEAD `b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15` |
+| `find .. -name 'CODEX_UI_BRANCH_MIGRATION_GUIDE.md' -o -name 'CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md' ...` | Passed; required governance docs found |
+| `sed -n '1,260p' ../CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed; migration rules read |
+| `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed; real-loop rules read |
+| `git ls-tree -r --name-only <branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs scripts` | Passed via read-only branch inventory script |
+| `git diff --name-status HEAD..<branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs/bioinformatics docs/reports scripts` | Passed for sampled high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive -maxdepth 4 -type f` | Passed; legacy inventory refreshed |
+| `rg -n "QPushButton\|setText\|plot\|report\|DEG\|ORA\|GSEA\|survival\|Cox\|Meta" app/bioinformatics app/meta_analysis -g '*.py'` | Passed; current and legacy UI/action surfaces sampled |
+
+### Finding Refresh
+
+The earlier Phase 2.5 conclusion still holds: old branches and legacy directories are material libraries only. The current refresh adds one important boundary:
+
+```text
+Current standard analysis runtime mock/lite worker scaffold is current code,
+but it is not full Bio/Meta L3 completion and must not be used to claim
+real production R/Bioc analysis until a selected module proves that full loop.
+```
+
+### Stop Point
+
+Stop after audit documents. The next phase must select one candidate feature and one current UI path before any migration or implementation begins.
+
 ## Phase 4: Meta Analysis Current UI Single-Point L3 Proof
 
 Date: 2026-05-29

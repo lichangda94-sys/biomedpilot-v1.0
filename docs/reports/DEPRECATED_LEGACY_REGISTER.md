@@ -6,6 +6,14 @@ Date: 2026-06-04
 
 This register identifies legacy paths that must not be migrated directly or counted as current completion evidence. They may be useful for requirements archaeology, fixtures, resource review, or UI inspiration, but they are not current runtime sources.
 
+Current audit baseline:
+
+```text
+branch: dev/bioinformatics
+HEAD: b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15
+audit mode: read-only Phase 2.5 refresh
+```
+
 ## Deprecated / Quarantined Items
 
 | Item | Source | Why deprecated | Current replacement / allowed use | Migration status |
@@ -22,6 +30,8 @@ This register identifies legacy paths that must not be migrated directly or coun
 | Meta legacy reporting placeholders | `app/meta_analysis/legacy/reporting/**`, old reporting docs, archive copy | Historical report summaries, not tied to current canonical result contract | Current `formal_report_service`, `publication_export_service`, Meta result contract bridge | Adapter/rewrite only |
 | Legacy package scripts | `app/meta_analysis/legacy/packaging/**`, `legacy/scripts/check_packaging_readiness.py` | Standalone package flow, not current app bundle source | Current root `scripts/package_app.py` | Deprecated |
 | Legacy icons/contact sheets | `app/meta_analysis/legacy/assets/**` | Visual assets only, not functionality | May be reviewed by UI design | Ignore for analysis capability |
+| Legacy bytecode/cache artifacts | `app/bioinformatics/legacy/**/__pycache__/**`, `app/meta_analysis/legacy/**/__pycache__/**` if present | Interpreter cache files from old runs; not source or reproducible evidence | Ignore; do not migrate or cite as implementation | Deprecated |
+| Archive duplicate model9 source | `archive/legacy_sources/model9/**` | Archived duplicate of old Meta workbench and task/report stack | File archaeology only | Deprecated as runtime |
 | Old pre-B8 DEG preflight | `codex/stage-3.6-deg-preflight`, old `deg_executor_preflight.py` variants | Predates current B8/B9+ result/input contracts | Current DEG formal gates | Superseded |
 | Old GEO search UI branches | `codex/bio-search-ui-main*`, `codex/bio-ui-download-integration`, `codex/bio-geo-real-download-test` | Older UI copy/search logic and partial recognition | Current Bio search/recognition pages | Reference only |
 | Old Meta workflow UI branch | `codex/meta-workflow-ui`, `codex/meta-analysis-refresh` | Early UI integration, superseded by current pages | Current Meta pages/workflow dashboard | Reference only |
@@ -39,5 +49,8 @@ The following are current or current-adjacent, but still require focused proof b
 - Current Meta v2 statistics engine.
 - Current Meta result contract bridge.
 - Current analysis runtime mock bridge.
+- Current standard analysis mock/lite worker scaffold.
 
 None of these should be described as clinical-grade, public-release ready, or full production analysis unless a later phase proves that standard with current UI, current contracts, real outputs, and tests.
+
+Current mock/lite worker scaffold is not deprecated, but it is quarantined as testing-level infrastructure until a selected module proves current UI entry, real input, real engine, standard package output, result discovery, and tests in one focused phase.

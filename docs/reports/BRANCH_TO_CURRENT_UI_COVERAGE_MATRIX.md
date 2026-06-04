@@ -6,6 +6,16 @@ Date: 2026-06-04
 
 This matrix maps historical branch/legacy functionality to the current UI pages and buttons. It does not mark branch-only features as available. Current UI remains the only mainline.
 
+Current audit baseline:
+
+```text
+branch: dev/bioinformatics
+HEAD: b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15
+audit mode: Phase 2.5 read-only inventory refresh
+```
+
+Existing uncommitted analysis worker/univariate lite fixture changes are excluded from current UI coverage claims.
+
 ## Bioinformatics UI Coverage
 
 | Current UI area | Current button / action | Current implementation evidence | Branch / legacy related material | Coverage verdict | Migration note |
@@ -25,7 +35,7 @@ This matrix maps historical branch/legacy functionality to the current UI pages 
 | Risk score / nomogram | Risk rows if present; no proven production UI completion | Current/branch risk artifacts not rerun in this audit | `codex/releasebuild-formal-deg-carryover`, `dev/release-internal-test` | Not current production coverage | Rewrite/adapt with strict clinical boundary |
 | Plot actions | Formal result-driven SVG/spec artifacts | Current `plots/**` | Branch `plots/real_svg.py`, `plots/ora.py`, `plots/gsea.py`, `plots/survival_real.py` | Partial current coverage | Branch split can inform adapter, not direct copy |
 | Report/export controls | Section package, report-ready gates, renderer status | Current `reports/**` | Branch `reports/integrated.py`, renderer capability/runtime policy | Partial | Adapter candidate, no placeholder report promotion |
-| Analysis runtime bridge | Mock standard package task bridge | Current `app/analysis_runtime/**`, `analysis/**` | No old equivalent | Mock-only current scaffold | Do not show as full R analysis execution |
+| Analysis runtime bridge | Mock/lite standard package task bridge and package catalog discovery | Current `app/analysis_runtime/**`, `analysis/**`; committed lite enrichment/survival scaffold | No old equivalent | Current scaffold only | Do not show as full R analysis execution; ordinary user UI completion not proven |
 
 ## Meta Analysis UI Coverage
 
@@ -45,6 +55,16 @@ This matrix maps historical branch/legacy functionality to the current UI pages 
 | Workflow dashboard | Refresh status across workflow steps | Current workflow dashboard page | `codex/meta-workflow-ui`, UI shell branches | Covered current-side | Do not replace current UI |
 | AI suggestions | Candidate-only AI suggestions | Current AI suggestions page | AI gateway branches | Partial; not analysis result | Out of current migration scope |
 | OCR fulltext | No current L3 proof | Branch `dev/meta-analysis` OCR workers/tests | Branch-only evidence | Not current coverage | Future adapter only after dependency/package audit |
+
+## Current UI Mapping Rules For Candidates
+
+| Candidate evidence | UI coverage rule |
+| --- | --- |
+| Current non-legacy code with current tests and current UI handler | May be marked `covered current-side`, with exact scope only |
+| Current non-legacy code without ordinary user UI path | Mark as `current scaffold` or `backend candidate`, not UI-complete |
+| Branch-only files or branch-only tests | Mark as `branch material`, not current coverage |
+| Legacy folder code or legacy tests | Mark as `legacy material`; no current UI coverage |
+| Mock/lite/testing-level output | May support developer preview only; cannot satisfy formal analysis or production coverage |
 
 ## Coverage Summary
 

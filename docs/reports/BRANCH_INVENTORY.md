@@ -6,7 +6,7 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `4e699cf961e97306e7ab3c4628c3fc9d05d54967`
+Current HEAD: `b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15`
 
 ## Audit Boundary
 
@@ -15,13 +15,45 @@ This is Phase 2.5 audit-only work. No legacy branch was checked out, merged, che
 Current unrelated worktree state was preserved and was not included as a migration action:
 
 ```text
+ M analysis/modules/univariate/module.json
  M analysis/registry/analysis_modules.json
-?? analysis/modules/
+ M analysis/runners/run_module.R
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M tests/test_analysis_runtime_task_bridge.py
+ M tests/test_r_analysis_architecture_contract.py
+?? analysis/fixtures/inputs/univariate/lite_clinical.tsv
+?? analysis/fixtures/inputs/univariate/module_input_lite.json
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
 
-The modified `analysis/registry/analysis_modules.json` and untracked `analysis/modules/**` existed before this Phase 2.5 audit pass and were not edited here.
+These R analysis worker / univariate lite fixture changes existed before this Phase 2.5 audit refresh and were not treated as migration evidence, completion evidence, or Phase 2.5 implementation work.
+
+## 2026-06-04 Refresh Notes
+
+This refresh re-ran read-only branch and legacy inventory commands against current `dev/bioinformatics` at `b77805c`. Since the prior Phase 2.5 report, the current branch has added analysis runtime isolation scaffolds and mock/lite standard package worker material:
+
+```text
+5c835b1 add analysis environment isolation scaffolds
+6afb3ff add per-module analysis mock result fixtures
+15f6fdd harden standard R analysis runner contract
+bf92811 add standard R analysis worker bridge
+fb200be add analysis resource governance gate
+514d226 expose standard analysis package catalog
+5425eb3 add enrichment lite standard worker fixture
+b77805c add survival lite standard worker fixture
+```
+
+These commits are current-branch material, not old-branch migration. They should be cataloged as `mock/lite standard package scaffold` until a specific module proves full current UI -> task -> real analysis -> result package closure.
+
+Branch inventory still shows no safe whole-branch merge path. The most migration-relevant historical sources remain:
+
+- Bioinformatics ReleaseBuild / internal-test branches for R DEG, enrichment package layout, plot/report renderer gates, risk/report gate history.
+- MainLine / survival clinical carry-over branches for survival/clinical contract convergence history.
+- Meta L3 branches for current Meta result contract and current UI proof history.
+- UI shell branches for design references only.
+- `app/bioinformatics/legacy/**`, `app/meta_analysis/legacy/**`, and `archive/legacy_sources/**` as quarantined legacy material.
 
 ## Commands Used
 
@@ -40,7 +72,7 @@ The modified `analysis/registry/analysis_modules.json` and untracked `analysis/m
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Audit disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `4e699cf` | 2026-06-04 | add analysis runtime mock task bridge | Current source of truth for this worktree; contains Bio and Meta current services plus new analysis runtime mock bridge | Source of truth; current dirty analysis scaffold not audited as completion |
+| `dev/bioinformatics` | `b77805c` | 2026-06-04 | add survival lite standard worker fixture | Current source of truth for this worktree; contains Bio and Meta current services plus analysis runtime mock/lite scaffold | Source of truth; current dirty univariate lite scaffold not audited as completion |
 | `feature/meta-l3-ui-loop` | `5f6150a` | 2026-05-29 | feat(meta): prove current UI L3 result loop | Meta Phase 4 focused UI L3 proof branch, now largely reachable from current history | Reference; current branch already contains related commits |
 | `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | High Bio ReleaseBuild candidate: structured R DEG, enrichment, GSEA, survival, risk, reports, renderer policy | Candidate library only; no wholesale carry-over |
 | `stable/mainline` | `be8c924` | 2026-05-21 | carry over Bioinformatics formal DEG MVP to MainLine | Older MainLine formal DEG baseline | Historical baseline; superseded by current Bio history |

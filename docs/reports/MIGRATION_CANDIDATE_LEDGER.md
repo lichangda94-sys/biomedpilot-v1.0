@@ -6,6 +6,16 @@ Date: 2026-06-04
 
 No candidate below is marked current available solely because it exists on a branch, under `legacy/`, or in `archive/legacy_sources/**`. A candidate is reusable only after it is adapted to the current UI and current result/input contracts, with current tests and real output evidence.
 
+Current audit baseline:
+
+```text
+branch: dev/bioinformatics
+HEAD: b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15
+audit mode: Phase 2.5 read-only inventory
+```
+
+The worktree contains pre-existing uncommitted analysis worker/univariate lite fixture changes. They are excluded from this ledger's "current implementation" and "real run" claims unless they are already committed and independently tested on the current line.
+
 Legend:
 
 | Recommendation | Meaning |
@@ -36,6 +46,9 @@ Legend:
 | Bio recognition / standardized asset selection | current + historical branches | `project_recognition.py`, `project_standardization.py`, `standardized_asset_selection.py`, `analysis_inputs/**` | Recognition and standardized asset selection | Bio Recognition / Standardized Assets | Yes/current | Input workflow, not analysis result | Current tests | No analysis artifact | Must feed resolver only | Medium | reuse |
 | Immune infiltration | current | `immune_infiltration/**`, UI tests | Bulk immune/TME scoring candidate | Bio immune pages | Yes/current candidate | Not rerun here | Current tests | Report module exists | Signature/resource policy | Medium | reuse with proof |
 | Generic analysis runtime mock bridge | current dirty/history | `app/analysis_runtime/**`, `analysis/**` | Mock standard result package task bridge | No final UI claim yet | Mock-only | Mock package only | Focused tests from recent commits | Mock result package only | Not a real R/Bioc execution env | Medium | keep quarantined until proven |
+| Enrichment lite standard package worker | current `dev/bioinformatics` | `analysis/modules/enrichment/**`, `analysis/fixtures/inputs/enrichment/**`, `analysis/runners/run_module.R`, `app/analysis_runtime/**` | Base R lite ORA fixture path that writes standard result package | No ordinary user UI completion claim yet; package catalog discovery only | Current scaffold | Current-line focused proof by recent commits; not rerun in this audit | Current focused tests by recent commits | Real TSV/manifest package for fixture; not formal ORA production result | Lite/testing-level worker mode | Medium | reuse as scaffold, not production |
+| Survival lite standard package worker | current `dev/bioinformatics` | `analysis/modules/survival/**`, `analysis/fixtures/inputs/survival/**`, `analysis/runners/run_module.R`, `app/analysis_runtime/**` | Base R lite KM/log-rank fixture path that writes standard result package | No ordinary user UI completion claim yet; package catalog discovery only | Current scaffold | Current-line focused proof by recent commits; not rerun in this audit | Current focused tests by recent commits | Real TSV/manifest package for fixture; no clinical conclusion | Lite/testing-level worker mode | High clinical overclaim risk | reuse as scaffold, not production |
+| Univariate lite standard package worker | current dirty worktree only | `analysis/modules/univariate/module.json`, `analysis/fixtures/inputs/univariate/**`, `analysis/runners/run_module.R` | In-progress base R univariate clinical association fixture | No current UI claim | No committed current implementation for this audit | Not counted; pre-existing dirty work | Not counted | Not counted | Dirty worktree state and clinical overclaim risk | High | exclude until committed/proven |
 | Legacy GEO desktop tool | `app/bioinformatics/legacy/geo_tool/**`, archive copy | `geo_tool/main.py`, `geo_workflow.py`, wrappers | Standalone GEO workflow | No current UI button should call directly | No | Legacy only | Legacy tests only | Not current formal output | Old standalone paths | High | deprecated |
 | Legacy TCGA/GTEx facade | `app/bioinformatics/legacy/tcga_gtex/**` | adapters/facade/lexicon | Old TCGA/GTEx optional runtime | Current Data Source cards use newer services | No direct | Legacy only | Legacy tests only | No current output | Old locator/mock contracts | High | rewrite |
 | Meta current v2 statistics | current `dev/bioinformatics` | `meta_statistics_engine_service.py`, `stats/**`, `analysis_page.py` | Real v2 statistics from confirmed plan | Meta Analysis / Run statistics analysis | Yes | Focused tests/reports exist; not rerun here | Current tests | Statistics result; artifacts through bridge | Current v2 contract | Medium | reuse |

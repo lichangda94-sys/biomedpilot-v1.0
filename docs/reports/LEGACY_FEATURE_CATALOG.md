@@ -6,6 +6,16 @@ Date: 2026-06-04
 
 This catalog covers current `app/bioinformatics/legacy/**`, `app/meta_analysis/legacy/**`, `archive/legacy_sources/**`, and branch-discovered historical implementation areas. It is not a current capability claim.
 
+Current audit baseline:
+
+```text
+branch: dev/bioinformatics
+HEAD: b77805c242d4f1a47a4cca20fcf21fb3ac4c6e15
+mode: read-only Phase 2.5 inventory refresh
+```
+
+Uncommitted R analysis worker / univariate lite fixture files were present before this refresh and are not counted here as completed legacy migration or production capability.
+
 Classification used:
 
 | Evidence class | Meaning |
@@ -29,6 +39,7 @@ Classification used:
 | Plot artifacts | `plots/basic_renderers.py`, `formal_deg.py`, `survival.py`, `cox.py`, `schema.py`, `registry.py` | SVG/spec-driven plot artifacts for supported current analysis results | Current plot tests | Not a full plotting platform |
 | Report/export packages | `reports/formal_deg.py`, `reports/export_package.py`, `reports/readiness.py`, `reports/project_report_builder.py` | Section/package report gates and export packages | Current report tests | Statistical package only, no clinical conclusion |
 | Analysis runtime mock bridge | `app/analysis_runtime/**`, `analysis/**` | Mock-mode standard result package bridge | Current recent commits and tests | Mock only; not full R analysis execution |
+| Standard analysis lite worker scaffold | `analysis/registry/analysis_modules.json`, `analysis/runners/run_module.R`, `analysis/modules/**`, `analysis/fixtures/**` | Current-line mock/lite standard package worker material for selected modules | Current branch commits through survival lite; uncommitted univariate work not counted | Lite/testing-level only; not production or full R/Bioc execution |
 
 ## Bioinformatics Legacy Catalog
 
@@ -79,6 +90,20 @@ Classification used:
 | Risk score / nomogram / calibration / DCA | `codex/releasebuild-formal-deg-carryover`, `dev/release-internal-test` | `risk_score_*`, calibration/DCA docs/tests by branch evidence | Risk score and advanced clinical visualization gates | Branch/current mixed evidence | Must remain non-clinical and gated if revisited |
 | Meta OCR fulltext | `dev/meta-analysis` | `fulltext/image_ocr_worker.py`, `pdf_ocr_worker.py`, `ocr_runtime_service.py`, `paddleocr_subprocess_runner.py` | OCR worker/runtime/package history | Branch file and test evidence | Not current-proven; future adapter only |
 | UI shell/icon/result export surfaces | `dev/ui-shell`, `integration/release-ui-shell-scoped-migration` | `docs/ui/**`, `app/shared/ui_components/**`, screenshot assets | UI design and shell material | Branch evidence | Design reference only; not analysis runtime |
+
+## Evidence Boundary Refresh
+
+The following labels must be used consistently in future migration work:
+
+| Label | Allowed claim | Disallowed claim |
+| --- | --- | --- |
+| Current | Exists in current non-legacy source and has current tests or recent current-line proof | Full production capability unless the proof specifically covers that level |
+| Current scaffold | Exists in current source but is mock/lite/testing-level or not wired to current UI | Real analysis closure |
+| Branch evidence | Exists on a branch by `git ls-tree`, `git diff`, or `git log` evidence | Current availability |
+| Legacy tests only | Has historical tests under `legacy/` or `archive/legacy_sources/**` | Current test coverage |
+| Deprecated | Historical standalone, fake, placeholder, no-op, old path, or boundary-violating code | Reuse without rewrite/adapter |
+
+Current scaffold items include the standard analysis runtime bridge and standard result package catalog. They are useful architecture material, but they do not convert old Bio/Meta legacy functionality into current completed features.
 
 ## Deprecated Legacy Register Cross-Reference
 
