@@ -133,6 +133,8 @@ Update: `build_standard_analysis_package_detail()` now exposes a UI-safe `artifa
 
 Update: standard package validation now blocks malformed, missing, absolute, package-external, or wrong-group `tables`/`plots`/`reports` artifact declarations. This turns artifact manifest drift into a contract blocker instead of leaving UI consumers to discover missing files later.
 
+Update: Analysis Center state now exposes `standard_package_gate_rows` for standard package catalog source, package validation, and artifact-manifest validity. The UI can display package-contract blockers without reading module-private R outputs.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -152,6 +154,7 @@ Acceptance:
 - Analysis Center can read worker invocation diagnostics from the standard package catalog. **Completed for task-bridge standard packages.**
 - Analysis Center can read declared standard-package artifact paths for tables, plots, reports, and logs without module-private output coupling. **Completed for catalog artifact manifest.**
 - Standard package validation blocks declared table/plot/report artifacts that are missing or outside their standard package directories. **Completed for artifact declaration gate.**
+- Analysis Center exposes standard package validation/artifact blockers as gate rows. **Completed for UI gate preview.**
 - DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
 - Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
 - Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**

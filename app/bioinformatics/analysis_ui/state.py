@@ -105,9 +105,10 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
+    standard_package_gate_rows = build_standard_package_gate_rows(standard_package_catalog)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency, enrichment_backend_gate=enrichment_backend_gate)
     survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency, km_gate_state=survival_gates)
-    blockers = _dedupe([*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]] + _list(standard_package_catalog.get("blockers")))
+    blockers = _dedupe(_list(standard_package_catalog.get("blockers")) + [*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]])
     warnings = _dedupe([*resolver.get("warnings", [])] + [item for row in package_rows for item in row["raw_warnings"]] + [item for row in dependency_rows for item in row["raw_warnings"]] + _list(standard_package_catalog.get("warnings")))
     return {
         "schema_version": "biomedpilot.analysis_center_ui_state.v1",
@@ -127,6 +128,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "legacy_asset_pipeline": legacy_pipeline,
         "result_rows": result_rows,
         "standard_analysis_packages": standard_package_catalog,
+        "standard_package_gate_rows": standard_package_gate_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
         "enrichment_gate_rows": enrichment_gates["gate_rows"],
@@ -137,6 +139,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "task_records": records,
             "result_index": result_index,
             "standard_analysis_package_catalog": standard_package_catalog,
+            "standard_package_gate_rows": standard_package_gate_rows,
             "analysis_input_resolver": resolver,
             "deg_dependency_snapshot": deg_dependency,
             "formal_deg_gate_state": deg_gates,
@@ -969,6 +972,45 @@ def build_result_gate_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]
             }
         )
     return rows
+
+
+def build_standard_package_gate_rows(catalog: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = [row for row in catalog.get("rows", []) if isinstance(row, dict)] if isinstance(catalog.get("rows"), list | tuple) else []
+    blockers = _list(catalog.get("blockers"))
+    warnings = _list(catalog.get("warnings"))
+    invalid_packages = [
+        str(row.get("result_id") or row.get("package_path_relative") or "")
+        for row in rows
+        if isinstance(row, dict) and str(row.get("validation_status") or "") != "passed"
+    ]
+    artifact_blockers = [
+        item
+        for item in blockers
+        if any(marker in item for marker in ("declared_artifact", "artifact_manifest", "standard_result_package"))
+    ]
+    return [
+        _formal_deg_gate_row(
+            "Standard package catalog source",
+            "passed",
+            [],
+            [],
+            basis=f"policy={catalog.get('source_policy') or 'unknown'}; packages={catalog.get('package_count', len(rows))}",
+        ),
+        _formal_deg_gate_row(
+            "Standard package validation",
+            catalog.get("status") or "passed",
+            blockers,
+            warnings,
+            basis=f"invalid_packages={compact_list(invalid_packages)}",
+        ),
+        _formal_deg_gate_row(
+            "Standard package artifact manifest",
+            "blocked" if artifact_blockers else "passed",
+            artifact_blockers,
+            [],
+            basis="UI may read only declared tables/plots/reports/logs inside the standard result package.",
+        ),
+    ]
 
 
 def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate: dict[str, Any], formal_deg_report_gate: dict[str, Any] | None = None) -> list[dict[str, Any]]:

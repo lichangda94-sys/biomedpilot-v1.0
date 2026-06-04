@@ -157,11 +157,35 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert row["artifact_manifest"]["reports"][0]["package_relative_path"] == "reports/README_mock.md"
     assert {item["artifact_type"] for item in row["artifact_manifest"]["logs"]} == {"analysis_worker_log", "analysis_worker_invocation_manifest"}
+    package_gate_text = "\n".join(str(item) for item in state["standard_package_gate_rows"])
+    assert "Standard package catalog source" in package_gate_text
+    assert "Standard package validation" in package_gate_text
+    assert "Standard package artifact manifest" in package_gate_text
+    assert all(row["status"] == "passed" for row in state["standard_package_gate_rows"])
     assert state["developer_diagnostics"]["standard_analysis_package_catalog"]["package_count"] == 1
+    assert state["developer_diagnostics"]["standard_package_gate_rows"] == state["standard_package_gate_rows"]
     result_row = next(item for item in state["result_rows"] if item["result_id"] == "analysis-package-enrichment-mock-task")
     assert result_row["semantics"] == "testing level"
     assert _action(state, "report_ready_export")["enabled"] is False
     assert _file_set(tmp_path) == before
+
+
+def test_analysis_center_state_surfaces_standard_package_artifact_gate_blockers(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, _module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    result_path = package_dir / "result.json"
+    result_json = json.loads(result_path.read_text(encoding="utf-8"))
+    result_json["tables"] = [{"artifact_type": "missing_table", "path": "tables/missing.tsv"}]
+    result_path.write_text(json.dumps(result_json, indent=2), encoding="utf-8")
+
+    state = build_analysis_center_state(tmp_path)
+    rows = {row["gate"]: row for row in state["standard_package_gate_rows"]}
+
+    assert rows["Standard package validation"]["status"] == "blocked"
+    assert "declared_artifact_tables_0_file_missing" in rows["Standard package validation"]["blockers"]
+    assert rows["Standard package artifact manifest"]["status"] == "blocked"
+    assert "declared_artifact_tables_0_file_missing" in rows["Standard package artifact manifest"]["blockers"]
+    assert any("declared_artifact_tables_0_file_missing" in item for item in state["top_blockers"])
 
 
 def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
