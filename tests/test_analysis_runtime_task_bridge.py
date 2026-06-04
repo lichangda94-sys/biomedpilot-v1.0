@@ -360,10 +360,17 @@ def test_r_worker_backend_missing_rscript_returns_blocked_standard_package(tmp_p
     package_dir = Path(result["result_package_dir"])
     result_json = read_json(package_dir / "result.json")
     provenance = read_json(package_dir / "provenance.json")
+    invocation = read_json(package_dir / "logs" / "worker_invocation.json")
     assert result["status"] == "blocked"
     assert "rscript_not_available" in result["blockers"]
     assert result_json["status"] == "blocked"
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
+    assert invocation["schema_version"] == "biomedpilot.analysis.worker_invocation.v1"
+    assert invocation["worker_backend"] == "rscript"
+    assert invocation["invocation_status"] == "blocked_before_process"
+    assert invocation["runtime_install_policy"] == "forbidden"
+    assert invocation["resource_download_policy"] == "forbidden"
+    assert "rscript_not_available" in invocation["blockers"]
     assert task_center.list_tasks()[0].status == TaskStatus.FAILED
 
 
@@ -730,6 +737,7 @@ def test_all_registered_lite_modules_run_through_standard_r_worker_package_contr
         package_dir = Path(result["result_package_dir"])
         result_json = read_json(package_dir / "result.json")
         provenance = read_json(package_dir / "provenance.json")
+        invocation = read_json(package_dir / "logs" / "worker_invocation.json")
         validation = validate_standard_result_package(
             package_dir,
             expected_module_id=module_id,
@@ -752,10 +760,18 @@ def test_all_registered_lite_modules_run_through_standard_r_worker_package_contr
         assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
         assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
         assert provenance["input_hash"] != provenance["parameter_hash"]
+        assert invocation["module_id"] == module_id
+        assert invocation["mode"] == "lite"
+        assert invocation["worker_backend"] == "rscript"
+        assert invocation["invocation_status"] == "completed"
+        assert invocation["runtime_install_policy"] == "forbidden"
+        assert invocation["resource_download_policy"] == "forbidden"
+        assert invocation["worker_boundary"]["boundary_type"] == "standard_r_worker"  # type: ignore[index]
         assert task_center.list_tasks()[0].status == TaskStatus.COMPLETED
         assert result_index["results"][0]["result_semantics"] == "testing_level"
         assert result_index["results"][0]["validation_status"] == "passed"
         assert result_index["results"][0]["report_ready_eligible"] is False
+        assert result_index["results"][0]["log_artifacts"][1]["artifact_type"] == "analysis_worker_invocation_manifest"
         assert catalog["status"] == "passed"
         assert catalog["rows"][0]["module_id"] == module_id
         assert catalog["rows"][0]["mode"] == "lite"
@@ -789,6 +805,7 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         package_dir = Path(result["result_package_dir"])
         result_json = read_json(package_dir / "result.json")
         provenance = read_json(package_dir / "provenance.json")
+        invocation = read_json(package_dir / "logs" / "worker_invocation.json")
         validation = validate_standard_result_package(
             package_dir,
             expected_module_id=module_id,
@@ -815,10 +832,19 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert provenance["runtime"]["package_versions"] == {}  # type: ignore[index]
         assert provenance["runtime"]["external_tool_versions"] == {}  # type: ignore[index]
         assert provenance["command"] == "analysis_task_bridge_mode_gate"
+        assert invocation["module_id"] == module_id
+        assert invocation["mode"] == "full"
+        assert invocation["worker_backend"] == "rscript"
+        assert invocation["invocation_status"] == "not_invoked_mode_gate"
+        assert invocation["returncode"] is None
+        assert invocation["command"] == []
+        assert invocation["worker_boundary"]["boundary_type"] == "analysis_task_bridge_gate"  # type: ignore[index]
+        assert invocation["worker_boundary"]["migration_status"] == "blocked_before_worker_execution"  # type: ignore[index]
         assert task_center.list_tasks()[0].status == TaskStatus.FAILED
         assert result_index["results"][0]["result_semantics"] == "blocked"
         assert result_index["results"][0]["validation_status"] == "blocked"
         assert result_index["results"][0]["report_ready_eligible"] is False
+        assert result_index["results"][0]["log_artifacts"][1]["artifact_type"] == "analysis_worker_invocation_manifest"
         assert catalog["status"] == "blocked"
         assert catalog["rows"][0]["module_id"] == module_id
         assert catalog["rows"][0]["mode"] == "full"

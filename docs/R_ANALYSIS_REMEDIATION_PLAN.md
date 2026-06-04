@@ -102,6 +102,8 @@ Update: full-mode blocking is now enforced by a registry-driven bridge test. Eve
 
 Update: environment boundaries are now centralized in `analysis/registry/analysis_environments.json`. The registry declares `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`, including Dockerfile, renv lock, allowed modules, heavy-dependency policy, resource/tool lock policy, and no runtime-install policy. Tests verify module manifests match this registry and cannot point analysis execution at `app-dev` or unregistered worker environments.
 
+Update: standard task-bridge R worker attempts now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Full-mode bridge gates also write this manifest with `invocation_status=not_invoked_mode_gate`.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -128,6 +130,7 @@ Acceptance:
 - Molecular dynamics can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing GROMACS. **Completed for MD adapter boundary fixture.**
 - Every registered `lite` module can run through the same main-backend task bridge and standard R worker package contract. **Completed with registry-driven focused test.**
 - Every registered `full` module is blocked through the same main-backend task bridge with a standard result package, result-index entry, catalog row, and non-executed provenance. **Completed with registry-driven focused test.**
+- Standard R worker attempts and full-mode bridge gates write a worker invocation manifest and register it in result-index log artifacts. **Completed for task-bridge paths.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.

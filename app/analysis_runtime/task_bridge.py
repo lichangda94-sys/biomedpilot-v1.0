@@ -62,6 +62,14 @@ def run_analysis_module_task(
             mode_blockers.extend(full_mode_resource_blockers(module_id))
             mode_blockers = list(dict.fromkeys(mode_blockers))
         _write_standard_package(package_dir, module_input, status="blocked", blockers=mode_blockers, command="analysis_task_bridge_mode_gate")
+        _write_worker_invocation_manifest(
+            package_dir,
+            module_input,
+            worker_backend=worker_backend,
+            invocation_status="not_invoked_mode_gate",
+            worker_result={},
+            blockers=mode_blockers,
+        )
         validation = validate_standard_result_package(package_dir, expected_module_id=module_id, expected_task_id=task_id, expected_mode=mode)
         _finish_task(center, task, success=False, summary=f"Analysis task blocked: {', '.join(mode_blockers)}")
         result_entry = _register_standard_package(project, package_dir, module_input, validation, status="blocked", blockers=mode_blockers)
@@ -80,6 +88,14 @@ def run_analysis_module_task(
                 warnings=["r_worker_unavailable"],
                 command="analysis_task_bridge_rscript_worker",
             )
+        _write_worker_invocation_manifest(
+            package_dir,
+            module_input,
+            worker_backend=worker_backend,
+            invocation_status="completed" if worker_result.get("returncode") is not None else "blocked_before_process",
+            worker_result=worker_result,
+            blockers=fixture_blockers,
+        )
     else:
         fixture_blockers = _write_mock_fixture_package(
             package_dir,
@@ -263,6 +279,47 @@ def _write_mock_fixture_package(package_dir: Path, payload: dict[str, Any], *, m
     return []
 
 
+def _write_worker_invocation_manifest(
+    package_dir: Path,
+    payload: dict[str, Any],
+    *,
+    worker_backend: str,
+    invocation_status: str,
+    worker_result: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    logs_dir = package_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    command = worker_result.get("command")
+    if not isinstance(command, list):
+        command = []
+    manifest = {
+        "schema_version": "biomedpilot.analysis.worker_invocation.v1",
+        "created_at": _now(),
+        "module_id": str(payload.get("module_id") or ""),
+        "mode": str(payload.get("mode") or ""),
+        "task_id": str(payload.get("task_id") or ""),
+        "worker_backend": worker_backend,
+        "invocation_status": invocation_status,
+        "standard_worker_entrypoint": str(REPO_ROOT / "analysis" / "runners" / "run_module.R"),
+        "input_manifest": "module_input.json",
+        "output_contract": "standard_result_package",
+        "runtime_install_policy": "forbidden",
+        "resource_download_policy": "forbidden",
+        "returncode": worker_result.get("returncode"),
+        "command": [str(item) for item in command],
+        "stdout": str(worker_result.get("stdout") or ""),
+        "stderr": str(worker_result.get("stderr") or ""),
+        "blockers": [str(item) for item in blockers],
+        "worker_boundary": {
+            "boundary_type": "standard_r_worker" if worker_backend == "rscript" and invocation_status == "completed" else "analysis_task_bridge_gate",
+            "task_system_invocation": "task_center_registered",
+            "migration_status": "standard_worker_contract" if worker_backend == "rscript" and invocation_status == "completed" else "blocked_before_worker_execution",
+        },
+    }
+    _write_json(logs_dir / "worker_invocation.json", manifest)
+
+
 def _register_standard_package(
     project: Path,
     package_dir: Path,
@@ -281,6 +338,15 @@ def _register_standard_package(
     runtime = provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {}
     engine_name = str(engine.get("name") or "biomedpilot_analysis_task_bridge")
     engine_version = str(engine.get("version") or "v1")
+    log_artifacts = [{"artifact_type": "analysis_worker_log", "path": f"{rel_package}/logs/worker.log"}]
+    if (package_dir / "logs" / "worker_invocation.json").is_file():
+        log_artifacts.append(
+            {
+                "artifact_type": "analysis_worker_invocation_manifest",
+                "path": f"{rel_package}/logs/worker_invocation.json",
+                "schema": "biomedpilot.analysis.worker_invocation.v1",
+            }
+        )
     entry = ResultIndexEntry(
         result_id=f"analysis-package-{task_id}",
         task_run_id=task_id,
@@ -308,7 +374,7 @@ def _register_standard_package(
         validation_status="passed" if validation["status"] == "passed" and not blockers else "blocked",
         warnings=tuple(str(item) for item in validation.get("warnings", [])),
         blockers=tuple(str(item) for item in blockers),
-        log_artifacts=({"artifact_type": "analysis_worker_log", "path": f"{rel_package}/logs/worker.log"},),
+        log_artifacts=tuple(log_artifacts),
         failure_reason=";".join(blockers),
         created_at=now,
         updated_at=now,
