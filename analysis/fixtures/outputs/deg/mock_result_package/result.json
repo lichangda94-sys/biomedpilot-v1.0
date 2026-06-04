@@ -1,0 +1,19 @@
+{
+  "schema_version": "biomedpilot.analysis.result.v1",
+  "module_id": "deg",
+  "mode": "mock",
+  "task_id": "deg-mock-fixture",
+  "status": "passed",
+  "result_semantics": "testing_level",
+  "summary": {
+    "message": "Mock DEG package for UI and task-flow development only.",
+    "analysis_type": "differential_expression",
+    "clinical_conclusion_status": "not_generated"
+  },
+  "tables": [{"artifact_type": "mock_deg_summary_table", "path": "tables/mock_deg_summary.tsv"}],
+  "plots": [],
+  "reports": [{"artifact_type": "mock_limitations_report", "path": "reports/README_mock.md"}],
+  "blockers": [],
+  "warnings": ["mock_result_not_scientific_output"],
+  "created_at": "2026-06-04T00:00:00Z"
+}

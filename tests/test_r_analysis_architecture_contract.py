@@ -12,6 +12,7 @@ from app.analysis_runtime.resources import full_mode_resource_blockers, validate
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_MODULES = {
+    "deg",
     "survival",
     "univariate",
     "multivariate",

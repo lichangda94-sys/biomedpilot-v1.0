@@ -103,7 +103,7 @@ The first lightweight worker paths are now available:
 
 A first environment isolation scaffold now also exists:
 
-- `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
+- `analysis/modules/<module_id>/module.json` for DEG, survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
 - `docker/Dockerfile.app-dev`
 - `docker/Dockerfile.r-bio-core`
 - `docker/Dockerfile.r-bio-full`
@@ -138,7 +138,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; real resource locks are incomplete. |
 | Provenance captures versions/hashes/seed/command | WARN | Some Bio result packages capture provenance; universal schema now requires it, migration incomplete. |
-| Survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, and first R-native lite workers exist for enrichment, survival, univariate, multivariate, and immune infiltration; full/formal migration remains pending. |
+| DEG/survival/univariate/multivariate/enrichment/immune/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, and first R-native lite workers exist for enrichment, survival, univariate, multivariate, and immune infiltration; DEG lite/full standard worker execution remains blocked pending migration. |
 | Docking/MD external tool adapters | FAIL | Target registry only; no adapters. |
 | Default dev can start without full analysis deps | PASS | Current source smoke historically works without requiring full R environments; scaffold test does not require R. |
 
@@ -209,6 +209,7 @@ New architecture boundary files:
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/resources/manifest.json`
+- `analysis/modules/deg/module.json`
 - `analysis/modules/survival/module.json`
 - `analysis/modules/univariate/module.json`
 - `analysis/modules/multivariate/module.json`
@@ -261,6 +262,7 @@ New architecture boundary files:
 - Added base R standard runner without package installation; mock writes standard packages and lite/full writes blocked standard packages.
 - Added generic mock input and standard mock result package.
 - Added per-module fixed mock inputs and fixed standard result package fixtures for all registered modules.
+- Added DEG to the standard analysis module registry with a mock input and mock standard result package; DEG lite/full standard worker execution remains blocked.
 - Added resource manifest skeleton with blocked full resources.
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.

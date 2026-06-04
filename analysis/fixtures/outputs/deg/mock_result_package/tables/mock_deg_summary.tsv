@@ -1,0 +1,6 @@
+metric	value
+module	deg
+result_semantics	testing_level
+comparison	case_vs_control
+method	mock_deg
+clinical_conclusion	not_generated

@@ -99,6 +99,7 @@ The first `lite` worker paths are enrichment ORA, survival KM/log-rank, univaria
 Every registered target module now has a `module.json` scaffold:
 
 ```text
+analysis/modules/deg/module.json
 analysis/modules/survival/module.json
 analysis/modules/univariate/module.json
 analysis/modules/multivariate/module.json
@@ -157,6 +158,7 @@ logs/
 | --- | --- |
 | Registry/schema | Present. |
 | Per-module mock result packages | Present for all registered modules. |
+| DEG module contract | Present as a registered standard module with mock input/output package; lite/full standard worker execution remains blocked. |
 | Standard R runner | Present for mock mode, enrichment/survival/univariate/multivariate/immune lite fixtures, and blocked full standard packages. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
 | Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |

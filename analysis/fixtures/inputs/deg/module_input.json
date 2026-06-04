@@ -1,0 +1,22 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "deg",
+  "mode": "mock",
+  "task_id": "deg-mock-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-deg-input",
+    "source_dataset_id": "fixture-deg-dataset",
+    "fixture_table": "analysis/fixtures/outputs/deg/mock_result_package/tables/mock_deg_summary.tsv"
+  },
+  "parameters": {
+    "analysis_family": "differential_expression",
+    "method": "mock_deg",
+    "comparison": "case_vs_control",
+    "value_type": "raw_count"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "app-dev"
+  }
+}
