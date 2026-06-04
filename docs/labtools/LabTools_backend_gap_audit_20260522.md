@@ -2,7 +2,7 @@
 
 日期：2026-05-22
 
-范围：评估当前 LabTools 后端相对于 BioMedPilot 桌面 UI mockup 和 integration 的缺口。本文不新增功能。
+范围：评估当前 LabTools 后端相对于 BioMedPilot 桌面 UI mockup 和 integration 的缺口。2026-06-04 更新：细胞图片实验 ImageJ/Fiji macro adapter 已补入。
 
 ## 1. 功能状态矩阵
 
@@ -20,9 +20,9 @@
 | BCA helper | OD parser, annotation, linear fit, warnings | `mockup_only` to `ui_adapter_needed` | P0 mockup 可做；正式保存前补 record store。 |
 | qPCR mix | `QpcrMixInput`, `calculate_qpcr_mix_v1` | `active_backend_ready` | 当前只保留 mix calculator。 |
 | cell plating | `CellSeedingInput`, `calculate_cell_seeding_v1` | `active_backend_ready` | P1 独立页，P0 可在快速计算出现。 |
-| 细胞实验记录 | no record model/store | `shell_only` / `blocked_until_backend` | P0 只做模板首页壳；后续补 store。 |
+| 细胞实验记录 | no record model/store；细胞图片实验已有 ImageJ/Fiji macro adapter | `image_processing_backend_ready` + `record_store_blocked` | 可开放划痕 / Transwell / 免疫组化图片处理入口；记录保存仍需补 store。 |
 | ELISA / 吸光度 | `labtools.elisa` empty | `blocked_until_backend` | 需要先做 MVP，不能接真实 ELISA 页面。 |
-| ImageJ/Fiji 图像分析入口 | no backend API | `shell_only` | 只做入口和外部引擎状态，不做图像分析承诺。 |
+| ImageJ/Fiji 图像分析入口 | executable discovery、macro generator、macro writer、headless runner wrapper | `adapter_ready_for_cell_image_workflows` | 可接三类细胞实验图片处理；UI 必须暴露阈值参数和人工复核提示。 |
 
 ## 2. 缺口评估
 
@@ -55,7 +55,7 @@
 
 结论：需要，但不属于本阶段。
 
-当前 `labtools.cell_culture` 只重导出 cell seeding calculator。细胞实验记录模板首页可以做 shell，但真实记录需要：
+当前 `labtools.cell_culture` 重导出 cell seeding calculator，并开放 `labtools.cell_culture.imagej` 的细胞图片实验 ImageJ/Fiji macro 工作流。细胞实验记录模板首页可以做 shell，但真实记录需要：
 
 - `CellExperimentTemplate`
 - `CellExperimentRecord`
@@ -67,20 +67,29 @@
 
 ### 2.4 ImageJ/Fiji 是否只做入口和外部引擎状态
 
-结论：是。
+结论：不再只是入口壳；细胞图片实验已有第一版可调用后端。
 
-当前 LabTools 没有 ImageJ/Fiji 后端 API，没有 executable discovery、macro runner、ROI model、result parser 或安全边界。UI 可以做：
+当前 LabTools 已有：
 
-- 外部引擎未连接状态
-- 配置入口占位
-- 支持范围说明
+- `CELL_IMAGEJ_EXPERIMENTS`
+- `render_cell_imagej_macro()`
+- `write_cell_imagej_macro()`
+- `resolve_imagej_executable()`
+- `run_cell_imagej_macro()`
+- CLI：`python3 -m labtools cell-imagej list|macro|run`
 
-不应做：
+已开放的图片处理范围：
 
-- 自动条带识别
-- 灰度定量承诺
-- ROI 自动分析
-- 后台运行 Fiji macro
+- 划痕实验：批量估算 gap area / gap fraction。
+- Transwell：批量 particle count / particle area。
+- 免疫组化 / IHC-DAB：批量 positive area fraction / mean gray。
+
+仍不应做：
+
+- 声称无需人工复核的全自动定量。
+- 声称适用于所有显微镜、染色和阈值条件。
+- 在未接 UI adapter 前隐藏 threshold、particle size、polarity 等参数。
+- 把 ImageJ CSV 结果保存为正式实验记录；记录 store 仍未完成。
 
 ### 2.5 导出按钮是否已有后端支持
 
@@ -105,7 +114,8 @@
 
 1. P0 必须保存：试剂模板、本次试剂配制、WB loading。
 2. P1 保存：通用快速计算、动态公式求解、SDS-PAGE 模板/计算、BCA/OD。
-3. blocked：ELISA、细胞实验记录、ImageJ/Fiji。
+3. blocked：ELISA、细胞实验记录保存。
+4. adapter ready：ImageJ/Fiji 细胞图片实验 macro 工作流。
 
 当前最大缺口是通用 `CalculationRecordStore` 不存在。`CalculationResult.to_record()` 可以生成记录，但没有统一本地 store。
 
@@ -141,7 +151,7 @@ LABTOOLS_STORAGE_ROOT 或 ~/.labtools
 | BCA record model/store/export | BCA / OD 记录正式保存 | P1 |
 | ELISA MVP backend | ELISA / 吸光度 | P2 |
 | Cell experiment record store | 细胞实验记录模板首页真实保存 | P2 |
-| ImageJ/Fiji external engine adapter | ImageJ/Fiji 图像分析入口 | P2 |
+| ImageJ/Fiji desktop UI adapter | ImageJ/Fiji 图像分析入口接入桌面 UI | P1 |
 | SDS-PAGE persistent template store | SDS-PAGE 模板库 | P1 |
 | Unified export/copy adapter | 多数结果页 | P1 |
 | UI-facing error normalization layer | 所有页面 | P0 adapter work |
@@ -151,7 +161,6 @@ LABTOOLS_STORAGE_ROOT 或 ~/.labtools
 - LabTools 完整桌面产品化
 - BioMedPilot 页面已接入
 - ELISA 分析可用
-- ImageJ/Fiji 图像分析可用
 - 细胞实验记录可保存
 - 所有计算都有历史记录
 - 所有页面都有文件导出
@@ -164,3 +173,4 @@ LABTOOLS_STORAGE_ROOT 或 ~/.labtools
 3. 在真实桌面接入前补 BioMedPilot storage root adapter。
 4. P0 页面先接 active backend：快速计算、公式求解、试剂模板、本次配制、WB loading、SDS-PAGE。
 5. BCA/OD 先做 mockup 和 adapter spike，确认 record store 后再进入正式保存。
+6. 细胞图片实验可接 ImageJ/Fiji macro adapter，但 UI 必须保留参数编辑、外部引擎路径配置和人工复核提示。

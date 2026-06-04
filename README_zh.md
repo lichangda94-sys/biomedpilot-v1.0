@@ -10,7 +10,7 @@ BioMedPilot-LabTools 是 **BioMedPilot / 医研智析** 的开源实验工具模
 
 Developer Preview / 开发预览版。
 
-当前代码已经作为独立公开包整理，支持本地安装、测试和 smoke test。
+当前代码已经作为独立公开包整理，支持本地安装、测试、smoke test，以及面向细胞图片实验的 ImageJ/Fiji macro 生成与调用封装。
 
 当前验证状态：
 
@@ -22,8 +22,8 @@ python -m labtools --smoke-test
 最近公开包验证结果：
 
 ```text
-pytest: 141 passed
-python -m labtools --smoke-test: passed
+python3 -m pytest: 216 passed
+python3 -m labtools --smoke-test: passed
 ```
 
 ## 功能范围
@@ -44,9 +44,39 @@ python -m labtools --smoke-test: passed
 - SDS-PAGE gel template helper
 - qPCR mix calculator
 - Cell seeding calculator
+- 细胞实验图片处理 ImageJ/Fiji macro 工作流（划痕实验、Transwell 实验、免疫组化 / IHC-DAB）
 - 单位换算工具
 - package smoke test
 - 测试用例
+
+## 细胞实验图片处理 / ImageJ-Fiji
+
+当前 `labtools.cell_culture` 已开放三类 ImageJ/Fiji macro 工作流：
+
+- `wound_scratch`：划痕实验图片批量估算划痕空白区域面积和比例。
+- `transwell`：Transwell 染色图片批量统计颗粒数量和颗粒面积。
+- `immunohistochemistry`：免疫组化 / IHC-DAB 图片批量估算阳性染色面积比例和平均灰度。
+
+只导出 macro：
+
+```bash
+python3 -m labtools cell-imagej macro wound_scratch \
+  --input-dir ./images \
+  --output-dir ./imagej-output \
+  --param threshold_method=Otsu
+```
+
+调用本机 ImageJ/Fiji 运行：
+
+```bash
+python3 -m labtools cell-imagej run transwell \
+  --input-dir ./images \
+  --output-dir ./imagej-output \
+  --imagej /Applications/Fiji.app \
+  --param min_particle_area_px=40
+```
+
+这些工作流用于科研图片处理辅助。阈值、ROI、批量结果和 CSV 输出必须由实验人员结合显微镜设置、染色条件、实验室 SOP 和原始图片人工复核。
 
 ## 安装与开发
 

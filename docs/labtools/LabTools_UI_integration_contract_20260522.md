@@ -142,9 +142,9 @@
 | Namespace | 状态 | UI 用法 |
 |---|---|---|
 | `labtools.pcr_qpcr` | `stable_for_ui` | 目前只公开 qPCR mix。 |
-| `labtools.cell_culture` | `stable_for_ui` | 目前只公开 cell seeding。 |
+| `labtools.cell_culture` | `stable_for_ui` | 公开 cell seeding，并开放细胞图片实验 ImageJ/Fiji macro 工作流。 |
 | `labtools.elisa` | `planned_shell_only` | 仅预留命名空间，`__all__` 为空。 |
-| ImageJ/Fiji APIs | `planned_shell_only` | 当前无 LabTools 后端 API；只能做入口和外部引擎状态壳。 |
+| ImageJ/Fiji APIs | `adapter_ready_for_cell_image_workflows` | 可用于划痕实验、Transwell、免疫组化图片处理的 macro 生成和 ImageJ/Fiji 调用；实验记录保存仍未接。 |
 
 ## 4. UI 调用规则
 
@@ -161,7 +161,7 @@
 
 用户输入中记录的旧基线是：
 
-- `pytest`: `145 passed`
+- `python3 -m pytest`: `216 passed`
 - `python3 -m labtools --smoke-test`: passed
 
 当前 checkout 已新增公式展示元数据测试，本阶段验证结果为：

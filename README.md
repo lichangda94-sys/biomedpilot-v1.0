@@ -20,6 +20,7 @@ The current package includes:
 - Calculation record serialization helpers
 - qPCR mix calculator
 - Cell seeding calculator
+- Cell experiment ImageJ/Fiji macro workflows for wound scratch, Transwell, and immunohistochemistry / IHC-DAB image batches
 - Reagent template models, validation, preparation calculator, and local JSON store
 - Western Blot loading calculator
 - Western Blot protein loading helpers
@@ -29,6 +30,35 @@ The current package includes:
 - Package-level smoke test via `python -m labtools --smoke-test`
 
 The package is intended for reusable calculation and model logic first. UI code and private BioMedPilot application-shell integrations are intentionally outside the public package surface.
+
+## Cell ImageJ/Fiji Workflows
+
+LabTools can generate ImageJ/Fiji macros for three cell experiment image workflows:
+
+- `wound_scratch`: batch wound/scratch gap area and fraction estimation.
+- `transwell`: batch particle counting and particle-area summary for stained Transwell images.
+- `immunohistochemistry`: batch positive-area fraction and mean-gray summary for IHC/DAB images.
+
+Generate a macro only:
+
+```bash
+python3 -m labtools cell-imagej macro wound_scratch \
+  --input-dir ./images \
+  --output-dir ./imagej-output \
+  --param threshold_method=Otsu
+```
+
+Generate and run with local ImageJ/Fiji:
+
+```bash
+python3 -m labtools cell-imagej run transwell \
+  --input-dir ./images \
+  --output-dir ./imagej-output \
+  --imagej /Applications/Fiji.app \
+  --param min_particle_area_px=40
+```
+
+Generated image-analysis CSV files require human review against the original images, microscope settings, staining conditions, and laboratory SOPs before scientific use.
 
 ## Safety Boundaries
 
@@ -62,8 +92,8 @@ python -m labtools --smoke-test
 Current known validation status:
 
 ```text
-pytest: 141 passed
-python -m labtools --smoke-test: passed
+python3 -m pytest: 216 passed
+python3 -m labtools --smoke-test: passed
 ```
 
 ## Project Structure
