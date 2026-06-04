@@ -17,7 +17,7 @@ def read_json(path: Path) -> dict[str, object]:
 
 
 def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrichment") -> dict[str, object]:
-    return {
+    payload: dict[str, object] = {
         "schema_version": "biomedpilot.analysis.module_input.v1",
         "module_id": module_id,
         "mode": mode,
@@ -31,6 +31,17 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
         "parameters": {"comparison": "case_vs_control"},
         "runtime": {"random_seed": 7, "requested_environment": "app-dev"},
     }
+    if module_id == "enrichment" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-enrichment-lite-input",
+            "source_dataset_id": "fixture-enrichment-lite-dataset",
+            "gene_list_path": "analysis/fixtures/inputs/enrichment/lite_genes.txt",
+            "term2gene_path": "analysis/fixtures/inputs/enrichment/lite_term2gene.tsv",
+            "term2name_path": "analysis/fixtures/inputs/enrichment/lite_term2name.tsv",
+        }
+        payload["parameters"] = {"analysis_family": "enrichment", "method": "base_r_hypergeometric_ora"}
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
+    return payload
 
 
 def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index(tmp_path: Path) -> None:
@@ -150,6 +161,49 @@ def test_r_worker_backend_missing_rscript_returns_blocked_standard_package(tmp_p
     assert result_json["status"] == "blocked"
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
     assert task_center.list_tasks()[0].status == TaskStatus.FAILED
+
+
+def test_enrichment_lite_mode_requires_rscript_worker_backend(tmp_path: Path) -> None:
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path, mode="lite"), task_center=task_center)
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    assert result["status"] == "blocked"
+    assert "analysis_mode_requires_rscript_worker:lite" in result["blockers"]
+    assert result_json["status"] == "blocked"
+    assert task_center.list_tasks()[0].status == TaskStatus.FAILED
+
+
+def test_enrichment_lite_mode_runs_through_standard_r_worker_and_catalog(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    assert result["status"] == "passed"
+    assert result_json["mode"] == "lite"
+    assert result_json["status"] == "passed"
+    assert result_json["result_semantics"] == "testing_level"
+    assert "lite_result_not_formal_analysis" in result_json["warnings"]
+    assert (package_dir / "tables" / "lite_ora_result.tsv").is_file()
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["engine_name"] == "biomedpilot_standard_r_worker"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
 
 
 def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execution(tmp_path: Path) -> None:

@@ -72,7 +72,7 @@
       "current_adapter_status": "existing_controlled_adapters_pending_standard_worker_wrapper",
       "modes": {
         "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/enrichment/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/enrichment/mock_result_package"},
-        "lite": {"supported": false, "blocker": "lite_worker_not_wrapped"},
+        "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/enrichment/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "base_r_hypergeometric_ora_fixture", "full_resource_policy": "not_used_in_lite_mode"},
         "full": {"supported": false, "blocker": "full_resource_manifest_and_container_not_available"}
       },
       "analysis_environment": "r-bio-core",

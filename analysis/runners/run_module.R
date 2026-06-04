@@ -55,6 +55,17 @@ read_integer_field <- function(text, field) {
   NA_integer_
 }
 
+resolve_input_path <- function(value) {
+  if (value == "") {
+    return("")
+  }
+  path <- path.expand(value)
+  if (grepl("^/", path)) {
+    return(normalizePath(path, mustWork = FALSE))
+  }
+  normalizePath(file.path(repo_root, path), mustWork = FALSE)
+}
+
 copy_fixture_package <- function(source, target) {
   if (!dir.exists(source)) {
     return(FALSE)
@@ -73,16 +84,20 @@ copy_fixture_package <- function(source, target) {
 }
 
 write_result <- function(module_id, task_id, mode, status, blockers, warnings, message) {
-  table_entries <- if (file.exists(file.path(output_dir, "tables", "mock_summary.tsv"))) {
-    '    {"artifact_type": "mock_summary_table", "path": "tables/mock_summary.tsv"}'
-  } else {
-    ""
+  table_files <- list.files(file.path(output_dir, "tables"), full.names = FALSE)
+  report_files <- list.files(file.path(output_dir, "reports"), full.names = FALSE)
+  table_entries_vector <- character(0)
+  for (table_file in table_files) {
+    artifact_type <- if (table_file == "mock_summary.tsv") "mock_summary_table" else "lite_enrichment_ora_result_table"
+    table_entries_vector <- c(table_entries_vector, paste0('    {"artifact_type": ', json_string(artifact_type), ', "path": ', json_string(file.path("tables", table_file)), '}'))
   }
-  report_entries <- if (file.exists(file.path(output_dir, "reports", "README_mock.md"))) {
-    '    {"artifact_type": "mock_limitations_report", "path": "reports/README_mock.md"}'
-  } else {
-    ""
+  report_entries_vector <- character(0)
+  for (report_file in report_files) {
+    artifact_type <- if (report_file == "README_mock.md") "mock_limitations_report" else "lite_analysis_limitations_report"
+    report_entries_vector <- c(report_entries_vector, paste0('    {"artifact_type": ', json_string(artifact_type), ', "path": ', json_string(file.path("reports", report_file)), '}'))
   }
+  table_entries <- paste(table_entries_vector, collapse = ",\n")
+  report_entries <- paste(report_entries_vector, collapse = ",\n")
   blockers_json <- if (length(blockers) > 0) paste(vapply(blockers, json_string, character(1)), collapse = ", ") else ""
   warnings_json <- if (length(warnings) > 0) paste(vapply(warnings, json_string, character(1)), collapse = ", ") else ""
   result <- paste0(
@@ -103,6 +118,95 @@ write_result <- function(module_id, task_id, mode, status, blockers, warnings, m
     "}\n"
   )
   writeLines(result, file.path(output_dir, "result.json"))
+}
+
+run_lite_enrichment_ora <- function() {
+  gene_list_path <- resolve_input_path(read_string_field(input_text, "gene_list_path", ""))
+  term2gene_path <- resolve_input_path(read_string_field(input_text, "term2gene_path", ""))
+  term2name_path <- resolve_input_path(read_string_field(input_text, "term2name_path", ""))
+  blockers <- character(0)
+  if (gene_list_path == "" || !file.exists(gene_list_path)) {
+    blockers <- c(blockers, "lite_enrichment_gene_list_missing")
+  }
+  if (term2gene_path == "" || !file.exists(term2gene_path)) {
+    blockers <- c(blockers, "lite_enrichment_term2gene_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite enrichment ORA blocked because required fixture inputs are missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  genes <- unique(trimws(readLines(gene_list_path, warn = FALSE)))
+  genes <- genes[nchar(genes) > 0]
+  term2gene <- read.delim(term2gene_path, stringsAsFactors = FALSE)
+  if (!all(c("term", "gene") %in% colnames(term2gene))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_enrichment_term2gene_schema_invalid"), c(), "Lite enrichment ORA blocked because TERM2GENE columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "term2gene_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  term_names <- data.frame(term = character(0), name = character(0), stringsAsFactors = FALSE)
+  if (term2name_path != "" && file.exists(term2name_path)) {
+    term_names <- read.delim(term2name_path, stringsAsFactors = FALSE)
+  }
+  universe <- unique(term2gene$gene)
+  genes_in_universe <- intersect(genes, universe)
+  n <- length(genes_in_universe)
+  N <- length(universe)
+  rows <- list()
+  for (term in unique(term2gene$term)) {
+    term_genes <- unique(term2gene$gene[term2gene$term == term])
+    overlap <- intersect(genes_in_universe, term_genes)
+    k <- length(overlap)
+    if (k < 1 || n < 1 || N < 1) {
+      next
+    }
+    M <- length(intersect(term_genes, universe))
+    pvalue <- phyper(k - 1, M, N - M, n, lower.tail = FALSE)
+    description <- term
+    if (nrow(term_names) > 0 && all(c("term", "name") %in% colnames(term_names)) && term %in% term_names$term) {
+      description <- term_names$name[match(term, term_names$term)]
+    }
+    rows[[length(rows) + 1]] <- data.frame(
+      ID = term,
+      Description = description,
+      GeneRatio = paste0(k, "/", n),
+      BgRatio = paste0(M, "/", N),
+      pvalue = pvalue,
+      geneID = paste(overlap, collapse = "/"),
+      Count = k,
+      stringsAsFactors = FALSE
+    )
+  }
+  if (length(rows) == 0) {
+    result_table <- data.frame(ID = character(0), Description = character(0), GeneRatio = character(0), BgRatio = character(0), pvalue = numeric(0), p.adjust = numeric(0), qvalue = numeric(0), geneID = character(0), Count = integer(0))
+  } else {
+    result_table <- do.call(rbind, rows)
+    result_table$p.adjust <- p.adjust(result_table$pvalue, method = "BH")
+    result_table$qvalue <- result_table$p.adjust
+    result_table <- result_table[, c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "p.adjust", "qvalue", "geneID", "Count")]
+  }
+  result_path <- file.path(output_dir, "tables", "lite_ora_result.tsv")
+  write.table(result_table, file = result_path, sep = "\t", quote = FALSE, row.names = FALSE)
+  writeLines(c(
+    "# Lite enrichment limitations",
+    "",
+    "This is a lightweight fixture ORA result for worker and package-contract validation.",
+    "It is not a formal enrichment result and is not report-ready."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "base_r_fixture_only_no_heavy_resources"),
+    "Lite enrichment ORA completed with base R fixture resources."
+  )
+  write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), paste0("result_table=", result_path)), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
 }
 
 write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version) {
@@ -148,6 +252,10 @@ if (input_mode != mode) {
   write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
   writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), blocker), file.path(output_dir, "logs", "worker.log"))
   quit(status = 2)
+}
+
+if (mode == "lite" && module_id == "enrichment") {
+  run_lite_enrichment_ora()
 }
 
 if (mode != "mock") {

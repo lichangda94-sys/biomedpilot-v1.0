@@ -6,9 +6,25 @@
   "input_schema": "analysis/schemas/input/module_input.schema.json",
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
-    "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/enrichment/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/enrichment/mock_result_package"},
-    "lite": {"supported": false, "blocker": "lite_worker_not_wrapped"},
-    "full": {"supported": false, "blocker": "full_resource_manifest_and_container_not_available"}
+    "mock": {
+      "supported": true,
+      "fixture_input": "analysis/fixtures/inputs/enrichment/module_input.json",
+      "fixture_output_package": "analysis/fixtures/outputs/enrichment/mock_result_package"
+    },
+    "lite": {
+      "supported": true,
+      "fixture_input": "analysis/fixtures/inputs/enrichment/module_input_lite.json",
+      "runner": "analysis/runners/run_module.R",
+      "worker_backend": "rscript",
+      "environment": "r-bio-core",
+      "result_semantics": "testing_level",
+      "capability": "base_r_hypergeometric_ora_fixture",
+      "full_resource_policy": "not_used_in_lite_mode"
+    },
+    "full": {
+      "supported": false,
+      "blocker": "full_resource_manifest_and_container_not_available"
+    }
   },
   "environment": {
     "app_dev": "docker/Dockerfile.app-dev",

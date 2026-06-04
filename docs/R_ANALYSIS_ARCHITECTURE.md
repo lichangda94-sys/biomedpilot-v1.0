@@ -24,7 +24,7 @@ R and external tools are not default frontend or main-backend runtime dependenci
 | Mode | Purpose | Dependency policy |
 | --- | --- | --- |
 | `mock` | Frontend, API, task-flow, and result-display development | No heavy R packages; fixed fixture input/output. |
-| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. |
+| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. Enrichment now has a base R ORA fixture through the standard runner. |
 | `full` | Formal analysis and full integration testing | Dedicated analysis container, renv lock, or isolated analysis environment. |
 
 ## Repository Contract
@@ -87,6 +87,8 @@ For worker-boundary validation, the bridge also supports an explicit `worker_bac
 Resource governance is centralized in `analysis/resources/manifest.json` and validated by `app/analysis_runtime/resources.py`. The manifest records mock fixtures plus blocked full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and molecular dynamics templates. These entries are not installations and do not enable full mode; they are explicit cache/version/hash/license requirements that must be satisfied before future full workers can run.
 
 `app/analysis_runtime/package_catalog.py` builds a read-only catalog from result-index `standard_result_package` artifacts. `build_analysis_center_state()` exposes this catalog as `standard_analysis_packages`, so Analysis Center can discover standard packages without reading R package internals or scanning arbitrary output folders. Existing module-specific result views still need staged migration.
+
+The first `lite` worker path is enrichment ORA. `analysis/runners/run_module.R` can run `module_id=enrichment`, `mode=lite` using base R and fixed repository TERM2GENE fixtures. It writes `tables/lite_ora_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`. This remains `testing_level`; it does not enable full enrichment, Reactome/MSigDB resources, plot/report-ready export, or clinical interpretation.
 
 ## Module Manifests
 
@@ -151,10 +153,11 @@ logs/
 | --- | --- |
 | Registry/schema | Present. |
 | Per-module mock result packages | Present for all registered modules. |
-| Standard R runner | Present for mock mode and blocked lite/full standard packages; no scientific execution enabled. |
+| Standard R runner | Present for mock mode, enrichment lite ORA fixture, and blocked full standard packages. |
 | Mock task bridge | Present; default path copies module-specific fixture packages, explicit `rscript` path invokes the standard R runner, and both register result-index entries. |
+| Enrichment lite worker | Present for base R ORA fixture only; testing-level standard package. |
 | Standard package catalog | Present; Analysis Center state exposes result-index-derived package summaries. |
-| Lite worker | Not enabled. |
+| Other lite workers | Not enabled. |
 | Full worker | Not enabled. |
 | Docker/renv split | Scaffolded only; not build/restoration proven. |
 | Resource manifest gate | Present as blocked full-mode resource ledger with validator; real locks pending. |

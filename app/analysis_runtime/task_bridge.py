@@ -50,8 +50,13 @@ def run_analysis_module_task(
         return _bridge_result(package_dir, module_input, validation, result_entry, status="blocked", blockers=blockers)
 
     mode_policy = module.get("modes", {}).get(mode, {}) if isinstance(module.get("modes"), dict) else {}
-    if mode != "mock" or not mode_policy.get("supported"):
+    mode_supported = bool(mode_policy.get("supported"))
+    worker_required = str(mode_policy.get("worker_backend") or "") == "rscript"
+    mode_worker_blocked = mode_supported and worker_required and worker_backend != "rscript"
+    if not mode_supported or mode_worker_blocked or mode == "full":
         blocker = str(mode_policy.get("blocker") or f"analysis_mode_not_enabled:{mode}")
+        if mode_worker_blocked:
+            blocker = f"analysis_mode_requires_rscript_worker:{mode}"
         mode_blockers = [blocker]
         if mode == "full":
             mode_blockers.extend(full_mode_resource_blockers(module_id))

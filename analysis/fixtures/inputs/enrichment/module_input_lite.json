@@ -1,0 +1,25 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "enrichment",
+  "mode": "lite",
+  "task_id": "enrichment-lite-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-enrichment-lite-input",
+    "source_dataset_id": "fixture-enrichment-lite-dataset",
+    "gene_list_path": "analysis/fixtures/inputs/enrichment/lite_genes.txt",
+    "term2gene_path": "analysis/fixtures/inputs/enrichment/lite_term2gene.tsv",
+    "term2name_path": "analysis/fixtures/inputs/enrichment/lite_term2name.tsv"
+  },
+  "parameters": {
+    "analysis_family": "enrichment",
+    "method": "base_r_hypergeometric_ora",
+    "p_adjust_method": "BH",
+    "gene_set_source": "fixture_term2gene",
+    "minimum_overlap": 1
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-bio-core-lite"
+  }
+}

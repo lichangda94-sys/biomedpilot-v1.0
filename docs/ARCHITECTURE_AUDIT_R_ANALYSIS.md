@@ -72,6 +72,12 @@ Standard package discovery is now available to the UI state layer:
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
 - Testing-level mock packages remain testing-level and do not become formal/report-ready results.
 
+The first lightweight worker path is now available:
+
+- `analysis/runners/run_module.R` supports `module_id=enrichment`, `mode=lite` using base R hypergeometric ORA and fixed repository TERM2GENE fixtures.
+- The enrichment lite path writes a standard result package with `tables/lite_ora_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
+- The lite package is `testing_level`; full enrichment, Reactome/MSigDB resources, plot/report-ready export, and clinical interpretation remain disabled.
+
 A first environment isolation scaffold now also exists:
 
 - `analysis/modules/<module_id>/module.json` for survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
@@ -96,12 +102,12 @@ These files are policy scaffolds only. They do not restore packages, install ful
 | Unified analysis module directory | WARN | Added `analysis/` and `analysis/modules/<module_id>/module.json`; existing algorithms still live under `app/bioinformatics/**`. |
 | Module registry | PASS | Added `analysis/registry/analysis_modules.json`. |
 | Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock and blocked lite/full standard packages; existing real modules do not call it yet. |
-| Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; lite/full remain blocked pending migration. |
+| Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; enrichment has a base R lite fixture; other lite modes and full modes remain blocked pending migration. |
 | Unified input/output schema | PASS | Added input and result package schemas. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog from result-index artifacts; existing detailed result views still consume module-specific result indexes and service payloads. |
-| Main backend task-system invocation | WARN | A mock-mode bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock packages. Existing analysis calls still include direct service calls. |
+| Main backend task-system invocation | WARN | A mock/lite bridge now creates `TaskCenter` entries and result-index entries; it can explicitly invoke the standard R runner for mock and enrichment-lite packages. Existing analysis calls still include direct service calls. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
 | Environment split | WARN | Docker/renv scaffold exists for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; not build/restoration proven. |
@@ -115,7 +121,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 ## 3. Top 5 Architecture Risks
 
-1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a mock-mode bridge exists but does not migrate existing algorithms yet.
+1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a standard bridge exists for mock and enrichment lite, but most existing algorithms are not migrated yet.
 2. **P1: Environment split is scaffold-only.** Docker/renv boundaries now exist for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`, but no full worker image has been built or restored.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`.
 4. **P1: Large resource governance is incomplete.** Required full-mode resources are now declared and blocked, but they still need real version, source, hash, license, and cache-path locks.
@@ -135,7 +141,7 @@ These files are policy scaffolds only. They do not restore packages, install ful
 
 | Issue | Evidence | Status after this audit |
 | --- | --- | --- |
-| No lite/full environment split | No `docker/` or `renv/` split existed before scaffold | Partially fixed with scaffold; real package locks and builds pending. |
+| No lite/full environment split | No `docker/` or `renv` split existed before scaffold | Partially fixed with scaffold and enrichment base R lite fixture; real package locks and builds pending. |
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
 | No complete resource lock | Only module-specific gates/docs existed | Blocked resource ledger and validator added; real locks pending. |
 | Full analysis no independent container | No Docker image split before scaffold | Partially fixed with Dockerfile scaffolds; real full image build pending. |
@@ -238,6 +244,7 @@ New architecture boundary files:
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
+- Added the first standard worker lite path: enrichment base R ORA fixture producing a testing-level standard result package.
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added architecture and remediation docs.

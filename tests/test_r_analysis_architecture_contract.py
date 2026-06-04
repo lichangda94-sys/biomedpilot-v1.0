@@ -78,7 +78,12 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
         assert modes["mock"]["supported"] is True
         assert (ROOT / modes["mock"]["fixture_input"]).is_file()
         assert (ROOT / modes["mock"]["fixture_output_package"]).is_dir()
-        assert modes["lite"]["supported"] is False
+        if module_id == "enrichment":
+            assert modes["lite"]["supported"] is True
+            assert modes["lite"]["worker_backend"] == "rscript"
+            assert (ROOT / modes["lite"]["fixture_input"]).is_file()
+        else:
+            assert modes["lite"]["supported"] is False
         assert modes["full"]["supported"] is False
         assert environment["app_dev"] == "docker/Dockerfile.app-dev"
         assert (ROOT / manifest["dockerfile"]).exists()
@@ -264,6 +269,35 @@ def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_pa
     assert "standard_worker_mode_not_enabled:full" in result["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
     assert (output_dir / "logs" / "worker.log").is_file()
+
+
+def test_standard_r_runner_enrichment_lite_mode_writes_real_fixture_ora_package(tmp_path: Path) -> None:
+    rscript = rscript_path()
+    output_dir = tmp_path / "r-runner-lite-output"
+    input_json = ROOT / "analysis" / "fixtures" / "inputs" / "enrichment" / "module_input_lite.json"
+
+    completed = subprocess.run(
+        [rscript, str(ROOT / "analysis" / "runners" / "run_module.R"), str(input_json), str(output_dir), "lite"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    result = read_json(output_dir / "result.json")
+    provenance = read_json(output_dir / "provenance.json")
+    table = (output_dir / "tables" / "lite_ora_result.tsv").read_text(encoding="utf-8")
+    assert result["module_id"] == "enrichment"
+    assert result["mode"] == "lite"
+    assert result["status"] == "passed"
+    assert result["result_semantics"] == "testing_level"
+    assert "lite_result_not_formal_analysis" in result["warnings"]
+    assert "lite_enrichment_ora_result_table" in str(result["tables"])
+    assert "DNA_DAMAGE" in table
+    assert "p.adjust" in table.splitlines()[0]
+    assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]
+    assert provenance["runtime"]["bioconductor_version"] == "not_required_for_lite_base_r"  # type: ignore[index]
+    assert (output_dir / "reports" / "README_lite.md").is_file()
 
 
 def test_standard_r_runner_blocks_input_manifest_mode_mismatch(tmp_path: Path) -> None:

@@ -61,6 +61,8 @@ Update: the resource manifest now declares required full-mode resources for enri
 
 Update: the standard package catalog now reads result-index `standard_result_package` artifacts and is exposed in Analysis Center state as `standard_analysis_packages`. This is a read-only UI bridge; detailed module result views still need migration.
 
+Update: enrichment now has the first `lite` standard worker path. `run_module.R` can execute a base R hypergeometric ORA fixture with local TERM2GENE files and write a testing-level standard result package. It does not use Reactome/MSigDB/full resources and does not enable report-ready output.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
@@ -75,6 +77,7 @@ Acceptance:
 - The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
 - The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
 - Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
+- Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for first lite worker.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 
@@ -90,9 +93,10 @@ Scope:
 
 Acceptance:
 
-- `mock` and `lite` pass.
-- `full` remains blocked until resource locks and full env exist.
-- Provenance records R version, package versions, input hash, parameter hash, seed, and command.
+- `mock` and base R ORA `lite` pass through the standard worker. **Completed for fixture ORA.**
+- `full` remains blocked until resource locks and full env exist. **Still required.**
+- Provenance records R version, input hash, parameter hash, seed, and command. **Completed for fixture ORA.**
+- Package-version capture for non-base R lite/full workers remains pending.
 
 ## Phase R3: Survival / Clinical R-Native Worker
 
