@@ -43,6 +43,17 @@ analysis/
 
 `analysis/runners/run_module.R` is a base R mock-mode boundary runner. It does not install packages and does not enable full analysis. Existing Bioinformatics algorithms still need staged migration into this contract.
 
+The main-backend side has a narrow mock-mode bridge:
+
+```text
+app/analysis_runtime/
+  registry.py
+  standard_package.py
+  task_bridge.py
+```
+
+The bridge can create a task record, write a standard result package, validate the package, and register the package in the current result index. It returns blocked standard packages for lite/full modes until isolated worker environments are available.
+
 ## Result Package
 
 Every module must eventually write:
@@ -58,3 +69,14 @@ logs/
 
 `provenance.json` must record engine version, R version, package versions, external tool versions, input hash, parameter hash, random seed, and command.
 
+## Current Implementation Status
+
+| Layer | Status |
+| --- | --- |
+| Registry/schema | Present. |
+| Mock result package | Present. |
+| Mock task bridge | Present. |
+| Lite worker | Not enabled. |
+| Full worker | Not enabled. |
+| Docker/renv split | Not implemented. |
+| Algorithm migration | Pending. |

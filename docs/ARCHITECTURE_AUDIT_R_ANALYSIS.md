@@ -25,7 +25,13 @@ This audit added a minimal boundary scaffold:
 - `analysis/resources/manifest.json`
 - `docs/R_ANALYSIS_ARCHITECTURE.md`
 
-The scaffold fixes the most basic registry/schema/mock result-package boundary, but existing algorithms are not yet migrated to the worker interface.
+The scaffold fixes the most basic registry/schema/mock result-package boundary. A minimal main-backend task bridge now also exists for mock-mode standard result packages:
+
+- `app/analysis_runtime/registry.py`
+- `app/analysis_runtime/standard_package.py`
+- `app/analysis_runtime/task_bridge.py`
+
+The bridge creates a `TaskCenter` task, writes a standard result package, validates it, and registers a result-index entry. It does not execute R packages or enable lite/full algorithms yet.
 
 ## 2. PASS / WARN / FAIL Table
 
@@ -39,7 +45,7 @@ The scaffold fixes the most basic registry/schema/mock result-package boundary, 
 | Every module outputs `result.json` / `provenance.json` | WARN | Contract exists; existing modules still use varied result-index/report structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock package fixture and schema exist; existing modules not fully normalized. |
 | Frontend consumes standard package only | FAIL | Current UI still consumes module-specific result indexes and service payloads. |
-| Main backend task-system invocation | WARN | Task/result contracts exist, but some analysis calls are direct service calls. |
+| Main backend task-system invocation | WARN | A mock-mode bridge now creates `TaskCenter` entries and result-index entries; existing analysis calls still include direct service calls. |
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages are detect-first external dependencies, not default Python package deps; full env split is not complete. |
 | Environment split | FAIL | No complete `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full` container/renv implementation yet. |
@@ -53,7 +59,7 @@ The scaffold fixes the most basic registry/schema/mock result-package boundary, 
 
 ## 3. Top 5 Architecture Risks
 
-1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`.
+1. **P0/P1: R analysis logic is not yet isolated behind a universal worker.** Current Rscript calls live in Python services such as `app/bioinformatics/deg_engine/multifactor_r_runner.py` and `app/bioinformatics/enrichment_r_adapter.py`; a mock-mode bridge exists but does not migrate existing algorithms yet.
 2. **P1: No full environment split.** There is no complete `renv`/Docker separation for `r-bio-core`, `r-bio-full`, `r-spatial-full`, and `r-chem-full`.
 3. **P1: Standard result package is not universal.** Existing modules use result index entries, report packages, and custom paths rather than always producing `result.json` and `provenance.json`.
 4. **P1: Large resource governance is incomplete.** Reactome/MSigDB and future spatial/chem resources need version, source, hash, license, and cache-path locks.
@@ -66,7 +72,7 @@ The scaffold fixes the most basic registry/schema/mock result-package boundary, 
 | Issue | Evidence | Status after this audit |
 | --- | --- | --- |
 | No unified mock-mode analysis module framework | No top-level `analysis/registry` before this audit | Partially fixed with registry, mock fixture, and mock runner. |
-| No standard result package contract | Existing modules emit varied outputs | Partially fixed at schema level; migration pending. |
+| No standard result package contract | Existing modules emit varied outputs | Partially fixed at schema and mock task bridge level; algorithm migration pending. |
 | R analysis logic scattered in main backend services | `app/bioinformatics/enrichment_r_adapter.py`, `app/bioinformatics/deg_engine/multifactor_r_runner.py` | Not fixed; documented for staged migration. |
 
 ### P1
@@ -77,7 +83,7 @@ The scaffold fixes the most basic registry/schema/mock result-package boundary, 
 | No universal module schema | Missing before audit | Fixed at initial schema level. |
 | No complete resource lock | Only module-specific gates/docs existed | Starter `analysis/resources/manifest.json` added; real locks pending. |
 | Full analysis no independent container | No Docker image split | Not fixed. |
-| UI/backend do not yet call standard worker | Existing direct service calls remain | Not fixed. |
+| UI/backend do not yet call standard worker | Existing direct service calls remain | Partially fixed for mock task bridge only; current UI algorithms not migrated. |
 
 ### P2
 
@@ -122,12 +128,15 @@ New architecture boundary files:
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/result.json`
 - `analysis/fixtures/outputs/mock_result_package/provenance.json`
+- `app/analysis_runtime/registry.py`
+- `app/analysis_runtime/standard_package.py`
+- `app/analysis_runtime/task_bridge.py`
 
 ## 6. Minimal Viable Remediation Path
 
 1. Keep existing algorithms stable.
 2. Add standard result package schema, registry, mock runner, and fixtures. **Completed in this audit.**
-3. Wrap one existing R-native module behind the standard worker in mock mode first.
+3. Wrap one existing R-native module behind the standard worker in mock mode first. **Started with `app/analysis_runtime/task_bridge.py`.**
 4. Add lite mode for one module with lightweight fixture data and no large downloads.
 5. Move full mode to an isolated `renv`/Docker environment.
 6. Repeat module by module: survival, univariate, multivariate, enrichment, immune infiltration, then spatial/chem.
@@ -147,6 +156,7 @@ New architecture boundary files:
 - Added generic mock input and standard mock result package.
 - Added resource manifest skeleton with blocked full resources.
 - Added static contract tests that do not require R.
+- Added a mock-mode task bridge that writes a standard result package, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed
@@ -156,4 +166,3 @@ New architecture boundary files:
 - Whether existing Bio result index v2 should become the standard result package index or remain a higher-level application index.
 - Which module should be migrated first: enrichment or survival.
 - Whether molecular docking/MD belongs in the same product release line or a separately gated advanced-analysis line.
-

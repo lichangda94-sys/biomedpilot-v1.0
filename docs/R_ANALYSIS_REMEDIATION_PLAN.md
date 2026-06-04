@@ -25,12 +25,16 @@ Completed in this audit:
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
 - `analysis/resources/manifest.json`
+- `app/analysis_runtime/registry.py`
+- `app/analysis_runtime/standard_package.py`
+- `app/analysis_runtime/task_bridge.py`
 
 Remaining:
 
 - Add per-module mock fixtures.
-- Add result package validator.
-- Add backend adapter that indexes standard result packages.
+- Wire one current analysis module through the bridge.
+
+Update: the first result package validator and mock-mode backend adapter now exist under `app/analysis_runtime/`.
 
 ## Phase R1: Task-System Bridge
 
@@ -42,7 +46,7 @@ Scope:
 
 Acceptance:
 
-- One module can run `mock` mode through the task system.
+- One module can run `mock` mode through the task system. **Started: generic registered modules can produce mock standard packages.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - No R installation is required.
 
@@ -142,4 +146,3 @@ Rules:
 ## Current Stop Rule
 
 Do not migrate algorithms until the standard package validator and one mock-mode task-system bridge are in place.
-
