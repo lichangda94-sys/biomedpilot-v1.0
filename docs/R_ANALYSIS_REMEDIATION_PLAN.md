@@ -28,6 +28,7 @@ Completed in this audit:
 - `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/schemas/output/resource_lock_evidence.schema.json`
 - `analysis/schemas/output/environment_lock_evidence.schema.json`
+- `analysis/schemas/output/full_analysis_activation_gate.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
@@ -143,7 +144,7 @@ Update: Analysis Center state now exposes `analysis_architecture_status` and `an
 
 Update: formal standard-worker migration evidence is now centralized in `analysis/registry/standard_worker_migration_evidence.json`. `build_standard_worker_migration_matrix()` reads this registry and will not mark any module `migrated_to_isolated_standard_worker` unless a registry-owned evidence entry passes `validate_standard_worker_migration_evidence()`. The registry is intentionally empty now, so all formal modules remain pending.
 
-Update: `build_full_analysis_activation_gate()` now combines full environment readiness, full resource readiness, and standard-worker migration evidence into one read-only full-mode activation decision. It is currently blocked by unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration; it does not execute workers, install packages, download resources, or change full-mode availability.
+Update: `build_full_analysis_activation_gate()` now combines full environment readiness, full resource readiness, and standard-worker migration evidence into one read-only full-mode activation decision. It is currently blocked by unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration; it does not execute workers, install packages, download resources, or change full-mode availability. The gate payload is covered by `analysis/schemas/output/full_analysis_activation_gate.schema.json` and reports schema validation status.
 
 Update: Analysis Center now renders the full-mode decision as a dedicated `Full analysis activation gate` row inside `analysis_architecture_gate_rows`, so UI users can see the exact disabled reasons without reading developer diagnostics.
 

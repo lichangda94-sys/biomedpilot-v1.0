@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.full_analysis_activation_gate.v1",
+  "title": "BioMedPilot full analysis activation gate",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "checks",
+    "blockers",
+    "policy",
+    "execution_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.full_analysis_activation_gate.v1"},
+    "status": {"type": "string", "minLength": 1},
+    "checks": {"type": "object"},
+    "blockers": {"type": "array"},
+    "policy": {"const": "full_analysis_requires_environment_resource_and_standard_worker_evidence"},
+    "execution_policy": {"const": "read_only_no_worker_execution_no_runtime_install_no_resource_download"},
+    "schema_validation_status": {"type": "string"},
+    "schema_blockers": {"type": "array"}
+  },
+  "additionalProperties": true
+}

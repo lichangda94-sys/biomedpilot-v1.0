@@ -451,6 +451,8 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["resource_validation"]["full_mode_ready"] is False
     assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
     assert full_gate["status"] == "blocked"
+    assert full_gate["schema_validation_status"] == "passed"
+    assert full_gate["schema_blockers"] == []
     assert full_gate["checks"]["environment_registry_passed"] is True
     assert full_gate["checks"]["resource_manifest_passed"] is True
     assert full_gate["checks"]["standard_worker_migration_registry_passed"] is True
@@ -478,6 +480,8 @@ def test_full_analysis_activation_gate_requires_all_prerequisites() -> None:
 
     assert gate["status"] == "eligible"
     assert gate["blockers"] == []
+    assert gate["schema_validation_status"] == "passed"
+    assert gate["schema_blockers"] == []
     assert gate["policy"] == "full_analysis_requires_environment_resource_and_standard_worker_evidence"
     assert gate["execution_policy"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
 
@@ -502,6 +506,8 @@ def test_full_analysis_activation_gate_blocks_partial_or_failed_prerequisites() 
         "full_analysis_standard_worker_evidence_registry_failed",
         "full_analysis_standard_worker_migration_incomplete",
     ]
+    assert gate["schema_validation_status"] == "passed"
+    assert gate["schema_blockers"] == []
 
 
 def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> None:
@@ -722,6 +728,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     result_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "result.schema.json")
     provenance_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json")
     invocation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json")
+    full_activation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json")
     resource_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json")
     environment_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
@@ -738,6 +745,9 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     runtime_required = set(provenance_schema["properties"]["runtime"]["required"])  # type: ignore[index]
     assert {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"} <= runtime_required
     assert invocation_schema["$id"] == "biomedpilot.analysis.worker_invocation.v1"
+    assert full_activation_schema["$id"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
+    assert "checks" in full_activation_schema["required"]
+    assert "execution_policy" in full_activation_schema["required"]
     assert resource_lock_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence.v1"
     assert "runtime_download_allowed" in resource_lock_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"

@@ -11,6 +11,7 @@ from .standard_package import validate_standard_result_package
 
 STANDARD_WORKER_MIGRATION_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json"
 STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "standard_worker_migration_evidence.json"
+FULL_ANALYSIS_ACTIVATION_GATE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json"
 TARGET_MODULE_IDS = (
     "deg",
     "survival",
@@ -259,7 +260,7 @@ def build_full_analysis_activation_gate(
         blockers.append("full_analysis_standard_worker_evidence_registry_failed")
     if not checks["all_modules_migrated_to_standard_worker"]:
         blockers.append("full_analysis_standard_worker_migration_incomplete")
-    return {
+    payload = {
         "schema_version": "biomedpilot.analysis.full_analysis_activation_gate.v1",
         "status": "eligible" if not blockers else "blocked",
         "checks": checks,
@@ -267,6 +268,13 @@ def build_full_analysis_activation_gate(
         "policy": "full_analysis_requires_environment_resource_and_standard_worker_evidence",
         "execution_policy": "read_only_no_worker_execution_no_runtime_install_no_resource_download",
     }
+    schema_blockers = _full_activation_gate_schema_blockers(payload)
+    payload["schema_validation_status"] = "blocked" if schema_blockers else "passed"
+    payload["schema_blockers"] = schema_blockers
+    if schema_blockers and "full_analysis_activation_gate_schema_invalid" not in payload["blockers"]:
+        payload["blockers"] = [*payload["blockers"], "full_analysis_activation_gate_schema_invalid"]
+        payload["status"] = "blocked"
+    return payload
 
 
 def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -578,6 +586,30 @@ def _migration_evidence_schema_blockers(evidence: dict[str, Any]) -> list[str]:
     return blockers
 
 
+def _full_activation_gate_schema_blockers(payload: dict[str, Any]) -> list[str]:
+    schema = _read_json(FULL_ANALYSIS_ACTIVATION_GATE_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"full_analysis_activation_gate_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        value = payload[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"full_analysis_activation_gate_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"full_analysis_activation_gate_type_invalid:{field}")
+            continue
+        min_length = field_schema.get("minLength")
+        if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+            blockers.append(f"full_analysis_activation_gate_min_length_invalid:{field}")
+    return blockers
+
+
 def _schema_type_matches(value: Any, expected_type: str) -> bool:
     if expected_type == "string":
         return isinstance(value, str)
@@ -681,6 +713,7 @@ def _required_schemas_exist() -> bool:
         "analysis/schemas/output/result_package.schema.json",
         "analysis/schemas/output/worker_invocation.schema.json",
         "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
+        "analysis/schemas/output/full_analysis_activation_gate.schema.json",
         "analysis/schemas/output/resource_lock_evidence.schema.json",
         "analysis/schemas/output/environment_lock_evidence.schema.json",
     )

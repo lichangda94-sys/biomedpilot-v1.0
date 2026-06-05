@@ -41,6 +41,7 @@ analysis/
   schemas/output/worker_invocation.schema.json
   schemas/output/resource_lock_evidence.schema.json
   schemas/output/environment_lock_evidence.schema.json
+  schemas/output/full_analysis_activation_gate.schema.json
   modules/<module_id>/module.json
   runners/run_module.R
   fixtures/inputs/<module_id>/module_input.json
@@ -129,7 +130,7 @@ Restored environment locks must also provide schema-valid evidence using `analys
 
 Formal standard-worker migration evidence is centralized in `analysis/registry/standard_worker_migration_evidence.json`. `build_standard_worker_migration_matrix()` reads this registry and will not mark a module as `migrated_to_isolated_standard_worker` unless that module has a schema-valid evidence entry that passes `validate_standard_worker_migration_evidence()`. The current registry is intentionally empty, so no formal module is marked migrated.
 
-`build_full_analysis_activation_gate()` is the read-only full-mode release gate. It requires full environment locks, full resource locks, a passed migration evidence registry, and zero pending/blocked standard-worker migration rows. The current gate is blocked and is included in `build_analysis_architecture_status()` so consumers can inspect one activation decision without enabling full execution.
+`build_full_analysis_activation_gate()` is the read-only full-mode release gate. It requires full environment locks, full resource locks, a passed migration evidence registry, and zero pending/blocked standard-worker migration rows. The current gate is blocked and is included in `build_analysis_architecture_status()` so consumers can inspect one activation decision without enabling full execution. The payload is checked against `analysis/schemas/output/full_analysis_activation_gate.schema.json` and exposes `schema_validation_status` plus `schema_blockers`.
 
 Analysis Center renders this as a dedicated `Full analysis activation gate` row in `analysis_architecture_gate_rows`, including disabled blockers for unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration.
 
