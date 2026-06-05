@@ -629,6 +629,29 @@ def validate_standard_worker_migration_evidence(
         blockers.append("standard_worker_migration_result_index_registration_missing")
     if evidence.get("formal_result_semantics_preserved") is not True:
         blockers.append("standard_worker_migration_formal_result_semantics_not_preserved")
+    if evidence.get("required_worker_boundary") != "standard_r_worker":
+        blockers.append("standard_worker_migration_required_worker_boundary_invalid")
+    if evidence.get("required_task_system_invocation") != "task_center_registered":
+        blockers.append("standard_worker_migration_required_task_system_invocation_invalid")
+    if evidence.get("required_worker_migration_status") != "standard_worker_contract":
+        blockers.append("standard_worker_migration_required_worker_migration_status_invalid")
+    forbidden_sources = evidence.get("forbidden_evidence_sources")
+    if not isinstance(forbidden_sources, list):
+        blockers.append("standard_worker_migration_forbidden_evidence_sources_invalid")
+        forbidden_source_values: set[str] = set()
+    else:
+        forbidden_source_values = {str(item) for item in forbidden_sources if item}
+    required_forbidden_sources = {
+        "mock_fixture_package",
+        "lite_testing_level_package",
+        "legacy_service_adapter_sidecar",
+        "module_private_output_path",
+    }
+    missing_forbidden_sources = sorted(required_forbidden_sources - forbidden_source_values)
+    blockers.extend(
+        f"standard_worker_migration_forbidden_evidence_source_missing:{item}"
+        for item in missing_forbidden_sources
+    )
 
     return {
         "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",

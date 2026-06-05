@@ -66,6 +66,12 @@ REQUIRED_FULL_ENVIRONMENT_IDS = [
     "r-chem-full",
     "r-chem-gpu",
 ]
+REQUIRED_STANDARD_WORKER_FORBIDDEN_EVIDENCE_SOURCES = [
+    "mock_fixture_package",
+    "lite_testing_level_package",
+    "legacy_service_adapter_sidecar",
+    "module_private_output_path",
+]
 RESULT_PAYLOAD_SCHEMA = "analysis/schemas/output/result.schema.json"
 PROVENANCE_PAYLOAD_SCHEMA = "analysis/schemas/output/provenance.schema.json"
 
@@ -210,6 +216,27 @@ def _write_candidate_standard_worker_package(
     )
     (package_dir / "logs" / "worker.log").write_text(f"{now} status={result_status}\n", encoding="utf-8")
     return package_dir
+
+
+def _standard_worker_migration_evidence(package_dir: Path) -> dict[str, object]:
+    return {
+        "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+        "module_id": "deg",
+        "mode": "full",
+        "task_id": "deg-full-standard-worker-task",
+        "result_package_dir": str(package_dir),
+        "frontend_consumes_standard_package": True,
+        "result_index_registered": True,
+        "formal_result_semantics_preserved": True,
+        "required_result_status": "passed",
+        "required_result_semantics": "formal_computed_result",
+        "required_engine_name": "biomedpilot_standard_r_worker",
+        "required_analysis_environment_status": "passed",
+        "required_worker_boundary": "standard_r_worker",
+        "required_task_system_invocation": "task_center_registered",
+        "required_worker_migration_status": "standard_worker_contract",
+        "forbidden_evidence_sources": REQUIRED_STANDARD_WORKER_FORBIDDEN_EVIDENCE_SOURCES,
+    }
 
 
 def rscript_path() -> str:
@@ -1736,6 +1763,17 @@ def test_standard_worker_migration_evidence_schema_is_checked_before_completion_
     assert "standard_worker_migration_evidence_type_invalid:frontend_consumes_standard_package" in validation["blockers"]
     assert "standard_worker_migration_evidence_type_invalid:result_index_registered" in validation["blockers"]
     assert "standard_worker_migration_evidence_type_invalid:formal_result_semantics_preserved" in validation["blockers"]
+    assert "required_worker_boundary" in schema["required"]
+    assert "required_task_system_invocation" in schema["required"]
+    assert "required_worker_migration_status" in schema["required"]
+    assert "forbidden_evidence_sources" in schema["required"]
+    assert schema["properties"]["required_worker_boundary"]["const"] == "standard_r_worker"
+    assert schema["properties"]["required_task_system_invocation"]["const"] == "task_center_registered"
+    assert schema["properties"]["required_worker_migration_status"]["const"] == "standard_worker_contract"
+    assert "standard_worker_migration_required_worker_boundary_invalid" in validation["blockers"]
+    assert "standard_worker_migration_required_task_system_invocation_invalid" in validation["blockers"]
+    assert "standard_worker_migration_required_worker_migration_status_invalid" in validation["blockers"]
+    assert "standard_worker_migration_forbidden_evidence_sources_invalid" in validation["blockers"]
 
 
 def test_standard_worker_migration_evidence_does_not_accept_mock_or_lite_fixture_package() -> None:
@@ -1772,16 +1810,7 @@ def test_standard_worker_migration_evidence_requires_passed_formal_ready_package
 
     validation = validate_standard_worker_migration_evidence(
         "deg",
-        {
-            "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
-            "module_id": "deg",
-            "mode": "full",
-            "task_id": "deg-full-standard-worker-task",
-            "result_package_dir": str(package_dir),
-            "frontend_consumes_standard_package": True,
-            "result_index_registered": True,
-            "formal_result_semantics_preserved": True,
-        },
+        _standard_worker_migration_evidence(package_dir),
     )
 
     assert validation["status"] == "blocked"
@@ -1807,22 +1836,35 @@ def test_standard_worker_migration_evidence_requires_passed_result_without_block
 
     validation = validate_standard_worker_migration_evidence(
         "deg",
-        {
-            "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
-            "module_id": "deg",
-            "mode": "full",
-            "task_id": "deg-full-standard-worker-task",
-            "result_package_dir": str(package_dir),
-            "frontend_consumes_standard_package": True,
-            "result_index_registered": True,
-            "formal_result_semantics_preserved": True,
-        },
+        _standard_worker_migration_evidence(package_dir),
     )
 
     assert validation["status"] == "blocked"
     assert "standard_worker_migration_requires_passed_result" in validation["blockers"]
     assert "standard_worker_migration_result_blockers_present" in validation["blockers"]
     assert "standard_worker_migration_analysis_environment_not_ready" not in validation["blockers"]
+
+
+def test_standard_worker_migration_evidence_accepts_schema_valid_standard_worker_package(tmp_path: Path) -> None:
+    package_dir = _write_candidate_standard_worker_package(
+        tmp_path,
+        result_status="passed",
+        result_semantics="formal_computed_result",
+        environment_status="passed",
+        environment_ready=True,
+        resource_ready=True,
+    )
+
+    validation = validate_standard_worker_migration_evidence(
+        "deg",
+        _standard_worker_migration_evidence(package_dir),
+    )
+
+    assert validation["status"] == "passed"
+    assert validation["blockers"] == []
+    assert validation["required_boundary"] == "standard_r_worker"
+    assert validation["required_invocation"] == "task_center_registered"
+    assert validation["required_migration_status"] == "standard_worker_contract"
 
 
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:
@@ -1881,6 +1923,10 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert migration_evidence_schema["properties"]["required_result_semantics"]["const"] == "formal_computed_result"
     assert migration_evidence_schema["properties"]["required_engine_name"]["const"] == "biomedpilot_standard_r_worker"
     assert migration_evidence_schema["properties"]["required_analysis_environment_status"]["const"] == "passed"
+    assert migration_evidence_schema["properties"]["required_worker_boundary"]["const"] == "standard_r_worker"
+    assert migration_evidence_schema["properties"]["required_task_system_invocation"]["const"] == "task_center_registered"
+    assert migration_evidence_schema["properties"]["required_worker_migration_status"]["const"] == "standard_worker_contract"
+    assert "forbidden_evidence_sources" in migration_evidence_schema["required"]
     assert full_activation_schema["$id"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
     assert "checks" in full_activation_schema["required"]
     assert "execution_policy" in full_activation_schema["required"]

@@ -11,7 +11,11 @@
     "result_package_dir",
     "frontend_consumes_standard_package",
     "result_index_registered",
-    "formal_result_semantics_preserved"
+    "formal_result_semantics_preserved",
+    "required_worker_boundary",
+    "required_task_system_invocation",
+    "required_worker_migration_status",
+    "forbidden_evidence_sources"
   ],
   "properties": {
     "schema_version": {"const": "biomedpilot.analysis.standard_worker_migration_evidence.v1"},
@@ -26,6 +30,15 @@
     "required_result_semantics": {"const": "formal_computed_result"},
     "required_engine_name": {"const": "biomedpilot_standard_r_worker"},
     "required_analysis_environment_status": {"const": "passed"},
+    "required_worker_boundary": {"const": "standard_r_worker"},
+    "required_task_system_invocation": {"const": "task_center_registered"},
+    "required_worker_migration_status": {"const": "standard_worker_contract"},
+    "forbidden_evidence_sources": {
+      "type": "array",
+      "minItems": 4,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "current_adapter_status": {"type": "string"},
     "created_at": {"type": "string"},
     "notes": {"type": "string"}
   },
