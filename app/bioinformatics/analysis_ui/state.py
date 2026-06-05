@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from app.analysis_runtime.architecture_status import build_analysis_architecture_status
 from app.analysis_runtime.package_catalog import build_standard_analysis_package_catalog
 from app.analysis_runtime.resources import validate_analysis_environment_registry
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
@@ -66,6 +67,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     records = load_task_records(root)
     result_index = load_result_index(root)
     result_entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
+    analysis_architecture_status = build_analysis_architecture_status()
+    analysis_architecture_gate_rows = build_analysis_architecture_gate_rows(analysis_architecture_status)
     standard_package_catalog = build_standard_analysis_package_catalog(root)
     analysis_environment_validation = validate_analysis_environment_registry()
     analysis_environment_gate_rows = build_analysis_environment_gate_rows(analysis_environment_validation)
@@ -131,6 +134,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "legacy_asset_pipeline": legacy_pipeline,
         "result_rows": result_rows,
         "standard_analysis_packages": standard_package_catalog,
+        "analysis_architecture_status": analysis_architecture_status,
+        "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
         "standard_package_gate_rows": standard_package_gate_rows,
         "analysis_environment_gate_rows": analysis_environment_gate_rows,
         "gate_rows": gate_rows,
@@ -142,6 +147,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "analysis_task_center": center,
             "task_records": records,
             "result_index": result_index,
+            "analysis_architecture_status": analysis_architecture_status,
+            "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
             "standard_analysis_package_catalog": standard_package_catalog,
             "standard_package_gate_rows": standard_package_gate_rows,
             "analysis_environment_registry_validation": analysis_environment_validation,
@@ -1080,6 +1087,27 @@ def build_analysis_environment_gate_rows(validation: dict[str, Any]) -> list[dic
             readiness_blockers,
             [f"blocked_full_environments={','.join(blocked_environment_ids)}"] if blocked_environment_ids else [],
             basis=f"environments={','.join(environment_ids)}",
+        ),
+    ]
+
+
+def build_analysis_architecture_gate_rows(status: dict[str, Any]) -> list[dict[str, Any]]:
+    p0_issues = _list(status.get("p0_issues"))
+    p1_issues = _list(status.get("p1_issues"))
+    return [
+        _formal_deg_gate_row(
+            "R analysis architecture snapshot",
+            status.get("status") or "blocked",
+            [],
+            p1_issues,
+            basis=f"requirements={status.get('requirement_count', 0)}; pass={status.get('pass_count', 0)}; warn={status.get('warn_count', 0)}; fail={status.get('fail_count', 0)}",
+        ),
+        _formal_deg_gate_row(
+            "R architecture P0 guard",
+            "passed" if not p0_issues else "blocked",
+            p0_issues,
+            [],
+            basis="default app-dev, mock package, result.json, and runtime install boundaries",
         ),
     ]
 

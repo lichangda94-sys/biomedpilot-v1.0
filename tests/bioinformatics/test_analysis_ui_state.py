@@ -31,6 +31,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["dependency_rows"]
     assert state["gate_rows"]
     assert state["enrichment_gate_rows"]
+    assert state["analysis_architecture_gate_rows"]
     assert state["analysis_environment_gate_rows"]
     assert state["survival_clinical_rows"]
     assert _file_set(tmp_path) == before
@@ -75,6 +76,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Analysis environment registry" in environment_gate_text
     assert "Full R environment readiness" in environment_gate_text
     assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in environment_gate_text
+    architecture_gate_text = "\n".join(str(row) for row in state["analysis_architecture_gate_rows"])
+    assert "R analysis architecture snapshot" in architecture_gate_text
+    assert "R architecture P0 guard" in architecture_gate_text
+    assert "partial_with_p1_gaps" in architecture_gate_text
+    assert state["developer_diagnostics"]["analysis_architecture_status"]["p0_issues"] == []
+    assert "full_analysis_environment_locks_not_restored" in state["developer_diagnostics"]["analysis_architecture_status"]["p1_issues"]
+    assert state["developer_diagnostics"]["analysis_architecture_gate_rows"] == state["analysis_architecture_gate_rows"]
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["status"] == "passed"
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["full_mode_ready"] is False
     assert state["developer_diagnostics"]["analysis_environment_gate_rows"] == state["analysis_environment_gate_rows"]
