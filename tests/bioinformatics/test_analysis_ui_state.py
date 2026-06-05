@@ -95,6 +95,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "R worker migration: deg" in worker_migration_text
     assert "pending_standard_worker_migration" in worker_migration_text
     assert "standard_worker_lite_ready" in worker_migration_text
+    assert "declare_scoped_full_mode_only_after_environment_and_resource_locks" in worker_migration_text
+    assert "implement_formal_runtime_contract_before_standard_worker_migration" in worker_migration_text
     remediation_text = "\n".join(str(row) for row in state["analysis_architecture_remediation_rows"])
     assert "R architecture remediation queue" in remediation_text
     assert "restore_full_analysis_environment_locks" in remediation_text

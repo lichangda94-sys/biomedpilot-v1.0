@@ -859,6 +859,12 @@ def _standard_worker_migration_row(
         evidence_status=evidence_status,
         current_adapter_status=current_adapter_status,
     )
+    prerequisite_status = _standard_worker_migration_prerequisite_status(
+        blockers=migration_blockers,
+        formal_worker_status=formal_worker_status,
+        full_environment=str(module.get("full_environment") or ""),
+        current_adapter_status=current_adapter_status,
+    )
     return {
         "module_id": module_id,
         "title": str(module.get("title") or module_id),
@@ -875,6 +881,12 @@ def _standard_worker_migration_row(
         "result_index_task_types": [str(item) for item in module.get("result_index_task_types", []) if item],
         "migration_readiness_status": "blocked" if migration_blockers else "candidate_evidence_ready",
         "migration_blockers": migration_blockers,
+        "migration_prerequisite_status": prerequisite_status,
+        "migration_next_action": _standard_worker_migration_next_action(
+            migration_blockers,
+            formal_worker_status=formal_worker_status,
+            current_adapter_status=current_adapter_status,
+        ),
         "migration_evidence_template": _standard_worker_migration_evidence_template(
             module_id=module_id,
             current_adapter_status=current_adapter_status,
@@ -902,6 +914,51 @@ def _standard_worker_migration_blockers(
     if "sidecar" in current_adapter_status:
         blockers.append("legacy_sidecar_output_is_not_migration_evidence")
     return blockers
+
+
+def _standard_worker_migration_prerequisite_status(
+    *,
+    blockers: list[str],
+    formal_worker_status: str,
+    full_environment: str,
+    current_adapter_status: str,
+) -> dict[str, Any]:
+    return {
+        "overall": "passed" if formal_worker_status == "migrated_to_isolated_standard_worker" and not blockers else "blocked",
+        "lite_standard_worker_path": "blocked" if "lite_standard_worker_path_missing" in blockers else "passed",
+        "full_mode_registry": "blocked" if "full_mode_not_supported_in_registry" in blockers else "ready_unverified",
+        "registry_evidence": "missing_or_blocked" if "registry_evidence_entry_missing_or_blocked" in blockers else "passed",
+        "formal_runtime_contract": "blocked" if "formal_runtime_contract_not_implemented" in blockers else "available_or_not_required",
+        "legacy_sidecar_boundary": "not_migration_evidence" if "legacy_sidecar_output_is_not_migration_evidence" in blockers else "not_present",
+        "required_full_environment": full_environment or "missing",
+        "required_environment_lock": "passed" if formal_worker_status == "migrated_to_isolated_standard_worker" else "required_before_migration_evidence",
+        "required_resource_lock": "passed" if formal_worker_status == "migrated_to_isolated_standard_worker" else "required_before_migration_evidence",
+        "required_task_boundary": "task_center_registered_standard_r_worker",
+        "current_adapter_status": current_adapter_status,
+    }
+
+
+def _standard_worker_migration_next_action(
+    blockers: list[str],
+    *,
+    formal_worker_status: str,
+    current_adapter_status: str,
+) -> str:
+    if formal_worker_status == "migrated_to_isolated_standard_worker" and not blockers:
+        return "no_action_migration_evidence_passed"
+    if "lite_standard_worker_path_missing" in blockers:
+        return "add_lite_standard_worker_path_before_formal_migration"
+    if "formal_runtime_contract_not_implemented" in blockers:
+        return "implement_formal_runtime_contract_before_standard_worker_migration"
+    if "full_mode_not_supported_in_registry" in blockers:
+        return "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+    if "legacy_sidecar_output_is_not_migration_evidence" in blockers:
+        return "replace_legacy_sidecar_with_task_center_registered_standard_worker_execution"
+    if "registry_evidence_entry_missing_or_blocked" in blockers:
+        return "register_schema_valid_standard_worker_migration_evidence"
+    if current_adapter_status.startswith("planned_"):
+        return "implement_scoped_worker_adapter_before_evidence_registration"
+    return "inspect_migration_blockers"
 
 
 def _standard_worker_migration_evidence_template(*, module_id: str, current_adapter_status: str) -> dict[str, Any]:

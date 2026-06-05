@@ -1184,13 +1184,18 @@ def build_standard_worker_migration_rows(matrix: dict[str, Any]) -> list[dict[st
         )
     ]
     for row in module_rows:
+        prerequisites = row.get("migration_prerequisite_status") if isinstance(row.get("migration_prerequisite_status"), dict) else {}
         rows.append(
             _formal_deg_gate_row(
                 f"R worker migration: {row.get('module_id')}",
                 "passed" if row.get("formal_worker_status") == "migrated_to_isolated_standard_worker" else "blocked",
-                [str(row.get("formal_worker_status") or "")],
-                [f"lite={row.get('lite_status')}", f"full={row.get('full_status')}"],
-                basis=f"{row.get('analysis_environment')}->{row.get('full_environment')}; {row.get('current_adapter_status')}",
+                [str(row.get("formal_worker_status") or ""), str(row.get("migration_next_action") or "")],
+                [
+                    f"lite={row.get('lite_status')}",
+                    f"full={row.get('full_status')}",
+                    f"prereq={prerequisites.get('overall', 'blocked')}",
+                ],
+                basis=f"{row.get('analysis_environment')}->{row.get('full_environment')}; {row.get('current_adapter_status')}; next={row.get('migration_next_action')}",
             )
         )
     return rows

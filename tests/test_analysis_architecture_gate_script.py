@@ -119,6 +119,9 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     }
     assert migration_rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
     assert migration_rows["deg"]["migration_readiness_status"] == "blocked"
+    assert migration_rows["deg"]["migration_prerequisite_status"]["overall"] == "blocked"
+    assert migration_rows["deg"]["migration_prerequisite_status"]["required_environment_lock"] == "required_before_migration_evidence"
+    assert migration_rows["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert migration_rows["deg"]["migration_evidence_template"]["mode"] == "full"
     assert migration_rows["deg"]["migration_evidence_template"]["required_worker_boundary"] == "standard_r_worker"
     assert "legacy_service_adapter_sidecar" in migration_rows["deg"]["migration_evidence_template"]["forbidden_evidence_sources"]
@@ -127,6 +130,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert migration_rows["spatial_transcriptomics"]["full_environment"] == "r-spatial-full"
     assert migration_rows["docking"]["full_environment"] == "r-chem-full"
     assert migration_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert migration_rows["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
     assert "analysis_architecture_has_p1_gaps" in payload["warnings"]
     assert "full_analysis_activation_gate_blocked_but_allowed_by_default_gate" in payload["warnings"]
     assert payload["execution_policy"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"

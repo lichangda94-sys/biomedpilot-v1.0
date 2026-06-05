@@ -1564,6 +1564,12 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
     assert rows["deg"]["migration_evidence_status"] == "missing"
     assert rows["deg"]["migration_readiness_status"] == "blocked"
+    assert rows["deg"]["migration_prerequisite_status"]["overall"] == "blocked"
+    assert rows["deg"]["migration_prerequisite_status"]["lite_standard_worker_path"] == "passed"
+    assert rows["deg"]["migration_prerequisite_status"]["full_mode_registry"] == "blocked"
+    assert rows["deg"]["migration_prerequisite_status"]["required_environment_lock"] == "required_before_migration_evidence"
+    assert rows["deg"]["migration_prerequisite_status"]["required_resource_lock"] == "required_before_migration_evidence"
+    assert rows["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert rows["deg"]["migration_evidence_template"]["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence.v1"
     assert rows["deg"]["migration_evidence_template"]["module_id"] == "deg"
     assert rows["deg"]["migration_evidence_template"]["mode"] == "full"
@@ -1575,6 +1581,9 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["correlation"]["lite_status"] == "standard_worker_lite_ready"
     assert rows["correlation"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert "legacy_sidecar_output_is_not_migration_evidence" in rows["correlation"]["migration_blockers"]
+    assert rows["correlation"]["migration_prerequisite_status"]["legacy_sidecar_boundary"] == "not_migration_evidence"
+    assert rows["univariate"]["formal_worker_status"] == "contract_only_pending_standard_worker_migration"
+    assert rows["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
     assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
@@ -1679,6 +1688,8 @@ def test_standard_worker_migration_matrix_does_not_accept_full_supported_module_
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
     assert "full_mode_not_supported_in_registry" not in rows["deg"]["migration_blockers"]
     assert rows["deg"]["migration_blockers"] == ["registry_evidence_entry_missing_or_blocked"]
+    assert rows["deg"]["migration_prerequisite_status"]["full_mode_registry"] == "ready_unverified"
+    assert rows["deg"]["migration_next_action"] == "register_schema_valid_standard_worker_migration_evidence"
     assert matrix["formal_pending_count"] == matrix["module_count"]
 
 
