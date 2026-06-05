@@ -1134,6 +1134,7 @@ def build_analysis_architecture_gate_rows(status: dict[str, Any]) -> list[dict[s
 
 def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[dict[str, Any]]:
     items = [item for item in queue.get("items", []) or [] if isinstance(item, dict)]
+    handoff = _analysis_architecture_evidence_handoff_preview(items)
     rows = [
         _formal_deg_gate_row(
             "R architecture remediation queue",
@@ -1143,6 +1144,21 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
             basis=str(queue.get("execution_policy") or "read_only_no_runtime_mutation"),
         )
     ]
+    if handoff["total_action_count"]:
+        rows.append(
+            _formal_deg_gate_row(
+                "R evidence template handoff preview",
+                handoff["status"],
+                [],
+                [
+                    f"environment_actions={handoff['environment_action_count']}",
+                    f"resource_actions={handoff['resource_action_count']}",
+                    f"module_actions={handoff['module_action_count']}",
+                    handoff["action_policy"],
+                ],
+                basis=handoff["basis"],
+            )
+        )
     for item in items:
         module_scope = item.get("module_scope") if isinstance(item.get("module_scope"), dict) else {}
         missing_modules = _list(module_scope.get("missing_module_ids"))
@@ -1180,6 +1196,26 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
             )
         )
     return rows
+
+
+def _analysis_architecture_evidence_handoff_preview(items: list[dict[str, Any]]) -> dict[str, Any]:
+    environment_action_count = 0
+    resource_action_count = 0
+    module_action_count = 0
+    for item in items:
+        environment_action_count += len([action for action in item.get("environment_next_actions", []) or [] if isinstance(action, dict)])
+        resource_action_count += len([action for action in item.get("resource_next_actions", []) or [] if isinstance(action, dict)])
+        module_action_count += len([action for action in item.get("module_next_actions", []) or [] if isinstance(action, dict)])
+    total = environment_action_count + resource_action_count + module_action_count
+    return {
+        "status": "available_for_handoff" if total else "not_available",
+        "environment_action_count": environment_action_count,
+        "resource_action_count": resource_action_count,
+        "module_action_count": module_action_count,
+        "total_action_count": total,
+        "action_policy": "planning_only_not_readiness_evidence",
+        "basis": "scripts/analysis_architecture_gate.py --evidence-template-output <path>",
+    }
 
 
 def build_standard_worker_migration_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:

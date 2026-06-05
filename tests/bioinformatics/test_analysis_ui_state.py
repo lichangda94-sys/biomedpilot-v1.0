@@ -99,6 +99,12 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "implement_formal_runtime_contract_before_standard_worker_migration" not in worker_migration_text
     remediation_text = "\n".join(str(row) for row in state["analysis_architecture_remediation_rows"])
     assert "R architecture remediation queue" in remediation_text
+    assert "R evidence template handoff preview" in remediation_text
+    assert "environment_actions=4" in remediation_text
+    assert "resource_actions=11" in remediation_text
+    assert "module_actions=10" in remediation_text
+    assert "planning_only_not_readiness_evidence" in remediation_text
+    assert "scripts/analysis_architecture_gate.py --evidence-template-output <path>" in remediation_text
     assert "restore_full_analysis_environment_locks" in remediation_text
     assert "r-bio-full:register_schema_valid_restored_environment_evidence" in remediation_text
     assert "register_schema_valid_restored_environment_evidence=4" in remediation_text
