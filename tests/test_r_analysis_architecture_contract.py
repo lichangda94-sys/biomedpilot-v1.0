@@ -996,6 +996,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     resource_lock_registry_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence_registry.schema.json")
     environment_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json")
     environment_lock_registry_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence_registry.schema.json")
+    evidence_template_package_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "evidence_template_package.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
     provenance = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "provenance.json")
 
@@ -1023,6 +1024,10 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert resource_lock_registry_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence_registry.v1"
     assert "evidence_entries" in resource_lock_registry_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"
+    assert evidence_template_package_schema["$id"] == "biomedpilot.analysis.evidence_template_package.v1"
+    assert "environment_lock_evidence_templates" in evidence_template_package_schema["required"]
+    assert "resource_lock_evidence_templates" in evidence_template_package_schema["required"]
+    assert "standard_worker_migration_evidence_templates" in evidence_template_package_schema["required"]
     assert "package_lock_hash" in environment_lock_schema["required"]
     assert "runtime_package_install" in environment_lock_schema["required"]
     assert environment_lock_registry_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence_registry.v1"

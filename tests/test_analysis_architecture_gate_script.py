@@ -213,6 +213,8 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     payload = json.loads(output.read_text(encoding="utf-8"))
     template_package = json.loads(template_output.read_text(encoding="utf-8"))
     assert template_package["schema_version"] == "biomedpilot.analysis.evidence_template_package.v1"
+    assert template_package["schema_validation_status"] == "passed"
+    assert template_package["schema_blockers"] == []
     assert template_package["architecture_status"] == "partial_with_p1_gaps"
     assert template_package["full_analysis_activation_gate_status"] == "blocked"
     assert template_package["template_policy"]["templates_are_not_readiness_evidence"] is True
@@ -294,3 +296,18 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "remediation_summary" in schema["required"]
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.architecture_gate_report.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
+
+
+def test_analysis_evidence_template_package_schema_is_present_and_matches_payload_contract() -> None:
+    schema = json.loads((ROOT / "analysis" / "schemas" / "output" / "evidence_template_package.schema.json").read_text(encoding="utf-8"))
+
+    assert schema["$id"] == "biomedpilot.analysis.evidence_template_package.v1"
+    assert "environment_lock_evidence_templates" in schema["required"]
+    assert "resource_lock_evidence_templates" in schema["required"]
+    assert "standard_worker_migration_evidence_templates" in schema["required"]
+    assert "template_policy" in schema["required"]
+    assert "registry_paths" in schema["required"]
+    assert "template_counts" in schema["required"]
+    assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.evidence_template_package.v1"
+    assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
+    assert schema["properties"]["install_policy"]["const"] == "no_runtime_package_install_or_resource_download"

@@ -161,7 +161,7 @@ Each standard-worker migration row now also exposes a `migration_evidence_templa
 
 The same gate can also render a nine-section Markdown report with `--markdown-output <path>`. That report is generated from the JSON payload and covers the required human audit sections: current fit, PASS/WARN/FAIL table, top five risks, P0/P1/P2/P3 issues, involved files, minimal remediation path, priority files, completed changes, and manual decisions. Markdown rendering is read-only and does not change the activation decision.
 
-For external environment/resource handoff, the gate can also write `--evidence-template-output <path>`. This JSON package contains environment lock templates, resource lock templates, standard-worker migration evidence templates, registry paths, current blockers, and template counts. It is a template export only: it does not register evidence, restore full environments, lock resources, execute workers, install packages, or download resources.
+For external environment/resource handoff, the gate can also write `--evidence-template-output <path>`. This JSON package contains environment lock templates, resource lock templates, standard-worker migration evidence templates, registry paths, current blockers, and template counts, and it self-checks against `analysis/schemas/output/evidence_template_package.schema.json`. It is a template export only: it does not register evidence, restore full environments, lock resources, execute workers, install packages, or download resources.
 
 Analysis Center renders this as a dedicated `Full analysis activation gate` row in `analysis_architecture_gate_rows`, including disabled blockers for unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration.
 

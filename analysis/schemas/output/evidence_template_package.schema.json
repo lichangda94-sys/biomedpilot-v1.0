@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.evidence_template_package.v1",
+  "title": "BioMedPilot analysis external evidence template package",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "created_at",
+    "worktree",
+    "architecture_status",
+    "full_analysis_activation_gate_status",
+    "execution_policy",
+    "install_policy",
+    "template_policy",
+    "registry_paths",
+    "environment_lock_evidence_templates",
+    "resource_lock_evidence_templates",
+    "standard_worker_migration_evidence_templates",
+    "blockers",
+    "template_counts"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.evidence_template_package.v1"},
+    "created_at": {"type": "string", "minLength": 1},
+    "worktree": {"type": "string", "minLength": 1},
+    "architecture_status": {"type": "string", "minLength": 1},
+    "full_analysis_activation_gate_status": {"type": "string", "minLength": 1},
+    "execution_policy": {"const": "read_only_no_worker_execution_no_runtime_install_no_resource_download"},
+    "install_policy": {"const": "no_runtime_package_install_or_resource_download"},
+    "template_policy": {"type": "object"},
+    "registry_paths": {"type": "object"},
+    "environment_lock_evidence_templates": {"type": "array"},
+    "resource_lock_evidence_templates": {"type": "array"},
+    "standard_worker_migration_evidence_templates": {"type": "array"},
+    "blockers": {"type": "object"},
+    "template_counts": {"type": "object"},
+    "schema_validation_status": {"type": "string"},
+    "schema_blockers": {"type": "array"}
+  },
+  "additionalProperties": true
+}

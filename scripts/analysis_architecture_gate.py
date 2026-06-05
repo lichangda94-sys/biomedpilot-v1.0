@@ -9,6 +9,7 @@ from typing import Any
 
 
 GATE_REPORT_SCHEMA_RELATIVE_PATH = Path("analysis") / "schemas" / "output" / "architecture_gate_report.schema.json"
+EVIDENCE_TEMPLATE_PACKAGE_SCHEMA_RELATIVE_PATH = Path("analysis") / "schemas" / "output" / "evidence_template_package.schema.json"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -40,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.evidence_template_output:
         template_output = Path(args.evidence_template_output).expanduser().resolve()
         template_output.parent.mkdir(parents=True, exist_ok=True)
-        template_output.write_text(json.dumps(build_evidence_template_package(payload), ensure_ascii=False, indent=2), encoding="utf-8")
+        template_output.write_text(json.dumps(build_evidence_template_package(payload, root=root), ensure_ascii=False, indent=2), encoding="utf-8")
     print(text)
     return 0 if payload["status"] == "passed" else 1
 
@@ -490,7 +491,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def build_evidence_template_package(payload: dict[str, Any]) -> dict[str, Any]:
+def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> dict[str, Any]:
     environment_readiness = payload.get("environment_readiness") if isinstance(payload.get("environment_readiness"), dict) else {}
     resource_readiness = payload.get("resource_readiness") if isinstance(payload.get("resource_readiness"), dict) else {}
     migration_rows = [row for row in payload.get("standard_worker_migration_rows", []) if isinstance(row, dict)]
@@ -514,7 +515,7 @@ def build_evidence_template_package(payload: dict[str, Any]) -> dict[str, Any]:
         for item in resource_readiness.get("resource_lock_evidence_templates", [])
         if isinstance(item, dict)
     ]
-    return {
+    template_package = {
         "schema_version": "biomedpilot.analysis.evidence_template_package.v1",
         "created_at": payload.get("created_at"),
         "worktree": payload.get("worktree"),
@@ -557,6 +558,40 @@ def build_evidence_template_package(payload: dict[str, Any]) -> dict[str, Any]:
             "standard_worker_migration_evidence_templates": len(migration_templates),
         },
     }
+    schema_blockers = _evidence_template_package_schema_blockers(template_package, root=root)
+    template_package["schema_validation_status"] = "blocked" if schema_blockers else "passed"
+    template_package["schema_blockers"] = schema_blockers
+    return template_package
+
+
+def _evidence_template_package_schema_blockers(payload: dict[str, Any], *, root: Path) -> list[str]:
+    schema_path = root / EVIDENCE_TEMPLATE_PACKAGE_SCHEMA_RELATIVE_PATH
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except OSError:
+        return [f"analysis_evidence_template_package_schema_missing:{EVIDENCE_TEMPLATE_PACKAGE_SCHEMA_RELATIVE_PATH}"]
+    except json.JSONDecodeError:
+        return [f"analysis_evidence_template_package_schema_invalid_json:{EVIDENCE_TEMPLATE_PACKAGE_SCHEMA_RELATIVE_PATH}"]
+
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"analysis_evidence_template_package_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        value = payload[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"analysis_evidence_template_package_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _matches_json_type(value, expected_type):
+            blockers.append(f"analysis_evidence_template_package_type_invalid:{field}")
+        min_length = field_schema.get("minLength")
+        if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+            blockers.append(f"analysis_evidence_template_package_min_length_invalid:{field}")
+    return blockers
 
 
 def _priority_file_lines(remediation_items: list[dict[str, Any]]) -> list[str]:
