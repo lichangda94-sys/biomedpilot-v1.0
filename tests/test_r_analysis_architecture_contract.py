@@ -12,6 +12,7 @@ import pytest
 from app.analysis_runtime.architecture_status import (
     build_analysis_architecture_status,
     build_external_tool_adapter_matrix,
+    build_frontend_standard_package_consumption_matrix,
     build_full_analysis_activation_gate,
     build_full_activation_module_matrix,
     build_module_interface_matrix,
@@ -1409,6 +1410,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["task_system_boundary_matrix"]["status"] == "passed"
     assert status["task_system_boundary_matrix"]["passed_module_count"] == 10
     assert status["task_system_boundary_matrix"]["blocked_module_count"] == 0
+    assert status["frontend_consumption_matrix"]["status"] == "partial"
+    assert status["frontend_consumption_matrix"]["passed_consumer_count"] == 4
+    assert status["frontend_consumption_matrix"]["partial_consumer_count"] == 1
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
     assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
@@ -1791,6 +1795,33 @@ def test_task_system_boundary_matrix_tracks_main_backend_task_contracts() -> Non
     assert rows["docking"]["required_task_system_invocation"] == "task_center_registered"
     assert rows["molecular_dynamics"]["result_index_task_types"] == ["molecular_dynamics"]
     assert rows["molecular_dynamics"]["direct_cli_is_not_ui_task_result"] is True
+
+
+def test_frontend_standard_package_consumption_matrix_tracks_partial_ui_boundary() -> None:
+    matrix = build_frontend_standard_package_consumption_matrix()
+    rows = {row["row_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1"
+    assert matrix["status"] == "partial"
+    assert matrix["boundary"] == "read_only_frontend_standard_package_consumption_diagnostics"
+    assert matrix["consumer_count"] == 5
+    assert matrix["passed_consumer_count"] == 4
+    assert matrix["partial_consumer_count"] == 1
+    assert matrix["blocked_consumer_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert matrix["warning_counts"]["detailed_result_views_still_need_standard_package_only_migration"] == 1
+    assert rows["catalog_source_policy"]["status"] == "passed"
+    assert rows["catalog_source_policy"]["consumer_surface"] == "build_standard_analysis_package_catalog"
+    assert rows["catalog_source_policy"]["source_policy"] == "consume_result_index_registered_standard_result_packages_only"
+    assert rows["catalog_detail_policy"]["status"] == "passed"
+    assert rows["catalog_detail_policy"]["consumer_surface"] == "build_standard_analysis_package_detail"
+    assert rows["analysis_center_state"]["status"] == "passed"
+    assert rows["analysis_center_state"]["file_path"] == "app/bioinformatics/analysis_ui/state.py"
+    assert rows["results_browser_tables"]["status"] == "passed"
+    assert rows["results_browser_tables"]["consumer_surface"] == "BioinformaticsResultsBrowserWidget"
+    assert rows["detailed_result_views_migration"]["status"] == "partial"
+    assert rows["detailed_result_views_migration"]["blockers"] == []
+    assert rows["detailed_result_views_migration"]["warnings"] == ["detailed_result_views_still_need_standard_package_only_migration"]
 
 
 def test_module_interface_matrix_tracks_standard_module_contracts() -> None:

@@ -107,6 +107,15 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert task_boundary_rows["deg"]["result_index_task_types"] == ["deg", "recomputed_deg", "differential_expression"]
     assert task_boundary_rows["correlation"]["direct_cli_is_not_ui_task_result"] is True
     assert "legacy_sidecar_boundary_transitional:correlation" in task_boundary_rows["correlation"]["warnings"]
+    assert payload["frontend_consumption_matrix"]["schema_version"] == "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1"
+    assert payload["frontend_consumption_matrix"]["status"] == "partial"
+    assert payload["frontend_consumption_matrix"]["passed_consumer_count"] == 4
+    assert payload["frontend_consumption_matrix"]["partial_consumer_count"] == 1
+    frontend_rows = {row["row_id"]: row for row in payload["frontend_consumption_rows"]}
+    assert frontend_rows["catalog_source_policy"]["status"] == "passed"
+    assert frontend_rows["results_browser_tables"]["consumer_surface"] == "BioinformaticsResultsBrowserWidget"
+    assert frontend_rows["detailed_result_views_migration"]["status"] == "partial"
+    assert frontend_rows["detailed_result_views_migration"]["warnings"] == ["detailed_result_views_still_need_standard_package_only_migration"]
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False
     assert set(payload["environment_readiness"]["blocked_environment_ids"]) == {
@@ -296,12 +305,14 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Module Interface Matrix" in text
     assert "External Tool Adapter Isolation Matrix" in text
     assert "Task System Boundary Matrix" in text
+    assert "Frontend Standard Package Consumption Matrix" in text
     assert "mock=True; lite=True; full=False" in text
     assert "not_executed_in_lite_mode" in text
     assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in text
     assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in text
     assert "task_center_registered" in text
     assert "pending_standard_worker_migration" in text
+    assert "detailed_result_views_still_need_standard_package_only_migration" in text
     assert "Runtime package install" in text
     assert "Runtime resource download" in text
     assert "Default app-dev heavy dependency" in text
@@ -484,6 +495,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "external_tool_adapter_rows" in schema["required"]
     assert "task_system_boundary_matrix" in schema["required"]
     assert "task_system_boundary_rows" in schema["required"]
+    assert "frontend_consumption_matrix" in schema["required"]
+    assert "frontend_consumption_rows" in schema["required"]
     assert "runtime_acquisition_scan" in schema["required"]
     assert "default_dependency_scan" in schema["required"]
     assert "environment_readiness" in schema["required"]
@@ -502,6 +515,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["external_tool_adapter_rows"]["type"] == "array"
     assert schema["properties"]["task_system_boundary_matrix"]["type"] == "object"
     assert schema["properties"]["task_system_boundary_rows"]["type"] == "array"
+    assert schema["properties"]["frontend_consumption_matrix"]["type"] == "object"
+    assert schema["properties"]["frontend_consumption_rows"]["type"] == "array"
     assert schema["properties"]["runtime_acquisition_scan"]["type"] == "object"
     assert schema["properties"]["default_dependency_scan"]["type"] == "object"
     assert schema["properties"]["full_activation_module_matrix"]["type"] == "object"

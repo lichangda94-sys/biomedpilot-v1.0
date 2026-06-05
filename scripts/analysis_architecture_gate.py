@@ -69,6 +69,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
+    frontend_consumption_matrix = architecture_status.get("frontend_consumption_matrix") if isinstance(architecture_status.get("frontend_consumption_matrix"), dict) else {}
     full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
     runtime_acquisition_scan = architecture_status.get("runtime_acquisition_scan") if isinstance(architecture_status.get("runtime_acquisition_scan"), dict) else {}
     default_dependency_scan = architecture_status.get("default_dependency_scan") if isinstance(architecture_status.get("default_dependency_scan"), dict) else {}
@@ -141,6 +142,23 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "task_system_boundary_rows": [
             dict(row)
             for row in task_system_boundary_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "frontend_consumption_matrix": {
+            "schema_version": frontend_consumption_matrix.get("schema_version"),
+            "status": frontend_consumption_matrix.get("status"),
+            "consumer_count": frontend_consumption_matrix.get("consumer_count"),
+            "passed_consumer_count": frontend_consumption_matrix.get("passed_consumer_count"),
+            "partial_consumer_count": frontend_consumption_matrix.get("partial_consumer_count"),
+            "blocked_consumer_count": frontend_consumption_matrix.get("blocked_consumer_count"),
+            "status_counts": frontend_consumption_matrix.get("status_counts", {}),
+            "blocker_counts": frontend_consumption_matrix.get("blocker_counts", {}),
+            "warning_counts": frontend_consumption_matrix.get("warning_counts", {}),
+            "boundary": frontend_consumption_matrix.get("boundary"),
+        },
+        "frontend_consumption_rows": [
+            dict(row)
+            for row in frontend_consumption_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -478,6 +496,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     external_tool_adapter_rows = [row for row in payload.get("external_tool_adapter_rows", []) if isinstance(row, dict)]
     task_system_boundary_matrix = payload.get("task_system_boundary_matrix") if isinstance(payload.get("task_system_boundary_matrix"), dict) else {}
     task_system_boundary_rows = [row for row in payload.get("task_system_boundary_rows", []) if isinstance(row, dict)]
+    frontend_consumption_matrix = payload.get("frontend_consumption_matrix") if isinstance(payload.get("frontend_consumption_matrix"), dict) else {}
+    frontend_consumption_rows = [row for row in payload.get("frontend_consumption_rows", []) if isinstance(row, dict)]
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
@@ -546,6 +566,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_task_system_boundary_summary_table(task_system_boundary_matrix, task_system_boundary_rows))
+    lines.extend(
+        [
+            "",
+            "### Frontend Standard Package Consumption Matrix",
+            "",
+        ]
+    )
+    lines.extend(_frontend_consumption_summary_table(frontend_consumption_matrix, frontend_consumption_rows))
     lines.extend(
         [
             "",
@@ -1061,6 +1089,42 @@ def _task_system_boundary_summary_table(matrix: dict[str, Any], rows: list[dict[
         *table,
         "",
         *_markdown_table(["Module", "Status", "Result Task Types", "Task Invocation", "Worker Manifest", "Formal Worker"], module_rows, ["module_id", "status", "task_types", "task_invocation", "worker_manifest", "formal_worker"]),
+    ]
+
+
+def _frontend_consumption_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed consumers",
+            "count": matrix.get("passed_consumer_count", 0),
+            "detail": "",
+        },
+        {
+            "metric": "Partial consumers",
+            "count": matrix.get("partial_consumer_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked consumers",
+            "count": matrix.get("blocked_consumer_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    consumer_rows = [
+        {
+            "row_id": row.get("row_id"),
+            "status": row.get("status"),
+            "surface": row.get("consumer_surface"),
+            "file": row.get("file_path"),
+            "policy": row.get("source_policy"),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Consumer", "Status", "Surface", "File", "Policy"], consumer_rows, ["row_id", "status", "surface", "file", "policy"]),
     ]
 
 

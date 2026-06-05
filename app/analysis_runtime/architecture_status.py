@@ -87,6 +87,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         registry=registry,
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
+    frontend_consumption_matrix = build_frontend_standard_package_consumption_matrix()
     runtime_acquisition_scan = build_runtime_acquisition_scan_summary()
     default_dependency_scan = build_default_dependency_scan_summary()
     active_install_hits = list(runtime_acquisition_scan.get("install_hits", []))
@@ -252,6 +253,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "module_interface_matrix": module_interface_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
+        "frontend_consumption_matrix": frontend_consumption_matrix,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "full_activation_module_matrix": full_activation_module_matrix,
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -581,6 +583,113 @@ def build_task_system_boundary_matrix(
         "warning_counts": warning_counts,
         "rows": rows,
         "boundary": "read_only_main_backend_task_system_boundary_diagnostics",
+    }
+
+
+def build_frontend_standard_package_consumption_matrix() -> dict[str, Any]:
+    """Return read-only diagnostics for UI standard-package consumption."""
+
+    rows = [
+        _frontend_consumption_row(
+            row_id="catalog_source_policy",
+            title="Standard package catalog reads result-index package artifacts only",
+            file_path="app/analysis_runtime/package_catalog.py",
+            required_tokens=[
+                "source_policy\": \"result_index_standard_result_package_artifacts_only\"",
+                "It does not scan arbitrary folders",
+                "standard_result_package_path_outside_project_root",
+            ],
+            consumer_surface="build_standard_analysis_package_catalog",
+        ),
+        _frontend_consumption_row(
+            row_id="catalog_detail_policy",
+            title="Standard package detail reads declared package artifacts only",
+            file_path="app/analysis_runtime/package_catalog.py",
+            required_tokens=[
+                "build_standard_analysis_package_detail",
+                "does not inspect module-private output folders",
+                "standard_result_package_declared_artifacts_and_logs_only",
+            ],
+            consumer_surface="build_standard_analysis_package_detail",
+        ),
+        _frontend_consumption_row(
+            row_id="analysis_center_state",
+            title="Analysis Center exposes standard package catalog and gates",
+            file_path="app/bioinformatics/analysis_ui/state.py",
+            required_tokens=[
+                "standard_analysis_packages",
+                "standard_package_gate_rows",
+                "build_result_gate_rows",
+            ],
+            consumer_surface="build_analysis_center_state",
+        ),
+        _frontend_consumption_row(
+            row_id="results_browser_tables",
+            title="Results Browser renders standard package provenance, manifest, input, and artifact tables",
+            file_path="app/bioinformatics/workflow_pages.py",
+            required_tokens=[
+                "resultsStandardPackageProvenanceTable",
+                "resultsStandardPackageManifestTable",
+                "resultsStandardPackageInputManifestTable",
+                "resultsStandardPackageArtifactTable",
+            ],
+            consumer_surface="BioinformaticsResultsBrowserWidget",
+        ),
+        {
+            "row_id": "detailed_result_views_migration",
+            "title": "Detailed result views still need standard-package-only migration",
+            "status": "partial",
+            "file_path": "app/bioinformatics/workflow_pages.py",
+            "consumer_surface": "module_specific_detailed_result_views",
+            "source_policy": "transitional_legacy_detail_views_must_not_be_formal_readiness_evidence",
+            "blockers": [],
+            "warnings": ["detailed_result_views_still_need_standard_package_only_migration"],
+        },
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1",
+        "status": "blocked" if blocker_counts else ("partial" if warning_counts else "passed"),
+        "consumer_count": len(rows),
+        "passed_consumer_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "partial_consumer_count": sum(1 for row in rows if row.get("status") == "partial"),
+        "blocked_consumer_count": sum(1 for row in rows if row.get("status") == "blocked"),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "rows": rows,
+        "boundary": "read_only_frontend_standard_package_consumption_diagnostics",
+    }
+
+
+def _frontend_consumption_row(
+    *,
+    row_id: str,
+    title: str,
+    file_path: str,
+    required_tokens: list[str],
+    consumer_surface: str,
+) -> dict[str, Any]:
+    path = REPO_ROOT / file_path
+    text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+    blockers: list[str] = []
+    if not path.is_file():
+        blockers.append(f"frontend_consumption_file_missing:{file_path}")
+    for token in required_tokens:
+        if token not in text:
+            blockers.append(f"frontend_consumption_required_token_missing:{row_id}:{token}")
+    return {
+        "row_id": row_id,
+        "title": title,
+        "status": "blocked" if blockers else "passed",
+        "file_path": file_path,
+        "consumer_surface": consumer_surface,
+        "source_policy": "consume_result_index_registered_standard_result_packages_only",
+        "required_tokens": required_tokens,
+        "blockers": blockers,
+        "warnings": [],
     }
 
 
