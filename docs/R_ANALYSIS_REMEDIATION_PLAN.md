@@ -210,6 +210,8 @@ Update: runtime acquisition and default dependency P0 guards now emit machine-re
 
 Update: module interface compliance now emits `module_interface_matrix`, covering module manifests, standard entrypoints, input/output schemas, mock/lite/full declarations, and mock fixture standard package validation. This matrix is visible in the gate JSON, Markdown report, and Analysis Center, giving future remediation a module-by-module contract baseline before formal worker migration.
 
+Update: standard worker entrypoint diagnostics now emit `standard_worker_entrypoint_matrix`, covering the shared `analysis/runners/run_module.R` CLI contract, standard package output contract, lite module dispatch coverage, main-backend invocation through `run_standard_r_worker()`, and runtime install/download absence. The matrix is `partial`: shared lite entrypoint contracts pass, while formal module migration remains pending until registry-owned full-mode standard-worker evidence exists.
+
 Update: chemistry external-tool adapter isolation now emits `external_tool_adapter_matrix`, covering docking and molecular dynamics. The matrix verifies that lite adapters stay in `r-bio-core`, do not execute AutoDock Vina or GROMACS, keep runtime installs forbidden, avoid default app dependencies, and point full execution at `r-chem-full` or `r-chem-gpu` with external resource/tool locks. It is a diagnostic and remediation surface only; full tool execution remains blocked until environment locks, tool/resource locks, and standard-worker migration evidence pass.
 
 Update: task-system boundary diagnostics now emit `task_system_boundary_matrix`, covering every target module. The matrix verifies registry-owned result-index task types, `run_analysis_module_task()`, TaskCenter, input schema, standard package schema, result registry, and worker invocation schema. It also records that task-bridge packages require `task_center_registered`, direct CLI standard-worker artifacts are not UI task results, and legacy sidecars remain transitional diagnostics rather than migration evidence.
@@ -349,6 +351,7 @@ Acceptance:
 - Task-bridge and standard-worker packages are blocked if their worker invocation manifest is missing or violates the schema/policy contract. **Completed for validator gate.**
 - Direct standard R runner mock and blocked full outputs validate as standard packages without requiring heavy R packages or enabling full execution. **Completed for direct runner contract.**
 - Current service-adapter sidecar standard packages expose worker invocation diagnostics without claiming isolated standard-worker execution. **Completed for sidecar diagnostics.**
+- The shared R worker entrypoint, lite dispatch coverage, main-backend invocation path, standard package output contract, and no-runtime-acquisition rule are exposed as `standard_worker_entrypoint_matrix`. **Completed for read-only entrypoint diagnostics.**
 - Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
 - Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
 - No R installation is required.
@@ -608,6 +611,7 @@ Completed:
 
 - Added `build_standard_worker_migration_matrix()` with one row per registered module.
 - The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
+- Added `standard_worker_entrypoint_matrix` to audit `analysis/runners/run_module.R`, standard package output, lite dispatch coverage, main-backend standard-worker invocation, and runtime install/download absence separately from formal migration evidence.
 - Added `analysis/registry/standard_worker_migration_evidence.json` as the authoritative migration evidence registry; an empty registry means no formal module is migrated.
 - Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` so malformed, mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
 - Standard-worker migration evidence now requires schema-level declarations for `required_worker_boundary=standard_r_worker`, `required_task_system_invocation=task_center_registered`, `required_worker_migration_status=standard_worker_contract`, and forbidden evidence sources. This keeps external registry entries from relying on sidecar, mock, lite, or module-private output evidence even before package inspection.

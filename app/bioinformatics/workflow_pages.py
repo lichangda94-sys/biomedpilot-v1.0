@@ -5801,6 +5801,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                     *(analysis_state.get("enrichment_gate_rows", []) or []),
                     *(analysis_state.get("analysis_architecture_gate_rows", []) or []),
                     *(analysis_state.get("module_interface_rows", []) or []),
+                    *(analysis_state.get("standard_worker_entrypoint_rows", []) or []),
                     *(analysis_state.get("external_tool_adapter_rows", []) or []),
                     *(analysis_state.get("task_system_boundary_rows", []) or []),
                     *(analysis_state.get("legacy_sidecar_transition_rows", []) or []),

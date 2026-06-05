@@ -67,6 +67,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
     module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
+    standard_worker_entrypoint_matrix = architecture_status.get("standard_worker_entrypoint_matrix") if isinstance(architecture_status.get("standard_worker_entrypoint_matrix"), dict) else {}
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
     legacy_sidecar_transition_matrix = architecture_status.get("legacy_sidecar_transition_matrix") if isinstance(architecture_status.get("legacy_sidecar_transition_matrix"), dict) else {}
@@ -114,6 +115,26 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "module_interface_rows": [
             dict(row)
             for row in module_interface_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "standard_worker_entrypoint_matrix": {
+            "schema_version": standard_worker_entrypoint_matrix.get("schema_version"),
+            "status": standard_worker_entrypoint_matrix.get("status"),
+            "row_count": standard_worker_entrypoint_matrix.get("row_count"),
+            "passed_row_count": standard_worker_entrypoint_matrix.get("passed_row_count"),
+            "partial_row_count": standard_worker_entrypoint_matrix.get("partial_row_count"),
+            "blocked_row_count": standard_worker_entrypoint_matrix.get("blocked_row_count"),
+            "status_counts": standard_worker_entrypoint_matrix.get("status_counts", {}),
+            "blocker_counts": standard_worker_entrypoint_matrix.get("blocker_counts", {}),
+            "warning_counts": standard_worker_entrypoint_matrix.get("warning_counts", {}),
+            "standard_entrypoint": standard_worker_entrypoint_matrix.get("standard_entrypoint"),
+            "lite_module_ids": standard_worker_entrypoint_matrix.get("lite_module_ids", []),
+            "formal_pending_module_ids": standard_worker_entrypoint_matrix.get("formal_pending_module_ids", []),
+            "boundary": standard_worker_entrypoint_matrix.get("boundary"),
+        },
+        "standard_worker_entrypoint_rows": [
+            dict(row)
+            for row in standard_worker_entrypoint_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "external_tool_adapter_matrix": {
@@ -533,6 +554,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
     module_interface_matrix = payload.get("module_interface_matrix") if isinstance(payload.get("module_interface_matrix"), dict) else {}
     module_interface_rows = [row for row in payload.get("module_interface_rows", []) if isinstance(row, dict)]
+    standard_worker_entrypoint_matrix = payload.get("standard_worker_entrypoint_matrix") if isinstance(payload.get("standard_worker_entrypoint_matrix"), dict) else {}
+    standard_worker_entrypoint_rows = [row for row in payload.get("standard_worker_entrypoint_rows", []) if isinstance(row, dict)]
     external_tool_adapter_matrix = payload.get("external_tool_adapter_matrix") if isinstance(payload.get("external_tool_adapter_matrix"), dict) else {}
     external_tool_adapter_rows = [row for row in payload.get("external_tool_adapter_rows", []) if isinstance(row, dict)]
     task_system_boundary_matrix = payload.get("task_system_boundary_matrix") if isinstance(payload.get("task_system_boundary_matrix"), dict) else {}
@@ -595,6 +618,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_module_interface_summary_table(module_interface_matrix, module_interface_rows))
+    lines.extend(
+        [
+            "",
+            "### Standard Worker Entrypoint Matrix",
+            "",
+        ]
+    )
+    lines.extend(_standard_worker_entrypoint_summary_table(standard_worker_entrypoint_matrix, standard_worker_entrypoint_rows))
     lines.extend(
         [
             "",
@@ -1118,6 +1149,43 @@ def _external_tool_adapter_summary_table(matrix: dict[str, Any], rows: list[dict
         *table,
         "",
         *_markdown_table(["Module", "Status", "Lite", "Full", "Resources", "Policy"], adapter_rows, ["module_id", "status", "lite", "full", "resources", "policy"]),
+    ]
+
+
+def _standard_worker_entrypoint_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed entrypoint contracts",
+            "count": matrix.get("passed_row_count", 0),
+            "detail": f"lite_modules={matrix.get('lite_module_ids', [])}",
+        },
+        {
+            "metric": "Partial entrypoint contracts",
+            "count": matrix.get("partial_row_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked entrypoint contracts",
+            "count": matrix.get("blocked_row_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    entry_rows = [
+        {
+            "row_id": row.get("row_id"),
+            "status": row.get("status"),
+            "evidence": row.get("evidence_path"),
+            "lite_modules": row.get("lite_module_ids", []),
+            "formal_pending": row.get("formal_pending_module_ids", []),
+            "warnings": row.get("warnings", []),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Contract", "Status", "Evidence", "Lite Modules", "Formal Pending", "Warnings"], entry_rows, ["row_id", "status", "evidence", "lite_modules", "formal_pending", "warnings"]),
     ]
 
 

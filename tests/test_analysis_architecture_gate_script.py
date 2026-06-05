@@ -83,6 +83,21 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert module_interface_rows["deg"]["mock_fixture_validation_status"] == "passed"
     assert module_interface_rows["deg"]["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
     assert module_interface_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert payload["standard_worker_entrypoint_matrix"]["schema_version"] == "biomedpilot.analysis.standard_worker_entrypoint_matrix.v1"
+    assert payload["standard_worker_entrypoint_matrix"]["status"] == "partial"
+    assert payload["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
+    assert payload["standard_worker_entrypoint_matrix"]["partial_row_count"] == 1
+    assert payload["standard_worker_entrypoint_matrix"]["blocked_row_count"] == 0
+    assert payload["standard_worker_entrypoint_matrix"]["standard_entrypoint"] == "analysis/runners/run_module.R"
+    assert "deg" in payload["standard_worker_entrypoint_matrix"]["lite_module_ids"]
+    assert "survival" in payload["standard_worker_entrypoint_matrix"]["formal_pending_module_ids"]
+    entrypoint_rows = {row["row_id"]: row for row in payload["standard_worker_entrypoint_rows"]}
+    assert entrypoint_rows["standard_r_worker_cli_contract"]["status"] == "passed"
+    assert entrypoint_rows["standard_r_worker_package_output_contract"]["status"] == "passed"
+    assert entrypoint_rows["standard_r_worker_lite_dispatch_contract"]["status"] == "passed"
+    assert entrypoint_rows["standard_r_worker_main_backend_invocation_contract"]["status"] == "passed"
+    assert entrypoint_rows["standard_r_worker_no_runtime_acquisition"]["status"] == "passed"
+    assert entrypoint_rows["standard_r_worker_formal_migration_boundary"]["status"] == "partial"
     assert payload["external_tool_adapter_matrix"]["schema_version"] == "biomedpilot.analysis.external_tool_adapter_matrix.v1"
     assert payload["external_tool_adapter_matrix"]["status"] == "passed"
     assert payload["external_tool_adapter_matrix"]["passed_module_count"] == 2
@@ -334,12 +349,15 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
         assert heading in text
     assert "Runtime Boundary Scan Evidence" in text
     assert "Module Interface Matrix" in text
+    assert "Standard Worker Entrypoint Matrix" in text
     assert "External Tool Adapter Isolation Matrix" in text
     assert "Task System Boundary Matrix" in text
     assert "Legacy Sidecar Transition Matrix" in text
     assert "Frontend Standard Package Consumption Matrix" in text
     assert "Reproducibility Provenance Matrix" in text
     assert "mock=True; lite=True; full=False" in text
+    assert "standard_r_worker_lite_dispatch_contract" in text
+    assert "standard_worker_entrypoint_formal_migration_pending:deg" in text
     assert "not_executed_in_lite_mode" in text
     assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in text
     assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in text
@@ -529,6 +547,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "full_analysis_activation_gate" in schema["required"]
     assert "module_interface_matrix" in schema["required"]
     assert "module_interface_rows" in schema["required"]
+    assert "standard_worker_entrypoint_matrix" in schema["required"]
+    assert "standard_worker_entrypoint_rows" in schema["required"]
     assert "external_tool_adapter_matrix" in schema["required"]
     assert "external_tool_adapter_rows" in schema["required"]
     assert "task_system_boundary_matrix" in schema["required"]
@@ -553,6 +573,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
     assert schema["properties"]["module_interface_matrix"]["type"] == "object"
     assert schema["properties"]["module_interface_rows"]["type"] == "array"
+    assert schema["properties"]["standard_worker_entrypoint_matrix"]["type"] == "object"
+    assert schema["properties"]["standard_worker_entrypoint_rows"]["type"] == "array"
     assert schema["properties"]["external_tool_adapter_matrix"]["type"] == "object"
     assert schema["properties"]["external_tool_adapter_rows"]["type"] == "array"
     assert schema["properties"]["task_system_boundary_matrix"]["type"] == "object"

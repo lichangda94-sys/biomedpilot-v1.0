@@ -68,6 +68,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
     module_ids = [str(item.get("module_id") or "") for item in modules if item.get("module_id")]
     module_interface_matrix = build_module_interface_matrix(registry)
     standard_worker_migration_matrix = build_standard_worker_migration_matrix(registry)
+    standard_worker_entrypoint_matrix = build_standard_worker_entrypoint_matrix(
+        registry=registry,
+        standard_worker_migration_matrix=standard_worker_migration_matrix,
+    )
     environment_validation = validate_analysis_environment_registry(module_registry=registry)
     resource_validation = validate_analysis_resource_manifest()
     full_analysis_activation_gate = build_full_analysis_activation_gate(
@@ -114,10 +118,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-03",
             "Unified worker entrypoint",
-            "warn" if _path_exists(registry.get("standard_entrypoint")) else "fail",
+            "warn" if standard_worker_entrypoint_matrix.get("status") == "partial" else ("pass" if standard_worker_entrypoint_matrix.get("status") == "passed" else "fail"),
             str(registry.get("standard_entrypoint") or "missing"),
-            warnings=["existing_formal_algorithms_still_need_standard_worker_migration"] if _path_exists(registry.get("standard_entrypoint")) else [],
-            blockers=[] if _path_exists(registry.get("standard_entrypoint")) else ["standard_entrypoint_missing"],
+            warnings=list(standard_worker_entrypoint_matrix.get("warning_counts", {}).keys()),
+            blockers=list(standard_worker_entrypoint_matrix.get("blocker_counts", {}).keys()),
         ),
         _row(
             "RARCH-04",
@@ -257,6 +261,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "p0_issues": p0,
         "p1_issues": p1,
         "module_interface_matrix": module_interface_matrix,
+        "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
         "legacy_sidecar_transition_matrix": legacy_sidecar_transition_matrix,
@@ -414,6 +419,203 @@ def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -
         "full_environment": str(source.get("full_environment") or module.get("full_environment") or ""),
         "result_package_required": [str(item) for item in source.get("result_package_required", []) if item],
         "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def build_standard_worker_entrypoint_matrix(
+    *,
+    registry: dict[str, Any] | None = None,
+    standard_worker_migration_matrix: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return static diagnostics for the repository-owned standard R entrypoint."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    migration_matrix = (
+        standard_worker_migration_matrix
+        if isinstance(standard_worker_migration_matrix, dict)
+        else build_standard_worker_migration_matrix(payload)
+    )
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
+    ]
+    standard_entrypoint = str(payload.get("standard_entrypoint") or "analysis/runners/run_module.R")
+    runner_text = (REPO_ROOT / standard_entrypoint).read_text(encoding="utf-8", errors="ignore") if (REPO_ROOT / standard_entrypoint).is_file() else ""
+    lite_modules = _standard_entrypoint_lite_module_ids(modules, standard_entrypoint=standard_entrypoint)
+    formal_pending = [
+        str(row.get("module_id") or "")
+        for row in migration_matrix.get("rows", [])
+        if isinstance(row, dict) and row.get("formal_worker_status") != "migrated_to_isolated_standard_worker"
+    ]
+    rows = [
+        _source_token_contract_row(
+            row_id="standard_r_worker_cli_contract",
+            title="Standard R worker accepts input_json, output_dir, and mode",
+            file_path=standard_entrypoint,
+            required_tokens=[
+                "usage: run_module.R <input_json> <output_dir> <mode>",
+                "input_json <- normalizePath(args[[1]], mustWork = TRUE)",
+                "output_dir <- args[[2]]",
+                "mode <- args[[3]]",
+                "repo_root <- normalizePath",
+            ],
+            evidence_path=f"{standard_entrypoint}::cli_args",
+        ),
+        _source_token_contract_row(
+            row_id="standard_r_worker_package_output_contract",
+            title="Standard R worker writes standard package files and directories",
+            file_path=standard_entrypoint,
+            required_tokens=[
+                'required_dirs <- c("tables", "plots", "reports", "logs")',
+                'writeLines(input_text, file.path(output_dir, "module_input.json")',
+                'writeLines(result, file.path(output_dir, "result.json"))',
+                'writeLines(provenance, file.path(output_dir, "provenance.json"))',
+                "write_worker_invocation <- function",
+                'file.path(output_dir, "logs", "worker_invocation.json")',
+                'file.path(output_dir, "logs", "worker.log")',
+            ],
+            evidence_path=f"{standard_entrypoint}::standard_package_writers",
+        ),
+        _standard_worker_lite_dispatch_row(
+            runner_text=runner_text,
+            lite_module_ids=lite_modules,
+            standard_entrypoint=standard_entrypoint,
+        ),
+        _standard_worker_main_backend_invocation_row(),
+        _standard_worker_runtime_acquisition_row(runner_text=runner_text, standard_entrypoint=standard_entrypoint),
+        {
+            "row_id": "standard_r_worker_formal_migration_boundary",
+            "title": "Formal/full algorithms still require migration evidence",
+            "status": "partial" if formal_pending else "passed",
+            "evidence_path": "analysis/registry/standard_worker_migration_evidence.json",
+            "formal_pending_module_count": len(formal_pending),
+            "formal_pending_module_ids": formal_pending,
+            "blockers": [],
+            "warnings": [f"standard_worker_entrypoint_formal_migration_pending:{module_id}" for module_id in formal_pending],
+            "boundary": "entrypoint_contract_is_not_formal_full_migration_evidence",
+        },
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.standard_worker_entrypoint_matrix.v1",
+        "status": "blocked" if blocker_counts else ("partial" if warning_counts else "passed"),
+        "row_count": len(rows),
+        "passed_row_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "partial_row_count": sum(1 for row in rows if row.get("status") == "partial"),
+        "blocked_row_count": sum(1 for row in rows if row.get("status") == "blocked"),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "standard_entrypoint": standard_entrypoint,
+        "lite_module_ids": lite_modules,
+        "formal_pending_module_ids": formal_pending,
+        "rows": rows,
+        "boundary": "read_only_standard_r_worker_entrypoint_contract_diagnostics",
+    }
+
+
+def _standard_entrypoint_lite_module_ids(modules: list[dict[str, Any]], *, standard_entrypoint: str) -> list[str]:
+    ids: list[str] = []
+    for module in modules:
+        modes = module.get("modes") if isinstance(module.get("modes"), dict) else {}
+        lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+        if lite.get("supported") is True and lite.get("runner") == standard_entrypoint and lite.get("worker_backend") == "rscript":
+            ids.append(str(module.get("module_id") or ""))
+    return [item for item in ids if item]
+
+
+def _standard_worker_lite_dispatch_row(
+    *,
+    runner_text: str,
+    lite_module_ids: list[str],
+    standard_entrypoint: str,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    for module_id in lite_module_ids:
+        token = f'if (mode == "lite" && module_id == "{module_id}")'
+        if token not in runner_text:
+            blockers.append(f"standard_worker_lite_dispatch_missing:{module_id}")
+    for token in (
+        'if (mode != "mock")',
+        'standard_worker_mode_not_enabled:',
+        'fixture_package <- file.path(repo_root, "analysis", "fixtures", "outputs", module_id, "mock_result_package")',
+    ):
+        if token not in runner_text:
+            blockers.append(f"standard_worker_mode_gate_token_missing:{token}")
+    return {
+        "row_id": "standard_r_worker_lite_dispatch_contract",
+        "title": "Standard R worker dispatches registered lite modules and blocks non-mock fallback modes",
+        "status": "blocked" if blockers else "passed",
+        "evidence_path": f"{standard_entrypoint}::lite_dispatch",
+        "lite_module_ids": lite_module_ids,
+        "lite_module_count": len(lite_module_ids),
+        "blockers": blockers,
+        "warnings": [],
+        "boundary": "lite_dispatch_only_full_mode_still_blocked_by_gate",
+    }
+
+
+def _standard_worker_main_backend_invocation_row() -> dict[str, Any]:
+    checks = [
+        (
+            "app/analysis_runtime/r_worker.py",
+            [
+                "STANDARD_R_RUNNER = REPO_ROOT / \"analysis\" / \"runners\" / \"run_module.R\"",
+                "def run_standard_r_worker",
+                "shutil.which(\"Rscript\")",
+                "command = [rscript, str(STANDARD_R_RUNNER), str(input_path), str(package_dir), mode]",
+                "subprocess.run(",
+                "\"rscript_not_available\"",
+            ],
+        ),
+        (
+            "app/analysis_runtime/task_bridge.py",
+            [
+                "from .r_worker import run_standard_r_worker",
+                "worker_required = str(mode_policy.get(\"worker_backend\") or \"\") == \"rscript\"",
+                "worker_result = run_standard_r_worker(worker_input, package_dir, mode)",
+                "worker_backend=worker_backend",
+                "task_center_registered",
+            ],
+        ),
+    ]
+    blockers: list[str] = []
+    evidence_paths: list[str] = []
+    for file_path, tokens in checks:
+        path = REPO_ROOT / file_path
+        text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+        evidence_paths.append(file_path)
+        if not path.is_file():
+            blockers.append(f"standard_worker_invocation_file_missing:{file_path}")
+            continue
+        for token in tokens:
+            if token not in text:
+                blockers.append(f"standard_worker_invocation_token_missing:{file_path}:{token}")
+    return {
+        "row_id": "standard_r_worker_main_backend_invocation_contract",
+        "title": "Main backend invokes standard R worker through task bridge helper",
+        "status": "blocked" if blockers else "passed",
+        "evidence_path": "; ".join(evidence_paths),
+        "blockers": blockers,
+        "warnings": [],
+        "boundary": "main_backend_invokes_repo_owned_runner_no_module_private_r_outputs",
+    }
+
+
+def _standard_worker_runtime_acquisition_row(*, runner_text: str, standard_entrypoint: str) -> dict[str, Any]:
+    hits = [pattern for pattern in (*BANNED_RUNTIME_INSTALL_PATTERNS, *BANNED_RUNTIME_RESOURCE_DOWNLOAD_PATTERNS) if pattern in runner_text]
+    return {
+        "row_id": "standard_r_worker_no_runtime_acquisition",
+        "title": "Standard R worker contains no runtime install or resource download commands",
+        "status": "blocked" if hits else "passed",
+        "evidence_path": standard_entrypoint,
+        "forbidden_patterns": list(BANNED_RUNTIME_INSTALL_PATTERNS) + list(BANNED_RUNTIME_RESOURCE_DOWNLOAD_PATTERNS),
+        "blockers": [f"standard_worker_runtime_acquisition_pattern_found:{pattern}" for pattern in hits],
+        "warnings": [],
+        "boundary": "no_install_no_download_in_standard_worker_entrypoint",
     }
 
 

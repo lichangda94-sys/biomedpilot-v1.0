@@ -106,6 +106,17 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "fixture=passed" in module_interface_text
     assert "analysis/modules/deg/module.json" in module_interface_text
     assert "r-bio-core->r-chem-gpu" in module_interface_text
+    entrypoint_text = "\n".join(str(row) for row in state["standard_worker_entrypoint_rows"])
+    assert "Standard R worker entrypoint matrix" in entrypoint_text
+    assert "passed=5" in entrypoint_text
+    assert "partial=1" in entrypoint_text
+    assert "blocked=0" in entrypoint_text
+    assert "lite_modules=deg；survival；univariate；multivariate；enrichment" in entrypoint_text
+    assert "Standard R worker contract: standard_r_worker_cli_contract" in entrypoint_text
+    assert "Standard R worker contract: standard_r_worker_lite_dispatch_contract" in entrypoint_text
+    assert "Standard R worker contract: standard_r_worker_formal_migration_boundary" in entrypoint_text
+    assert "standard_worker_entrypoint_formal_migration_pending:deg" in entrypoint_text
+    assert "entrypoint_contract_is_not_formal_full_migration_evidence" in entrypoint_text
     external_tool_text = "\n".join(str(row) for row in state["external_tool_adapter_rows"])
     assert "External tool adapter isolation matrix" in external_tool_text
     assert "passed=2" in external_tool_text
@@ -232,6 +243,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["module_interface_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["module_interface_matrix"]["passed_module_count"] == 10
     assert state["developer_diagnostics"]["module_interface_rows"] == state["module_interface_rows"]
+    assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["status"] == "partial"
+    assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
+    assert state["developer_diagnostics"]["standard_worker_entrypoint_rows"] == state["standard_worker_entrypoint_rows"]
     assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["passed_module_count"] == 2
     assert state["developer_diagnostics"]["external_tool_adapter_rows"] == state["external_tool_adapter_rows"]

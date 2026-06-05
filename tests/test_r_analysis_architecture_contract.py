@@ -18,6 +18,7 @@ from app.analysis_runtime.architecture_status import (
     build_legacy_sidecar_transition_matrix,
     build_module_interface_matrix,
     build_reproducibility_provenance_matrix,
+    build_standard_worker_entrypoint_matrix,
     build_task_system_boundary_matrix,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
@@ -1406,6 +1407,12 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["module_interface_matrix"]["status"] == "passed"
     assert status["module_interface_matrix"]["passed_module_count"] == 10
     assert status["module_interface_matrix"]["blocked_module_count"] == 0
+    assert status["standard_worker_entrypoint_matrix"]["status"] == "partial"
+    assert status["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
+    assert status["standard_worker_entrypoint_matrix"]["partial_row_count"] == 1
+    assert status["standard_worker_entrypoint_matrix"]["blocked_row_count"] == 0
+    assert status["standard_worker_entrypoint_matrix"]["standard_entrypoint"] == "analysis/runners/run_module.R"
+    assert set(status["standard_worker_entrypoint_matrix"]["lite_module_ids"]) == REQUIRED_MODULES
     assert status["external_tool_adapter_matrix"]["status"] == "passed"
     assert status["external_tool_adapter_matrix"]["passed_module_count"] == 2
     assert status["external_tool_adapter_matrix"]["blocked_module_count"] == 0
@@ -1920,6 +1927,34 @@ def test_module_interface_matrix_tracks_standard_module_contracts() -> None:
     assert rows["deg"]["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+
+
+def test_standard_worker_entrypoint_matrix_tracks_runner_contract_and_partial_migration() -> None:
+    matrix = build_standard_worker_entrypoint_matrix()
+    rows = {row["row_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.standard_worker_entrypoint_matrix.v1"
+    assert matrix["status"] == "partial"
+    assert matrix["boundary"] == "read_only_standard_r_worker_entrypoint_contract_diagnostics"
+    assert matrix["standard_entrypoint"] == "analysis/runners/run_module.R"
+    assert set(matrix["lite_module_ids"]) == REQUIRED_MODULES
+    assert set(matrix["formal_pending_module_ids"]) == REQUIRED_MODULES
+    assert matrix["row_count"] == 6
+    assert matrix["passed_row_count"] == 5
+    assert matrix["partial_row_count"] == 1
+    assert matrix["blocked_row_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert matrix["warning_counts"]["standard_worker_entrypoint_formal_migration_pending:deg"] == 1
+    assert rows["standard_r_worker_cli_contract"]["status"] == "passed"
+    assert rows["standard_r_worker_package_output_contract"]["status"] == "passed"
+    assert rows["standard_r_worker_lite_dispatch_contract"]["status"] == "passed"
+    assert rows["standard_r_worker_lite_dispatch_contract"]["lite_module_count"] == 10
+    assert set(rows["standard_r_worker_lite_dispatch_contract"]["lite_module_ids"]) == REQUIRED_MODULES
+    assert rows["standard_r_worker_main_backend_invocation_contract"]["status"] == "passed"
+    assert rows["standard_r_worker_no_runtime_acquisition"]["status"] == "passed"
+    assert rows["standard_r_worker_no_runtime_acquisition"]["blockers"] == []
+    assert rows["standard_r_worker_formal_migration_boundary"]["status"] == "partial"
+    assert "standard_worker_entrypoint_formal_migration_pending:survival" in rows["standard_r_worker_formal_migration_boundary"]["warnings"]
 
 
 def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_by_default() -> None:
