@@ -198,6 +198,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "status_counts": frontend_consumption_matrix.get("status_counts", {}),
             "blocker_counts": frontend_consumption_matrix.get("blocker_counts", {}),
             "warning_counts": frontend_consumption_matrix.get("warning_counts", {}),
+            "pending_detail_view_count": frontend_consumption_matrix.get("pending_detail_view_count", 0),
+            "pending_detail_view_ids": frontend_consumption_matrix.get("pending_detail_view_ids", []),
             "boundary": frontend_consumption_matrix.get("boundary"),
         },
         "frontend_consumption_rows": [

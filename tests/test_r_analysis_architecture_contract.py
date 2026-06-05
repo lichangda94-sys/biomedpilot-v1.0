@@ -1871,8 +1871,15 @@ def test_frontend_standard_package_consumption_matrix_tracks_partial_ui_boundary
     assert matrix["passed_consumer_count"] == 4
     assert matrix["partial_consumer_count"] == 1
     assert matrix["blocked_consumer_count"] == 0
+    assert matrix["pending_detail_view_count"] == 3
+    assert matrix["pending_detail_view_ids"] == [
+        "formal_deg_review_panel",
+        "formal_deg_plot_report_controls",
+        "immune_tme_scoring_page",
+    ]
     assert matrix["blocker_counts"] == {}
     assert matrix["warning_counts"]["detailed_result_views_still_need_standard_package_only_migration"] == 1
+    assert matrix["warning_counts"]["detailed_result_view_pending_standard_package_migration:formal_deg_review_panel"] == 1
     assert rows["catalog_source_policy"]["status"] == "passed"
     assert rows["catalog_source_policy"]["consumer_surface"] == "build_standard_analysis_package_catalog"
     assert rows["catalog_source_policy"]["source_policy"] == "consume_result_index_registered_standard_result_packages_only"
@@ -1883,8 +1890,18 @@ def test_frontend_standard_package_consumption_matrix_tracks_partial_ui_boundary
     assert rows["results_browser_tables"]["status"] == "passed"
     assert rows["results_browser_tables"]["consumer_surface"] == "BioinformaticsResultsBrowserWidget"
     assert rows["detailed_result_views_migration"]["status"] == "partial"
+    assert rows["detailed_result_views_migration"]["pending_detail_view_count"] == 3
+    assert rows["detailed_result_views_migration"]["pending_detail_view_ids"] == [
+        "formal_deg_review_panel",
+        "formal_deg_plot_report_controls",
+        "immune_tme_scoring_page",
+    ]
+    assert rows["detailed_result_views_migration"]["pending_detail_views"][0]["consumer_surface"] == "BioinformaticsResultsBrowserWidget.formal_deg_review"
+    assert "build_formal_deg_result_review" in rows["detailed_result_views_migration"]["pending_detail_views"][0]["current_private_tokens"]
+    assert "build_standard_analysis_package_detail()" in rows["detailed_result_views_migration"]["migration_next_action"]
     assert rows["detailed_result_views_migration"]["blockers"] == []
-    assert rows["detailed_result_views_migration"]["warnings"] == ["detailed_result_views_still_need_standard_package_only_migration"]
+    assert "detailed_result_views_still_need_standard_package_only_migration" in rows["detailed_result_views_migration"]["warnings"]
+    assert "detailed_result_view_pending_standard_package_migration:immune_tme_scoring_page" in rows["detailed_result_views_migration"]["warnings"]
 
 
 def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> None:

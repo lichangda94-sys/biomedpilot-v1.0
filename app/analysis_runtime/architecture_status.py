@@ -860,16 +860,7 @@ def build_frontend_standard_package_consumption_matrix() -> dict[str, Any]:
             ],
             consumer_surface="BioinformaticsResultsBrowserWidget",
         ),
-        {
-            "row_id": "detailed_result_views_migration",
-            "title": "Detailed result views still need standard-package-only migration",
-            "status": "partial",
-            "file_path": "app/bioinformatics/workflow_pages.py",
-            "consumer_surface": "module_specific_detailed_result_views",
-            "source_policy": "transitional_legacy_detail_views_must_not_be_formal_readiness_evidence",
-            "blockers": [],
-            "warnings": ["detailed_result_views_still_need_standard_package_only_migration"],
-        },
+        _frontend_detailed_result_views_migration_row(),
     ]
     blocker_counts = _count_row_blockers(rows, "blockers")
     warning_counts = _count_row_blockers(rows, "warnings")
@@ -884,6 +875,12 @@ def build_frontend_standard_package_consumption_matrix() -> dict[str, Any]:
         "status_counts": status_counts,
         "blocker_counts": blocker_counts,
         "warning_counts": warning_counts,
+        "pending_detail_view_count": sum(int(row.get("pending_detail_view_count") or 0) for row in rows),
+        "pending_detail_view_ids": [
+            str(item)
+            for row in rows
+            for item in (row.get("pending_detail_view_ids", []) if isinstance(row.get("pending_detail_view_ids"), list) else [])
+        ],
         "rows": rows,
         "boundary": "read_only_frontend_standard_package_consumption_diagnostics",
     }
@@ -915,6 +912,71 @@ def _frontend_consumption_row(
         "required_tokens": required_tokens,
         "blockers": blockers,
         "warnings": [],
+    }
+
+
+def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
+    file_path = "app/bioinformatics/workflow_pages.py"
+    path = REPO_ROOT / file_path
+    text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+    targets = [
+        {
+            "view_id": "formal_deg_review_panel",
+            "consumer_surface": "BioinformaticsResultsBrowserWidget.formal_deg_review",
+            "current_private_tokens": [
+                "build_formal_deg_result_review",
+                "export_formal_deg_review_table",
+                "formalDegReviewTable",
+            ],
+            "migration_next_action": "read DEG review rows from standard package artifact manifest and package-local tables",
+        },
+        {
+            "view_id": "formal_deg_plot_report_controls",
+            "consumer_surface": "BioinformaticsResultsBrowserWidget.formal_deg_plot_report_export",
+            "current_private_tokens": [
+                "build_formal_deg_plot_gate",
+                "create_formal_deg_plot_artifact",
+                "create_formal_deg_report_ready_package",
+            ],
+            "migration_next_action": "drive plot/report/export controls from standard package artifacts and report package manifests",
+        },
+        {
+            "view_id": "immune_tme_scoring_page",
+            "consumer_surface": "BioinformaticsImmuneScoringWidget",
+            "current_private_tokens": [
+                "build_immune_infiltration_readiness",
+                "run_immune_scoring",
+                "generate_immune_tme_report",
+            ],
+            "migration_next_action": "replace module-private score/report previews with standard package catalog/detail artifacts",
+        },
+    ]
+    blockers: list[str] = []
+    if not path.is_file():
+        blockers.append(f"frontend_consumption_file_missing:{file_path}")
+    pending: list[dict[str, Any]] = []
+    for target in targets:
+        missing_tokens = [token for token in target["current_private_tokens"] if token not in text]
+        if missing_tokens:
+            blockers.append(f"detailed_result_view_inventory_token_missing:{target['view_id']}:{','.join(missing_tokens)}")
+            continue
+        pending.append(dict(target))
+    pending_ids = [str(item["view_id"]) for item in pending]
+    warnings = ["detailed_result_views_still_need_standard_package_only_migration"]
+    warnings.extend(f"detailed_result_view_pending_standard_package_migration:{view_id}" for view_id in pending_ids)
+    return {
+        "row_id": "detailed_result_views_migration",
+        "title": "Detailed result views still need standard-package-only migration",
+        "status": "blocked" if blockers else "partial",
+        "file_path": file_path,
+        "consumer_surface": "module_specific_detailed_result_views",
+        "source_policy": "transitional_legacy_detail_views_must_not_be_formal_readiness_evidence",
+        "pending_detail_view_count": len(pending),
+        "pending_detail_view_ids": pending_ids,
+        "pending_detail_views": pending,
+        "migration_next_action": "migrate listed detailed result views to consume build_standard_analysis_package_detail() and standard package artifact manifests before closing RARCH-08",
+        "blockers": blockers,
+        "warnings": warnings,
     }
 
 

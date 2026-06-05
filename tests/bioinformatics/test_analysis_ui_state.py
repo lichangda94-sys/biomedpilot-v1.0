@@ -271,7 +271,11 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["legacy_sidecar_transition_rows"] == state["legacy_sidecar_transition_rows"]
     assert state["developer_diagnostics"]["frontend_consumption_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["frontend_consumption_matrix"]["partial_consumer_count"] == 1
+    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["pending_detail_view_count"] == 3
+    assert "formal_deg_review_panel" in state["developer_diagnostics"]["frontend_consumption_matrix"]["pending_detail_view_ids"]
     assert state["developer_diagnostics"]["frontend_consumption_rows"] == state["frontend_consumption_rows"]
+    assert "pending_detail_views=3" in frontend_consumption_text
+    assert "formal_deg_review_panel" in frontend_consumption_text
     assert state["developer_diagnostics"]["reproducibility_provenance_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["reproducibility_provenance_matrix"]["passed_row_count"] == 5
     assert state["developer_diagnostics"]["reproducibility_provenance_rows"] == state["reproducibility_provenance_rows"]
