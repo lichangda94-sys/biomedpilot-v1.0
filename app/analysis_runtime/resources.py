@@ -408,7 +408,8 @@ def _renv_lock_environment_blockers(environment_id: str, lockfile: str) -> list[
         return [f"analysis_environment_renv_lock_invalid_json:{environment_id}:{lockfile}"]
     policy = lock.get("BioMedPilotPolicy") if isinstance(lock.get("BioMedPilotPolicy"), dict) else {}
     blockers: list[str] = []
-    if policy.get("environment") != environment_id:
+    policy_environment = str(policy.get("environment") or "")
+    if not _renv_lock_environment_matches(environment_id, policy_environment):
         blockers.append(f"analysis_environment_renv_lock_environment_mismatch:{environment_id}")
     if policy.get("runtime_package_install") != "forbidden":
         blockers.append(f"analysis_environment_renv_lock_runtime_install_policy_invalid:{environment_id}")

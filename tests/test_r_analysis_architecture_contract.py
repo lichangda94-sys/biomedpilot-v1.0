@@ -275,6 +275,16 @@ def test_analysis_environment_registry_validator_separates_structure_from_full_r
     assert validation["blockers"] == []
 
 
+def test_full_mode_environment_blockers_allow_chem_gpu_shared_lock_policy() -> None:
+    docking_blockers = full_mode_environment_blockers("docking")
+    md_blockers = full_mode_environment_blockers("molecular_dynamics")
+
+    assert "analysis_environment_renv_lock_environment_mismatch:r-chem-full" not in docking_blockers
+    assert "analysis_environment_renv_lock_environment_mismatch:r-chem-gpu" not in md_blockers
+    assert "analysis_environment_renv_lock_not_restored:r-chem-full:scaffold_only_not_restored" in docking_blockers
+    assert "analysis_environment_renv_lock_not_restored:r-chem-gpu:scaffold_only_not_restored" in md_blockers
+
+
 def test_analysis_environment_registry_validator_blocks_invalid_app_dev_and_unknown_modules() -> None:
     environment_registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_environments.json"))
     environments = {item["environment_id"]: item for item in environment_registry["environments"]}  # type: ignore[index]
