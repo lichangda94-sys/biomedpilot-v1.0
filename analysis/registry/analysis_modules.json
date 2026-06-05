@@ -285,11 +285,12 @@
                     "fixture_input": "analysis/fixtures/inputs/correlation/module_input.json",
                     "fixture_output_package": "analysis/fixtures/outputs/correlation/mock_result_package"
                 },
-    "lite": {
-      "supported": true,
-      "worker_backend": "rscript",
-      "fixture_input": "analysis/fixtures/inputs/correlation/module_input_lite.json"
-    },
+                "lite": {
+                    "supported": true,
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "fixture_input": "analysis/fixtures/inputs/correlation/module_input_lite.json"
+                },
                 "full": {
                     "supported": false,
                     "blocker": "full_r_worker_container_not_available"

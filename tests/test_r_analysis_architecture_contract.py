@@ -758,6 +758,8 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["deg"]["full_status"] == "blocked"
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
     assert rows["deg"]["migration_evidence_status"] == "missing"
+    assert rows["correlation"]["lite_status"] == "standard_worker_lite_ready"
+    assert rows["correlation"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"

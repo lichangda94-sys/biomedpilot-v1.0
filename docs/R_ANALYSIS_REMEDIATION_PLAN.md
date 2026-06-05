@@ -36,6 +36,7 @@ Completed in this audit:
 - `analysis/schemas/output/remediation_queue.schema.json`
 - `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`
 - `analysis/runners/run_module.R`
+- `scripts/analysis_architecture_gate.py`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
 - `analysis/fixtures/inputs/<module_id>/module_input.json`
@@ -111,6 +112,10 @@ Update: exploratory immune / TME scoring now mirrors score matrix, signature cov
 Update: local expression correlation now mirrors Pearson correlation result tables and summary logs into a standard result package sidecar and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable report-ready output, causal interpretation, clinical interpretation, or complete isolated worker migration.
 
 Update: correlation is now registered as a standard analysis module with fixed mock and lite input/output contracts plus full-mode blocking. The existing production-facing runtime remains a testing-level legacy service-adapter sidecar until a standard worker migration is implemented.
+
+Update: the correlation lite registry now declares the standard R runner, so architecture status reports it as `standard_worker_lite_ready` while still blocking formal/full migration.
+
+Update: `scripts/analysis_architecture_gate.py` now provides a read-only architecture gate for CI/ReleaseBuild preflight. The default mode proves P0 absence and contract payload validity without pretending full mode is ready; `--require-full-ready` blocks until full environment locks, resource locks, and standard-worker migration evidence pass.
 
 Update: result-index task type aliases are now declared in `analysis/registry/analysis_modules.json` as `result_index_task_types`. The standard package catalog uses that registry-owned mapping when validating whether a result-index entry belongs to a package module, instead of carrying a separate hard-coded task-type map. `analysis:<module_id>` result-index entries are also blocked if the module id is not registered.
 
