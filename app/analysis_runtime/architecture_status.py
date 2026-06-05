@@ -398,12 +398,15 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
             "status": "blocked",
             "recommended_files": [
                 "app/bioinformatics/",
+                "analysis/registry/standard_worker_migration_evidence.json",
                 "analysis/runners/run_module.R",
                 "analysis/modules/",
                 "analysis/schemas/input/module_input.schema.json",
+                "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
                 "analysis/schemas/output/result_package.schema.json",
             ],
             "required_evidence": [
+                "selected formal module has registry-owned schema-valid standard worker migration evidence",
                 "validate_standard_worker_migration_evidence.status=passed",
                 "selected formal module has formal_worker_status=migrated_to_isolated_standard_worker",
                 "selected formal module executes through the task bridge and standard worker boundary",

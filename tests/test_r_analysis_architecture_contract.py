@@ -473,7 +473,19 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert "analysis/resources/manifest.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "analysis/schemas/output/resource_lock_evidence.schema.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "each locked full resource has schema-valid resource_lock_evidence" in items["lock_full_analysis_resources"]["required_evidence"]
+    assert (
+        "analysis/registry/standard_worker_migration_evidence.json"
+        in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
+    )
     assert "analysis/runners/run_module.R" in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
+    assert (
+        "analysis/schemas/output/standard_worker_migration_evidence.schema.json"
+        in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
+    )
+    assert (
+        "selected formal module has registry-owned schema-valid standard worker migration evidence"
+        in items["migrate_formal_algorithms_to_isolated_standard_worker"]["required_evidence"]
+    )
     assert all(item["status"] == "blocked" for item in items.values())
 
 

@@ -512,6 +512,7 @@ Completed:
 - Added `analysis/registry/standard_worker_migration_evidence.json` as the authoritative migration evidence registry; an empty registry means no formal module is migrated.
 - Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` so malformed, mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
 - Added a deterministic remediation queue derived from `build_analysis_architecture_status()`.
+- The formal-worker migration queue item now explicitly recommends `analysis/registry/standard_worker_migration_evidence.json` and `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, and requires registry-owned migration evidence before completion.
 - Exposed the queue through Analysis Center state and the existing formal gate table.
 - Current queue items:
   - `restore_full_analysis_environment_locks`
