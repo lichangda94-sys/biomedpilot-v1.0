@@ -432,6 +432,15 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
 
     snapshot = status if isinstance(status, dict) else build_analysis_architecture_status()
     p1_issues = [str(item) for item in snapshot.get("p1_issues", []) if item]
+    migration_matrix = snapshot.get("standard_worker_migration_matrix") if isinstance(snapshot.get("standard_worker_migration_matrix"), dict) else {}
+    migration_module_scope = {
+        "expected_module_ids": list(migration_matrix.get("expected_evidence_module_ids", [])),
+        "passed_module_ids": list(migration_matrix.get("passed_evidence_module_ids", [])),
+        "blocked_module_ids": list(migration_matrix.get("blocked_evidence_module_ids", [])),
+        "missing_module_ids": list(migration_matrix.get("missing_evidence_module_ids", [])),
+        "missing_count": len(migration_matrix.get("missing_evidence_module_ids", [])),
+        "scope_policy": "module_by_module_standard_worker_migration_required",
+    }
     issue_items = {
         "full_analysis_environment_locks_not_restored": {
             "item_id": "restore_full_analysis_environment_locks",
@@ -508,6 +517,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
                 "frontend consumes the standard package instead of module-private output paths",
             ],
             "boundary": "one module at a time; sidecar-only legacy adapter output is not full migration",
+            "module_scope": migration_module_scope,
         },
     }
     items = [issue_items[issue] for issue in p1_issues if issue in issue_items]

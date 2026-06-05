@@ -746,6 +746,14 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
         "selected formal module has registry-owned schema-valid standard worker migration evidence"
         in items["migrate_formal_algorithms_to_isolated_standard_worker"]["required_evidence"]
     )
+    migration_scope = items["migrate_formal_algorithms_to_isolated_standard_worker"]["module_scope"]
+    assert migration_scope["scope_policy"] == "module_by_module_standard_worker_migration_required"
+    assert migration_scope["passed_module_ids"] == []
+    assert migration_scope["blocked_module_ids"] == []
+    assert migration_scope["missing_module_ids"] == migration_scope["expected_module_ids"]
+    assert migration_scope["missing_count"] == len(migration_scope["expected_module_ids"])
+    assert "deg" in migration_scope["missing_module_ids"]
+    assert "molecular_dynamics" in migration_scope["missing_module_ids"]
     assert all(item["status"] == "blocked" for item in items.values())
 
 

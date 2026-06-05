@@ -99,6 +99,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "restore_full_analysis_environment_locks" in remediation_text
     assert "lock_full_analysis_resources" in remediation_text
     assert "migrate_formal_algorithms_to_isolated_standard_worker" in remediation_text
+    assert "missing_modules=10" in remediation_text
+    assert "missing_module:deg" in remediation_text
+    assert "missing_module:enrichment" in remediation_text
     assert state["developer_diagnostics"]["analysis_architecture_status"]["p0_issues"] == []
     assert "full_analysis_environment_locks_not_restored" in state["developer_diagnostics"]["analysis_architecture_status"]["p1_issues"]
     activation_gate = state["developer_diagnostics"]["analysis_architecture_status"]["full_analysis_activation_gate"]

@@ -119,6 +119,7 @@ Standard package discovery is now available to the UI state layer:
 - Analysis Center exposes that activation gate as a visible row with disabled reasons, so full-mode blockers are not hidden in developer-only diagnostics.
 - Analysis Center also exposes a `R worker migration evidence coverage` row derived from the standard-worker migration matrix. It lists missing migration evidence per module, so users and internal testers can see that lite readiness is not full/formal isolated-worker migration.
 - `build_analysis_remediation_queue()` now self-checks against `analysis/schemas/output/remediation_queue.schema.json`, keeping P1 remediation queue consumers on a stable contract.
+- The `migrate_formal_algorithms_to_isolated_standard_worker` remediation item now carries `module_scope` with expected, passed, blocked, and missing migration evidence modules, so remediation planning can proceed one module at a time without treating lite fixture readiness as full migration.
 - `analysis/registry/environment_lock_evidence.json` is now the authoritative registry for restored full environment evidence. It is intentionally empty, so no full environment is restored; `validate_analysis_environment_lock_evidence_registry()` provides the future evidence entry point without changing the default app-dev dependency boundary.
 - `analysis/registry/resource_lock_evidence.json` is now the authoritative registry for externally prepared full resource lock evidence. It is intentionally empty, so no Reactome/MSigDB/spatial/chem resource is locked; `validate_analysis_resource_lock_evidence_registry()` provides the future evidence entry point without permitting runtime downloads.
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
@@ -478,6 +479,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added Analysis Center remediation rows so the UI can display full environment, full resource, and isolated worker migration blockers without implying full analysis readiness.
 - Added Analysis Center standard-worker migration evidence coverage row so missing module-level migration evidence is visible in the UI state.
 - Added standard-worker migration evidence coverage to the architecture gate Markdown report.
+- Added module-level migration scope to the isolated standard-worker remediation item.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

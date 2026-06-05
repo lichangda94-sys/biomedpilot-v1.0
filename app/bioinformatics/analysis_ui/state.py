@@ -1144,13 +1144,18 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
         )
     ]
     for item in items:
+        module_scope = item.get("module_scope") if isinstance(item.get("module_scope"), dict) else {}
+        missing_modules = _list(module_scope.get("missing_module_ids"))
+        scope_basis = ""
+        if module_scope:
+            scope_basis = f"; missing_modules={len(missing_modules)}; modules={compact_list(missing_modules)}"
         rows.append(
             _formal_deg_gate_row(
                 f"R remediation: {item.get('item_id')}",
                 item.get("status") or "blocked",
                 [str(item.get("source_issue") or "")],
-                _list(item.get("required_evidence"))[:2],
-                basis=f"{item.get('priority', 'P1')}; files={compact_list(_list(item.get('recommended_files'))[:3])}",
+                [*_list(item.get("required_evidence"))[:2], *[f"missing_module:{module_id}" for module_id in missing_modules[:5]]],
+                basis=f"{item.get('priority', 'P1')}; files={compact_list(_list(item.get('recommended_files'))[:3])}{scope_basis}",
             )
         )
     return rows
