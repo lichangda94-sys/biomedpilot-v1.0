@@ -99,6 +99,7 @@ Standard package discovery is now available to the UI state layer:
 - `build_analysis_architecture_status()` creates a read-only machine snapshot for the 20 R analysis architecture requirements, including P0/P1 issue lists plus resource and environment validator payloads.
 - `analysis/registry/standard_worker_migration_evidence.json` is now the authoritative registry for formal isolated-worker migration evidence. The registry is empty, so no formal module is marked migrated.
 - `build_full_analysis_activation_gate()` combines full environment readiness, full resource locks, and standard-worker migration evidence into a single read-only activation gate. Current status is blocked; the gate performs no worker execution, package installation, or resource download.
+- Analysis Center exposes that activation gate as a visible row with disabled reasons, so full-mode blockers are not hidden in developer-only diagnostics.
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - Result-index `task_type` to standard module mapping is now owned by `analysis/registry/analysis_modules.json` through `result_index_task_types`; the catalog no longer carries its own hard-coded Bioinformatics task-type map, and `analysis:<module_id>` entries are blocked when the module is not registered.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.

@@ -81,6 +81,10 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     architecture_gate_text = "\n".join(str(row) for row in state["analysis_architecture_gate_rows"])
     assert "R analysis architecture snapshot" in architecture_gate_text
     assert "R architecture P0 guard" in architecture_gate_text
+    assert "Full analysis activation gate" in architecture_gate_text
+    assert "full_analysis_environment_locks_not_ready" in architecture_gate_text
+    assert "full_analysis_resource_locks_not_ready" in architecture_gate_text
+    assert "full_analysis_standard_worker_migration_incomplete" in architecture_gate_text
     assert "partial_with_p1_gaps" in architecture_gate_text
     worker_migration_text = "\n".join(str(row) for row in state["standard_worker_migration_rows"])
     assert "R standard worker migration matrix" in worker_migration_text
@@ -94,6 +98,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "migrate_formal_algorithms_to_isolated_standard_worker" in remediation_text
     assert state["developer_diagnostics"]["analysis_architecture_status"]["p0_issues"] == []
     assert "full_analysis_environment_locks_not_restored" in state["developer_diagnostics"]["analysis_architecture_status"]["p1_issues"]
+    activation_gate = state["developer_diagnostics"]["analysis_architecture_status"]["full_analysis_activation_gate"]
+    assert activation_gate["status"] == "blocked"
+    assert activation_gate["blockers"] == [
+        "full_analysis_environment_locks_not_ready",
+        "full_analysis_resource_locks_not_ready",
+        "full_analysis_standard_worker_migration_incomplete",
+    ]
     remediation_queue = state["developer_diagnostics"]["analysis_architecture_remediation_queue"]
     assert remediation_queue["status"] == "open"
     assert remediation_queue["execution_policy"] == "read_only_no_runtime_mutation"

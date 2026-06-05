@@ -1106,6 +1106,7 @@ def build_analysis_environment_gate_rows(validation: dict[str, Any]) -> list[dic
 def build_analysis_architecture_gate_rows(status: dict[str, Any]) -> list[dict[str, Any]]:
     p0_issues = _list(status.get("p0_issues"))
     p1_issues = _list(status.get("p1_issues"))
+    full_gate = status.get("full_analysis_activation_gate") if isinstance(status.get("full_analysis_activation_gate"), dict) else {}
     return [
         _formal_deg_gate_row(
             "R analysis architecture snapshot",
@@ -1120,6 +1121,13 @@ def build_analysis_architecture_gate_rows(status: dict[str, Any]) -> list[dict[s
             p0_issues,
             [],
             basis="default app-dev, mock package, result.json, and runtime install boundaries",
+        ),
+        _formal_deg_gate_row(
+            "Full analysis activation gate",
+            full_gate.get("status") or "blocked",
+            _list(full_gate.get("blockers")),
+            [],
+            basis=str(full_gate.get("policy") or "full_analysis_requires_environment_resource_and_standard_worker_evidence"),
         ),
     ]
 

@@ -145,6 +145,8 @@ Update: formal standard-worker migration evidence is now centralized in `analysi
 
 Update: `build_full_analysis_activation_gate()` now combines full environment readiness, full resource readiness, and standard-worker migration evidence into one read-only full-mode activation decision. It is currently blocked by unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration; it does not execute workers, install packages, download resources, or change full-mode availability.
 
+Update: Analysis Center now renders the full-mode decision as a dedicated `Full analysis activation gate` row inside `analysis_architecture_gate_rows`, so UI users can see the exact disabled reasons without reading developer diagnostics.
+
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 
 Update: direct `analysis/runners/run_module.R` outputs now copy the submitted input payload into package-local `module_input.json` and write `logs/worker_invocation.json` with `input_manifest=module_input.json` and `worker_boundary.task_system_invocation=standard_worker_direct_cli`. Focused tests validate direct mock and blocked full runner packages through the same Python standard package validator. The blocked full direct-runner package records target environment/resource-lock snapshots and remains non-executing.
