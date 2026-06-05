@@ -196,6 +196,7 @@ The first lightweight worker paths are now available:
 - `analysis/runners/run_module.R` supports `module_id=spatial_transcriptomics`, `mode=lite` using base R spot QC and fixed repository expression/coordinate fixture data.
 - `analysis/runners/run_module.R` supports `module_id=docking`, `mode=lite` as an external-tool adapter contract fixture that writes an AutoDock Vina command manifest without executing AutoDock Vina.
 - `analysis/runners/run_module.R` supports `module_id=molecular_dynamics`, `mode=lite` as an external-tool adapter contract fixture that writes a GROMACS command manifest without executing GROMACS.
+- Spatial transcriptomics, docking, and molecular dynamics lite fixtures now declare `r-bio-core` as their lite environment. Their full modes still point to `r-spatial-full`, `r-chem-full`, and `r-chem-gpu` and remain blocked until full locks and resources exist.
 - The DEG lite path writes a standard result package with `tables/lite_deg_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - The enrichment lite path writes a standard result package with `tables/lite_ora_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - The survival lite path writes a standard result package with `tables/lite_km_curve.tsv`, `tables/lite_logrank_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.

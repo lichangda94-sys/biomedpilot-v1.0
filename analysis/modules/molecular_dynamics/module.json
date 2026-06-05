@@ -7,17 +7,17 @@
   "output_schema": "analysis/schemas/output/result_package.schema.json",
   "modes": {
     "mock": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input.json", "fixture_output_package": "analysis/fixtures/outputs/molecular_dynamics/mock_result_package"},
-    "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-chem-gpu", "result_semantics": "testing_level", "capability": "gromacs_command_manifest_fixture_no_execution", "external_tool_execution": "not_executed_in_lite_mode"},
+    "lite": {"supported": true, "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json", "runner": "analysis/runners/run_module.R", "worker_backend": "rscript", "environment": "r-bio-core", "result_semantics": "testing_level", "capability": "gromacs_command_manifest_fixture_no_execution", "external_tool_execution": "not_executed_in_lite_mode"},
     "full": {"supported": false, "blocker": "r_chem_gpu_container_not_available"}
   },
   "environment": {
     "app_dev": "docker/Dockerfile.app-dev",
-    "lite": "docker/Dockerfile.r-chem-gpu",
+    "lite": "docker/Dockerfile.r-bio-core",
     "full": "docker/Dockerfile.r-chem-gpu",
-    "renv_lite": "renv/renv.chem-full.lock",
+    "renv_lite": "renv/renv.bio-core.lock",
     "renv_full": "renv/renv.chem-full.lock"
   },
-  "analysis_environment": "r-chem-gpu",
+  "analysis_environment": "r-bio-core",
   "full_environment": "r-chem-gpu",
   "environment_lock": "renv/renv.chem-full.lock",
   "dockerfile": "docker/Dockerfile.r-chem-gpu",

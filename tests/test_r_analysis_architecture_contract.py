@@ -61,6 +61,19 @@ def rscript_path() -> str:
     return path
 
 
+def modules_lite_full_boundaries(module_registry: dict[str, object]) -> dict[str, tuple[str, str]]:
+    selected = {"spatial_transcriptomics", "docking", "molecular_dynamics"}
+    boundaries: dict[str, tuple[str, str]] = {}
+    for module in module_registry["modules"]:  # type: ignore[index]
+        module_id = str(module["module_id"])  # type: ignore[index]
+        if module_id in selected:
+            boundaries[module_id] = (
+                str(module["modes"]["lite"].get("environment")),  # type: ignore[index]
+                str(module["full_environment"]),  # type: ignore[index]
+            )
+    return boundaries
+
+
 def test_analysis_registry_declares_standard_modules_modes_and_package_contract() -> None:
     registry = read_json(ROOT / "analysis" / "registry" / "analysis_modules.json")
 
@@ -372,6 +385,18 @@ def test_analysis_environment_registry_is_authoritative_for_module_worker_bounda
         assert manifest["environment_lock"] == full_environment["renv_lock"]
         assert manifest["dependency_policy"]["runtime_install"] == "forbidden"
         assert manifest["dependency_policy"]["default_app_dependency"] is False
+
+        if module_id in {"spatial_transcriptomics", "docking", "molecular_dynamics"}:
+            assert lite_environment_id == "r-bio-core"
+            assert lite_environment["allows_heavy_analysis_dependencies"] is False
+            assert manifest_environment["lite"] == "docker/Dockerfile.r-bio-core"
+            assert manifest_environment["renv_lite"] == "renv/renv.bio-core.lock"
+
+    assert modules_lite_full_boundaries(module_registry) == {
+        "spatial_transcriptomics": ("r-bio-core", "r-spatial-full"),
+        "docking": ("r-bio-core", "r-chem-full"),
+        "molecular_dynamics": ("r-bio-core", "r-chem-gpu"),
+    }
 
 
 def test_analysis_environment_registry_validator_separates_structure_from_full_readiness() -> None:

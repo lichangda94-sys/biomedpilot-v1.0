@@ -46,7 +46,10 @@
         "multivariate",
         "enrichment",
         "immune_infiltration",
-        "correlation"
+        "correlation",
+        "spatial_transcriptomics",
+        "docking",
+        "molecular_dynamics"
       ]
     },
     {

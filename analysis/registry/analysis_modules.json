@@ -322,7 +322,7 @@
                     "fixture_input": "analysis/fixtures/inputs/spatial_transcriptomics/module_input_lite.json",
                     "runner": "analysis/runners/run_module.R",
                     "worker_backend": "rscript",
-                    "environment": "r-spatial-full",
+                    "environment": "r-bio-core",
                     "result_semantics": "testing_level",
                     "capability": "base_r_spatial_spot_qc_fixture_no_heavy_spatial_packages",
                     "heavy_spatial_packages": "not_used_in_lite_mode"
@@ -332,7 +332,7 @@
                     "blocker": "r_spatial_full_container_not_available"
                 }
             },
-            "analysis_environment": "r-spatial-full",
+            "analysis_environment": "r-bio-core",
             "full_environment": "r-spatial-full",
             "module_manifest": "analysis/modules/spatial_transcriptomics/module.json",
             "result_index_task_types": [
@@ -362,7 +362,7 @@
                     "fixture_input": "analysis/fixtures/inputs/docking/module_input_lite.json",
                     "runner": "analysis/runners/run_module.R",
                     "worker_backend": "rscript",
-                    "environment": "r-chem-full",
+                    "environment": "r-bio-core",
                     "result_semantics": "testing_level",
                     "capability": "autodock_vina_command_manifest_fixture_no_execution",
                     "external_tool_execution": "not_executed_in_lite_mode"
@@ -372,7 +372,7 @@
                     "blocker": "r_chem_full_container_not_available"
                 }
             },
-            "analysis_environment": "r-chem-full",
+            "analysis_environment": "r-bio-core",
             "full_environment": "r-chem-full",
             "module_manifest": "analysis/modules/docking/module.json",
             "result_index_task_types": [
@@ -400,7 +400,7 @@
                     "fixture_input": "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json",
                     "runner": "analysis/runners/run_module.R",
                     "worker_backend": "rscript",
-                    "environment": "r-chem-gpu",
+                    "environment": "r-bio-core",
                     "result_semantics": "testing_level",
                     "capability": "gromacs_command_manifest_fixture_no_execution",
                     "external_tool_execution": "not_executed_in_lite_mode"
@@ -410,7 +410,7 @@
                     "blocker": "r_chem_gpu_container_not_available"
                 }
             },
-            "analysis_environment": "r-chem-gpu",
+            "analysis_environment": "r-bio-core",
             "full_environment": "r-chem-gpu",
             "module_manifest": "analysis/modules/molecular_dynamics/module.json",
             "result_index_task_types": [

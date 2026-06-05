@@ -129,6 +129,8 @@ Update: immune infiltration now has a `lite` standard worker path. `run_module.R
 
 Update: expression correlation now has a `lite` standard worker path. `run_module.R` can execute base R Pearson correlation on fixed local expression fixture data and write a testing-level standard result package with `tables/lite_correlation_result.tsv`. It does not generate causal interpretation, clinical interpretation, report-ready output, or formal result semantics.
 
+Update: spatial transcriptomics, docking, and molecular dynamics lite fixtures now use `r-bio-core` rather than their full spatial/chem environments. Their lite paths remain base R or command-manifest contract fixtures; full execution still requires `r-spatial-full`, `r-chem-full`, or `r-chem-gpu` locks plus resource/tool evidence.
+
 Update: spatial transcriptomics now has a `lite` standard worker path. `run_module.R` can execute base R spot QC and coordinate SVG preview on fixed local expression/coordinate fixture data and write a testing-level standard result package. It does not use Seurat, CellChat, spacexr, spatial references, clustering, deconvolution, spatial domain calling, cell-cell communication, or report-ready spatial interpretation.
 
 Update: docking now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local receptor/ligand/config fixtures and write `tables/lite_docking_command_manifest.tsv` plus provenance and limitations. It does not execute AutoDock Vina, does not generate docking poses/scores/affinities, and does not enable full molecular docking.
