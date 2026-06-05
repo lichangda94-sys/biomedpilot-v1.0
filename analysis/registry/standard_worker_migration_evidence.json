@@ -1,0 +1,10 @@
+{
+  "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1",
+  "policy": {
+    "registry_is_authoritative": true,
+    "migration_completion_requires_schema_valid_evidence": true,
+    "mock_lite_and_legacy_sidecar_evidence_forbidden": true,
+    "manual_scoped_migration_only": true
+  },
+  "evidence_entries": []
+}

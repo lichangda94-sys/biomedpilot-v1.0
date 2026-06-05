@@ -12,6 +12,8 @@ from app.analysis_runtime.architecture_status import (
     build_analysis_architecture_status,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
+    load_standard_worker_migration_evidence_registry,
+    validate_standard_worker_migration_evidence_registry,
     validate_standard_worker_migration_evidence,
 )
 from app.analysis_runtime.standard_package import validate_standard_result_package
@@ -482,6 +484,9 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert matrix["schema_version"] == "biomedpilot.analysis.standard_worker_migration_matrix.v1"
     assert matrix["status"] == "partial"
     assert matrix["boundary"] == "matrix_is_read_only_no_worker_execution"
+    assert matrix["evidence_registry_status"] == "passed"
+    assert matrix["evidence_entry_count"] == 0
+    assert matrix["evidence_registry_blockers"] == []
     assert matrix["module_count"] >= 10
     assert matrix["formal_pending_count"] == matrix["module_count"]
     assert matrix["full_blocked_count"] == matrix["module_count"]
@@ -490,9 +495,76 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"
     assert rows["deg"]["full_status"] == "blocked"
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert rows["deg"]["migration_evidence_status"] == "missing"
     assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+
+
+def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_by_default() -> None:
+    registry = load_standard_worker_migration_evidence_registry()
+    validation = validate_standard_worker_migration_evidence_registry(registry)
+
+    assert registry["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1"
+    assert registry["policy"]["registry_is_authoritative"] is True
+    assert registry["policy"]["migration_completion_requires_schema_valid_evidence"] is True
+    assert registry["policy"]["mock_lite_and_legacy_sidecar_evidence_forbidden"] is True
+    assert registry["evidence_entries"] == []
+    assert validation["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry_validation.v1"
+    assert validation["status"] == "passed"
+    assert validation["entry_count"] == 0
+    assert validation["blockers"] == []
+
+
+def test_standard_worker_migration_matrix_does_not_accept_full_supported_module_without_registry_evidence() -> None:
+    registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_modules.json"))
+    modules = {item["module_id"]: item for item in registry["modules"]}  # type: ignore[index]
+    modules["deg"]["modes"]["full"]["supported"] = True
+    modules["deg"]["modes"]["full"]["blocker"] = ""
+    matrix = build_standard_worker_migration_matrix(registry)
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert rows["deg"]["full_status"] == "ready_unverified"
+    assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"
+    assert rows["deg"]["migration_evidence_status"] == "missing"
+    assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert matrix["formal_pending_count"] == matrix["module_count"]
+
+
+def test_standard_worker_migration_evidence_registry_blocks_bad_entries() -> None:
+    validation = validate_standard_worker_migration_evidence_registry(
+        {
+            "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1",
+            "policy": {
+                "registry_is_authoritative": True,
+                "migration_completion_requires_schema_valid_evidence": True,
+                "mock_lite_and_legacy_sidecar_evidence_forbidden": True,
+                "manual_scoped_migration_only": True,
+            },
+            "evidence_entries": [
+                {
+                    "module_id": "deg",
+                    "evidence": {
+                        "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+                        "module_id": "deg",
+                        "mode": "mock",
+                        "task_id": "mock-deg",
+                        "result_package_dir": "analysis/fixtures/outputs/deg/mock_result_package",
+                        "frontend_consumes_standard_package": True,
+                        "result_index_registered": True,
+                        "formal_result_semantics_preserved": True,
+                    },
+                }
+            ],
+        }
+    )
+
+    assert validation["status"] == "blocked"
+    assert validation["entry_count"] == 1
+    assert any(
+        blocker.startswith("standard_worker_migration_evidence_registry_entry:deg:")
+        for blocker in validation["blockers"]
+    )
 
 
 def test_standard_worker_migration_evidence_blocks_missing_package_and_ui_contract() -> None:

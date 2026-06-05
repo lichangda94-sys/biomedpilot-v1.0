@@ -4,6 +4,8 @@ from .architecture_status import (
     build_analysis_architecture_status,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
+    load_standard_worker_migration_evidence_registry,
+    validate_standard_worker_migration_evidence_registry,
     validate_standard_worker_migration_evidence,
 )
 from .package_catalog import build_standard_analysis_package_catalog, build_standard_analysis_package_detail
@@ -23,6 +25,8 @@ __all__ = [
     "build_analysis_architecture_status",
     "build_analysis_remediation_queue",
     "build_standard_worker_migration_matrix",
+    "load_standard_worker_migration_evidence_registry",
+    "validate_standard_worker_migration_evidence_registry",
     "validate_standard_worker_migration_evidence",
     "build_standard_analysis_package_catalog",
     "build_standard_analysis_package_detail",

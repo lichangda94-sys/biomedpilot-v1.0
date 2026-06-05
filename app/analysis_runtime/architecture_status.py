@@ -10,6 +10,7 @@ from .standard_package import validate_standard_result_package
 
 
 STANDARD_WORKER_MIGRATION_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json"
+STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "standard_worker_migration_evidence.json"
 TARGET_MODULE_IDS = (
     "deg",
     "survival",
@@ -222,9 +223,23 @@ def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = Non
     """Summarize module-by-module migration toward the standard worker boundary."""
 
     payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    evidence_registry = load_standard_worker_migration_evidence_registry()
+    evidence_registry_validation = validate_standard_worker_migration_evidence_registry(evidence_registry, registry=payload)
+    valid_evidence_by_module = {
+        str(item.get("module_id") or ""): item
+        for item in evidence_registry_validation.get("entries", [])
+        if isinstance(item, dict) and item.get("status") == "passed"
+    }
     modules = [item for item in payload.get("modules", []) if isinstance(item, dict)]
     standard_entrypoint = str(payload.get("standard_entrypoint") or "analysis/runners/run_module.R")
-    rows = [_standard_worker_migration_row(module, standard_entrypoint=standard_entrypoint) for module in modules]
+    rows = [
+        _standard_worker_migration_row(
+            module,
+            standard_entrypoint=standard_entrypoint,
+            valid_evidence_by_module=valid_evidence_by_module,
+        )
+        for module in modules
+    ]
     formal_pending = [row for row in rows if row["formal_worker_status"] != "migrated_to_isolated_standard_worker"]
     full_blocked = [row for row in rows if row["full_status"] == "blocked"]
     return {
@@ -235,8 +250,87 @@ def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = Non
         "formal_pending_count": len(formal_pending),
         "full_blocked_count": len(full_blocked),
         "rows": rows,
+        "evidence_registry_status": str(evidence_registry_validation.get("status") or "blocked"),
+        "evidence_entry_count": int(evidence_registry_validation.get("entry_count") or 0),
+        "evidence_registry_blockers": list(evidence_registry_validation.get("blockers", [])),
         "migration_policy": "module_by_module_standard_worker_migration_required",
         "boundary": "matrix_is_read_only_no_worker_execution",
+    }
+
+
+def load_standard_worker_migration_evidence_registry(path: str | Path | None = None) -> dict[str, Any]:
+    registry_path = Path(path).expanduser().resolve() if path else STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_PATH
+    return _read_json(registry_path)
+
+
+def validate_standard_worker_migration_evidence_registry(
+    evidence_registry: dict[str, Any] | None = None,
+    *,
+    registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate the centralized standard-worker migration evidence registry."""
+
+    payload = evidence_registry if isinstance(evidence_registry, dict) else load_standard_worker_migration_evidence_registry()
+    module_registry = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    blockers: list[str] = []
+    warnings: list[str] = []
+    entries = payload.get("evidence_entries")
+    if payload.get("schema_version") != "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1":
+        blockers.append("standard_worker_migration_evidence_registry_schema_version_mismatch")
+    policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
+    if policy.get("registry_is_authoritative") is not True:
+        blockers.append("standard_worker_migration_evidence_registry_authoritative_policy_invalid")
+    if policy.get("migration_completion_requires_schema_valid_evidence") is not True:
+        blockers.append("standard_worker_migration_evidence_registry_schema_policy_invalid")
+    if policy.get("mock_lite_and_legacy_sidecar_evidence_forbidden") is not True:
+        blockers.append("standard_worker_migration_evidence_registry_sidecar_policy_invalid")
+    if not isinstance(entries, list):
+        blockers.append("standard_worker_migration_evidence_registry_entries_invalid")
+        entries = []
+
+    seen: set[str] = set()
+    entry_results: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            blockers.append("standard_worker_migration_evidence_registry_entry_invalid")
+            continue
+        module_id = str(entry.get("module_id") or "")
+        if not module_id:
+            blockers.append("standard_worker_migration_evidence_registry_entry_module_id_missing")
+        elif module_id in seen:
+            blockers.append(f"standard_worker_migration_evidence_registry_entry_duplicate:{module_id}")
+        seen.add(module_id)
+        evidence = entry.get("evidence") if isinstance(entry.get("evidence"), dict) else {}
+        if not evidence:
+            validation = {
+                "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+                "status": "blocked",
+                "module_id": module_id,
+                "blockers": ["standard_worker_migration_evidence_registry_entry_evidence_missing"],
+                "warnings": [],
+            }
+        else:
+            validation = validate_standard_worker_migration_evidence(module_id, evidence, registry=module_registry)
+        if validation.get("status") != "passed":
+            blockers.extend(
+                f"standard_worker_migration_evidence_registry_entry:{module_id}:{blocker}"
+                for blocker in validation.get("blockers", [])
+            )
+        entry_results.append(
+            {
+                "module_id": module_id,
+                "status": str(validation.get("status") or "blocked"),
+                "blockers": list(validation.get("blockers", [])),
+                "warnings": list(validation.get("warnings", [])),
+            }
+        )
+    return {
+        "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence_registry_validation.v1",
+        "status": "blocked" if blockers else "passed",
+        "entry_count": len(entries),
+        "entries": entry_results,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": warnings,
     }
 
 
@@ -449,7 +543,12 @@ def _schema_type_matches(value: Any, expected_type: str) -> bool:
     return True
 
 
-def _standard_worker_migration_row(module: dict[str, Any], *, standard_entrypoint: str) -> dict[str, Any]:
+def _standard_worker_migration_row(
+    module: dict[str, Any],
+    *,
+    standard_entrypoint: str,
+    valid_evidence_by_module: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
     module_id = str(module.get("module_id") or "")
     modes = module.get("modes") if isinstance(module.get("modes"), dict) else {}
     mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
@@ -464,7 +563,12 @@ def _standard_worker_migration_row(module: dict[str, Any], *, standard_entrypoin
     )
     full_supported = bool(full.get("supported"))
     current_adapter_status = str(module.get("current_adapter_status") or "")
-    formal_worker_status = "migrated_to_isolated_standard_worker" if full_supported and lite_uses_standard_worker else "pending_standard_worker_migration"
+    evidence_status = "passed" if module_id in valid_evidence_by_module else "missing"
+    formal_worker_status = (
+        "migrated_to_isolated_standard_worker"
+        if full_supported and lite_uses_standard_worker and evidence_status == "passed"
+        else "pending_standard_worker_migration"
+    )
     if current_adapter_status.startswith("contract_required"):
         formal_worker_status = "contract_only_pending_standard_worker_migration"
     return {
@@ -474,6 +578,7 @@ def _standard_worker_migration_row(module: dict[str, Any], *, standard_entrypoin
         "lite_status": "standard_worker_lite_ready" if lite_uses_standard_worker else "blocked",
         "full_status": "ready_unverified" if full_supported else "blocked",
         "formal_worker_status": formal_worker_status,
+        "migration_evidence_status": evidence_status,
         "current_adapter_status": current_adapter_status,
         "standard_entrypoint": standard_entrypoint if lite_uses_standard_worker else "",
         "analysis_environment": str(module.get("analysis_environment") or ""),

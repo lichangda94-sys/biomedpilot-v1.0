@@ -20,6 +20,7 @@ Completed in this audit:
 
 - `analysis/registry/analysis_modules.json`
 - `analysis/registry/analysis_environments.json`
+- `analysis/registry/standard_worker_migration_evidence.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result.schema.json`
 - `analysis/schemas/output/provenance.schema.json`
@@ -139,6 +140,8 @@ Update: Analysis Center state now exposes `analysis_environment_gate_rows` and d
 Update: `build_analysis_architecture_status()` now provides a read-only, machine-consumable snapshot of the 20 R analysis architecture requirements. It reports current status as `partial_with_p1_gaps`: no P0 failure is present, but full environment locks, full resource locks, and universal isolated-worker migration remain incomplete.
 
 Update: Analysis Center state now exposes `analysis_architecture_status` and `analysis_architecture_gate_rows`. The visible gate table shows the architecture snapshot summary and P0 guard status, while P1 gaps remain warnings instead of being mislabeled as completed full-mode readiness.
+
+Update: formal standard-worker migration evidence is now centralized in `analysis/registry/standard_worker_migration_evidence.json`. `build_standard_worker_migration_matrix()` reads this registry and will not mark any module `migrated_to_isolated_standard_worker` unless a registry-owned evidence entry passes `validate_standard_worker_migration_evidence()`. The registry is intentionally empty now, so all formal modules remain pending.
 
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 
@@ -506,6 +509,7 @@ Completed:
 
 - Added `build_standard_worker_migration_matrix()` with one row per registered module.
 - The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
+- Added `analysis/registry/standard_worker_migration_evidence.json` as the authoritative migration evidence registry; an empty registry means no formal module is migrated.
 - Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` so malformed, mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
 - Added a deterministic remediation queue derived from `build_analysis_architecture_status()`.
 - Exposed the queue through Analysis Center state and the existing formal gate table.
@@ -525,7 +529,7 @@ Remaining:
 Acceptance:
 
 - Lite standard worker readiness must not be displayed as full/formal migration completion.
-- A module can only leave pending migration after a schema-valid evidence payload passes `validate_standard_worker_migration_evidence()` for its full-mode standard package and current UI/result-index evidence.
+- A module can only leave pending migration after a registry-owned, schema-valid evidence payload passes `validate_standard_worker_migration_evidence()` for its full-mode standard package and current UI/result-index evidence.
 - Queue remains read-only.
 - Full mode remains blocked until environment and resource validators pass.
 - Current UI can show disabled reasons without implying formal/full analysis completion.

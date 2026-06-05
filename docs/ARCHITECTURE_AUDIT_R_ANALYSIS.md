@@ -18,6 +18,7 @@ This audit added a minimal boundary scaffold:
 
 - `analysis/registry/analysis_modules.json`
 - `analysis/registry/analysis_environments.json`
+- `analysis/registry/standard_worker_migration_evidence.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result.schema.json`
 - `analysis/schemas/output/provenance.schema.json`
@@ -96,6 +97,7 @@ Resource governance now has a programmatic gate:
 Standard package discovery is now available to the UI state layer:
 
 - `build_analysis_architecture_status()` creates a read-only machine snapshot for the 20 R analysis architecture requirements, including P0/P1 issue lists plus resource and environment validator payloads.
+- `analysis/registry/standard_worker_migration_evidence.json` is now the authoritative registry for formal isolated-worker migration evidence. The registry is empty, so no formal module is marked migrated.
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - Result-index `task_type` to standard module mapping is now owned by `analysis/registry/analysis_modules.json` through `result_index_task_types`; the catalog no longer carries its own hard-coded Bioinformatics task-type map, and `analysis:<module_id>` entries are blocked when the module is not registered.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
@@ -393,7 +395,7 @@ The current machine-readable queue exposes these P1 items:
 | `lock_full_analysis_resources` | `analysis/resources/manifest.json`, `analysis/schemas/output/resource_lock_evidence.schema.json`, `analysis/resources/locks/`, `external_analysis_resources/` | Every full resource declares version, source, hash, license, and cache path; every locked full resource has schema-valid evidence; resource validator reports full readiness. |
 | `migrate_formal_algorithms_to_isolated_standard_worker` | `app/bioinformatics/`, `analysis/runners/run_module.R`, `analysis/modules/`, `analysis/schemas/input/module_input.schema.json`, `analysis/schemas/output/result_package.schema.json` | Selected formal module executes through the task bridge and standard worker boundary; frontend consumes the standard package instead of module-private output paths. |
 
-The current standard-worker migration matrix is intentionally still `partial`: all registered modules have mock packages and lite worker fixture paths, but full/formal migration remains blocked or pending until a selected formal module has `formal_worker_status=migrated_to_isolated_standard_worker`, provides a payload matching `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, passes `validate_standard_worker_migration_evidence()`, and passes isolated environment/resource gates.
+The current standard-worker migration matrix is intentionally still `partial`: all registered modules have mock packages and lite worker fixture paths, but full/formal migration remains blocked or pending until a selected formal module has a registry-owned payload in `analysis/registry/standard_worker_migration_evidence.json`, that payload matches `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, passes `validate_standard_worker_migration_evidence()`, and passes isolated environment/resource gates.
 
 ## 8. Completed Changes in This Audit
 
