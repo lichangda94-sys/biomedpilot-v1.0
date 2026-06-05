@@ -6,6 +6,7 @@ from typing import Any
 
 from .registry import REPO_ROOT, load_analysis_module_registry
 from .resources import validate_analysis_environment_registry, validate_analysis_resource_manifest
+from .standard_package import validate_standard_result_package
 
 
 TARGET_MODULE_IDS = (
@@ -302,6 +303,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
                 "analysis/schemas/output/result_package.schema.json",
             ],
             "required_evidence": [
+                "validate_standard_worker_migration_evidence.status=passed",
                 "selected formal module has formal_worker_status=migrated_to_isolated_standard_worker",
                 "selected formal module executes through the task bridge and standard worker boundary",
                 "standard package includes result.json, provenance.json, tables, plots, reports, and logs",
@@ -321,6 +323,79 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
         "execution_policy": "read_only_no_runtime_mutation",
         "install_policy": "no_runtime_package_install_or_resource_download",
         "full_mode_policy": "full_mode_remains_blocked_until_environment_and_resource_evidence_passes",
+    }
+
+
+def validate_standard_worker_migration_evidence(
+    module_id: str,
+    evidence: dict[str, Any],
+    *,
+    registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate evidence before a formal module can be marked worker-migrated."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    registered = {
+        str(item.get("module_id") or ""): item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id")
+    }
+    blockers: list[str] = []
+    warnings: list[str] = []
+    module_key = str(module_id or evidence.get("module_id") or "")
+    if module_key not in registered:
+        blockers.append(f"standard_worker_migration_module_unregistered:{module_key}")
+    if str(evidence.get("module_id") or module_key) != module_key:
+        blockers.append("standard_worker_migration_evidence_module_id_mismatch")
+
+    mode = str(evidence.get("mode") or "")
+    if mode != "full":
+        blockers.append("standard_worker_migration_requires_full_mode_standard_package")
+    task_id = str(evidence.get("task_id") or "")
+    if not task_id:
+        blockers.append("standard_worker_migration_task_id_missing")
+
+    package_dir = REPO_ROOT / str(evidence.get("result_package_dir") or "")
+    if not str(evidence.get("result_package_dir") or ""):
+        blockers.append("standard_worker_migration_result_package_dir_missing")
+    elif not package_dir.is_dir():
+        blockers.append("standard_worker_migration_result_package_dir_not_found")
+    else:
+        validation = validate_standard_result_package(package_dir, expected_module_id=module_key, expected_task_id=task_id, expected_mode=mode)
+        if validation.get("status") != "passed":
+            blockers.extend(f"standard_worker_migration_package_validation:{item}" for item in validation.get("blockers", []) or [])
+        warnings.extend(f"standard_worker_migration_package_warning:{item}" for item in validation.get("warnings", []) or [])
+        invocation = _read_json(package_dir / "logs" / "worker_invocation.json")
+        boundary = invocation.get("worker_boundary") if isinstance(invocation.get("worker_boundary"), dict) else {}
+        if boundary.get("boundary_type") != "standard_r_worker":
+            blockers.append("standard_worker_migration_requires_standard_r_worker_boundary")
+        if boundary.get("task_system_invocation") != "task_center_registered":
+            blockers.append("standard_worker_migration_requires_task_center_registered_invocation")
+        if boundary.get("migration_status") != "standard_worker_contract":
+            blockers.append("standard_worker_migration_requires_standard_worker_contract_status")
+        if invocation.get("runtime_install_policy") != "forbidden":
+            blockers.append("standard_worker_migration_runtime_install_policy_not_forbidden")
+        if invocation.get("resource_download_policy") != "forbidden":
+            blockers.append("standard_worker_migration_resource_download_policy_not_forbidden")
+
+    if evidence.get("frontend_consumes_standard_package") is not True:
+        blockers.append("standard_worker_migration_frontend_standard_package_consumption_missing")
+    if evidence.get("result_index_registered") is not True:
+        blockers.append("standard_worker_migration_result_index_registration_missing")
+    if evidence.get("formal_result_semantics_preserved") is not True:
+        blockers.append("standard_worker_migration_formal_result_semantics_not_preserved")
+
+    return {
+        "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+        "status": "blocked" if blockers else "passed",
+        "module_id": module_key,
+        "mode": mode,
+        "result_package_dir": str(evidence.get("result_package_dir") or ""),
+        "blockers": blockers,
+        "warnings": warnings,
+        "required_boundary": "standard_r_worker",
+        "required_invocation": "task_center_registered",
+        "required_migration_status": "standard_worker_contract",
     }
 
 
@@ -417,6 +492,13 @@ def _mock_package_path(module: dict[str, Any]) -> Path:
 
 def _path_exists(value: object) -> bool:
     return bool(value) and (REPO_ROOT / str(value)).exists()
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
 def _renv_locks_exist() -> bool:

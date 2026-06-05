@@ -388,7 +388,7 @@ The current machine-readable queue exposes these P1 items:
 | `lock_full_analysis_resources` | `analysis/resources/manifest.json`, `external_analysis_resources/` | Every full resource declares version, source, hash, license, and cache path; resource validator reports full readiness. |
 | `migrate_formal_algorithms_to_isolated_standard_worker` | `app/bioinformatics/`, `analysis/runners/run_module.R`, `analysis/modules/`, `analysis/schemas/input/module_input.schema.json`, `analysis/schemas/output/result_package.schema.json` | Selected formal module executes through the task bridge and standard worker boundary; frontend consumes the standard package instead of module-private output paths. |
 
-The current standard-worker migration matrix is intentionally still `partial`: all registered modules have mock packages and lite worker fixture paths, but full/formal migration remains blocked or pending until a selected formal module has `formal_worker_status=migrated_to_isolated_standard_worker` and passes isolated environment/resource gates.
+The current standard-worker migration matrix is intentionally still `partial`: all registered modules have mock packages and lite worker fixture paths, but full/formal migration remains blocked or pending until a selected formal module has `formal_worker_status=migrated_to_isolated_standard_worker`, passes `validate_standard_worker_migration_evidence()`, and passes isolated environment/resource gates.
 
 ## 8. Completed Changes in This Audit
 
@@ -431,6 +431,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added Analysis Center environment gate rows for registry structure and full R environment readiness.
 - Added `build_analysis_remediation_queue()` to expose current P1 architecture gaps as blocked, manual, read-only remediation items with source issues, recommended files, and required evidence.
 - Added `build_standard_worker_migration_matrix()` to expose module-level mock/lite/full/formal migration status and to drive the formal-standard-worker P1 issue from evidence instead of a static string.
+- Added `validate_standard_worker_migration_evidence()` to block full/formal migration completion claims unless standard package, standard R worker boundary, task-center invocation, result-index registration, UI standard-package consumption, and formal semantics preservation evidence is present.
 - Added Analysis Center remediation rows so the UI can display full environment, full resource, and isolated worker migration blockers without implying full analysis readiness.
 - Added architecture and remediation docs.
 

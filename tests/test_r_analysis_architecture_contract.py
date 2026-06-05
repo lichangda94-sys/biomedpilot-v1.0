@@ -8,7 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from app.analysis_runtime.architecture_status import build_analysis_architecture_status, build_analysis_remediation_queue, build_standard_worker_migration_matrix
+from app.analysis_runtime.architecture_status import (
+    build_analysis_architecture_status,
+    build_analysis_remediation_queue,
+    build_standard_worker_migration_matrix,
+    validate_standard_worker_migration_evidence,
+)
 from app.analysis_runtime.standard_package import validate_standard_result_package
 from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
@@ -345,6 +350,48 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+
+
+def test_standard_worker_migration_evidence_blocks_missing_package_and_ui_contract() -> None:
+    validation = validate_standard_worker_migration_evidence(
+        "deg",
+        {
+            "module_id": "deg",
+            "mode": "full",
+            "task_id": "task-deg-full",
+            "result_package_dir": "missing/package",
+            "frontend_consumes_standard_package": False,
+            "result_index_registered": False,
+            "formal_result_semantics_preserved": False,
+        },
+    )
+
+    assert validation["status"] == "blocked"
+    assert "standard_worker_migration_result_package_dir_not_found" in validation["blockers"]
+    assert "standard_worker_migration_frontend_standard_package_consumption_missing" in validation["blockers"]
+    assert "standard_worker_migration_result_index_registration_missing" in validation["blockers"]
+    assert "standard_worker_migration_formal_result_semantics_not_preserved" in validation["blockers"]
+
+
+def test_standard_worker_migration_evidence_does_not_accept_mock_or_lite_fixture_package() -> None:
+    validation = validate_standard_worker_migration_evidence(
+        "deg",
+        {
+            "module_id": "deg",
+            "mode": "mock",
+            "task_id": "mock-deg",
+            "result_package_dir": "analysis/fixtures/outputs/deg/mock_result_package",
+            "frontend_consumes_standard_package": True,
+            "result_index_registered": True,
+            "formal_result_semantics_preserved": True,
+        },
+    )
+
+    assert validation["status"] == "blocked"
+    assert "standard_worker_migration_requires_full_mode_standard_package" in validation["blockers"]
+    assert "standard_worker_migration_requires_standard_r_worker_boundary" in validation["blockers"]
+    assert "standard_worker_migration_requires_task_center_registered_invocation" in validation["blockers"]
+    assert "standard_worker_migration_requires_standard_worker_contract_status" in validation["blockers"]
 
 
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:
