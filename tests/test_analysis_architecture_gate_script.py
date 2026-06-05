@@ -261,6 +261,8 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     assert environment_templates["r-bio-full"]["runtime_package_install"] == "forbidden"
     assert environment_templates["r-bio-full"]["renv_lock_content"]["policy_status"] == "restored"
     assert environment_templates["r-bio-full"]["renv_lock_content"]["packages_non_empty"] is True
+    assert environment_templates["r-bio-full"]["docker_image"]["digest"]["algorithm"] == "sha256"
+    assert environment_templates["r-bio-full"]["docker_image"]["build_status"] == "built"
     assert resource_templates["reactome_full"]["runtime_download_allowed"] is False
     assert resource_templates["reactome_full"]["cache_content"]["non_empty"] is True
     assert migration_templates["deg"]["required_worker_boundary"] == "standard_r_worker"
@@ -340,6 +342,7 @@ def test_analysis_evidence_template_package_schema_is_present_and_matches_payloa
     assert "template_counts" in schema["required"]
     assert schema["properties"]["remediation_scope"]["type"] == "object"
     assert "renv_lock_content" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
+    assert "docker_image" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
     assert "cache_content" in schema["properties"]["resource_lock_evidence_templates"]["items"]["required"]
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.evidence_template_package.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
@@ -369,4 +372,5 @@ def test_analysis_evidence_template_package_schema_blocks_missing_content_declar
     )
 
     assert "analysis_evidence_template_package_environment_template_renv_lock_content_missing:r-bio-full" in blockers
+    assert "analysis_evidence_template_package_environment_template_docker_image_missing:r-bio-full" in blockers
     assert "analysis_evidence_template_package_resource_template_cache_content_missing:reactome_full" in blockers

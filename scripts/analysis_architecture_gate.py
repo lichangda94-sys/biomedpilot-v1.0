@@ -635,11 +635,24 @@ def _environment_template_package_item_blockers(value: Any) -> list[str]:
         content = item.get("renv_lock_content")
         if not isinstance(content, dict):
             blockers.append(f"analysis_evidence_template_package_environment_template_renv_lock_content_missing:{template_id}")
-            continue
-        if content.get("packages_non_empty") is not True:
+        elif content.get("packages_non_empty") is not True:
             blockers.append(f"analysis_evidence_template_package_environment_template_packages_non_empty_missing:{template_id}")
-        if not str(content.get("policy_status") or ""):
+        if isinstance(content, dict) and not str(content.get("policy_status") or ""):
             blockers.append(f"analysis_evidence_template_package_environment_template_policy_status_missing:{template_id}")
+        docker_image = item.get("docker_image")
+        if not isinstance(docker_image, dict):
+            blockers.append(f"analysis_evidence_template_package_environment_template_docker_image_missing:{template_id}")
+        else:
+            if not str(docker_image.get("image_ref") or ""):
+                blockers.append(f"analysis_evidence_template_package_environment_template_docker_image_ref_missing:{template_id}")
+            if not isinstance(docker_image.get("digest"), dict):
+                blockers.append(f"analysis_evidence_template_package_environment_template_docker_image_digest_missing:{template_id}")
+            if not str(docker_image.get("architecture") or ""):
+                blockers.append(f"analysis_evidence_template_package_environment_template_docker_image_architecture_missing:{template_id}")
+            if docker_image.get("build_status") != "built":
+                blockers.append(f"analysis_evidence_template_package_environment_template_docker_image_status_missing:{template_id}")
+            if not str(docker_image.get("build_log") or ""):
+                blockers.append(f"analysis_evidence_template_package_environment_template_docker_image_build_log_missing:{template_id}")
     return blockers
 
 

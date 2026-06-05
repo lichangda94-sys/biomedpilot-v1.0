@@ -444,6 +444,33 @@ def validate_analysis_environment_lock_evidence(
         ):
             blockers.append("analysis_environment_lock_evidence_renv_lock_content_package_count_invalid")
 
+    docker_image = evidence.get("docker_image")
+    if not isinstance(docker_image, dict):
+        blockers.append("analysis_environment_lock_evidence_docker_image_invalid")
+    else:
+        if _is_placeholder_resource_value(docker_image.get("image_ref")):
+            blockers.append("analysis_environment_lock_evidence_docker_image_ref_missing")
+        if _is_placeholder_resource_value(docker_image.get("architecture")):
+            blockers.append("analysis_environment_lock_evidence_docker_image_architecture_missing")
+        if docker_image.get("build_status") != "built":
+            blockers.append("analysis_environment_lock_evidence_docker_image_status_not_built")
+        docker_digest = docker_image.get("digest")
+        if not isinstance(docker_digest, dict):
+            blockers.append("analysis_environment_lock_evidence_docker_image_digest_invalid")
+        else:
+            if docker_digest.get("algorithm") != "sha256":
+                blockers.append("analysis_environment_lock_evidence_docker_image_digest_algorithm_not_sha256")
+            digest_value = str(docker_digest.get("value") or "")
+            if _is_placeholder_resource_value(digest_value):
+                blockers.append("analysis_environment_lock_evidence_docker_image_digest_value_missing")
+            elif not _is_sha256_hex(digest_value):
+                blockers.append("analysis_environment_lock_evidence_docker_image_digest_value_not_sha256")
+        build_log = str(docker_image.get("build_log") or "")
+        if not build_log:
+            blockers.append("analysis_environment_lock_evidence_docker_image_build_log_missing")
+        elif not (REPO_ROOT / build_log).is_file():
+            blockers.append(f"analysis_environment_lock_evidence_docker_image_build_log_not_found:{build_log}")
+
     dockerfile = str(evidence.get("dockerfile") or "")
     renv_lock = str(evidence.get("renv_lock") or "")
     if dockerfile and not (REPO_ROOT / dockerfile).is_file():
@@ -847,6 +874,16 @@ def _environment_lock_evidence_templates(environments: list[Any]) -> list[dict[s
                 "renv_lock_content": {
                     "policy_status": "restored",
                     "packages_non_empty": True,
+                },
+                "docker_image": {
+                    "image_ref": "biomedpilot/<environment_id>:<version>",
+                    "digest": {
+                        "algorithm": "sha256",
+                        "value": "<docker image sha256 digest>",
+                    },
+                    "architecture": "<image architecture>",
+                    "build_status": "built",
+                    "build_log": "external_analysis_environments/logs/<environment_id>.docker-build.log",
                 },
                 "dockerfile": str(item.get("dockerfile") or "docker/Dockerfile.<environment>"),
                 "renv_lock": str(item.get("renv_lock") or "renv/renv.<environment>.lock"),

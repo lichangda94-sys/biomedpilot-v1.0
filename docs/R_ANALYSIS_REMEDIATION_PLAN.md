@@ -156,7 +156,7 @@ Update: environment boundaries are now centralized in `analysis/registry/analysi
 
 Update: `validate_analysis_environment_registry()` now turns the environment registry into a runtime-consumable contract. It checks required fields, unique environment ids, app-dev isolation, allowed-module references, Dockerfile labels, lockfile policy, and full-environment readiness separately. The current registry is structurally valid but still reports `full_mode_ready=false` because full environment locks are scaffold-only.
 
-Update: restored full environment locks now require schema-valid evidence. `analysis/schemas/output/environment_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_environment_lock_evidence()` blocks missing evidence, non-restored status, placeholder R/Bioconductor/package-lock data, missing Dockerfile/renv/evidence files, registry mismatch, allowed-module mismatch, or runtime install/download allowance. Current full locks remain `scaffold_only_not_restored`, so this does not activate full mode.
+Update: restored full environment locks now require schema-valid evidence. `analysis/schemas/output/environment_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_environment_lock_evidence()` blocks missing evidence, non-restored status, placeholder R/Bioconductor/package-lock data, missing Docker image build proof, missing Dockerfile/renv/evidence files, registry mismatch, allowed-module mismatch, or runtime install/download allowance. Current full locks remain `scaffold_only_not_restored`, so this does not activate full mode.
 
 Update: restored full environment evidence now requires `package_lock_hash.algorithm=sha256` and a 64-character hex package-lock hash value. The hash must match the referenced `renv_lock` file content. Arbitrary non-empty hash algorithm labels or mismatched lock hashes are blocked before an environment can contribute to full-mode readiness.
 
@@ -186,7 +186,7 @@ Update: restored full environment evidence is now routed through `analysis/regis
 
 Update: externally prepared full resource evidence is now routed through `analysis/registry/resource_lock_evidence.json` and validated by `validate_analysis_resource_lock_evidence_registry()`. The registry is intentionally empty; it establishes the audited handoff point for Reactome/MSigDB/spatial/chem resource locks without allowing runtime downloads or marking any full resource ready.
 
-Update: environment and resource validators now emit machine-readable evidence templates. `environment_lock_evidence_templates` and `resource_lock_evidence_templates` are included in the architecture gate payload so external engine/resource work can fill the exact future evidence shape without relying on prose. These templates keep runtime package installation, runtime resource download, placeholder hashes, unlicensed caches, mock/lite evidence, and app-dev environments forbidden as readiness proof.
+Update: environment and resource validators now emit machine-readable evidence templates. `environment_lock_evidence_templates` and `resource_lock_evidence_templates` are included in the architecture gate payload so external engine/resource work can fill the exact future evidence shape without relying on prose. Environment templates include non-empty renv content and Docker image build evidence; resource templates include cache content evidence. These templates keep runtime package installation, runtime resource download, placeholder hashes, unlicensed caches, mock/lite evidence, and app-dev environments forbidden as readiness proof.
 
 Update: `scripts/analysis_architecture_gate.py --evidence-template-output <path>` now exports a standalone external evidence template package. The package includes full environment templates, full resource/tool templates, standard-worker migration templates, registry paths, blockers, and counts, and validates against `analysis/schemas/output/evidence_template_package.schema.json`. The package checker now also verifies that environment templates include `renv_lock_content` and resource templates include `cache_content`, so exported handoff templates cannot drift away from the full lock evidence validators. It is intended for handoff to external environment/resource preparation work and is not accepted as readiness evidence by itself.
 
@@ -587,7 +587,7 @@ Completed:
 
 Remaining:
 
-- Restore approved full `renv` locks and Docker image evidence outside default `app-dev`.
+- Restore approved full `renv` locks and Docker image evidence outside default `app-dev`, including image ref, SHA-256 digest, architecture, and build log.
 - Replace resource placeholders with approved version/source/hash/license/cache metadata.
 - Migrate formal algorithms one module at a time from transitional sidecar outputs to the isolated standard worker boundary.
 

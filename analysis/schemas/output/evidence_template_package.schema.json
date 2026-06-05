@@ -38,6 +38,7 @@
           "environment_id",
           "package_lock_hash",
           "renv_lock_content",
+          "docker_image",
           "runtime_package_install",
           "runtime_resource_download",
           "forbidden_evidence_sources"

@@ -867,6 +867,8 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
     )
     evidence_note = tmp_path / "bio_full_environment_build_evidence.txt"
     evidence_note.write_text("controlled external environment build evidence\n", encoding="utf-8")
+    docker_build_log = tmp_path / "r-bio-full.docker-build.log"
+    docker_build_log.write_text("docker buildx build --platform linux/arm64\n", encoding="utf-8")
     restored_lock_hash = hashlib.sha256(restored_lock.read_bytes()).hexdigest()
     evidence_path = tmp_path / "r-bio-full.environment_lock_evidence.json"
     evidence_path.write_text(
@@ -879,6 +881,13 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
                 "bioconductor_version": "3.20",
                 "package_lock_hash": {"algorithm": "sha256", "value": restored_lock_hash},
                 "renv_lock_content": {"policy_status": "restored", "packages_non_empty": True, "package_count": 1},
+                "docker_image": {
+                    "image_ref": "biomedpilot/r-bio-full:test",
+                    "digest": {"algorithm": "sha256", "value": "a" * 64},
+                    "architecture": "linux/arm64",
+                    "build_status": "built",
+                    "build_log": str(docker_build_log),
+                },
                 "dockerfile": "docker/Dockerfile.r-bio-full",
                 "renv_lock": str(restored_lock),
                 "runtime_package_install": "forbidden",
@@ -925,6 +934,55 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
     assert "r-bio-full" not in registry_validation["blocked_environment_ids"]
     assert "r-spatial-full" in registry_validation["blocked_environment_ids"]
     assert deg_environment_blockers == []
+
+
+def test_environment_lock_evidence_requires_docker_image_build_evidence(tmp_path: Path) -> None:
+    environment_registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_environments.json"))
+    environments = {item["environment_id"]: item for item in environment_registry["environments"]}  # type: ignore[index]
+    restored_lock = tmp_path / "renv.bio-full.restored.lock"
+    restored_lock.write_text(
+        json.dumps(
+            {
+                "R": {"Version": "4.4.2", "Repositories": []},
+                "Packages": {"limma": {"Package": "limma", "Version": "3.62.2"}},
+                "BioMedPilotPolicy": {
+                    "schema_version": "biomedpilot.renv_policy.v1",
+                    "environment": "r-bio-full",
+                    "status": "restored",
+                    "heavy_analysis_dependencies_allowed": True,
+                    "runtime_package_install": "forbidden",
+                    "resource_lock_required": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    environments["r-bio-full"]["renv_lock"] = str(restored_lock)
+    restored_lock_hash = hashlib.sha256(restored_lock.read_bytes()).hexdigest()
+
+    validation = validate_analysis_environment_lock_evidence(
+        "r-bio-full",
+        {
+            "schema_version": "biomedpilot.analysis.environment_lock_evidence.v1",
+            "environment_id": "r-bio-full",
+            "status": "restored",
+            "r_version": "R 4.4.2",
+            "bioconductor_version": "3.20",
+            "package_lock_hash": {"algorithm": "sha256", "value": restored_lock_hash},
+            "renv_lock_content": {"policy_status": "restored", "packages_non_empty": True, "package_count": 1},
+            "dockerfile": "docker/Dockerfile.r-bio-full",
+            "renv_lock": str(restored_lock),
+            "runtime_package_install": "forbidden",
+            "runtime_resource_download": "forbidden",
+            "allowed_module_ids": environments["r-bio-full"]["allowed_module_ids"],
+            "evidence_files": ["analysis/registry/analysis_environments.json"],
+        },
+        environment_registry=environment_registry,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_lock_evidence_required_field_missing:docker_image" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_docker_image_invalid" in validation["blockers"]
 
 
 def test_environment_lock_evidence_blocks_empty_restored_renv_packages(tmp_path: Path) -> None:
@@ -1753,8 +1811,10 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "evidence_entries" in resource_lock_registry_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"
     assert "renv_lock_content" in environment_lock_schema["required"]
+    assert "docker_image" in environment_lock_schema["required"]
     assert environment_lock_schema["properties"]["package_lock_hash"]["required"] == ["algorithm", "value"]
     assert environment_lock_schema["properties"]["renv_lock_content"]["required"] == ["policy_status", "packages_non_empty"]
+    assert environment_lock_schema["properties"]["docker_image"]["required"] == ["image_ref", "digest", "architecture", "build_status", "build_log"]
     assert evidence_template_package_schema["$id"] == "biomedpilot.analysis.evidence_template_package.v1"
     assert "environment_lock_evidence_templates" in evidence_template_package_schema["required"]
     assert "resource_lock_evidence_templates" in evidence_template_package_schema["required"]

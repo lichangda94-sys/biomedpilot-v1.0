@@ -11,6 +11,7 @@
     "bioconductor_version",
     "package_lock_hash",
     "renv_lock_content",
+    "docker_image",
     "dockerfile",
     "renv_lock",
     "runtime_package_install",
@@ -39,6 +40,24 @@
         "policy_status": {"type": "string", "minLength": 1},
         "packages_non_empty": {"const": true},
         "package_count": {"type": "integer"}
+      }
+    },
+    "docker_image": {
+      "type": "object",
+      "required": ["image_ref", "digest", "architecture", "build_status", "build_log"],
+      "properties": {
+        "image_ref": {"type": "string", "minLength": 1},
+        "digest": {
+          "type": "object",
+          "required": ["algorithm", "value"],
+          "properties": {
+            "algorithm": {"const": "sha256"},
+            "value": {"type": "string", "minLength": 1}
+          }
+        },
+        "architecture": {"type": "string", "minLength": 1},
+        "build_status": {"const": "built"},
+        "build_log": {"type": "string", "minLength": 1}
       }
     },
     "dockerfile": {"type": "string", "minLength": 1},
