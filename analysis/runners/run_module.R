@@ -26,6 +26,7 @@ for (name in required_dirs) {
 }
 
 input_text <- paste(readLines(input_json, warn = FALSE), collapse = "\n")
+writeLines(input_text, file.path(output_dir, "module_input.json"), useBytes = TRUE)
 
 json_string <- function(value) {
   if (is.null(value) || is.na(value)) {
@@ -1263,7 +1264,7 @@ write_worker_invocation <- function(module_id, task_id, mode, invocation_status,
     '  "worker_backend": "rscript",\n',
     '  "invocation_status": ', json_string(invocation_status), ",\n",
     '  "standard_worker_entrypoint": "analysis/runners/run_module.R",\n',
-    '  "input_manifest": ', json_string(input_json), ",\n",
+    '  "input_manifest": "module_input.json",\n',
     '  "output_contract": "standard_result_package",\n',
     '  "runtime_install_policy": "forbidden",\n',
     '  "resource_download_policy": "forbidden",\n',

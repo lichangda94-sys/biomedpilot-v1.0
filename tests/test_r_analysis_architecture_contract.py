@@ -384,6 +384,7 @@ def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Pat
     assert (output_dir / "reports" / "README_mock.md").is_file()
     assert (output_dir / "logs" / "worker.log").is_file()
     assert (output_dir / "logs" / "worker_invocation.json").is_file()
+    assert read_json(output_dir / "module_input.json") == read_json(input_json)
     assert provenance["module_id"] == "enrichment"
     assert provenance["task_id"] == "enrichment-mock-fixture"
     assert provenance["runtime"]["r_version"] != "not_required_for_mock"  # type: ignore[index]
@@ -400,6 +401,7 @@ def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Pat
     )
     invocation = read_json(output_dir / "logs" / "worker_invocation.json")
     assert validation["status"] == "passed"
+    assert invocation["input_manifest"] == "module_input.json"
     assert invocation["worker_boundary"]["task_system_invocation"] == "standard_worker_direct_cli"  # type: ignore[index]
 
 
@@ -433,6 +435,7 @@ def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_pa
     assert provenance["analysis_environment"]["renv_lock"] == "renv/renv.bio-full.lock"  # type: ignore[index]
     assert provenance["analysis_environment"]["resource_lock_status"]["blockers"]  # type: ignore[index]
     assert provenance["parameter_hash"] != provenance["input_hash"]
+    assert read_json(output_dir / "module_input.json") == payload
     assert (output_dir / "logs" / "worker.log").is_file()
     assert (output_dir / "logs" / "worker_invocation.json").is_file()
     validation = validate_standard_result_package(
@@ -443,6 +446,7 @@ def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_pa
     )
     invocation = read_json(output_dir / "logs" / "worker_invocation.json")
     assert validation["status"] == "passed"
+    assert invocation["input_manifest"] == "module_input.json"
     assert invocation["invocation_status"] == "not_invoked_mode_gate"
     assert invocation["worker_boundary"]["task_system_invocation"] == "standard_worker_direct_cli"  # type: ignore[index]
 

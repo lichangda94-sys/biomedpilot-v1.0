@@ -54,7 +54,7 @@ The R-side standard entrypoint has also been hardened:
 - `analysis/runners/run_module.R <input_json> <output_dir> <mode>`
 - `mock` mode copies the module fixture package and writes fresh result/provenance/log metadata.
 - Supported `lite` modules execute fixed-fixture base R paths; unsupported `lite` modes and all `full` modes write blocked standard result packages with provenance instead of executing.
-- Direct standard R runner outputs now also write `logs/worker_invocation.json` with `worker_boundary.task_system_invocation=standard_worker_direct_cli`. This keeps the worker CLI contract self-contained for development and tests while the main backend still uses `task_center_registered` through `run_analysis_module_task()`.
+- Direct standard R runner outputs now copy the submitted input to package-local `module_input.json` and write `logs/worker_invocation.json` with `input_manifest=module_input.json` and `worker_boundary.task_system_invocation=standard_worker_direct_cli`. This keeps the worker CLI contract self-contained for development and tests while the main backend still uses `task_center_registered` through `run_analysis_module_task()`.
 - Transitional service-adapter sidecar packages now also write `logs/worker_invocation.json` with `worker_backend=legacy_service_adapter` and `task_system_invocation=legacy_service_adapter_direct_call`. These manifests make catalog diagnostics consistent without claiming the adapters have migrated into the isolated standard worker.
 - CLI mode and input manifest mode mismatches are blocked.
 - Paths containing spaces are supported.
@@ -385,6 +385,7 @@ New architecture boundary files:
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
+- Materialized `module_input.json` inside direct standard R runner output packages and changed direct runner `worker_invocation.input_manifest` to package-local `module_input.json`.
 - Materialized `module_input.json` for all standard task-bridge outcomes, including Python fixture copy and validation/mode-blocked packages, so `logs/worker_invocation.json` can always point to an auditable input manifest.
 - Added `logs/worker_invocation.json` for all standard task-bridge outcomes, and registered it in result-index log artifacts after `worker.log`.
 - Added `analysis/schemas/output/worker_invocation.schema.json` and validation blockers for missing or invalid task-bridge/standard-worker invocation manifests.
