@@ -71,6 +71,19 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["standard_worker_migration_matrix"]["status"] == "partial"
     assert payload["standard_worker_migration_matrix"]["evidence_registry_status"] == "passed"
     assert payload["standard_worker_migration_matrix"]["evidence_entry_count"] == 0
+    assert payload["remediation_queue"]["item_count"] == 3
+    assert len(payload["remediation_queue"]["items"]) == 3
+    assert payload["remediation_queue"]["automation_policy"] == "manual_scoped_changes_only"
+    assert payload["remediation_queue"]["install_policy"] == "no_runtime_package_install_or_resource_download"
+    assert payload["remediation_summary"]["minimal_remediation_path"] == [
+        "restore_full_analysis_environment_locks",
+        "lock_full_analysis_resources",
+        "migrate_formal_algorithms_to_isolated_standard_worker",
+    ]
+    assert "analysis/registry/analysis_environments.json" in payload["remediation_summary"]["involved_files"]
+    assert "analysis/resources/manifest.json" in payload["remediation_summary"]["involved_files"]
+    assert "analysis/registry/standard_worker_migration_evidence.json" in payload["remediation_summary"]["involved_files"]
+    assert len(payload["remediation_summary"]["manual_decision_points"]) == 3
     migration_rows = {row["module_id"]: row for row in payload["standard_worker_migration_rows"]}
     assert set(migration_rows) >= {
         "deg",
@@ -142,5 +155,6 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "standard_worker_migration_matrix" in schema["required"]
     assert "standard_worker_migration_rows" in schema["required"]
     assert "remediation_queue" in schema["required"]
+    assert "remediation_summary" in schema["required"]
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.architecture_gate_report.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"

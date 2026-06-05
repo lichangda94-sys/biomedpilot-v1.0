@@ -59,6 +59,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     resource_validation = architecture_status.get("resource_validation") if isinstance(architecture_status.get("resource_validation"), dict) else {}
     migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
     requirement_rows = [dict(row) for row in architecture_status.get("requirement_rows", []) if isinstance(row, dict)]
+    remediation_items = [dict(item) for item in remediation_queue.get("items", []) if isinstance(item, dict)]
     priority_issues = _priority_issue_lists(
         p0_issues=[str(item) for item in architecture_status.get("p0_issues", []) if item],
         p1_issues=p1_issues,
@@ -120,9 +121,16 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "schema_version": remediation_queue.get("schema_version"),
             "status": remediation_queue.get("status"),
             "item_ids": [str(item.get("item_id")) for item in remediation_queue.get("items", []) if isinstance(item, dict)],
+            "items": remediation_items,
+            "item_count": remediation_queue.get("item_count"),
+            "automation_policy": remediation_queue.get("automation_policy"),
+            "execution_policy": remediation_queue.get("execution_policy"),
+            "install_policy": remediation_queue.get("install_policy"),
+            "full_mode_policy": remediation_queue.get("full_mode_policy"),
             "schema_validation_status": remediation_queue.get("schema_validation_status"),
             "schema_blockers": remediation_queue.get("schema_blockers", []),
         },
+        "remediation_summary": _remediation_summary(remediation_items),
         "blockers": blockers,
         "warnings": _gate_warnings(full_gate_status=full_gate_status, p1_issues=p1_issues, require_full_ready=require_full_ready),
         "execution_policy": "read_only_no_worker_execution_no_runtime_install_no_resource_download",
@@ -291,6 +299,33 @@ def _top_architecture_risks(priority_issues: dict[str, list[dict[str, Any]]]) ->
             if len(risks) >= 5:
                 return risks
     return risks
+
+
+def _remediation_summary(remediation_items: list[dict[str, Any]]) -> dict[str, Any]:
+    involved_files: list[str] = []
+    minimal_path: list[str] = []
+    manual_decisions: list[dict[str, Any]] = []
+    for item in remediation_items:
+        item_id = str(item.get("item_id") or "")
+        title = str(item.get("title") or item_id)
+        minimal_path.append(item_id)
+        for path in item.get("recommended_files", []):
+            if isinstance(path, str) and path not in involved_files:
+                involved_files.append(path)
+        manual_decisions.append(
+            {
+                "item_id": item_id,
+                "title": title,
+                "decision_required": str(item.get("boundary") or ""),
+                "required_evidence": [str(value) for value in item.get("required_evidence", []) if value],
+            }
+        )
+    return {
+        "item_count": len(remediation_items),
+        "minimal_remediation_path": minimal_path,
+        "involved_files": involved_files,
+        "manual_decision_points": manual_decisions,
+    }
 
 
 def _gate_report_schema_blockers(payload: dict[str, Any], *, root: Path) -> list[str]:
