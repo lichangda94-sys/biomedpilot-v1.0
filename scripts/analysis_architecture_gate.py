@@ -58,6 +58,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     environment_validation = architecture_status.get("environment_validation") if isinstance(architecture_status.get("environment_validation"), dict) else {}
     resource_validation = architecture_status.get("resource_validation") if isinstance(architecture_status.get("resource_validation"), dict) else {}
     migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
+    requirement_rows = [dict(row) for row in architecture_status.get("requirement_rows", []) if isinstance(row, dict)]
     payload = {
         "schema_version": "biomedpilot.analysis.architecture_gate_report.v1",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -65,6 +66,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "status": "blocked" if blockers else "passed",
         "require_full_ready": require_full_ready,
         "architecture_status": architecture_status.get("status"),
+        "requirement_summary": _requirement_summary(requirement_rows),
+        "requirement_rows": requirement_rows,
         "p0_issues": [str(item) for item in architecture_status.get("p0_issues", []) if item],
         "p1_issues": p1_issues,
         "full_analysis_activation_gate": full_gate,
@@ -157,6 +160,24 @@ def _gate_warnings(*, full_gate_status: str, p1_issues: list[str], require_full_
     if full_gate_status == "blocked" and not require_full_ready:
         warnings.append("full_analysis_activation_gate_blocked_but_allowed_by_default_gate")
     return warnings
+
+
+def _requirement_summary(requirement_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    counts = {"pass": 0, "warn": 0, "fail": 0, "other": 0}
+    for row in requirement_rows:
+        status = str(row.get("status") or "other")
+        if status in counts:
+            counts[status] += 1
+        else:
+            counts["other"] += 1
+    return {
+        "requirement_count": len(requirement_rows),
+        "pass_count": counts["pass"],
+        "warn_count": counts["warn"],
+        "fail_count": counts["fail"],
+        "other_count": counts["other"],
+        "status_order": ["fail", "warn", "pass"],
+    }
 
 
 def _gate_report_schema_blockers(payload: dict[str, Any], *, root: Path) -> list[str]:

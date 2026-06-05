@@ -818,13 +818,27 @@ def _dockerfiles_exist() -> bool:
 
 
 def _chem_modules_use_external_tool_policy() -> bool:
-    for module_id in ("docking", "molecular_dynamics"):
+    expected_full_environments = {
+        "docking": "r-chem-full",
+        "molecular_dynamics": "r-chem-gpu",
+    }
+    expected_tool_names = {
+        "docking": "AutoDock_Vina",
+        "molecular_dynamics": "GROMACS",
+    }
+    for module_id, expected_full_environment in expected_full_environments.items():
         path = REPO_ROOT / "analysis" / "modules" / module_id / "module.json"
         payload = json.loads(path.read_text(encoding="utf-8"))
         policy = str(payload.get("external_tool_policy") or "")
-        if "R_adapter_calls_" not in policy:
+        modes = payload.get("modes") if isinstance(payload.get("modes"), dict) else {}
+        lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+        if f"R_adapter_calls_{expected_tool_names[module_id]}" not in policy:
             return False
-        if payload.get("analysis_environment") not in {"r-chem-full", "r-chem-gpu"}:
+        if payload.get("full_environment") != expected_full_environment:
+            return False
+        if lite.get("environment") != "r-bio-core":
+            return False
+        if lite.get("external_tool_execution") != "not_executed_in_lite_mode":
             return False
     return True
 

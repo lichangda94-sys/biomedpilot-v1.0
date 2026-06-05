@@ -29,6 +29,16 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["status"] == "passed"
     assert payload["require_full_ready"] is False
     assert payload["architecture_status"] == "partial_with_p1_gaps"
+    assert payload["requirement_summary"]["requirement_count"] == 20
+    assert payload["requirement_summary"]["fail_count"] == 0
+    assert payload["requirement_summary"]["warn_count"] >= 1
+    assert payload["requirement_summary"]["pass_count"] >= 1
+    requirement_rows = {row["requirement_id"]: row for row in payload["requirement_rows"]}
+    assert len(requirement_rows) == 20
+    assert requirement_rows["RARCH-01"]["status"] == "pass"
+    assert requirement_rows["RARCH-03"]["status"] == "warn"
+    assert requirement_rows["RARCH-10"]["status"] == "pass"
+    assert requirement_rows["RARCH-11"]["status"] == "pass"
     assert payload["p0_issues"] == []
     assert set(payload["p1_issues"]) == {
         "full_analysis_environment_locks_not_restored",
@@ -112,6 +122,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
 
     assert schema["$id"] == "biomedpilot.analysis.architecture_gate_report.v1"
     assert "schema_version" in schema["required"]
+    assert "requirement_summary" in schema["required"]
+    assert "requirement_rows" in schema["required"]
     assert "full_analysis_activation_gate" in schema["required"]
     assert "environment_readiness" in schema["required"]
     assert "resource_readiness" in schema["required"]

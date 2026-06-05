@@ -619,6 +619,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert rows["RARCH-10"]["status"] == "pass"
     assert rows["RARCH-11"]["status"] == "pass"
     assert rows["RARCH-12"]["status"] == "warn"
+    assert rows["RARCH-18"]["status"] == "warn"
+    assert rows["RARCH-18"]["blockers"] == []
+    assert "lite_mode_writes_command_manifest_only_no_AutoDock_or_GROMACS_execution" in rows["RARCH-18"]["warnings"]
     assert rows["RARCH-20"]["status"] == "pass"
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
