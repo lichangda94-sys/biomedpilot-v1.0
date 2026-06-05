@@ -1224,6 +1224,9 @@ def build_standard_worker_migration_rows(matrix: dict[str, Any]) -> list[dict[st
     passed_modules = _list(matrix.get("passed_evidence_module_ids"))
     blocked_modules = _list(matrix.get("blocked_evidence_module_ids"))
     missing_modules = _list(matrix.get("missing_evidence_module_ids"))
+    adapter_status_counts = matrix.get("adapter_status_counts") if isinstance(matrix.get("adapter_status_counts"), dict) else {}
+    migration_next_action_counts = matrix.get("migration_next_action_counts") if isinstance(matrix.get("migration_next_action_counts"), dict) else {}
+    migration_blocker_counts = matrix.get("migration_blocker_counts") if isinstance(matrix.get("migration_blocker_counts"), dict) else {}
     rows = [
         _formal_deg_gate_row(
             "R standard worker migration matrix",
@@ -1238,6 +1241,16 @@ def build_standard_worker_migration_rows(matrix: dict[str, Any]) -> list[dict[st
             [f"missing_standard_worker_migration_evidence:{module_id}" for module_id in missing_modules],
             [f"passed={len(passed_modules)}", f"blocked={len(blocked_modules)}"],
             basis=f"expected={len(expected_modules)}; missing={len(missing_modules)}; modules={compact_list(missing_modules)}",
+        ),
+        _formal_deg_gate_row(
+            "R worker migration adapter status summary",
+            "passed" if not migration_blocker_counts and expected_modules else "blocked",
+            [f"{key}={value}" for key, value in sorted(migration_blocker_counts.items())],
+            [
+                *[f"adapter:{key}={value}" for key, value in sorted(adapter_status_counts.items())],
+                *[f"next:{key}={value}" for key, value in sorted(migration_next_action_counts.items())],
+            ],
+            basis="read_only_standard_worker_migration_grouping",
         )
     ]
     for row in module_rows:

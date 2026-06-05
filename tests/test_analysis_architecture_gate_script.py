@@ -153,6 +153,15 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "molecular_dynamics",
     }
     assert migration_rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert payload["standard_worker_migration_matrix"]["adapter_status_counts"][
+        "existing_controlled_python_and_r_contracts_pending_standard_worker_migration"
+    ] == 1
+    assert payload["standard_worker_migration_matrix"]["migration_next_action_counts"][
+        "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+    ] == payload["standard_worker_migration_matrix"]["module_count"]
+    assert payload["standard_worker_migration_matrix"]["migration_blocker_counts"][
+        "registry_evidence_entry_missing_or_blocked"
+    ] == payload["standard_worker_migration_matrix"]["module_count"]
     assert migration_rows["deg"]["migration_readiness_status"] == "blocked"
     assert migration_rows["deg"]["migration_prerequisite_status"]["overall"] == "blocked"
     assert migration_rows["deg"]["migration_prerequisite_status"]["required_environment_lock"] == "required_before_migration_evidence"

@@ -1610,6 +1610,13 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert matrix["module_count"] >= 10
     assert matrix["formal_pending_count"] == matrix["module_count"]
     assert matrix["full_blocked_count"] == matrix["module_count"]
+    assert matrix["adapter_status_counts"]["existing_controlled_python_and_r_contracts_pending_standard_worker_migration"] == 1
+    assert matrix["adapter_status_counts"]["r_native_lite_contract_exists_pending_full_environment_and_standard_worker_migration"] == 2
+    assert matrix["adapter_status_counts"]["planned_external_tool_adapter_only"] == 2
+    assert matrix["migration_next_action_counts"]["declare_scoped_full_mode_only_after_environment_and_resource_locks"] == matrix["module_count"]
+    assert matrix["migration_blocker_counts"]["full_mode_not_supported_in_registry"] == matrix["module_count"]
+    assert matrix["migration_blocker_counts"]["registry_evidence_entry_missing_or_blocked"] == matrix["module_count"]
+    assert matrix["migration_blocker_counts"]["legacy_sidecar_output_is_not_migration_evidence"] == 1
     assert {"deg", "survival", "univariate", "multivariate", "enrichment", "immune_infiltration", "spatial_transcriptomics", "docking", "molecular_dynamics"} <= set(rows)
     assert rows["deg"]["mock_status"] == "passed"
     assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"

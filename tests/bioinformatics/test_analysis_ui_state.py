@@ -90,6 +90,11 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     worker_migration_text = "\n".join(str(row) for row in state["standard_worker_migration_rows"])
     assert "R standard worker migration matrix" in worker_migration_text
     assert "R worker migration evidence coverage" in worker_migration_text
+    assert "R worker migration adapter status summary" in worker_migration_text
+    assert "adapter:existing_controlled_python_and_r_contracts_pending_standard_worker_migration=1" in worker_migration_text
+    assert "adapter:r_native_lite_contract_exists_pending_full_environment_and_standard_worker_migration=2" in worker_migration_text
+    assert "next:declare_scoped_full_mode_only_after_environment_and_resource_locks=10" in worker_migration_text
+    assert "registry_evidence_entry_missing_or_blocked=10" in worker_migration_text
     assert "missing_standard_worker_migration_evidence:deg" in worker_migration_text
     assert "missing_standard_worker_migration_evidence:molecular_dynamics" in worker_migration_text
     assert "R worker migration: deg" in worker_migration_text

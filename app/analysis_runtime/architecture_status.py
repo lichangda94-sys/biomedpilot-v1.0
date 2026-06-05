@@ -313,6 +313,9 @@ def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = Non
     ]
     formal_pending = [row for row in rows if row["formal_worker_status"] != "migrated_to_isolated_standard_worker"]
     full_blocked = [row for row in rows if row["full_status"] == "blocked"]
+    adapter_status_counts = _count_row_values(rows, "current_adapter_status")
+    migration_next_action_counts = _count_row_values(rows, "migration_next_action")
+    migration_blocker_counts = _count_row_blockers(rows, "migration_blockers")
     return {
         "schema_version": "biomedpilot.analysis.standard_worker_migration_matrix.v1",
         "status": "passed" if not formal_pending and not full_blocked else "partial",
@@ -320,6 +323,9 @@ def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = Non
         "module_count": len(rows),
         "formal_pending_count": len(formal_pending),
         "full_blocked_count": len(full_blocked),
+        "adapter_status_counts": adapter_status_counts,
+        "migration_next_action_counts": migration_next_action_counts,
+        "migration_blocker_counts": migration_blocker_counts,
         "rows": rows,
         "evidence_registry_status": str(evidence_registry_validation.get("status") or "blocked"),
         "evidence_entry_count": int(evidence_registry_validation.get("entry_count") or 0),
@@ -331,6 +337,24 @@ def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = Non
         "migration_policy": "module_by_module_standard_worker_migration_required",
         "boundary": "matrix_is_read_only_no_worker_execution",
     }
+
+
+def _count_row_values(rows: list[dict[str, Any]], field: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        value = str(row.get(field) or "unknown")
+        counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _count_row_blockers(rows: list[dict[str, Any]], field: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        for value in row.get(field, []) or []:
+            key = str(value)
+            if key:
+                counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def load_standard_worker_migration_evidence_registry(path: str | Path | None = None) -> dict[str, Any]:
