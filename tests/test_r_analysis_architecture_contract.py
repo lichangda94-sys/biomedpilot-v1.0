@@ -1465,6 +1465,23 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert "analysis/schemas/output/environment_lock_evidence.schema.json" in items["restore_full_analysis_environment_locks"]["recommended_files"]
     assert "analysis/schemas/output/environment_lock_evidence_registry.schema.json" in items["restore_full_analysis_environment_locks"]["recommended_files"]
     assert "each restored full environment lock has schema-valid environment_lock_evidence" in items["restore_full_analysis_environment_locks"]["required_evidence"]
+    environment_actions = {item["environment_id"]: item for item in items["restore_full_analysis_environment_locks"]["environment_next_actions"]}
+    environment_summary = items["restore_full_analysis_environment_locks"]["environment_action_summary"]
+    assert environment_summary["environment_count"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
+    assert environment_summary["blocked_environment_count"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
+    assert environment_summary["next_action_counts"]["register_schema_valid_restored_environment_evidence"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
+    assert set(environment_actions) == set(REQUIRED_FULL_ENVIRONMENT_IDS)
+    assert environment_actions["r-bio-full"]["next_action"] == "register_schema_valid_restored_environment_evidence"
+    assert environment_actions["r-bio-full"]["runtime_package_install"] == "forbidden"
+    assert environment_actions["r-bio-full"]["runtime_resource_download"] == "forbidden"
+    assert environment_actions["r-bio-full"]["required_package_lock_hash_algorithm"] == "sha256"
+    assert environment_actions["r-bio-full"]["required_docker_image_status"] == "built"
+    assert "deg" in environment_actions["r-bio-full"]["allowed_module_ids"]
+    assert "runtime_package_install" in environment_actions["r-bio-full"]["forbidden_evidence_sources"]
+    assert environment_summary["module_environments"]["deg"] == ["r-bio-full"]
+    assert environment_summary["module_environments"]["spatial_transcriptomics"] == ["r-spatial-full"]
+    assert environment_summary["module_environments"]["docking"] == ["r-chem-full"]
+    assert environment_summary["module_environments"]["molecular_dynamics"] == ["r-chem-gpu"]
     assert "analysis/resources/manifest.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "analysis/registry/resource_lock_evidence.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "analysis/schemas/output/resource_lock_evidence.schema.json" in items["lock_full_analysis_resources"]["recommended_files"]

@@ -100,6 +100,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     remediation_text = "\n".join(str(row) for row in state["analysis_architecture_remediation_rows"])
     assert "R architecture remediation queue" in remediation_text
     assert "restore_full_analysis_environment_locks" in remediation_text
+    assert "r-bio-full:register_schema_valid_restored_environment_evidence" in remediation_text
+    assert "register_schema_valid_restored_environment_evidence=4" in remediation_text
     assert "lock_full_analysis_resources" in remediation_text
     assert "reactome_full:register_schema_valid_prelocked_resource_evidence" in remediation_text
     assert "register_schema_valid_prelocked_resource_evidence=11" in remediation_text

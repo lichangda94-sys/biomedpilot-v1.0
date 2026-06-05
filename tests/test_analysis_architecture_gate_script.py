@@ -97,6 +97,11 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["remediation_queue"]["automation_policy"] == "manual_scoped_changes_only"
     assert payload["remediation_queue"]["install_policy"] == "no_runtime_package_install_or_resource_download"
     remediation_items = {item["item_id"]: item for item in payload["remediation_queue"]["items"]}
+    environment_remediation = remediation_items["restore_full_analysis_environment_locks"]
+    environment_actions = {item["environment_id"]: item for item in environment_remediation["environment_next_actions"]}
+    assert environment_remediation["environment_action_summary"]["blocked_environment_count"] == len(environment_actions)
+    assert environment_actions["r-bio-full"]["next_action"] == "register_schema_valid_restored_environment_evidence"
+    assert environment_actions["r-chem-gpu"]["allowed_module_ids"] == ["molecular_dynamics"]
     resource_remediation = remediation_items["lock_full_analysis_resources"]
     resource_actions = {item["resource_id"]: item for item in resource_remediation["resource_next_actions"]}
     assert resource_remediation["resource_action_summary"]["blocked_resource_count"] == len(resource_actions)
@@ -116,6 +121,12 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     decisions = {item["item_id"]: item for item in payload["remediation_summary"]["manual_decision_points"]}
     assert decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=10; passed=0; blocked=0")
     assert "modules=deg, survival, univariate, multivariate, enrichment" in decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
+    assert (
+        decisions["restore_full_analysis_environment_locks"]["environment_action_summary"]["next_action_counts"][
+            "register_schema_valid_restored_environment_evidence"
+        ]
+        >= 1
+    )
     assert (
         decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["module_action_summary"]["next_action_counts"][
             "declare_scoped_full_mode_only_after_environment_and_resource_locks"

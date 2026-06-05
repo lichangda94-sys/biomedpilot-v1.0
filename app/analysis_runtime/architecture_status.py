@@ -471,6 +471,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
     snapshot = status if isinstance(status, dict) else build_analysis_architecture_status()
     p1_issues = [str(item) for item in snapshot.get("p1_issues", []) if item]
     migration_matrix = snapshot.get("standard_worker_migration_matrix") if isinstance(snapshot.get("standard_worker_migration_matrix"), dict) else {}
+    environment_validation = snapshot.get("environment_validation") if isinstance(snapshot.get("environment_validation"), dict) else {}
     resource_validation = snapshot.get("resource_validation") if isinstance(snapshot.get("resource_validation"), dict) else {}
     migration_module_scope = {
         "expected_module_ids": list(migration_matrix.get("expected_evidence_module_ids", [])),
@@ -482,6 +483,8 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
     }
     migration_module_actions = _standard_worker_migration_remediation_actions(migration_matrix)
     migration_action_summary = _standard_worker_migration_action_summary(migration_module_actions)
+    environment_actions = _full_environment_lock_remediation_actions(environment_validation)
+    environment_action_summary = _full_environment_lock_action_summary(environment_actions)
     resource_actions = _full_resource_lock_remediation_actions(resource_validation)
     resource_action_summary = _full_resource_lock_action_summary(resource_actions)
     issue_items = {
@@ -512,6 +515,8 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
                 "validate_analysis_environment_registry.full_mode_ready becomes true",
             ],
             "boundary": "detect-first external full environments only; default app-dev remains lightweight",
+            "environment_next_actions": environment_actions,
+            "environment_action_summary": environment_action_summary,
         },
         "full_analysis_resource_locks_not_complete": {
             "item_id": "lock_full_analysis_resources",
@@ -585,6 +590,70 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
     if schema_blockers:
         payload["status"] = "blocked"
     return payload
+
+
+def _full_environment_lock_remediation_actions(environment_validation: dict[str, Any]) -> list[dict[str, Any]]:
+    templates = [
+        item
+        for item in environment_validation.get("environment_lock_evidence_templates", [])
+        if isinstance(item, dict)
+    ]
+    blocked_ids = {str(item) for item in environment_validation.get("blocked_environment_ids", []) if item}
+    actions: list[dict[str, Any]] = []
+    for template in templates:
+        environment_id = str(template.get("environment_id") or "")
+        if environment_id and environment_id not in blocked_ids:
+            continue
+        docker_image = template.get("docker_image") if isinstance(template.get("docker_image"), dict) else {}
+        package_lock_hash = template.get("package_lock_hash") if isinstance(template.get("package_lock_hash"), dict) else {}
+        actions.append(
+            {
+                "environment_id": environment_id,
+                "status": "blocked",
+                "next_action": "register_schema_valid_restored_environment_evidence",
+                "allowed_module_ids": [str(item) for item in template.get("allowed_module_ids", []) if item],
+                "dockerfile": str(template.get("dockerfile") or ""),
+                "renv_lock": str(template.get("renv_lock") or ""),
+                "evidence_files": [str(item) for item in template.get("evidence_files", []) if item],
+                "runtime_package_install": str(template.get("runtime_package_install") or ""),
+                "runtime_resource_download": str(template.get("runtime_resource_download") or ""),
+                "required_package_lock_hash_algorithm": str(package_lock_hash.get("algorithm") or "sha256"),
+                "required_docker_image_status": str(docker_image.get("build_status") or "built"),
+                "required_docker_image_digest_algorithm": str((docker_image.get("digest") if isinstance(docker_image.get("digest"), dict) else {}).get("algorithm") or "sha256"),
+                "required_docker_build_log": str(docker_image.get("build_log") or ""),
+                "renv_lock_content": template.get("renv_lock_content") if isinstance(template.get("renv_lock_content"), dict) else {},
+                "forbidden_evidence_sources": [str(item) for item in template.get("forbidden_evidence_sources", []) if item],
+                "recommended_files": [
+                    "analysis/registry/analysis_environments.json",
+                    "analysis/registry/environment_lock_evidence.json",
+                    "analysis/schemas/output/environment_lock_evidence.schema.json",
+                    "analysis/schemas/output/environment_lock_evidence_registry.schema.json",
+                    str(template.get("dockerfile") or ""),
+                    str(template.get("renv_lock") or ""),
+                    *[str(item) for item in template.get("evidence_files", []) if item],
+                    str(docker_image.get("build_log") or ""),
+                ],
+            }
+        )
+    return actions
+
+
+def _full_environment_lock_action_summary(actions: list[dict[str, Any]]) -> dict[str, Any]:
+    module_environments: dict[str, list[str]] = {}
+    for action in actions:
+        for module_id in action.get("allowed_module_ids", []) or []:
+            module_key = str(module_id)
+            module_environments.setdefault(module_key, []).append(str(action.get("environment_id") or ""))
+    return {
+        "schema_version": "biomedpilot.analysis.environment_lock_action_summary.v1",
+        "environment_count": len(actions),
+        "blocked_environment_count": sum(1 for action in actions if action.get("status") == "blocked"),
+        "module_environment_counts": {module_id: len(environments) for module_id, environments in sorted(module_environments.items())},
+        "module_environments": {module_id: environments for module_id, environments in sorted(module_environments.items())},
+        "next_action_counts": {
+            "register_schema_valid_restored_environment_evidence": len(actions),
+        },
+    }
 
 
 def _full_resource_lock_remediation_actions(resource_validation: dict[str, Any]) -> list[dict[str, Any]]:
