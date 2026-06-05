@@ -1214,14 +1214,19 @@ full_required_resources <- function(module_id) {
   )
 }
 
+full_environment_lock_blockers <- function(environment_id) {
+  paste0("analysis_environment_renv_lock_not_restored:", environment_id, ":scaffold_only_not_restored")
+}
+
 analysis_environment_snapshot_json <- function(module_id, mode) {
   if (mode != "full") {
     return("null")
   }
   environment_id <- full_environment_id(module_id)
   required_resources <- full_required_resources(module_id)
+  environment_blockers <- full_environment_lock_blockers(environment_id)
   resource_blockers <- if (length(required_resources) > 0) paste0("analysis_resource_not_locked:", required_resources) else character(0)
-  environment_status <- if (length(resource_blockers) > 0) "blocked_full_mode_resource_or_tool_lock" else "blocked_full_mode_worker_not_enabled"
+  environment_status <- if (length(environment_blockers) > 0) "blocked_full_mode_environment_lock" else if (length(resource_blockers) > 0) "blocked_full_mode_resource_or_tool_lock" else "blocked_full_mode_worker_not_enabled"
   paste0(
     "{\n",
     '    "schema_version": "biomedpilot.analysis_environment_snapshot.v1",\n',
@@ -1241,6 +1246,10 @@ analysis_environment_snapshot_json <- function(module_id, mode) {
     '    "runtime_package_install": "forbidden",\n',
     '    "runtime_resource_download": "forbidden",\n',
     '    "module_manifest": ', json_string(file.path("analysis", "modules", module_id, "module.json")), ",\n",
+    '    "environment_lock_status": {\n',
+    '      "ready": false,\n',
+    '      "blockers": ', json_array(environment_blockers), "\n",
+    "    },\n",
     '    "resource_lock_status": {\n',
     '      "full_mode_ready": false,\n',
     '      "required_resource_ids": ', json_array(required_resources), ",\n",
@@ -1341,8 +1350,9 @@ if (mode == "lite" && module_id == "molecular_dynamics") {
 
 if (mode != "mock") {
   blocker <- paste0("standard_worker_mode_not_enabled:", mode)
+  environment_blockers <- if (mode == "full") full_environment_lock_blockers(full_environment_id(module_id)) else character(0)
   resource_blockers <- if (mode == "full") paste0("analysis_resource_not_locked:", full_required_resources(module_id)) else character(0)
-  blockers <- c(blocker, resource_blockers)
+  blockers <- c(blocker, environment_blockers, resource_blockers)
   write_result(
     module_id,
     task_id,

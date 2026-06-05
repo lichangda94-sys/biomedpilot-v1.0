@@ -14,7 +14,12 @@ from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, T
 
 from .registry import get_analysis_module, load_analysis_module_registry
 from .r_worker import run_standard_r_worker
-from .resources import full_mode_resource_blockers, load_analysis_resource_manifest, validate_analysis_resource_manifest
+from .resources import (
+    full_mode_environment_blockers,
+    full_mode_resource_blockers,
+    load_analysis_resource_manifest,
+    validate_analysis_resource_manifest,
+)
 from .standard_package import REQUIRED_DIRECTORIES, validate_standard_result_package
 
 
@@ -71,6 +76,7 @@ def run_analysis_module_task(
             blocker = f"analysis_mode_requires_rscript_worker:{mode}"
         mode_blockers = [blocker]
         if mode == "full":
+            mode_blockers.extend(full_mode_environment_blockers(module_id))
             mode_blockers.extend(full_mode_resource_blockers(module_id))
             mode_blockers = list(dict.fromkeys(mode_blockers))
         _write_standard_package(package_dir, module_input, module=module, status="blocked", blockers=mode_blockers, command="analysis_task_bridge_mode_gate")
@@ -414,11 +420,14 @@ def _analysis_environment_snapshot(module: dict[str, Any], *, mode: str) -> dict
         if isinstance(item, dict)
         and module_id in {str(value) for value in item.get("required_for_modules", []) if value is not None}
     ]
+    environment_blockers = full_mode_environment_blockers(module_id) if mode == "full" else []
     resource_blockers = full_mode_resource_blockers(module_id) if mode == "full" else []
     policy = environment_registry.get("policy") if isinstance(environment_registry.get("policy"), dict) else {}
     status = "passed"
     if not environment:
         status = "blocked_environment_missing"
+    elif mode == "full" and environment_blockers:
+        status = "blocked_full_mode_environment_lock"
     elif mode == "full" and resource_blockers:
         status = "blocked_full_mode_resource_or_tool_lock"
     elif mode == "full":
@@ -441,6 +450,10 @@ def _analysis_environment_snapshot(module: dict[str, Any], *, mode: str) -> dict
         "runtime_package_install": str(policy.get("runtime_package_install") or "forbidden"),
         "runtime_resource_download": str(policy.get("runtime_resource_download") or "forbidden"),
         "module_manifest": str(module.get("module_manifest") or ""),
+        "environment_lock_status": {
+            "ready": mode != "full" or not environment_blockers,
+            "blockers": environment_blockers,
+        },
         "resource_lock_status": {
             "full_mode_ready": bool(resource_validation.get("full_mode_ready")),
             "required_resource_ids": required_resources,

@@ -426,6 +426,7 @@ def _analysis_environment_blockers(result: dict[str, Any], provenance: dict[str,
         "runtime_package_install",
         "runtime_resource_download",
         "module_manifest",
+        "environment_lock_status",
         "resource_lock_status",
     )
     missing = [field for field in required_fields if field not in environment]
@@ -449,6 +450,17 @@ def _analysis_environment_blockers(result: dict[str, Any], provenance: dict[str,
         blockers.append("analysis_environment_runtime_package_install_policy_invalid")
     if environment.get("runtime_resource_download") != "forbidden":
         blockers.append("analysis_environment_runtime_resource_download_policy_invalid")
+    environment_lock_status = environment.get("environment_lock_status")
+    if not isinstance(environment_lock_status, dict):
+        blockers.append("analysis_environment_lock_status_invalid")
+    else:
+        if "ready" not in environment_lock_status:
+            blockers.append("analysis_environment_lock_status_ready_missing")
+        if not isinstance(environment_lock_status.get("blockers"), list):
+            blockers.append("analysis_environment_lock_status_blockers_invalid")
+        status = str(environment.get("status") or "")
+        if status == "blocked_full_mode_environment_lock" and not environment_lock_status.get("blockers"):
+            blockers.append("analysis_environment_lock_blockers_missing")
     resource_lock_status = environment.get("resource_lock_status")
     if not isinstance(resource_lock_status, dict):
         blockers.append("analysis_environment_resource_lock_status_invalid")

@@ -9,7 +9,11 @@ from pathlib import Path
 import pytest
 
 from app.analysis_runtime.standard_package import validate_standard_result_package
-from app.analysis_runtime.resources import full_mode_resource_blockers, validate_analysis_resource_manifest
+from app.analysis_runtime.resources import (
+    full_mode_environment_blockers,
+    full_mode_resource_blockers,
+    validate_analysis_resource_manifest,
+)
 from app.analysis_runtime.registry import build_result_index_task_type_module_map
 
 
@@ -427,12 +431,17 @@ def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_pa
     assert result["mode"] == "full"
     assert result["status"] == "blocked"
     assert "standard_worker_mode_not_enabled:full" in result["blockers"]
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in result["blockers"]
     assert "analysis_resource_not_locked:reactome_full" in result["blockers"]
     assert "analysis_resource_not_locked:msigdb_full" in result["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
+    assert provenance["analysis_environment"]["status"] == "blocked_full_mode_environment_lock"  # type: ignore[index]
     assert provenance["analysis_environment"]["environment_id"] == "r-bio-full"  # type: ignore[index]
     assert provenance["analysis_environment"]["dockerfile"] == "docker/Dockerfile.r-bio-full"  # type: ignore[index]
     assert provenance["analysis_environment"]["renv_lock"] == "renv/renv.bio-full.lock"  # type: ignore[index]
+    assert provenance["analysis_environment"]["environment_lock_status"]["blockers"] == [  # type: ignore[index]
+        "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored"
+    ]
     assert provenance["analysis_environment"]["resource_lock_status"]["blockers"]  # type: ignore[index]
     assert provenance["parameter_hash"] != provenance["input_hash"]
     assert read_json(output_dir / "module_input.json") == payload
@@ -666,6 +675,19 @@ def test_full_mode_resource_blockers_are_module_specific() -> None:
     assert "analysis_resource_not_locked:autodock_vina_tool" in docking_blockers
     assert "analysis_resource_not_locked:gromacs_tool" in md_blockers
     assert "analysis_resource_not_locked:gromacs_tool" not in enrichment_blockers
+
+
+def test_full_mode_environment_blockers_require_restored_isolated_locks() -> None:
+    enrichment_blockers = full_mode_environment_blockers("enrichment")
+    spatial_blockers = full_mode_environment_blockers("spatial_transcriptomics")
+    docking_blockers = full_mode_environment_blockers("docking")
+    md_blockers = full_mode_environment_blockers("molecular_dynamics")
+
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in enrichment_blockers
+    assert "analysis_environment_renv_lock_not_restored:r-spatial-full:scaffold_only_not_restored" in spatial_blockers
+    assert "analysis_environment_renv_lock_not_restored:r-chem-full:scaffold_only_not_restored" in docking_blockers
+    assert "analysis_environment_renv_lock_not_restored:r-chem-gpu:scaffold_only_not_restored" in md_blockers
+    assert not any("analysis_resource_not_locked" in blocker for blocker in enrichment_blockers)
 
 
 def test_locked_resource_with_placeholder_fields_blocks_full_mode() -> None:
