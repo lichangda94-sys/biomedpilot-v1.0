@@ -618,6 +618,46 @@ def _evidence_template_package_schema_blockers(payload: dict[str, Any], *, root:
         min_length = field_schema.get("minLength")
         if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
             blockers.append(f"analysis_evidence_template_package_min_length_invalid:{field}")
+    blockers.extend(_environment_template_package_item_blockers(payload.get("environment_lock_evidence_templates")))
+    blockers.extend(_resource_template_package_item_blockers(payload.get("resource_lock_evidence_templates")))
+    return blockers
+
+
+def _environment_template_package_item_blockers(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    blockers: list[str] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            blockers.append(f"analysis_evidence_template_package_environment_template_invalid:{index}")
+            continue
+        template_id = str(item.get("environment_id") or index)
+        content = item.get("renv_lock_content")
+        if not isinstance(content, dict):
+            blockers.append(f"analysis_evidence_template_package_environment_template_renv_lock_content_missing:{template_id}")
+            continue
+        if content.get("packages_non_empty") is not True:
+            blockers.append(f"analysis_evidence_template_package_environment_template_packages_non_empty_missing:{template_id}")
+        if not str(content.get("policy_status") or ""):
+            blockers.append(f"analysis_evidence_template_package_environment_template_policy_status_missing:{template_id}")
+    return blockers
+
+
+def _resource_template_package_item_blockers(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    blockers: list[str] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            blockers.append(f"analysis_evidence_template_package_resource_template_invalid:{index}")
+            continue
+        template_id = str(item.get("resource_id") or index)
+        content = item.get("cache_content")
+        if not isinstance(content, dict):
+            blockers.append(f"analysis_evidence_template_package_resource_template_cache_content_missing:{template_id}")
+            continue
+        if content.get("non_empty") is not True:
+            blockers.append(f"analysis_evidence_template_package_resource_template_non_empty_missing:{template_id}")
     return blockers
 
 

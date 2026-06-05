@@ -29,8 +29,35 @@
     "install_policy": {"const": "no_runtime_package_install_or_resource_download"},
     "template_policy": {"type": "object"},
     "registry_paths": {"type": "object"},
-    "environment_lock_evidence_templates": {"type": "array"},
-    "resource_lock_evidence_templates": {"type": "array"},
+    "environment_lock_evidence_templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "environment_id",
+          "package_lock_hash",
+          "renv_lock_content",
+          "runtime_package_install",
+          "runtime_resource_download",
+          "forbidden_evidence_sources"
+        ]
+      }
+    },
+    "resource_lock_evidence_templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "resource_id",
+          "hash",
+          "cache_content",
+          "runtime_download_allowed",
+          "forbidden_evidence_sources"
+        ]
+      }
+    },
     "standard_worker_migration_evidence_templates": {"type": "array"},
     "blockers": {"type": "object"},
     "remediation_scope": {"type": "object"},

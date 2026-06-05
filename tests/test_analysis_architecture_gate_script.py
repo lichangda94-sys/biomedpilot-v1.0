@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -8,6 +9,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "analysis_architecture_gate.py"
+
+
+def _load_gate_module():
+    spec = importlib.util.spec_from_file_location("analysis_architecture_gate", SCRIPT)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_analysis_architecture_gate_script_allows_current_partial_state_without_full_ready(tmp_path: Path) -> None:
@@ -249,7 +259,10 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     resource_templates = {item["resource_id"]: item for item in template_package["resource_lock_evidence_templates"]}
     migration_templates = {item["module_id"]: item for item in template_package["standard_worker_migration_evidence_templates"]}
     assert environment_templates["r-bio-full"]["runtime_package_install"] == "forbidden"
+    assert environment_templates["r-bio-full"]["renv_lock_content"]["policy_status"] == "restored"
+    assert environment_templates["r-bio-full"]["renv_lock_content"]["packages_non_empty"] is True
     assert resource_templates["reactome_full"]["runtime_download_allowed"] is False
+    assert resource_templates["reactome_full"]["cache_content"]["non_empty"] is True
     assert migration_templates["deg"]["required_worker_boundary"] == "standard_r_worker"
     assert "registry_evidence_entry_missing_or_blocked" in template_package["blockers"]["standard_worker_migration"]["deg"]
 
@@ -326,6 +339,34 @@ def test_analysis_evidence_template_package_schema_is_present_and_matches_payloa
     assert "registry_paths" in schema["required"]
     assert "template_counts" in schema["required"]
     assert schema["properties"]["remediation_scope"]["type"] == "object"
+    assert "renv_lock_content" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
+    assert "cache_content" in schema["properties"]["resource_lock_evidence_templates"]["items"]["required"]
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.evidence_template_package.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
     assert schema["properties"]["install_policy"]["const"] == "no_runtime_package_install_or_resource_download"
+
+
+def test_analysis_evidence_template_package_schema_blocks_missing_content_declarations() -> None:
+    gate = _load_gate_module()
+    blockers = gate._evidence_template_package_schema_blockers(
+        {
+            "schema_version": "biomedpilot.analysis.evidence_template_package.v1",
+            "created_at": "2026-06-05T00:00:00+00:00",
+            "worktree": str(ROOT),
+            "architecture_status": "partial_with_p1_gaps",
+            "full_analysis_activation_gate_status": "blocked",
+            "execution_policy": "read_only_no_worker_execution_no_runtime_install_no_resource_download",
+            "install_policy": "no_runtime_package_install_or_resource_download",
+            "template_policy": {},
+            "registry_paths": {},
+            "environment_lock_evidence_templates": [{"environment_id": "r-bio-full"}],
+            "resource_lock_evidence_templates": [{"resource_id": "reactome_full"}],
+            "standard_worker_migration_evidence_templates": [],
+            "blockers": {},
+            "template_counts": {},
+        },
+        root=ROOT,
+    )
+
+    assert "analysis_evidence_template_package_environment_template_renv_lock_content_missing:r-bio-full" in blockers
+    assert "analysis_evidence_template_package_resource_template_cache_content_missing:reactome_full" in blockers
