@@ -7,6 +7,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULT_PACKAGE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "result_package.schema.json"
+MODULE_INPUT_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "input" / "module_input.schema.json"
 RESULT_PAYLOAD_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "result.schema.json"
 PROVENANCE_PAYLOAD_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json"
 REQUIRED_FILES = ("result.json", "provenance.json")
@@ -136,6 +137,7 @@ def validate_standard_result_package(
     blockers.extend(_analysis_environment_blockers(result, provenance, expected_mode=expected_mode))
     blockers.extend(
         _worker_invocation_blockers(
+            root,
             invocation,
             provenance,
             expected_module_id=expected_module_id,
@@ -247,17 +249,20 @@ def _schema_value_blockers(payload_name: str, field_path: str, value: Any, schem
     if isinstance(expected_type, str) and not _value_matches_schema_type(value, expected_type):
         blockers.append(f"{payload_name}_schema_field_type_invalid:{field_path}")
         return blockers
+    if isinstance(expected_type, list) and not any(isinstance(item, str) and _value_matches_schema_type(value, item) for item in expected_type):
+        blockers.append(f"{payload_name}_schema_field_type_invalid:{field_path}")
+        return blockers
     min_length = schema.get("minLength")
     if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
         blockers.append(f"{payload_name}_schema_field_min_length_invalid:{field_path}")
-    if expected_type == "array" and isinstance(value, list):
+    if _schema_allows_type(expected_type, "array") and isinstance(value, list):
         item_schema = schema.get("items")
         if isinstance(item_schema, dict):
             blockers.extend(_array_item_blockers(payload_name, field_path, value, item_schema))
         contains_schema = schema.get("contains")
         if isinstance(contains_schema, dict) and not any(_schema_contains_match(item, contains_schema) for item in value):
             blockers.append(f"{payload_name}_schema_array_contains_missing:{field_path}")
-    if expected_type == "object" and isinstance(value, dict):
+    if _schema_allows_type(expected_type, "object") and isinstance(value, dict):
         blockers.extend(_object_nested_blockers(payload_name, field_path, value, schema))
     return blockers
 
@@ -285,6 +290,12 @@ def _array_item_blockers(payload_name: str, field_path: str, values: list[Any], 
     return blockers
 
 
+def _schema_allows_type(expected_type: object, type_name: str) -> bool:
+    if expected_type == type_name:
+        return True
+    return isinstance(expected_type, list) and type_name in expected_type
+
+
 def _schema_contains_match(value: Any, schema: dict[str, Any]) -> bool:
     if "const" in schema and value != schema["const"]:
         return False
@@ -310,6 +321,8 @@ def _value_matches_schema_type(value: Any, expected_type: str) -> bool:
         return isinstance(value, int) and not isinstance(value, bool)
     if expected_type == "number":
         return isinstance(value, int | float) and not isinstance(value, bool)
+    if expected_type == "null":
+        return value is None
     return True
 
 
@@ -460,6 +473,7 @@ def _is_relative_to(path: Path, root: Path) -> bool:
 
 
 def _worker_invocation_blockers(
+    root: Path,
     invocation: dict[str, Any],
     provenance: dict[str, Any],
     *,
@@ -529,7 +543,62 @@ def _worker_invocation_blockers(
                 blockers.append(f"worker_invocation_worker_boundary_{field}_missing")
         if boundary.get("task_system_invocation") not in TASK_SYSTEM_INVOCATIONS:
             blockers.append("worker_invocation_task_system_invocation_invalid")
+        blockers.extend(
+            _worker_input_manifest_blockers(
+                root,
+                invocation,
+                boundary,
+                expected_module_id=expected_module_id,
+                expected_task_id=expected_task_id,
+                expected_mode=expected_mode,
+            )
+        )
     return blockers
+
+
+def _worker_input_manifest_blockers(
+    root: Path,
+    invocation: dict[str, Any],
+    boundary: dict[str, Any],
+    *,
+    expected_module_id: str,
+    expected_task_id: str,
+    expected_mode: str,
+) -> list[str]:
+    input_manifest = invocation.get("input_manifest")
+    if not isinstance(input_manifest, str) or not input_manifest.strip():
+        return ["worker_invocation_input_manifest_invalid"]
+    task_system_invocation = str(boundary.get("task_system_invocation") or "")
+    if task_system_invocation == "task_center_registered" and input_manifest != "module_input.json":
+        return ["worker_invocation_input_manifest_not_materialized_for_task_center"]
+    if input_manifest != "module_input.json":
+        return []
+
+    path = root / input_manifest
+    if not path.is_file():
+        return [f"worker_invocation_input_manifest_missing:{input_manifest}"]
+    payload = _safe_load_json(path)
+    if not payload:
+        return [f"worker_invocation_input_manifest_invalid_json:{input_manifest}"]
+
+    blockers = []
+    blockers.extend(_payload_required_field_blockers("module_input_manifest", payload, MODULE_INPUT_SCHEMA_PATH))
+    blockers.extend(_payload_schema_shape_blockers("module_input_manifest", payload, MODULE_INPUT_SCHEMA_PATH))
+    if expected_module_id and payload.get("module_id") != expected_module_id:
+        blockers.append("module_input_manifest_module_id_mismatch")
+    if expected_task_id and payload.get("task_id") != expected_task_id:
+        blockers.append("module_input_manifest_task_id_mismatch")
+    if expected_mode and payload.get("mode") != expected_mode:
+        blockers.append("module_input_manifest_mode_mismatch")
+    return blockers
+
+
+def _safe_load_json(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def _load_json(path: Path) -> dict[str, Any]:

@@ -486,6 +486,65 @@ def test_worker_invocation_manifest_schema_and_policy_are_validated(tmp_path: Pa
     assert "worker_invocation_task_system_invocation_invalid" in validation["blockers"]
 
 
+def test_task_bridge_worker_invocation_rejects_not_materialized_input_manifest(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    invocation_path = package_dir / "logs" / "worker_invocation.json"
+    invocation = read_json(invocation_path)
+    invocation["input_manifest"] = "not_materialized"
+    invocation_path.write_text(json.dumps(invocation, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "worker_invocation_input_manifest_not_materialized_for_task_center" in validation["blockers"]
+
+
+def test_worker_invocation_manifest_requires_materialized_module_input_for_task_bridge(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    (package_dir / "module_input.json").unlink()
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "worker_invocation_input_manifest_missing:module_input.json" in validation["blockers"]
+
+
+def test_worker_invocation_materialized_module_input_must_match_expected_contract(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    input_path = package_dir / "module_input.json"
+    payload = read_json(input_path)
+    payload["mode"] = "lite"
+    payload["task_id"] = "wrong-task"
+    payload["runtime"] = {"random_seed": "not-an-integer", "requested_environment": 7}
+    input_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "module_input_manifest_mode_mismatch" in validation["blockers"]
+    assert "module_input_manifest_task_id_mismatch" in validation["blockers"]
+    assert "module_input_manifest_schema_field_type_invalid:runtime.random_seed" in validation["blockers"]
+    assert "module_input_manifest_schema_field_type_invalid:runtime.requested_environment" in validation["blockers"]
+
+
 def test_formal_standard_package_validation_blocks_missing_worker_boundary(tmp_path: Path) -> None:
     package_dir = tmp_path / "formal-package"
     for dirname in ("tables", "plots", "reports", "logs"):
@@ -1370,7 +1429,8 @@ def test_invalid_module_input_is_blocked_but_still_has_standard_package(tmp_path
     registry = load_registry(tmp_path)
 
     assert result["status"] == "blocked"
-    assert validation["status"] == "passed"
+    assert validation["status"] == "blocked"
+    assert "module_input_manifest_schema_required_field_missing:parameters" in validation["blockers"]
     assert "module_input_parameters_missing_or_invalid" in read_json(package_dir / "result.json")["blockers"]
     assert "module_input_schema_required_field_missing:parameters" in read_json(package_dir / "result.json")["blockers"]
     assert invocation["worker_backend"] == "python_fixture"

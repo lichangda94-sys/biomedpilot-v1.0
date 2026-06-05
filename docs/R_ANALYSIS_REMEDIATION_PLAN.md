@@ -151,6 +151,8 @@ Update: task submission now enforces the module input payload schema before work
 
 Update: `logs/worker_invocation.json` now points to `module_input.json` for current task-bridge packages instead of `not_materialized`. Malformed input submissions preserve the raw submitted payload in the package for audit while still blocking before worker execution.
 
+Update: standard package validation now follows `logs/worker_invocation.json -> input_manifest` for task-center packages. Current task-bridge packages must use `input_manifest=module_input.json`, the file must exist inside the standard package, and its content must satisfy `analysis/schemas/input/module_input.schema.json` plus expected module/task/mode matching.
+
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.

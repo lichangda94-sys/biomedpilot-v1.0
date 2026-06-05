@@ -220,6 +220,7 @@ The main-backend task bridge now also treats the module input schema as an execu
 - `run_analysis_module_task()` reads `analysis/schemas/input/module_input.schema.json` before invoking a fixture copy or R worker.
 - Missing schema-required fields such as `parameters` produce `module_input_schema_required_field_missing:<field>` blockers while preserving existing semantic blockers for UI disabled reasons.
 - Shape drift such as invalid mode enum, empty `task_id`, non-object `inputs`, and invalid nested `runtime` field types is blocked before worker execution and still writes a diagnostic standard result package plus `logs/worker_invocation.json`.
+- `validate_standard_result_package()` now follows `logs/worker_invocation.json -> input_manifest`; for task-center packages, `input_manifest` must be `module_input.json`, the file must exist inside the standard package, and its content must satisfy `analysis/schemas/input/module_input.schema.json` plus expected module/task/mode matching.
 
 ## 2. PASS / WARN / FAIL Table
 
@@ -236,6 +237,7 @@ The main-backend task bridge now also treats the module input schema as an execu
 | Payload schema shape validation | PASS | `validate_standard_result_package()` now blocks result/provenance payload enum/type/minLength drift, array item type drift, and declared one-level nested object shape drift. |
 | Result package schema validation | PASS | `validate_standard_result_package()` synthesizes a package manifest and validates it against `analysis/schemas/output/result_package.schema.json`, including required package files and directory contract shape. |
 | Module input schema validation | PASS | `run_analysis_module_task()` now blocks required-field and shape drift from `analysis/schemas/input/module_input.schema.json` before worker execution while still returning a standard diagnostic package and worker invocation manifest. |
+| Materialized input manifest validation | PASS | Standard package validation now verifies task-center `worker_invocation.input_manifest=module_input.json`, checks the file exists in the package, and validates its schema plus expected module/task/mode. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, exploratory immune/TME scoring, and local correlation results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog and standard-package gate rows from result-index artifacts, worker invocation diagnostics, worker-boundary metadata, full-mode environment snapshots, and a standard artifact manifest; package validation blocks declared table/plot/report artifacts that are missing or escape the standard package directories. Existing detailed result views still consume module-specific result indexes and service payloads. |
@@ -388,6 +390,7 @@ New architecture boundary files:
 - Added `analysis/schemas/output/worker_invocation.schema.json` and validation blockers for missing or invalid task-bridge/standard-worker invocation manifests.
 - Added result-package-level schema validation against `analysis/schemas/output/result_package.schema.json`; validation payloads now expose the synthesized package manifest and block package-level directory contract drift.
 - Added schema-driven module input validation in the task bridge so required-field, enum, type, minLength, and nested runtime field drift from `analysis/schemas/input/module_input.schema.json` is blocked before worker execution.
+- Added standard package validation for materialized task-center input manifests: `worker_invocation.input_manifest` must point to package-local `module_input.json`, and that manifest must pass schema and expected module/task/mode checks.
 - Split standard R worker provenance hashing so `input_hash` tracks the full input manifest and `parameter_hash` tracks the `parameters` object separately.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
