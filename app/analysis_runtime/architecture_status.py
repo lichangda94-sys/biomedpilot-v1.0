@@ -55,6 +55,11 @@ def build_analysis_architecture_status() -> dict[str, Any]:
     standard_worker_migration_matrix = build_standard_worker_migration_matrix(registry)
     environment_validation = validate_analysis_environment_registry(module_registry=registry)
     resource_validation = validate_analysis_resource_manifest()
+    full_analysis_activation_gate = build_full_analysis_activation_gate(
+        environment_validation=environment_validation,
+        resource_validation=resource_validation,
+        standard_worker_migration_matrix=standard_worker_migration_matrix,
+    )
     active_install_hits = _active_runtime_install_hits()
     heavy_default_hits = _default_dependency_hits()
     rows = [
@@ -214,8 +219,53 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "p0_issues": p0,
         "p1_issues": p1,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
+        "full_analysis_activation_gate": full_analysis_activation_gate,
         "environment_validation": environment_validation,
         "resource_validation": resource_validation,
+    }
+
+
+def build_full_analysis_activation_gate(
+    *,
+    environment_validation: dict[str, Any] | None = None,
+    resource_validation: dict[str, Any] | None = None,
+    standard_worker_migration_matrix: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Combine full-mode prerequisites into one read-only activation gate."""
+
+    env = environment_validation if isinstance(environment_validation, dict) else validate_analysis_environment_registry()
+    resources = resource_validation if isinstance(resource_validation, dict) else validate_analysis_resource_manifest()
+    matrix = standard_worker_migration_matrix if isinstance(standard_worker_migration_matrix, dict) else build_standard_worker_migration_matrix()
+    checks = {
+        "environment_registry_passed": env.get("status") == "passed",
+        "full_environment_locks_ready": env.get("full_mode_ready") is True,
+        "resource_manifest_passed": resources.get("status") == "passed",
+        "full_resource_locks_ready": resources.get("full_mode_ready") is True,
+        "standard_worker_migration_registry_passed": matrix.get("evidence_registry_status") == "passed",
+        "all_modules_migrated_to_standard_worker": matrix.get("status") == "passed"
+        and int(matrix.get("formal_pending_count") or 0) == 0
+        and int(matrix.get("full_blocked_count") or 0) == 0,
+    }
+    blockers: list[str] = []
+    if not checks["environment_registry_passed"]:
+        blockers.append("full_analysis_environment_registry_failed")
+    if not checks["full_environment_locks_ready"]:
+        blockers.append("full_analysis_environment_locks_not_ready")
+    if not checks["resource_manifest_passed"]:
+        blockers.append("full_analysis_resource_manifest_failed")
+    if not checks["full_resource_locks_ready"]:
+        blockers.append("full_analysis_resource_locks_not_ready")
+    if not checks["standard_worker_migration_registry_passed"]:
+        blockers.append("full_analysis_standard_worker_evidence_registry_failed")
+    if not checks["all_modules_migrated_to_standard_worker"]:
+        blockers.append("full_analysis_standard_worker_migration_incomplete")
+    return {
+        "schema_version": "biomedpilot.analysis.full_analysis_activation_gate.v1",
+        "status": "eligible" if not blockers else "blocked",
+        "checks": checks,
+        "blockers": blockers,
+        "policy": "full_analysis_requires_environment_resource_and_standard_worker_evidence",
+        "execution_policy": "read_only_no_worker_execution_no_runtime_install_no_resource_download",
     }
 
 

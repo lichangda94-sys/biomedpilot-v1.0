@@ -10,6 +10,7 @@ import pytest
 
 from app.analysis_runtime.architecture_status import (
     build_analysis_architecture_status,
+    build_full_analysis_activation_gate,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
     load_standard_worker_migration_evidence_registry,
@@ -433,6 +434,7 @@ def test_analysis_environment_registry_validator_blocks_invalid_app_dev_and_unkn
 def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p0_failures() -> None:
     status = build_analysis_architecture_status()
     rows = {row["requirement_id"]: row for row in status["requirement_rows"]}
+    full_gate = status["full_analysis_activation_gate"]
 
     assert status["schema_version"] == "biomedpilot.analysis.architecture_status.v1"
     assert status["requirement_count"] == 20
@@ -447,6 +449,59 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert rows["RARCH-20"]["status"] == "pass"
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
+    assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
+    assert full_gate["status"] == "blocked"
+    assert full_gate["checks"]["environment_registry_passed"] is True
+    assert full_gate["checks"]["resource_manifest_passed"] is True
+    assert full_gate["checks"]["standard_worker_migration_registry_passed"] is True
+    assert full_gate["checks"]["full_environment_locks_ready"] is False
+    assert full_gate["checks"]["full_resource_locks_ready"] is False
+    assert full_gate["checks"]["all_modules_migrated_to_standard_worker"] is False
+    assert full_gate["blockers"] == [
+        "full_analysis_environment_locks_not_ready",
+        "full_analysis_resource_locks_not_ready",
+        "full_analysis_standard_worker_migration_incomplete",
+    ]
+
+
+def test_full_analysis_activation_gate_requires_all_prerequisites() -> None:
+    gate = build_full_analysis_activation_gate(
+        environment_validation={"status": "passed", "full_mode_ready": True},
+        resource_validation={"status": "passed", "full_mode_ready": True},
+        standard_worker_migration_matrix={
+            "status": "passed",
+            "evidence_registry_status": "passed",
+            "formal_pending_count": 0,
+            "full_blocked_count": 0,
+        },
+    )
+
+    assert gate["status"] == "eligible"
+    assert gate["blockers"] == []
+    assert gate["policy"] == "full_analysis_requires_environment_resource_and_standard_worker_evidence"
+    assert gate["execution_policy"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
+
+
+def test_full_analysis_activation_gate_blocks_partial_or_failed_prerequisites() -> None:
+    gate = build_full_analysis_activation_gate(
+        environment_validation={"status": "blocked", "full_mode_ready": False},
+        resource_validation={"status": "passed", "full_mode_ready": False},
+        standard_worker_migration_matrix={
+            "status": "partial",
+            "evidence_registry_status": "blocked",
+            "formal_pending_count": 2,
+            "full_blocked_count": 1,
+        },
+    )
+
+    assert gate["status"] == "blocked"
+    assert gate["blockers"] == [
+        "full_analysis_environment_registry_failed",
+        "full_analysis_environment_locks_not_ready",
+        "full_analysis_resource_locks_not_ready",
+        "full_analysis_standard_worker_evidence_registry_failed",
+        "full_analysis_standard_worker_migration_incomplete",
+    ]
 
 
 def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> None:

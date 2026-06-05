@@ -3,6 +3,7 @@
 from .architecture_status import (
     build_analysis_architecture_status,
     build_analysis_remediation_queue,
+    build_full_analysis_activation_gate,
     build_standard_worker_migration_matrix,
     load_standard_worker_migration_evidence_registry,
     validate_standard_worker_migration_evidence_registry,
@@ -24,6 +25,7 @@ from .task_bridge import run_analysis_module_task
 __all__ = [
     "build_analysis_architecture_status",
     "build_analysis_remediation_queue",
+    "build_full_analysis_activation_gate",
     "build_standard_worker_migration_matrix",
     "load_standard_worker_migration_evidence_registry",
     "validate_standard_worker_migration_evidence_registry",
