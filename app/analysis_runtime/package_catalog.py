@@ -26,6 +26,22 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             package_dir = _resolve_artifact_path(root, artifact.get("path"))
             expected_module_id = _module_id_from_entry(entry)
             payload_schemas = _payload_schemas_for_module(expected_module_id)
+            result_index_module_blockers = _result_index_module_resolution_blockers(entry, expected_module_id)
+            if not _is_relative_to(package_dir, root):
+                rows.append(
+                    _blocked_catalog_row(
+                        root=root,
+                        entry=entry,
+                        package_dir=package_dir,
+                        expected_module_id=expected_module_id,
+                        payload_schemas=payload_schemas,
+                        blockers=[
+                            "standard_result_package_path_outside_project_root",
+                            *result_index_module_blockers,
+                        ],
+                    )
+                )
+                continue
             validation = validate_standard_result_package(
                 package_dir,
                 expected_module_id=expected_module_id,
@@ -36,7 +52,6 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             provenance_payload = _read_json(package_dir / "provenance.json")
             invocation_payload = _read_json(package_dir / "logs" / "worker_invocation.json")
             result_index_log_blockers = _result_index_worker_invocation_blockers(entry, root, package_dir)
-            result_index_module_blockers = _result_index_module_resolution_blockers(entry, expected_module_id)
             detail = build_standard_analysis_package_detail(
                 package_dir,
                 project_root=root,
@@ -116,6 +131,74 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
         "rows": rows,
         "blockers": blockers,
         "warnings": [item for row in rows for item in row["warnings"]],
+    }
+
+
+def _blocked_catalog_row(
+    *,
+    root: Path,
+    entry: dict[str, Any],
+    package_dir: Path,
+    expected_module_id: str,
+    payload_schemas: dict[str, str],
+    blockers: list[str],
+) -> dict[str, Any]:
+    return {
+        "schema_version": "biomedpilot.analysis.standard_package_catalog_row.v1",
+        "result_id": str(entry.get("result_id") or ""),
+        "task_run_id": str(entry.get("task_run_id") or ""),
+        "task_type": str(entry.get("task_type") or ""),
+        "result_semantics": str(entry.get("result_semantics") or ""),
+        "package_path": str(package_dir),
+        "package_path_relative": _relative_or_absolute(root, package_dir),
+        "module_id": expected_module_id,
+        "mode": str((entry.get("dependency_snapshot") or {}).get("mode") or ""),
+        "status": "blocked",
+        "validation_status": "blocked",
+        "result_package_schema": "analysis/schemas/output/result_package.schema.json",
+        "package_manifest": {
+            "schema_version": "biomedpilot.analysis.standard_package_manifest_detail.v1",
+            "source_policy": "result_index_declared_standard_package_not_read",
+            "validation_status": "blocked",
+            "blockers": blockers,
+        },
+        "package_manifest_validation_status": "blocked",
+        "payload_schemas": payload_schemas,
+        "result_payload_schema": payload_schemas.get("result.json", ""),
+        "provenance_payload_schema": payload_schemas.get("provenance.json", ""),
+        "engine_name": str(entry.get("engine_name") or ""),
+        "engine_version": str(entry.get("engine_version") or ""),
+        "runtime": {},
+        "analysis_environment": {},
+        "worker_invocation": {},
+        "input_manifest": {
+            "schema_version": "biomedpilot.analysis.standard_package_input_manifest.v1",
+            "validation_status": "blocked",
+            "source_policy": "standard_result_package_not_read",
+            "blockers": blockers,
+        },
+        "input_manifest_path_relative": "",
+        "input_manifest_validation_status": "blocked",
+        "worker_backend": "",
+        "worker_invocation_status": "",
+        "worker_boundary": {},
+        "worker_boundary_type": "",
+        "worker_migration_status": "",
+        "command": "",
+        "input_hash": "",
+        "parameter_hash": "",
+        "random_seed": "",
+        "artifact_counts": {"tables": 0, "plots": 0, "reports": 0, "logs": 0},
+        "artifact_manifest": {
+            "schema_version": "biomedpilot.analysis.standard_package_artifact_manifest.v1",
+            "source_policy": "standard_result_package_not_read",
+            "tables": [],
+            "plots": [],
+            "reports": [],
+            "logs": [],
+        },
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": [],
     }
 
 

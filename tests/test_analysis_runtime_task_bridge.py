@@ -327,6 +327,38 @@ def test_standard_analysis_package_catalog_blocks_unregistered_analysis_task_typ
     assert any("result_index_task_type_not_registered:analysis:not_registered" in item for item in catalog["blockers"])
 
 
+def test_standard_analysis_package_catalog_blocks_packages_outside_project_root(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    original_package_dir = Path(result["result_package_dir"])
+    outside_project_package = tmp_path.parent / f"{tmp_path.name}-outside-standard-package"
+    if outside_project_package.exists():
+        shutil.rmtree(outside_project_package)
+    shutil.copytree(original_package_dir, outside_project_package)
+    registry = load_registry(tmp_path)
+    entry = registry["results"][0]
+    entry["output_artifacts"] = [
+        {
+            "artifact_type": "standard_result_package",
+            "path": str(outside_project_package.resolve()),
+            "schema": "biomedpilot.analysis.result_package.v1",
+        }
+    ]
+    save_registry(tmp_path, [entry])
+
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = catalog["rows"][0]
+
+    assert catalog["status"] == "blocked"
+    assert catalog["package_count"] == 1
+    assert row["validation_status"] == "blocked"
+    assert row["artifact_counts"] == {"tables": 0, "plots": 0, "reports": 0, "logs": 0}
+    assert row["artifact_manifest"]["source_policy"] == "standard_result_package_not_read"
+    assert row["input_manifest"]["source_policy"] == "standard_result_package_not_read"
+    assert row["package_manifest"]["source_policy"] == "result_index_declared_standard_package_not_read"
+    assert "standard_result_package_path_outside_project_root" in row["blockers"]
+    assert any("standard_result_package_path_outside_project_root" in item for item in catalog["blockers"])
+
+
 def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(tmp_path: Path) -> None:
     result = run_analysis_module_task(tmp_path, module_input(tmp_path))
     package_dir = Path(result["result_package_dir"])

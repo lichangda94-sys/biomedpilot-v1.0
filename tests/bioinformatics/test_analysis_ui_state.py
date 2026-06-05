@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from app.analysis_runtime import run_analysis_module_task
 from app.bioinformatics.analysis_ui.state import build_analysis_center_state, build_dependency_rows
 from app.bioinformatics.results.models import ResultIndexEntry
-from app.bioinformatics.results.registry import register_result
+from app.bioinformatics.results.registry import load_registry, register_result, save_registry
 
 
 def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(tmp_path: Path) -> None:
@@ -272,6 +273,41 @@ def test_analysis_center_state_surfaces_standard_package_input_manifest_gate_blo
     assert rows["Standard package input manifest"]["status"] == "blocked"
     assert "module_input_manifest_task_id_mismatch" in rows["Standard package input manifest"]["blockers"]
     assert any("module_input_manifest_task_id_mismatch" in item for item in state["top_blockers"])
+
+
+def test_analysis_center_state_blocks_standard_package_paths_outside_project_root(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, _module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    outside_project_package = tmp_path.parent / f"{tmp_path.name}-outside-standard-package"
+    if outside_project_package.exists():
+        shutil.rmtree(outside_project_package)
+    shutil.copytree(package_dir, outside_project_package)
+    registry = load_registry(tmp_path)
+    entry = registry["results"][0]
+    entry["output_artifacts"] = [
+        {
+            "artifact_type": "standard_result_package",
+            "path": str(outside_project_package.resolve()),
+            "schema": "biomedpilot.analysis.result_package.v1",
+        }
+    ]
+    save_registry(tmp_path, [entry])
+
+    state = build_analysis_center_state(tmp_path)
+    rows = {row["gate"]: row for row in state["standard_package_gate_rows"]}
+    package_row = state["standard_analysis_packages"]["rows"][0]
+    result_row = next(item for item in state["result_rows"] if item["result_id"] == "analysis-package-enrichment-mock-task")
+
+    assert state["standard_analysis_packages"]["status"] == "blocked"
+    assert rows["Standard package validation"]["status"] == "blocked"
+    assert rows["Standard package artifact manifest"]["status"] == "blocked"
+    assert "standard_result_package_path_outside_project_root" in rows["Standard package validation"]["blockers"]
+    assert package_row["artifact_manifest"]["source_policy"] == "standard_result_package_not_read"
+    assert package_row["artifact_counts"] == {"tables": 0, "plots": 0, "reports": 0, "logs": 0}
+    assert result_row["standard_package_status"] == "registered"
+    assert result_row["standard_package_validation_status"] == "blocked"
+    assert result_row["standard_package_artifacts"] == "tables=0; plots=0; reports=0; logs=0"
+    assert any("standard_result_package_path_outside_project_root" in item for item in state["top_blockers"])
 
 
 def test_result_rows_show_missing_standard_package_for_non_package_results(tmp_path: Path) -> None:
