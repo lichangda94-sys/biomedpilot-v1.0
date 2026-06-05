@@ -23,8 +23,15 @@
     "provenance_json": {"const": "provenance.json"},
     "directories": {
       "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
       "items": {"enum": ["tables", "plots", "reports", "logs"]},
-      "contains": {"const": "logs"}
+      "allOf": [
+        {"contains": {"const": "tables"}},
+        {"contains": {"const": "plots"}},
+        {"contains": {"const": "reports"}},
+        {"contains": {"const": "logs"}}
+      ]
     },
     "artifacts": {
       "type": "object",

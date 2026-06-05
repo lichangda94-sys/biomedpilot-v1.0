@@ -1044,6 +1044,14 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "module_id" in input_schema["required"]
     assert "result_json" in output_schema["required"]
     assert "provenance_json" in output_schema["required"]
+    directory_schema = output_schema["properties"]["directories"]
+    assert directory_schema["minItems"] == 4
+    assert directory_schema["uniqueItems"] is True
+    required_directories = [
+        item["contains"]["const"]
+        for item in directory_schema["allOf"]
+    ]
+    assert required_directories == ["tables", "plots", "reports", "logs"]
     assert result_schema["$id"] == "biomedpilot.analysis.result.v1"
     assert provenance_schema["$id"] == "biomedpilot.analysis.provenance.v1"
     assert {"result_semantics", "tables", "plots", "reports", "blockers", "warnings"} <= set(result_schema["required"])

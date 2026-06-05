@@ -220,6 +220,8 @@ Update: standard package validation now also enforces basic schema shape from th
 
 Update: standard package validation now enforces the package-level schema too. `validate_standard_result_package()` synthesizes a package manifest from the package filesystem and `result.json`, validates it against `analysis/schemas/output/result_package.schema.json`, exposes `result_package_schema` plus `package_manifest` in the validation payload, and blocks directory contract drift such as a missing `logs/` directory.
 
+Update: the package-level schema now requires every standard output directory (`tables`, `plots`, `reports`, `logs`) with unique directory entries. This aligns the machine-readable schema with the existing validator requirement that every result package carry the complete standard directory surface, even when a given directory has no generated artifacts.
+
 Update: standard package catalog and detail payloads now expose the synthesized package-level manifest and `result_package_schema`. Results Browser renders this as a standard package manifest table showing validation status, schema path, module/mode/task/status, required directories, and result/provenance payload files.
 
 Update: task submission now enforces the module input payload schema before worker execution. `run_analysis_module_task()` reads `analysis/schemas/input/module_input.schema.json`, blocks missing required fields, enum/type/minLength drift, and nested `runtime` field shape drift, then returns a diagnostic standard package and `logs/worker_invocation.json` instead of invoking mock fixtures or R workers with malformed input.

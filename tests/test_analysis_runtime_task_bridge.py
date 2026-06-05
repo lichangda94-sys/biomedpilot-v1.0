@@ -404,7 +404,27 @@ def test_standard_package_validation_enforces_result_package_schema_directories(
     assert validation["status"] == "blocked"
     assert "missing_required_directory:logs" in validation["blockers"]
     assert "result_package_schema_array_contains_missing:directories" in validation["blockers"]
+    assert "result_package_schema_array_min_items_invalid:directories" in validation["blockers"]
     assert "logs" not in validation["package_manifest"]["directories"]
+
+
+def test_standard_package_schema_requires_every_standard_directory(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    shutil.rmtree(package_dir / "tables")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "missing_required_directory:tables" in validation["blockers"]
+    assert "result_package_schema_array_contains_missing:directories" in validation["blockers"]
+    assert "result_package_schema_array_min_items_invalid:directories" in validation["blockers"]
+    assert "tables" not in validation["package_manifest"]["directories"]
 
 
 def test_standard_package_validation_blocks_result_and_provenance_schema_version_drift(tmp_path: Path) -> None:

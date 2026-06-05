@@ -255,13 +255,25 @@ def _schema_value_blockers(payload_name: str, field_path: str, value: Any, schem
     min_length = schema.get("minLength")
     if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
         blockers.append(f"{payload_name}_schema_field_min_length_invalid:{field_path}")
-    if _schema_allows_type(expected_type, "array") and isinstance(value, list):
+    min_items = schema.get("minItems")
+    if isinstance(min_items, int) and isinstance(value, list) and len(value) < min_items:
+        blockers.append(f"{payload_name}_schema_array_min_items_invalid:{field_path}")
+    if schema.get("uniqueItems") is True and isinstance(value, list):
+        normalized = [json.dumps(item, sort_keys=True, ensure_ascii=False) for item in value]
+        if len(normalized) != len(set(normalized)):
+            blockers.append(f"{payload_name}_schema_array_unique_items_invalid:{field_path}")
+    if _schema_allows_array_keywords(expected_type, value, schema):
         item_schema = schema.get("items")
         if isinstance(item_schema, dict):
             blockers.extend(_array_item_blockers(payload_name, field_path, value, item_schema))
         contains_schema = schema.get("contains")
         if isinstance(contains_schema, dict) and not any(_schema_contains_match(item, contains_schema) for item in value):
             blockers.append(f"{payload_name}_schema_array_contains_missing:{field_path}")
+    all_of = schema.get("allOf")
+    if isinstance(all_of, list):
+        for item_schema in all_of:
+            if isinstance(item_schema, dict):
+                blockers.extend(_schema_value_blockers(payload_name, field_path, value, item_schema))
     if _schema_allows_type(expected_type, "object") and isinstance(value, dict):
         blockers.extend(_object_nested_blockers(payload_name, field_path, value, schema))
     return blockers
@@ -294,6 +306,15 @@ def _schema_allows_type(expected_type: object, type_name: str) -> bool:
     if expected_type == type_name:
         return True
     return isinstance(expected_type, list) and type_name in expected_type
+
+
+def _schema_allows_array_keywords(expected_type: object, value: Any, schema: dict[str, Any]) -> bool:
+    if not isinstance(value, list):
+        return False
+    return _schema_allows_type(expected_type, "array") or any(
+        keyword in schema
+        for keyword in ("items", "contains", "minItems", "uniqueItems")
+    )
 
 
 def _schema_contains_match(value: Any, schema: dict[str, Any]) -> bool:

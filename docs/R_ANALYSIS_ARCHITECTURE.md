@@ -101,6 +101,8 @@ app/analysis_runtime/
 
 The bridge can create a task record, write a standard result package, validate the package, and register the package in the current result index. It can invoke supported `lite` worker paths explicitly via `worker_backend="rscript"`; unsupported `lite` modes and all `full` modes remain blocked until isolated worker environments are available.
 
+The package-level schema requires the complete standard directory surface: `tables`, `plots`, `reports`, and `logs`. These directories may be empty when a module has no artifact of that type, but every package must carry the same directory shape and unique directory entries so UI, report, and audit consumers do not depend on module-private output conventions.
+
 Lite support is registry-gated. Any module that declares `modes.lite.supported=true` in `analysis/registry/analysis_modules.json` is covered by a focused task-bridge test that runs the module through `run_analysis_module_task(..., worker_backend="rscript")`, validates the standard package, verifies result-index registration, verifies standard package catalog discovery, and confirms the output remains `testing_level` with `report_ready_eligible=false`.
 
 Full mode is also registry-gated, but currently as a blocking contract rather than an activation contract. Any module that declares `modes.full` is covered by a focused task-bridge test that requests `mode=full` with `worker_backend="rscript"` and verifies the bridge stops before worker execution, writes a blocked standard package, registers a blocked result-index entry, exposes the package in the standard catalog, and records non-executed R/Bioconductor/package/tool provenance.

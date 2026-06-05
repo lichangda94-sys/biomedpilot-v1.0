@@ -257,7 +257,7 @@ This closes a schema-discovery gap for future UI/catalog consumers: they no long
 The standard package validator now uses the result/provenance payload schema files as a required-field gate:
 
 - `validate_standard_result_package()` now synthesizes a package-level manifest from the package filesystem and `result.json`, then validates it against `analysis/schemas/output/result_package.schema.json`.
-- Package-level schema validation exposes `result_package_schema` and `package_manifest` in the validation payload and blocks package directory contract drift such as missing `logs/`.
+- Package-level schema validation exposes `result_package_schema` and `package_manifest` in the validation payload and blocks package directory contract drift. The schema now requires all four standard directories (`tables`, `plots`, `reports`, `logs`) with unique entries, matching the validator's filesystem checks.
 - `validate_standard_result_package()` reads `analysis/schemas/output/result.schema.json` and blocks packages missing required result fields such as `result_semantics` or `created_at`.
 - It reads `analysis/schemas/output/provenance.schema.json` and blocks packages missing required provenance fields such as `engine` or `command`.
 - It now also enforces top-level schema shape for declared `type`, `enum`, `const`, `minLength`, array item types, and one-level nested object properties such as `engine.version` and `runtime.package_versions`.
