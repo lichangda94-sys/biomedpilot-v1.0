@@ -16,6 +16,7 @@ from app.analysis_runtime.architecture_status import (
     build_full_analysis_activation_gate,
     build_full_activation_module_matrix,
     build_module_interface_matrix,
+    build_reproducibility_provenance_matrix,
     build_task_system_boundary_matrix,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
@@ -1413,6 +1414,12 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["frontend_consumption_matrix"]["status"] == "partial"
     assert status["frontend_consumption_matrix"]["passed_consumer_count"] == 4
     assert status["frontend_consumption_matrix"]["partial_consumer_count"] == 1
+    assert status["reproducibility_provenance_matrix"]["status"] == "partial"
+    assert status["reproducibility_provenance_matrix"]["passed_row_count"] == 5
+    assert status["reproducibility_provenance_matrix"]["partial_row_count"] == 1
+    assert status["reproducibility_provenance_matrix"]["blocked_row_count"] == 0
+    assert "input_hash" in status["reproducibility_provenance_matrix"]["required_fields"]
+    assert "package_versions" in status["reproducibility_provenance_matrix"]["required_runtime_fields"]
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
     assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
@@ -1822,6 +1829,41 @@ def test_frontend_standard_package_consumption_matrix_tracks_partial_ui_boundary
     assert rows["detailed_result_views_migration"]["status"] == "partial"
     assert rows["detailed_result_views_migration"]["blockers"] == []
     assert rows["detailed_result_views_migration"]["warnings"] == ["detailed_result_views_still_need_standard_package_only_migration"]
+
+
+def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> None:
+    matrix = build_reproducibility_provenance_matrix()
+    rows = {row["row_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.reproducibility_provenance_matrix.v1"
+    assert matrix["status"] == "partial"
+    assert matrix["boundary"] == "read_only_reproducibility_provenance_contract_diagnostics"
+    assert matrix["row_count"] == 6
+    assert matrix["passed_row_count"] == 5
+    assert matrix["partial_row_count"] == 1
+    assert matrix["blocked_row_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert matrix["warning_counts"]["legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"] == 1
+    assert {"input_hash", "parameter_hash", "random_seed", "engine", "runtime", "command"} <= set(matrix["required_fields"])
+    assert {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"} <= set(matrix["required_runtime_fields"])
+    assert {"name", "version"} <= set(matrix["required_engine_fields"])
+    assert rows["provenance_payload_schema"]["status"] == "passed"
+    assert rows["provenance_payload_schema"]["required_runtime_fields"] == [
+        "r_version",
+        "bioconductor_version",
+        "package_versions",
+        "external_tool_versions",
+    ]
+    assert rows["standard_package_validator_required_provenance"]["status"] == "passed"
+    assert rows["task_bridge_provenance_writer"]["status"] == "passed"
+    assert rows["standard_r_worker_provenance_writer"]["status"] == "passed"
+    assert rows["worker_invocation_schema"]["status"] == "passed"
+    assert "runtime_install_policy" in rows["worker_invocation_schema"]["required_fields"]
+    assert "resource_download_policy" in rows["worker_invocation_schema"]["required_fields"]
+    assert rows["legacy_sidecar_provenance_boundary"]["status"] == "partial"
+    assert rows["legacy_sidecar_provenance_boundary"]["warnings"] == [
+        "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"
+    ]
 
 
 def test_module_interface_matrix_tracks_standard_module_contracts() -> None:

@@ -143,6 +143,19 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Frontend standard package consumer: detailed_result_views_migration" in frontend_consumption_text
     assert "detailed_result_views_still_need_standard_package_only_migration" in frontend_consumption_text
     assert "consume_result_index_registered_standard_result_packages_only" in frontend_consumption_text
+    provenance_text = "\n".join(str(row) for row in state["reproducibility_provenance_rows"])
+    assert "Reproducibility provenance matrix" in provenance_text
+    assert "passed=5" in provenance_text
+    assert "partial=1" in provenance_text
+    assert "blocked=0" in provenance_text
+    assert "field:input_hash" in provenance_text
+    assert "field:parameter_hash" in provenance_text
+    assert "field:random_seed" in provenance_text
+    assert "runtime:package_versions" in provenance_text
+    assert "runtime:external_tool_versions" in provenance_text
+    assert "Provenance contract: standard_r_worker_provenance_writer" in provenance_text
+    assert "Provenance contract: legacy_sidecar_provenance_boundary" in provenance_text
+    assert "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence" in provenance_text
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text
@@ -216,6 +229,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["frontend_consumption_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["frontend_consumption_matrix"]["partial_consumer_count"] == 1
     assert state["developer_diagnostics"]["frontend_consumption_rows"] == state["frontend_consumption_rows"]
+    assert state["developer_diagnostics"]["reproducibility_provenance_matrix"]["status"] == "partial"
+    assert state["developer_diagnostics"]["reproducibility_provenance_matrix"]["passed_row_count"] == 5
+    assert state["developer_diagnostics"]["reproducibility_provenance_rows"] == state["reproducibility_provenance_rows"]
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["status"] == "blocked"
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["blocked_module_count"] == 10
     assert state["developer_diagnostics"]["full_activation_module_rows"] == state["full_activation_module_rows"]

@@ -116,6 +116,24 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert frontend_rows["results_browser_tables"]["consumer_surface"] == "BioinformaticsResultsBrowserWidget"
     assert frontend_rows["detailed_result_views_migration"]["status"] == "partial"
     assert frontend_rows["detailed_result_views_migration"]["warnings"] == ["detailed_result_views_still_need_standard_package_only_migration"]
+    assert payload["reproducibility_provenance_matrix"]["schema_version"] == "biomedpilot.analysis.reproducibility_provenance_matrix.v1"
+    assert payload["reproducibility_provenance_matrix"]["status"] == "partial"
+    assert payload["reproducibility_provenance_matrix"]["passed_row_count"] == 5
+    assert payload["reproducibility_provenance_matrix"]["partial_row_count"] == 1
+    assert payload["reproducibility_provenance_matrix"]["blocked_row_count"] == 0
+    assert payload["reproducibility_provenance_matrix"]["blocker_counts"] == {}
+    assert "input_hash" in payload["reproducibility_provenance_matrix"]["required_fields"]
+    assert "package_versions" in payload["reproducibility_provenance_matrix"]["required_runtime_fields"]
+    provenance_rows = {row["row_id"]: row for row in payload["reproducibility_provenance_rows"]}
+    assert provenance_rows["provenance_payload_schema"]["status"] == "passed"
+    assert provenance_rows["standard_package_validator_required_provenance"]["status"] == "passed"
+    assert provenance_rows["task_bridge_provenance_writer"]["status"] == "passed"
+    assert provenance_rows["standard_r_worker_provenance_writer"]["status"] == "passed"
+    assert provenance_rows["worker_invocation_schema"]["status"] == "passed"
+    assert provenance_rows["legacy_sidecar_provenance_boundary"]["status"] == "partial"
+    assert provenance_rows["legacy_sidecar_provenance_boundary"]["warnings"] == [
+        "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"
+    ]
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False
     assert set(payload["environment_readiness"]["blocked_environment_ids"]) == {
@@ -306,6 +324,7 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "External Tool Adapter Isolation Matrix" in text
     assert "Task System Boundary Matrix" in text
     assert "Frontend Standard Package Consumption Matrix" in text
+    assert "Reproducibility Provenance Matrix" in text
     assert "mock=True; lite=True; full=False" in text
     assert "not_executed_in_lite_mode" in text
     assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in text
@@ -313,6 +332,9 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "task_center_registered" in text
     assert "pending_standard_worker_migration" in text
     assert "detailed_result_views_still_need_standard_package_only_migration" in text
+    assert "standard_r_worker_provenance_writer" in text
+    assert "package_versions" in text
+    assert "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence" in text
     assert "Runtime package install" in text
     assert "Runtime resource download" in text
     assert "Default app-dev heavy dependency" in text
@@ -497,6 +519,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "task_system_boundary_rows" in schema["required"]
     assert "frontend_consumption_matrix" in schema["required"]
     assert "frontend_consumption_rows" in schema["required"]
+    assert "reproducibility_provenance_matrix" in schema["required"]
+    assert "reproducibility_provenance_rows" in schema["required"]
     assert "runtime_acquisition_scan" in schema["required"]
     assert "default_dependency_scan" in schema["required"]
     assert "environment_readiness" in schema["required"]
@@ -517,6 +541,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["task_system_boundary_rows"]["type"] == "array"
     assert schema["properties"]["frontend_consumption_matrix"]["type"] == "object"
     assert schema["properties"]["frontend_consumption_rows"]["type"] == "array"
+    assert schema["properties"]["reproducibility_provenance_matrix"]["type"] == "object"
+    assert schema["properties"]["reproducibility_provenance_rows"]["type"] == "array"
     assert schema["properties"]["runtime_acquisition_scan"]["type"] == "object"
     assert schema["properties"]["default_dependency_scan"]["type"] == "object"
     assert schema["properties"]["full_activation_module_matrix"]["type"] == "object"

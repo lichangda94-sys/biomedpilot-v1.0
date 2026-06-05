@@ -14,6 +14,8 @@ STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_SCHEMA_PATH = REPO_ROOT / "analysis"
 STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "standard_worker_migration_evidence.json"
 FULL_ANALYSIS_ACTIVATION_GATE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json"
 REMEDIATION_QUEUE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "remediation_queue.schema.json"
+PROVENANCE_PAYLOAD_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json"
+WORKER_INVOCATION_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json"
 TARGET_MODULE_IDS = (
     "deg",
     "survival",
@@ -88,6 +90,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
     frontend_consumption_matrix = build_frontend_standard_package_consumption_matrix()
+    reproducibility_provenance_matrix = build_reproducibility_provenance_matrix()
     runtime_acquisition_scan = build_runtime_acquisition_scan_summary()
     default_dependency_scan = build_default_dependency_scan_summary()
     active_install_hits = list(runtime_acquisition_scan.get("install_hits", []))
@@ -202,9 +205,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-16",
             "Reproducibility provenance contract",
-            "warn",
+            "warn" if reproducibility_provenance_matrix.get("status") == "partial" else ("pass" if reproducibility_provenance_matrix.get("status") == "passed" else "fail"),
             "analysis/schemas/output/provenance.schema.json and standard package validator",
-            warnings=["unmigrated_formal_or_full_modules_still_need_complete_runtime_package_version_capture"],
+            blockers=list(reproducibility_provenance_matrix.get("blocker_counts", {}).keys()),
+            warnings=list(reproducibility_provenance_matrix.get("warning_counts", {}).keys()),
         ),
         _row(
             "RARCH-17",
@@ -254,6 +258,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
         "frontend_consumption_matrix": frontend_consumption_matrix,
+        "reproducibility_provenance_matrix": reproducibility_provenance_matrix,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "full_activation_module_matrix": full_activation_module_matrix,
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -690,6 +695,229 @@ def _frontend_consumption_row(
         "required_tokens": required_tokens,
         "blockers": blockers,
         "warnings": [],
+    }
+
+
+def build_reproducibility_provenance_matrix() -> dict[str, Any]:
+    """Return static evidence for reproducibility provenance coverage.
+
+    This matrix proves the current contracts require the reproducibility fields
+    and that bridge/worker writers materialize them. It remains partial until
+    formal/full modules register standard-worker migration evidence.
+    """
+
+    provenance_schema = _read_json(PROVENANCE_PAYLOAD_SCHEMA_PATH)
+    runtime_schema = (
+        provenance_schema.get("properties", {}).get("runtime", {})
+        if isinstance(provenance_schema.get("properties"), dict)
+        else {}
+    )
+    engine_schema = (
+        provenance_schema.get("properties", {}).get("engine", {})
+        if isinstance(provenance_schema.get("properties"), dict)
+        else {}
+    )
+    required_fields = [str(item) for item in provenance_schema.get("required", []) if item]
+    runtime_required_fields = [str(item) for item in runtime_schema.get("required", []) if item] if isinstance(runtime_schema, dict) else []
+    engine_required_fields = [str(item) for item in engine_schema.get("required", []) if item] if isinstance(engine_schema, dict) else []
+    rows = [
+        _provenance_schema_row(
+            required_fields=required_fields,
+            runtime_required_fields=runtime_required_fields,
+            engine_required_fields=engine_required_fields,
+        ),
+        _source_token_contract_row(
+            row_id="standard_package_validator_required_provenance",
+            title="Standard package validator blocks incomplete passed provenance",
+            file_path="app/analysis_runtime/standard_package.py",
+            required_tokens=[
+                "_passed_package_provenance_blockers",
+                "for field in (\"input_hash\", \"parameter_hash\", \"command\")",
+                "blockers.append(f\"passed_provenance_{field}_missing\")",
+                "passed_provenance_random_seed_missing",
+                "for field in (\"name\", \"version\")",
+                "blockers.append(f\"passed_provenance_engine_{field}_missing\")",
+                "for field in (\"r_version\", \"bioconductor_version\", \"package_versions\", \"external_tool_versions\")",
+                "blockers.append(f\"passed_provenance_runtime_{field}_missing\")",
+                "passed_provenance_runtime_package_versions_invalid",
+                "passed_provenance_runtime_external_tool_versions_invalid",
+            ],
+            evidence_path="app/analysis_runtime/standard_package.py::_passed_package_provenance_blockers",
+        ),
+        _source_token_contract_row(
+            row_id="task_bridge_provenance_writer",
+            title="Task bridge writes deterministic input/parameter hashes and runtime snapshot",
+            file_path="app/analysis_runtime/task_bridge.py",
+            required_tokens=[
+                "input_hash = _hash_payload(payload.get(\"inputs\", {}))",
+                "parameter_hash = _hash_payload(payload.get(\"parameters\", {}))",
+                "\"random_seed\": (payload.get(\"runtime\") or {}).get(\"random_seed\")",
+                "\"engine\": {\"name\": \"biomedpilot_analysis_task_bridge\", \"version\": \"v1\"}",
+                "\"runtime\": {",
+                "\"package_versions\": {}",
+                "\"external_tool_versions\": {}",
+                "\"command\": command",
+                "analysis_environment",
+            ],
+            evidence_path="app/analysis_runtime/task_bridge.py::_write_standard_package",
+        ),
+        _source_token_contract_row(
+            row_id="standard_r_worker_provenance_writer",
+            title="Standard R worker writes R/Bioc/hash/seed/command provenance",
+            file_path="analysis/runners/run_module.R",
+            required_tokens=[
+                "write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version",
+                "seed <- read_integer_field(input_text, \"random_seed\")",
+                "input_hash <- as.character(tools::md5sum(input_json))",
+                "parameter_hash <- hash_string(read_object_field_text(input_text, \"parameters\", \"{}\"))",
+                "\"engine\": {\"name\": \"biomedpilot_standard_r_worker\", \"version\": \"v1\"}",
+                "\"runtime\": {\"r_version\": ",
+                "\"bioconductor_version\": ",
+                "\"package_versions\": {}",
+                "\"external_tool_versions\": ",
+                "\"command\": ",
+            ],
+            evidence_path="analysis/runners/run_module.R::write_provenance",
+        ),
+        _worker_invocation_schema_row(),
+        {
+            "row_id": "legacy_sidecar_provenance_boundary",
+            "title": "Legacy service adapter sidecars remain transitional provenance only",
+            "status": "partial",
+            "evidence_path": "app/analysis_runtime/standard_package.py::write_legacy_service_adapter_invocation_manifest",
+            "required_fields": [],
+            "required_runtime_fields": [],
+            "required_engine_fields": [],
+            "blockers": [],
+            "warnings": ["legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"],
+            "boundary": "formal_full_completion_requires_standard_worker_migration_evidence_not_sidecar_provenance",
+        },
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.reproducibility_provenance_matrix.v1",
+        "status": "blocked" if blocker_counts else ("partial" if warning_counts else "passed"),
+        "row_count": len(rows),
+        "passed_row_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "partial_row_count": sum(1 for row in rows if row.get("status") == "partial"),
+        "blocked_row_count": sum(1 for row in rows if row.get("status") == "blocked"),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "required_fields": required_fields,
+        "required_runtime_fields": runtime_required_fields,
+        "required_engine_fields": engine_required_fields,
+        "rows": rows,
+        "boundary": "read_only_reproducibility_provenance_contract_diagnostics",
+    }
+
+
+def _provenance_schema_row(
+    *,
+    required_fields: list[str],
+    runtime_required_fields: list[str],
+    engine_required_fields: list[str],
+) -> dict[str, Any]:
+    required = {
+        "schema_version",
+        "module_id",
+        "mode",
+        "task_id",
+        "created_at",
+        "input_hash",
+        "parameter_hash",
+        "random_seed",
+        "engine",
+        "runtime",
+        "command",
+    }
+    runtime_required = {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"}
+    engine_required = {"name", "version"}
+    blockers: list[str] = []
+    missing = sorted(required - set(required_fields))
+    missing_runtime = sorted(runtime_required - set(runtime_required_fields))
+    missing_engine = sorted(engine_required - set(engine_required_fields))
+    blockers.extend(f"provenance_schema_required_field_missing:{field}" for field in missing)
+    blockers.extend(f"provenance_schema_runtime_field_missing:{field}" for field in missing_runtime)
+    blockers.extend(f"provenance_schema_engine_field_missing:{field}" for field in missing_engine)
+    return {
+        "row_id": "provenance_payload_schema",
+        "title": "Provenance payload schema requires reproducibility fields",
+        "status": "blocked" if blockers else "passed",
+        "evidence_path": "analysis/schemas/output/provenance.schema.json",
+        "required_fields": required_fields,
+        "required_runtime_fields": runtime_required_fields,
+        "required_engine_fields": engine_required_fields,
+        "blockers": blockers,
+        "warnings": [],
+        "boundary": "schema_contract_only_no_worker_execution",
+    }
+
+
+def _worker_invocation_schema_row() -> dict[str, Any]:
+    schema = _read_json(WORKER_INVOCATION_SCHEMA_PATH)
+    required_fields = [str(item) for item in schema.get("required", []) if item]
+    required = {
+        "schema_version",
+        "module_id",
+        "mode",
+        "task_id",
+        "worker_backend",
+        "invocation_status",
+        "standard_worker_entrypoint",
+        "input_manifest",
+        "output_contract",
+        "runtime_install_policy",
+        "resource_download_policy",
+        "command",
+        "worker_boundary",
+    }
+    missing = sorted(required - set(required_fields))
+    blockers = [f"worker_invocation_schema_required_field_missing:{field}" for field in missing]
+    return {
+        "row_id": "worker_invocation_schema",
+        "title": "Worker invocation manifest captures command and no-install/no-download policy",
+        "status": "blocked" if blockers else "passed",
+        "evidence_path": "analysis/schemas/output/worker_invocation.schema.json",
+        "required_fields": required_fields,
+        "required_runtime_fields": [],
+        "required_engine_fields": [],
+        "blockers": blockers,
+        "warnings": [],
+        "boundary": "worker_invocation_contract_only_no_worker_execution",
+    }
+
+
+def _source_token_contract_row(
+    *,
+    row_id: str,
+    title: str,
+    file_path: str,
+    required_tokens: list[str],
+    evidence_path: str,
+) -> dict[str, Any]:
+    path = REPO_ROOT / file_path
+    text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+    blockers: list[str] = []
+    if not path.is_file():
+        blockers.append(f"provenance_contract_file_missing:{file_path}")
+    for token in required_tokens:
+        if token not in text:
+            blockers.append(f"provenance_contract_required_token_missing:{row_id}:{token}")
+    return {
+        "row_id": row_id,
+        "title": title,
+        "status": "blocked" if blockers else "passed",
+        "evidence_path": evidence_path,
+        "required_tokens": required_tokens,
+        "required_fields": [],
+        "required_runtime_fields": [],
+        "required_engine_fields": [],
+        "blockers": blockers,
+        "warnings": [],
+        "boundary": "static_source_contract_check_no_worker_execution",
     }
 
 

@@ -77,6 +77,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     task_system_boundary_rows = build_task_system_boundary_rows(task_system_boundary_matrix)
     frontend_consumption_matrix = analysis_architecture_status.get("frontend_consumption_matrix") if isinstance(analysis_architecture_status.get("frontend_consumption_matrix"), dict) else {}
     frontend_consumption_rows = build_frontend_consumption_rows(frontend_consumption_matrix)
+    reproducibility_provenance_matrix = analysis_architecture_status.get("reproducibility_provenance_matrix") if isinstance(analysis_architecture_status.get("reproducibility_provenance_matrix"), dict) else {}
+    reproducibility_provenance_rows = build_reproducibility_provenance_rows(reproducibility_provenance_matrix)
     full_activation_module_matrix = analysis_architecture_status.get("full_activation_module_matrix") if isinstance(analysis_architecture_status.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = build_full_activation_module_rows(full_activation_module_matrix)
     standard_worker_migration_matrix = analysis_architecture_status.get("standard_worker_migration_matrix") if isinstance(analysis_architecture_status.get("standard_worker_migration_matrix"), dict) else {}
@@ -158,6 +160,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "task_system_boundary_rows": task_system_boundary_rows,
         "frontend_consumption_matrix": frontend_consumption_matrix,
         "frontend_consumption_rows": frontend_consumption_rows,
+        "reproducibility_provenance_matrix": reproducibility_provenance_matrix,
+        "reproducibility_provenance_rows": reproducibility_provenance_rows,
         "full_activation_module_matrix": full_activation_module_matrix,
         "full_activation_module_rows": full_activation_module_rows,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
@@ -185,6 +189,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "task_system_boundary_rows": task_system_boundary_rows,
             "frontend_consumption_matrix": frontend_consumption_matrix,
             "frontend_consumption_rows": frontend_consumption_rows,
+            "reproducibility_provenance_matrix": reproducibility_provenance_matrix,
+            "reproducibility_provenance_rows": reproducibility_provenance_rows,
             "full_activation_module_matrix": full_activation_module_matrix,
             "full_activation_module_rows": full_activation_module_rows,
             "standard_worker_migration_matrix": standard_worker_migration_matrix,
@@ -1393,6 +1399,52 @@ def build_frontend_consumption_rows(matrix: dict[str, Any]) -> list[dict[str, An
                     f"{row.get('consumer_surface')}; "
                     f"{row.get('file_path')}; "
                     f"{row.get('source_policy')}"
+                ),
+            )
+        )
+    return rows
+
+
+def build_reproducibility_provenance_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    provenance_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    blocker_counts = matrix.get("blocker_counts") if isinstance(matrix.get("blocker_counts"), dict) else {}
+    warning_counts = matrix.get("warning_counts") if isinstance(matrix.get("warning_counts"), dict) else {}
+    rows = [
+        _formal_deg_gate_row(
+            "Reproducibility provenance matrix",
+            matrix.get("status") or "blocked",
+            [f"{key}={value}" for key, value in sorted(blocker_counts.items())],
+            [
+                f"passed={matrix.get('passed_row_count', 0)}",
+                f"partial={matrix.get('partial_row_count', 0)}",
+                f"blocked={matrix.get('blocked_row_count', 0)}",
+                f"fields={compact_list(_list(matrix.get('required_fields')))}",
+                f"runtime={compact_list(_list(matrix.get('required_runtime_fields')))}",
+                *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
+            ],
+            basis=f"rows={matrix.get('row_count', 0)}; {matrix.get('boundary', 'read_only_reproducibility_provenance_contract_diagnostics')}",
+        )
+    ]
+    for row in provenance_rows:
+        important_fields = [
+            field
+            for field in _list(row.get("required_fields"))
+            if field in {"input_hash", "parameter_hash", "random_seed", "engine", "runtime", "command"}
+        ]
+        rows.append(
+            _formal_deg_gate_row(
+                f"Provenance contract: {row.get('row_id')}",
+                row.get("status") or "blocked",
+                _list(row.get("blockers")),
+                [
+                    *[f"field:{field}" for field in important_fields],
+                    *[f"runtime:{field}" for field in _list(row.get("required_runtime_fields"))[:6]],
+                    *[f"engine:{field}" for field in _list(row.get("required_engine_fields"))[:4]],
+                    *_list(row.get("warnings")),
+                ],
+                basis=(
+                    f"{row.get('evidence_path')}; "
+                    f"{row.get('boundary')}"
                 ),
             )
         )

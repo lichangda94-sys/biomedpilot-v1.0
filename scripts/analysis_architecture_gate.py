@@ -70,6 +70,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
     frontend_consumption_matrix = architecture_status.get("frontend_consumption_matrix") if isinstance(architecture_status.get("frontend_consumption_matrix"), dict) else {}
+    reproducibility_provenance_matrix = architecture_status.get("reproducibility_provenance_matrix") if isinstance(architecture_status.get("reproducibility_provenance_matrix"), dict) else {}
     full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
     runtime_acquisition_scan = architecture_status.get("runtime_acquisition_scan") if isinstance(architecture_status.get("runtime_acquisition_scan"), dict) else {}
     default_dependency_scan = architecture_status.get("default_dependency_scan") if isinstance(architecture_status.get("default_dependency_scan"), dict) else {}
@@ -159,6 +160,26 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "frontend_consumption_rows": [
             dict(row)
             for row in frontend_consumption_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "reproducibility_provenance_matrix": {
+            "schema_version": reproducibility_provenance_matrix.get("schema_version"),
+            "status": reproducibility_provenance_matrix.get("status"),
+            "row_count": reproducibility_provenance_matrix.get("row_count"),
+            "passed_row_count": reproducibility_provenance_matrix.get("passed_row_count"),
+            "partial_row_count": reproducibility_provenance_matrix.get("partial_row_count"),
+            "blocked_row_count": reproducibility_provenance_matrix.get("blocked_row_count"),
+            "status_counts": reproducibility_provenance_matrix.get("status_counts", {}),
+            "blocker_counts": reproducibility_provenance_matrix.get("blocker_counts", {}),
+            "warning_counts": reproducibility_provenance_matrix.get("warning_counts", {}),
+            "required_fields": reproducibility_provenance_matrix.get("required_fields", []),
+            "required_runtime_fields": reproducibility_provenance_matrix.get("required_runtime_fields", []),
+            "required_engine_fields": reproducibility_provenance_matrix.get("required_engine_fields", []),
+            "boundary": reproducibility_provenance_matrix.get("boundary"),
+        },
+        "reproducibility_provenance_rows": [
+            dict(row)
+            for row in reproducibility_provenance_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -498,6 +519,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     task_system_boundary_rows = [row for row in payload.get("task_system_boundary_rows", []) if isinstance(row, dict)]
     frontend_consumption_matrix = payload.get("frontend_consumption_matrix") if isinstance(payload.get("frontend_consumption_matrix"), dict) else {}
     frontend_consumption_rows = [row for row in payload.get("frontend_consumption_rows", []) if isinstance(row, dict)]
+    reproducibility_provenance_matrix = payload.get("reproducibility_provenance_matrix") if isinstance(payload.get("reproducibility_provenance_matrix"), dict) else {}
+    reproducibility_provenance_rows = [row for row in payload.get("reproducibility_provenance_rows", []) if isinstance(row, dict)]
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
@@ -574,6 +597,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_frontend_consumption_summary_table(frontend_consumption_matrix, frontend_consumption_rows))
+    lines.extend(
+        [
+            "",
+            "### Reproducibility Provenance Matrix",
+            "",
+        ]
+    )
+    lines.extend(_reproducibility_provenance_summary_table(reproducibility_provenance_matrix, reproducibility_provenance_rows))
     lines.extend(
         [
             "",
@@ -1125,6 +1156,42 @@ def _frontend_consumption_summary_table(matrix: dict[str, Any], rows: list[dict[
         *table,
         "",
         *_markdown_table(["Consumer", "Status", "Surface", "File", "Policy"], consumer_rows, ["row_id", "status", "surface", "file", "policy"]),
+    ]
+
+
+def _reproducibility_provenance_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed provenance contracts",
+            "count": matrix.get("passed_row_count", 0),
+            "detail": f"fields={matrix.get('required_fields', [])}",
+        },
+        {
+            "metric": "Partial provenance contracts",
+            "count": matrix.get("partial_row_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked provenance contracts",
+            "count": matrix.get("blocked_row_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    provenance_rows = [
+        {
+            "row_id": row.get("row_id"),
+            "status": row.get("status"),
+            "evidence": row.get("evidence_path"),
+            "runtime_fields": row.get("required_runtime_fields", []),
+            "warnings": row.get("warnings", []),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Contract", "Status", "Evidence", "Runtime Fields", "Warnings"], provenance_rows, ["row_id", "status", "evidence", "runtime_fields", "warnings"]),
     ]
 
 
