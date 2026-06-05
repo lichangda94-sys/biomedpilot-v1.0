@@ -304,6 +304,18 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     assert template_package["template_counts"]["environment_lock_evidence_templates"] == 4
     assert template_package["template_counts"]["resource_lock_evidence_templates"] == 11
     assert template_package["template_counts"]["standard_worker_migration_evidence_templates"] == len(payload["standard_worker_migration_rows"])
+    assert template_package["full_activation_module_matrix"]["schema_version"] == "biomedpilot.analysis.full_activation_module_matrix.v1"
+    assert template_package["full_activation_module_matrix"]["status"] == "blocked"
+    assert template_package["full_activation_module_matrix"]["blocked_module_count"] == 10
+    assert template_package["full_activation_module_matrix"]["boundary"] == "read_only_module_level_full_activation_diagnostics"
+    full_activation_rows = {
+        item["module_id"]: item
+        for item in template_package["full_activation_module_rows"]
+    }
+    assert full_activation_rows["deg"]["resource_status"] == "not_required"
+    assert full_activation_rows["enrichment"]["resource_status"] == "blocked"
+    assert "analysis_resource_not_locked:reactome_full" in full_activation_rows["enrichment"]["blockers"]
+    assert full_activation_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     remediation_actions = template_package["remediation_actions"]
     assert remediation_actions["schema_version"] == "biomedpilot.analysis.evidence_template_remediation_actions.v1"
     assert remediation_actions["action_policy"] == "planning_only_not_readiness_evidence"
@@ -431,6 +443,8 @@ def test_analysis_evidence_template_package_schema_is_present_and_matches_payloa
     assert "environment_lock_evidence_templates" in schema["required"]
     assert "resource_lock_evidence_templates" in schema["required"]
     assert "standard_worker_migration_evidence_templates" in schema["required"]
+    assert "full_activation_module_matrix" in schema["required"]
+    assert "full_activation_module_rows" in schema["required"]
     assert "template_policy" in schema["required"]
     assert "registry_paths" in schema["required"]
     assert "expected_evidence_scope" in schema["required"]
@@ -439,6 +453,8 @@ def test_analysis_evidence_template_package_schema_is_present_and_matches_payloa
     assert schema["properties"]["remediation_scope"]["type"] == "object"
     assert schema["properties"]["remediation_actions"]["type"] == "object"
     assert schema["properties"]["expected_evidence_scope"]["type"] == "object"
+    assert schema["properties"]["full_activation_module_matrix"]["type"] == "object"
+    assert schema["properties"]["full_activation_module_rows"]["type"] == "array"
     assert "expected_module_ids" in schema["properties"]["expected_evidence_scope"]["required"]
     assert "renv_lock_content" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
     assert "docker_image" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
@@ -465,6 +481,8 @@ def test_analysis_evidence_template_package_schema_blocks_missing_content_declar
             "environment_lock_evidence_templates": [{"environment_id": "r-bio-full"}],
             "resource_lock_evidence_templates": [{"resource_id": "reactome_full"}],
             "standard_worker_migration_evidence_templates": [],
+            "full_activation_module_matrix": {},
+            "full_activation_module_rows": [],
             "blockers": {},
             "remediation_actions": {},
             "template_counts": {},
@@ -475,6 +493,9 @@ def test_analysis_evidence_template_package_schema_blocks_missing_content_declar
     assert "analysis_evidence_template_package_environment_template_renv_lock_content_missing:r-bio-full" in blockers
     assert "analysis_evidence_template_package_environment_template_docker_image_missing:r-bio-full" in blockers
     assert "analysis_evidence_template_package_resource_template_cache_content_missing:reactome_full" in blockers
+    assert "analysis_evidence_template_package_full_activation_module_matrix_schema_version_invalid" in blockers
+    assert "analysis_evidence_template_package_full_activation_module_matrix_boundary_invalid" in blockers
+    assert "analysis_evidence_template_package_full_activation_module_rows_missing" in blockers
     assert "analysis_evidence_template_package_remediation_actions_schema_version_invalid" in blockers
     assert "analysis_evidence_template_package_remediation_actions_policy_invalid" in blockers
     assert "analysis_evidence_template_package_remediation_actions_invalid:environment_next_actions" in blockers

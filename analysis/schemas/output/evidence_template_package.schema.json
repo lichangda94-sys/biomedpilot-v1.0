@@ -17,6 +17,8 @@
     "environment_lock_evidence_templates",
     "resource_lock_evidence_templates",
     "standard_worker_migration_evidence_templates",
+    "full_activation_module_matrix",
+    "full_activation_module_rows",
     "blockers",
     "remediation_actions",
     "template_counts"
@@ -76,6 +78,8 @@
       }
     },
     "standard_worker_migration_evidence_templates": {"type": "array"},
+    "full_activation_module_matrix": {"type": "object"},
+    "full_activation_module_rows": {"type": "array"},
     "blockers": {"type": "object"},
     "remediation_actions": {
       "type": "object",

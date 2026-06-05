@@ -575,6 +575,12 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
         if isinstance(item, dict)
     ]
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
+    full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
+    full_activation_module_rows = [
+        row
+        for row in payload.get("full_activation_module_rows", [])
+        if isinstance(row, dict)
+    ]
     template_package = {
         "schema_version": "biomedpilot.analysis.evidence_template_package.v1",
         "created_at": payload.get("created_at"),
@@ -613,6 +619,17 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
         "environment_lock_evidence_templates": environment_templates,
         "resource_lock_evidence_templates": resource_templates,
         "standard_worker_migration_evidence_templates": migration_templates,
+        "full_activation_module_matrix": {
+            "schema_version": full_activation_module_matrix.get("schema_version"),
+            "status": full_activation_module_matrix.get("status"),
+            "module_count": full_activation_module_matrix.get("module_count"),
+            "eligible_module_count": full_activation_module_matrix.get("eligible_module_count"),
+            "blocked_module_count": full_activation_module_matrix.get("blocked_module_count"),
+            "status_counts": full_activation_module_matrix.get("status_counts", {}),
+            "blocker_counts": full_activation_module_matrix.get("blocker_counts", {}),
+            "boundary": full_activation_module_matrix.get("boundary"),
+        },
+        "full_activation_module_rows": full_activation_module_rows,
         "blockers": {
             "environment_readiness": environment_readiness.get("readiness_blockers", []),
             "resource_readiness": resource_readiness.get("blocked_resource_ids", []),
@@ -694,6 +711,7 @@ def _evidence_template_package_schema_blockers(payload: dict[str, Any], *, root:
     blockers.extend(_environment_template_package_item_blockers(payload.get("environment_lock_evidence_templates")))
     blockers.extend(_resource_template_package_item_blockers(payload.get("resource_lock_evidence_templates")))
     blockers.extend(_remediation_actions_package_blockers(payload.get("remediation_actions")))
+    blockers.extend(_full_activation_module_package_blockers(payload.get("full_activation_module_matrix"), payload.get("full_activation_module_rows")))
     blockers.extend(_evidence_template_scope_blockers(payload))
     return blockers
 
@@ -769,6 +787,35 @@ def _resource_template_package_item_blockers(value: Any) -> list[str]:
             continue
         if content.get("non_empty") is not True:
             blockers.append(f"analysis_evidence_template_package_resource_template_non_empty_missing:{template_id}")
+    return blockers
+
+
+def _full_activation_module_package_blockers(matrix: Any, rows: Any) -> list[str]:
+    blockers: list[str] = []
+    if not isinstance(matrix, dict):
+        blockers.append("analysis_evidence_template_package_full_activation_module_matrix_missing")
+    else:
+        if matrix.get("schema_version") != "biomedpilot.analysis.full_activation_module_matrix.v1":
+            blockers.append("analysis_evidence_template_package_full_activation_module_matrix_schema_version_invalid")
+        if matrix.get("boundary") != "read_only_module_level_full_activation_diagnostics":
+            blockers.append("analysis_evidence_template_package_full_activation_module_matrix_boundary_invalid")
+        if not isinstance(matrix.get("module_count"), int):
+            blockers.append("analysis_evidence_template_package_full_activation_module_matrix_module_count_invalid")
+        if not isinstance(matrix.get("blocker_counts"), dict):
+            blockers.append("analysis_evidence_template_package_full_activation_module_matrix_blocker_counts_invalid")
+    if not isinstance(rows, list) or not rows:
+        blockers.append("analysis_evidence_template_package_full_activation_module_rows_missing")
+    else:
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                blockers.append(f"analysis_evidence_template_package_full_activation_module_row_invalid:{index}")
+                continue
+            module_id = str(row.get("module_id") or index)
+            for field in ("status", "full_environment", "environment_status", "resource_status", "standard_worker_migration_status"):
+                if not str(row.get(field) or ""):
+                    blockers.append(f"analysis_evidence_template_package_full_activation_module_row_field_missing:{module_id}:{field}")
+            if not isinstance(row.get("blockers"), list):
+                blockers.append(f"analysis_evidence_template_package_full_activation_module_row_blockers_invalid:{module_id}")
     return blockers
 
 
