@@ -18,6 +18,7 @@
     "resource_lock_evidence_templates",
     "standard_worker_migration_evidence_templates",
     "blockers",
+    "remediation_actions",
     "template_counts"
   ],
   "properties": {
@@ -76,6 +77,29 @@
     },
     "standard_worker_migration_evidence_templates": {"type": "array"},
     "blockers": {"type": "object"},
+    "remediation_actions": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "environment_next_actions",
+        "environment_action_summary",
+        "resource_next_actions",
+        "resource_action_summary",
+        "module_next_actions",
+        "module_action_summary",
+        "action_policy"
+      ],
+      "properties": {
+        "schema_version": {"const": "biomedpilot.analysis.evidence_template_remediation_actions.v1"},
+        "environment_next_actions": {"type": "array"},
+        "environment_action_summary": {"type": "object"},
+        "resource_next_actions": {"type": "array"},
+        "resource_action_summary": {"type": "object"},
+        "module_next_actions": {"type": "array"},
+        "module_action_summary": {"type": "object"},
+        "action_policy": {"const": "planning_only_not_readiness_evidence"}
+      }
+    },
     "remediation_scope": {"type": "object"},
     "template_counts": {"type": "object"},
     "schema_validation_status": {"type": "string"},

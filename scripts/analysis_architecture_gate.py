@@ -518,6 +518,12 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
     environment_readiness = payload.get("environment_readiness") if isinstance(payload.get("environment_readiness"), dict) else {}
     resource_readiness = payload.get("resource_readiness") if isinstance(payload.get("resource_readiness"), dict) else {}
     remediation_summary = payload.get("remediation_summary") if isinstance(payload.get("remediation_summary"), dict) else {}
+    remediation_queue = payload.get("remediation_queue") if isinstance(payload.get("remediation_queue"), dict) else {}
+    remediation_items = {
+        str(item.get("item_id") or ""): item
+        for item in remediation_queue.get("items", [])
+        if isinstance(item, dict)
+    }
     migration_rows = [row for row in payload.get("standard_worker_migration_rows", []) if isinstance(row, dict)]
     migration_templates = [
         row.get("migration_evidence_template")
@@ -588,6 +594,7 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
                 else []
             ),
         },
+        "remediation_actions": _evidence_template_remediation_actions(remediation_items),
         "remediation_scope": {
             "manual_decision_points": [
                 {
@@ -610,6 +617,22 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
     template_package["schema_validation_status"] = "blocked" if schema_blockers else "passed"
     template_package["schema_blockers"] = schema_blockers
     return template_package
+
+
+def _evidence_template_remediation_actions(remediation_items: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    environment_item = remediation_items.get("restore_full_analysis_environment_locks", {})
+    resource_item = remediation_items.get("lock_full_analysis_resources", {})
+    migration_item = remediation_items.get("migrate_formal_algorithms_to_isolated_standard_worker", {})
+    return {
+        "schema_version": "biomedpilot.analysis.evidence_template_remediation_actions.v1",
+        "environment_next_actions": environment_item.get("environment_next_actions", []),
+        "environment_action_summary": environment_item.get("environment_action_summary", {}),
+        "resource_next_actions": resource_item.get("resource_next_actions", []),
+        "resource_action_summary": resource_item.get("resource_action_summary", {}),
+        "module_next_actions": migration_item.get("module_next_actions", []),
+        "module_action_summary": migration_item.get("module_action_summary", {}),
+        "action_policy": "planning_only_not_readiness_evidence",
+    }
 
 
 def _evidence_template_package_schema_blockers(payload: dict[str, Any], *, root: Path) -> list[str]:
@@ -641,6 +664,7 @@ def _evidence_template_package_schema_blockers(payload: dict[str, Any], *, root:
             blockers.append(f"analysis_evidence_template_package_min_length_invalid:{field}")
     blockers.extend(_environment_template_package_item_blockers(payload.get("environment_lock_evidence_templates")))
     blockers.extend(_resource_template_package_item_blockers(payload.get("resource_lock_evidence_templates")))
+    blockers.extend(_remediation_actions_package_blockers(payload.get("remediation_actions")))
     blockers.extend(_evidence_template_scope_blockers(payload))
     return blockers
 
@@ -716,6 +740,36 @@ def _resource_template_package_item_blockers(value: Any) -> list[str]:
             continue
         if content.get("non_empty") is not True:
             blockers.append(f"analysis_evidence_template_package_resource_template_non_empty_missing:{template_id}")
+    return blockers
+
+
+def _remediation_actions_package_blockers(value: Any) -> list[str]:
+    if not isinstance(value, dict):
+        return ["analysis_evidence_template_package_remediation_actions_missing"]
+    blockers: list[str] = []
+    if value.get("schema_version") != "biomedpilot.analysis.evidence_template_remediation_actions.v1":
+        blockers.append("analysis_evidence_template_package_remediation_actions_schema_version_invalid")
+    if value.get("action_policy") != "planning_only_not_readiness_evidence":
+        blockers.append("analysis_evidence_template_package_remediation_actions_policy_invalid")
+    expected_fields = (
+        "environment_next_actions",
+        "resource_next_actions",
+        "module_next_actions",
+    )
+    for field in expected_fields:
+        actions = value.get(field)
+        if not isinstance(actions, list):
+            blockers.append(f"analysis_evidence_template_package_remediation_actions_invalid:{field}")
+        elif not actions:
+            blockers.append(f"analysis_evidence_template_package_remediation_actions_empty:{field}")
+    summary_fields = (
+        "environment_action_summary",
+        "resource_action_summary",
+        "module_action_summary",
+    )
+    for field in summary_fields:
+        if not isinstance(value.get(field), dict) or not value.get(field):
+            blockers.append(f"analysis_evidence_template_package_remediation_action_summary_missing:{field}")
     return blockers
 
 

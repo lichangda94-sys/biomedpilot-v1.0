@@ -287,6 +287,18 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     assert template_package["template_counts"]["environment_lock_evidence_templates"] == 4
     assert template_package["template_counts"]["resource_lock_evidence_templates"] == 11
     assert template_package["template_counts"]["standard_worker_migration_evidence_templates"] == len(payload["standard_worker_migration_rows"])
+    remediation_actions = template_package["remediation_actions"]
+    assert remediation_actions["schema_version"] == "biomedpilot.analysis.evidence_template_remediation_actions.v1"
+    assert remediation_actions["action_policy"] == "planning_only_not_readiness_evidence"
+    assert remediation_actions["environment_action_summary"]["blocked_environment_count"] == 4
+    assert remediation_actions["resource_action_summary"]["blocked_resource_count"] == 11
+    assert remediation_actions["module_action_summary"]["blocked_module_count"] == 10
+    environment_actions = {item["environment_id"]: item for item in remediation_actions["environment_next_actions"]}
+    resource_actions = {item["resource_id"]: item for item in remediation_actions["resource_next_actions"]}
+    module_actions = {item["module_id"]: item for item in remediation_actions["module_next_actions"]}
+    assert environment_actions["r-bio-full"]["next_action"] == "register_schema_valid_restored_environment_evidence"
+    assert resource_actions["reactome_full"]["next_action"] == "register_schema_valid_prelocked_resource_evidence"
+    assert module_actions["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert template_package["expected_evidence_scope"] == {
         "scope_policy": "authoritative_registry_scope",
         "expected_environment_ids": payload["environment_readiness"]["expected_environment_ids"],
@@ -399,7 +411,9 @@ def test_analysis_evidence_template_package_schema_is_present_and_matches_payloa
     assert "registry_paths" in schema["required"]
     assert "expected_evidence_scope" in schema["required"]
     assert "template_counts" in schema["required"]
+    assert "remediation_actions" in schema["required"]
     assert schema["properties"]["remediation_scope"]["type"] == "object"
+    assert schema["properties"]["remediation_actions"]["type"] == "object"
     assert schema["properties"]["expected_evidence_scope"]["type"] == "object"
     assert "expected_module_ids" in schema["properties"]["expected_evidence_scope"]["required"]
     assert "renv_lock_content" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
@@ -428,6 +442,7 @@ def test_analysis_evidence_template_package_schema_blocks_missing_content_declar
             "resource_lock_evidence_templates": [{"resource_id": "reactome_full"}],
             "standard_worker_migration_evidence_templates": [],
             "blockers": {},
+            "remediation_actions": {},
             "template_counts": {},
         },
         root=ROOT,
@@ -436,5 +451,8 @@ def test_analysis_evidence_template_package_schema_blocks_missing_content_declar
     assert "analysis_evidence_template_package_environment_template_renv_lock_content_missing:r-bio-full" in blockers
     assert "analysis_evidence_template_package_environment_template_docker_image_missing:r-bio-full" in blockers
     assert "analysis_evidence_template_package_resource_template_cache_content_missing:reactome_full" in blockers
+    assert "analysis_evidence_template_package_remediation_actions_schema_version_invalid" in blockers
+    assert "analysis_evidence_template_package_remediation_actions_policy_invalid" in blockers
+    assert "analysis_evidence_template_package_remediation_actions_invalid:environment_next_actions" in blockers
     assert "analysis_evidence_template_package_expected_scope_policy_invalid" in blockers
     assert "analysis_evidence_template_package_expected_scope_invalid:expected_environment_ids" in blockers
