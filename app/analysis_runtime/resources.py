@@ -11,6 +11,7 @@ RESOURCE_MANIFEST_PATH = REPO_ROOT / "analysis" / "resources" / "manifest.json"
 ENVIRONMENT_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_environments.json"
 MODULE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_modules.json"
 RESOURCE_LOCK_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json"
+ENVIRONMENT_LOCK_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json"
 REQUIRED_RESOURCE_FIELDS = (
     "resource_id",
     "title",
@@ -233,6 +234,97 @@ def validate_analysis_resource_lock_evidence(
     }
 
 
+def validate_analysis_environment_lock_evidence(
+    environment_id: str,
+    evidence: dict[str, Any],
+    *,
+    environment_registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate evidence before an isolated analysis environment can be restored."""
+
+    payload = environment_registry or load_analysis_environment_registry()
+    environments = {
+        str(item.get("environment_id") or ""): item
+        for item in payload.get("environments", [])
+        if isinstance(item, dict) and item.get("environment_id")
+    }
+    blockers: list[str] = []
+    warnings: list[str] = []
+    blockers.extend(_environment_lock_evidence_schema_blockers(evidence))
+    environment_key = str(environment_id or evidence.get("environment_id") or "")
+    environment = environments.get(environment_key)
+    if environment is None:
+        blockers.append(f"analysis_environment_lock_evidence_environment_unregistered:{environment_key}")
+    if str(evidence.get("environment_id") or environment_key) != environment_key:
+        blockers.append("analysis_environment_lock_evidence_environment_id_mismatch")
+
+    status = str(evidence.get("status") or "")
+    if status not in RESTORED_LOCK_STATUSES:
+        blockers.append("analysis_environment_lock_evidence_status_not_restored")
+    if evidence.get("runtime_package_install") != "forbidden":
+        blockers.append("analysis_environment_lock_evidence_runtime_install_not_forbidden")
+    if evidence.get("runtime_resource_download") != "forbidden":
+        blockers.append("analysis_environment_lock_evidence_runtime_download_not_forbidden")
+
+    package_hash = evidence.get("package_lock_hash")
+    if not isinstance(package_hash, dict):
+        blockers.append("analysis_environment_lock_evidence_package_lock_hash_invalid")
+    else:
+        algorithm = str(package_hash.get("algorithm") or "")
+        value = str(package_hash.get("value") or "")
+        if not algorithm:
+            blockers.append("analysis_environment_lock_evidence_package_lock_hash_algorithm_missing")
+        if _is_placeholder_resource_value(value):
+            blockers.append("analysis_environment_lock_evidence_package_lock_hash_value_missing")
+
+    for field in ("r_version", "bioconductor_version", "dockerfile", "renv_lock"):
+        if _is_placeholder_resource_value(evidence.get(field)):
+            blockers.append(f"analysis_environment_lock_evidence_placeholder_field:{field}")
+
+    dockerfile = str(evidence.get("dockerfile") or "")
+    renv_lock = str(evidence.get("renv_lock") or "")
+    if dockerfile and not (REPO_ROOT / dockerfile).is_file():
+        blockers.append(f"analysis_environment_lock_evidence_dockerfile_not_found:{dockerfile}")
+    if renv_lock and not (REPO_ROOT / renv_lock).is_file():
+        blockers.append(f"analysis_environment_lock_evidence_renv_lock_not_found:{renv_lock}")
+
+    evidence_files = evidence.get("evidence_files")
+    if not isinstance(evidence_files, list) or not evidence_files:
+        blockers.append("analysis_environment_lock_evidence_files_missing")
+    else:
+        for item in evidence_files:
+            evidence_file = str(item or "")
+            if not evidence_file:
+                blockers.append("analysis_environment_lock_evidence_file_invalid")
+            elif not (REPO_ROOT / evidence_file).is_file():
+                blockers.append(f"analysis_environment_lock_evidence_file_not_found:{evidence_file}")
+
+    allowed_modules = evidence.get("allowed_module_ids")
+    allowed = {str(item) for item in allowed_modules if item is not None} if isinstance(allowed_modules, list) else set()
+    if environment_key != "app-dev" and not allowed:
+        blockers.append("analysis_environment_lock_evidence_allowed_modules_missing")
+    if environment is not None:
+        expected_allowed = {
+            str(item)
+            for item in environment.get("allowed_module_ids", [])
+            if item is not None
+        }
+        if allowed != expected_allowed:
+            blockers.append("analysis_environment_lock_evidence_allowed_modules_mismatch")
+        for field in ("dockerfile", "renv_lock"):
+            if str(evidence.get(field) or "") != str(environment.get(field) or ""):
+                blockers.append(f"analysis_environment_lock_evidence_registry_field_mismatch:{field}")
+        r_runtime = str(environment.get("r_runtime") or "")
+        if r_runtime != "not_required" and str(evidence.get("r_version") or "") != r_runtime:
+            blockers.append("analysis_environment_lock_evidence_registry_field_mismatch:r_version")
+
+    return {
+        "schema_version": "biomedpilot.analysis.environment_lock_evidence_validation.v1",
+        "status": "blocked" if blockers else "passed",
+        "environment_id": environment_key,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": warnings,
+    }
 def validate_analysis_environment_registry(
     environment_registry: dict[str, Any] | None = None,
     *,
@@ -386,6 +478,30 @@ def _resource_lock_evidence_schema_blockers(evidence: dict[str, Any]) -> list[st
     return blockers
 
 
+def _environment_lock_evidence_schema_blockers(evidence: dict[str, Any]) -> list[str]:
+    schema = _read_json(ENVIRONMENT_LOCK_EVIDENCE_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in evidence:
+            blockers.append(f"analysis_environment_lock_evidence_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in evidence or not isinstance(field_schema, dict):
+            continue
+        value = evidence[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"analysis_environment_lock_evidence_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"analysis_environment_lock_evidence_type_invalid:{field}")
+            continue
+        min_length = field_schema.get("minLength")
+        if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+            blockers.append(f"analysis_environment_lock_evidence_min_length_invalid:{field}")
+    return blockers
+
+
 def _schema_type_matches(value: Any, expected_type: str) -> bool:
     if expected_type == "string":
         return isinstance(value, str)
@@ -431,6 +547,7 @@ def _environment_file_policy_blockers(environment: dict[str, Any], environment_i
                 blockers.append(f"analysis_environment_renv_lock_environment_mismatch:{environment_id}")
             if policy.get("runtime_package_install") != "forbidden":
                 blockers.append(f"analysis_environment_renv_lock_runtime_install_policy_invalid:{environment_id}")
+            blockers.extend(_environment_lock_evidence_blockers(environment_id, policy, environment_registry=None))
     return blockers
 
 
@@ -578,4 +695,31 @@ def _renv_lock_environment_blockers(environment_id: str, lockfile: str) -> list[
     status = str(policy.get("status") or "missing")
     if status not in RESTORED_LOCK_STATUSES:
         blockers.append(f"analysis_environment_renv_lock_not_restored:{environment_id}:{status}")
+    blockers.extend(_environment_lock_evidence_blockers(environment_id, policy, environment_registry=None))
     return blockers
+
+
+def _environment_lock_evidence_blockers(
+    environment_id: str,
+    policy: dict[str, Any],
+    *,
+    environment_registry: dict[str, Any] | None,
+) -> list[str]:
+    status = str(policy.get("status") or "missing")
+    if status not in RESTORED_LOCK_STATUSES:
+        return []
+    evidence_path = str(policy.get("lock_evidence") or "")
+    if not evidence_path:
+        return [f"analysis_environment_lock_evidence_missing:{environment_id}"]
+    full_path = REPO_ROOT / evidence_path
+    if not full_path.is_file():
+        return [f"analysis_environment_lock_evidence_not_found:{environment_id}:{evidence_path}"]
+    try:
+        evidence = json.loads(full_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return [f"analysis_environment_lock_evidence_invalid_json:{environment_id}:{evidence_path}"]
+    validation = validate_analysis_environment_lock_evidence(environment_id, evidence, environment_registry=environment_registry)
+    return [
+        f"analysis_environment_lock_evidence:{environment_id}:{blocker}"
+        for blocker in validation.get("blockers", [])
+    ]

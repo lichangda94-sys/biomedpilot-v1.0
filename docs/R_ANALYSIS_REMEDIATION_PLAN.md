@@ -26,6 +26,7 @@ Completed in this audit:
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/schemas/output/resource_lock_evidence.schema.json`
+- `analysis/schemas/output/environment_lock_evidence.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
@@ -130,6 +131,8 @@ Update: `validate_standard_result_package()` now validates the `analysis_environ
 Update: environment boundaries are now centralized in `analysis/registry/analysis_environments.json`. The registry declares `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`, including Dockerfile, renv lock, allowed modules, heavy-dependency policy, resource/tool lock policy, and no runtime-install policy. Tests verify module manifests match this registry and cannot point analysis execution at `app-dev` or unregistered worker environments.
 
 Update: `validate_analysis_environment_registry()` now turns the environment registry into a runtime-consumable contract. It checks required fields, unique environment ids, app-dev isolation, allowed-module references, Dockerfile labels, lockfile policy, and full-environment readiness separately. The current registry is structurally valid but still reports `full_mode_ready=false` because full environment locks are scaffold-only.
+
+Update: restored full environment locks now require schema-valid evidence. `analysis/schemas/output/environment_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_environment_lock_evidence()` blocks missing evidence, non-restored status, placeholder R/Bioconductor/package-lock data, missing Dockerfile/renv/evidence files, registry mismatch, allowed-module mismatch, or runtime install/download allowance. Current full locks remain `scaffold_only_not_restored`, so this does not activate full mode.
 
 Update: Analysis Center state now exposes `analysis_environment_gate_rows` and developer diagnostics for `validate_analysis_environment_registry()`. The current UI gate table can show registry structural status and full R environment readiness blockers without reading Dockerfiles, renv locks, or module-private R outputs directly.
 

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.environment_lock_evidence.v1",
+  "title": "BioMedPilot analysis environment lock evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "environment_id",
+    "status",
+    "r_version",
+    "bioconductor_version",
+    "package_lock_hash",
+    "dockerfile",
+    "renv_lock",
+    "runtime_package_install",
+    "runtime_resource_download",
+    "allowed_module_ids",
+    "evidence_files"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.environment_lock_evidence.v1"},
+    "environment_id": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "minLength": 1},
+    "r_version": {"type": "string", "minLength": 1},
+    "bioconductor_version": {"type": "string", "minLength": 1},
+    "package_lock_hash": {"type": "object"},
+    "dockerfile": {"type": "string", "minLength": 1},
+    "renv_lock": {"type": "string", "minLength": 1},
+    "runtime_package_install": {"const": "forbidden"},
+    "runtime_resource_download": {"const": "forbidden"},
+    "allowed_module_ids": {"type": "array"},
+    "evidence_files": {"type": "array"},
+    "created_at": {"type": "string"},
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": true
+}

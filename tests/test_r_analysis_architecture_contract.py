@@ -18,6 +18,7 @@ from app.analysis_runtime.standard_package import validate_standard_result_packa
 from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
     full_mode_resource_blockers,
+    validate_analysis_environment_lock_evidence,
     validate_analysis_resource_lock_evidence,
     validate_analysis_environment_registry,
     validate_analysis_resource_manifest,
@@ -333,6 +334,74 @@ def test_analysis_environment_registry_validator_separates_structure_from_full_r
     assert validation["blockers"] == []
 
 
+def test_restored_full_environment_lock_requires_schema_valid_evidence(tmp_path: Path) -> None:
+    environment_registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_environments.json"))
+    environments = {item["environment_id"]: item for item in environment_registry["environments"]}  # type: ignore[index]
+    restored_lock = tmp_path / "renv.bio-full.restored.lock"
+    restored_lock.write_text(
+        json.dumps(
+            {
+                "R": {"Version": "4.4.2", "Repositories": []},
+                "Packages": {},
+                "BioMedPilotPolicy": {
+                    "schema_version": "biomedpilot.renv_policy.v1",
+                    "environment": "r-bio-full",
+                    "status": "restored",
+                    "heavy_analysis_dependencies_allowed": True,
+                    "runtime_package_install": "forbidden",
+                    "resource_lock_required": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    environments["r-bio-full"]["renv_lock"] = str(restored_lock)
+    validation = validate_analysis_environment_registry(environment_registry)
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_lock_evidence_missing:r-bio-full" in validation["blockers"]
+    assert "r-bio-full" not in validation["blocked_environment_ids"]
+
+
+def test_environment_lock_evidence_blocks_placeholder_or_mismatched_payloads() -> None:
+    environment_registry = read_json(ROOT / "analysis" / "registry" / "analysis_environments.json")
+    validation = validate_analysis_environment_lock_evidence(
+        "r-bio-full",
+        {
+            "schema_version": "wrong",
+            "environment_id": "",
+            "status": "scaffold_only_not_restored",
+            "r_version": "pending",
+            "bioconductor_version": "",
+            "package_lock_hash": {"algorithm": "", "value": "required_before_full_mode"},
+            "dockerfile": "missing/Dockerfile",
+            "renv_lock": "missing/renv.lock",
+            "runtime_package_install": "allowed",
+            "runtime_resource_download": "allowed",
+            "allowed_module_ids": ["unknown"],
+            "evidence_files": ["missing/evidence.json"],
+        },
+        environment_registry=environment_registry,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_lock_evidence_const_mismatch:schema_version" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_min_length_invalid:environment_id" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_status_not_restored" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_runtime_install_not_forbidden" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_runtime_download_not_forbidden" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_package_lock_hash_algorithm_missing" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_package_lock_hash_value_missing" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_placeholder_field:r_version" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_placeholder_field:bioconductor_version" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_dockerfile_not_found:missing/Dockerfile" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_renv_lock_not_found:missing/renv.lock" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_file_not_found:missing/evidence.json" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_allowed_modules_mismatch" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_registry_field_mismatch:dockerfile" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_registry_field_mismatch:renv_lock" in validation["blockers"]
+
+
 def test_full_mode_environment_blockers_allow_chem_gpu_shared_lock_policy() -> None:
     docking_blockers = full_mode_environment_blockers("docking")
     md_blockers = full_mode_environment_blockers("molecular_dynamics")
@@ -341,6 +410,8 @@ def test_full_mode_environment_blockers_allow_chem_gpu_shared_lock_policy() -> N
     assert "analysis_environment_renv_lock_environment_mismatch:r-chem-gpu" not in md_blockers
     assert "analysis_environment_renv_lock_not_restored:r-chem-full:scaffold_only_not_restored" in docking_blockers
     assert "analysis_environment_renv_lock_not_restored:r-chem-gpu:scaffold_only_not_restored" in md_blockers
+    assert not any("analysis_environment_lock_evidence" in blocker for blocker in docking_blockers)
+    assert not any("analysis_environment_lock_evidence" in blocker for blocker in md_blockers)
 
 
 def test_analysis_environment_registry_validator_blocks_invalid_app_dev_and_unknown_modules() -> None:
@@ -509,6 +580,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     provenance_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json")
     invocation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json")
     resource_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json")
+    environment_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
     provenance = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "provenance.json")
 
@@ -525,6 +597,9 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert invocation_schema["$id"] == "biomedpilot.analysis.worker_invocation.v1"
     assert resource_lock_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence.v1"
     assert "runtime_download_allowed" in resource_lock_schema["required"]
+    assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"
+    assert "package_lock_hash" in environment_lock_schema["required"]
+    assert "runtime_package_install" in environment_lock_schema["required"]
     assert "worker_backend" in invocation_schema["required"]
     assert "invocation_status" in invocation_schema["required"]
     assert "runtime_install_policy" in invocation_schema["required"]

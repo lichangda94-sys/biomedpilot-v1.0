@@ -518,6 +518,7 @@ def _required_schemas_exist() -> bool:
         "analysis/schemas/output/worker_invocation.schema.json",
         "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
         "analysis/schemas/output/resource_lock_evidence.schema.json",
+        "analysis/schemas/output/environment_lock_evidence.schema.json",
     )
     return all((REPO_ROOT / path).is_file() for path in paths)
 
