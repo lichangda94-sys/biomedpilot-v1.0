@@ -1,0 +1,29 @@
+{
+  "schema_version": "biomedpilot.analysis.resource_lock_evidence.v1",
+  "resource_id": "mock_fixture_builtin_v1",
+  "status": "locked",
+  "version": "v1",
+  "source": "BioMedPilot repository fixture",
+  "hash": {
+    "algorithm": "repository_fixture",
+    "value": "not_applicable_repository_fixture"
+  },
+  "license": "internal_test_fixture",
+  "cache_path": "analysis/fixtures",
+  "runtime_download_allowed": false,
+  "approved_for_modules": [
+    "survival",
+    "univariate",
+    "multivariate",
+    "enrichment",
+    "immune_infiltration",
+    "spatial_transcriptomics",
+    "docking",
+    "molecular_dynamics"
+  ],
+  "evidence_files": [
+    "analysis/resources/manifest.json"
+  ],
+  "created_at": "2026-06-05T00:00:00Z",
+  "notes": "Repository-local mock fixtures are locked for mock/lite contract tests only and are not full analysis resources."
+}

@@ -25,12 +25,14 @@ Completed in this audit:
 - `analysis/schemas/output/provenance.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/schemas/output/worker_invocation.schema.json`
+- `analysis/schemas/output/resource_lock_evidence.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
 - `analysis/fixtures/inputs/<module_id>/module_input.json`
 - `analysis/fixtures/outputs/<module_id>/mock_result_package/**`
 - `analysis/resources/manifest.json`
+- `analysis/resources/locks/mock_fixture_builtin_v1.lock.json`
 - `app/analysis_runtime/package_catalog.py`
 - `app/analysis_runtime/registry.py`
 - `app/analysis_runtime/r_worker.py`
@@ -72,6 +74,8 @@ Update: transitional R adapters no longer import `subprocess` or set `subprocess
 Update: the resource manifest now declares required full-mode resources for enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics. `app/analysis_runtime/resources.py` validates the manifest and adds module-specific full-mode blockers until real locks exist.
 
 Update: resource validation now rejects any resource marked `locked` while version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`. Partially prepared blocked resources may carry warnings, but full mode remains blocked until the lock is complete.
+
+Update: locked resources now require schema-valid lock evidence. `analysis/schemas/output/resource_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_resource_lock_evidence()` blocks missing evidence, placeholder fields, missing cache paths, missing evidence files, manifest/evidence mismatch, approved-module mismatch, or any runtime-download allowance. The repository-local mock fixture resource has evidence under `analysis/resources/locks/`; full Reactome/MSigDB/spatial/chem resources remain blocked until real external lock evidence exists.
 
 Update: the Bioinformatics gene-set resource manager now blocks Reactome/GO/KEGG runtime downloads by default. Common resources remain visible as guidance, but user/UI flows must import GMT files or use externally prepared prelocked resources; parser/download code requires an explicit developer/test override and is not a normal runtime acquisition path.
 

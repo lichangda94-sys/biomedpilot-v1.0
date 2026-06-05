@@ -18,6 +18,7 @@ from app.analysis_runtime.standard_package import validate_standard_result_packa
 from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
     full_mode_resource_blockers,
+    validate_analysis_resource_lock_evidence,
     validate_analysis_environment_registry,
     validate_analysis_resource_manifest,
 )
@@ -202,6 +203,63 @@ def test_analysis_environment_split_scaffold_exists_without_claiming_full_readin
         assert lock["Packages"] == {}
         assert lock["BioMedPilotPolicy"]["status"] == "scaffold_only_not_restored"  # type: ignore[index]
         assert lock["BioMedPilotPolicy"]["runtime_package_install"] == "forbidden"  # type: ignore[index]
+
+
+def test_locked_analysis_resource_requires_schema_valid_lock_evidence() -> None:
+    manifest = read_json(ROOT / "analysis" / "resources" / "manifest.json")
+    evidence = read_json(ROOT / "analysis" / "resources" / "locks" / "mock_fixture_builtin_v1.lock.json")
+    validation = validate_analysis_resource_lock_evidence("mock_fixture_builtin_v1", evidence, manifest=manifest)
+    manifest_validation = validate_analysis_resource_manifest(manifest)
+
+    assert validation["schema_version"] == "biomedpilot.analysis.resource_lock_evidence_validation.v1"
+    assert validation["status"] == "passed"
+    assert validation["blockers"] == []
+    assert manifest_validation["status"] == "passed"
+    assert "mock_fixture_builtin_v1" in manifest_validation["locked_resource_ids"]
+
+
+def test_locked_analysis_resource_without_evidence_is_blocked() -> None:
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    first_resource = manifest["resources"][0]  # type: ignore[index]
+    first_resource.pop("lock_evidence")
+    validation = validate_analysis_resource_manifest(manifest)
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_missing:mock_fixture_builtin_v1" in validation["blockers"]
+
+
+def test_analysis_resource_lock_evidence_blocks_placeholder_or_mismatched_payloads() -> None:
+    manifest = read_json(ROOT / "analysis" / "resources" / "manifest.json")
+    validation = validate_analysis_resource_lock_evidence(
+        "mock_fixture_builtin_v1",
+        {
+            "schema_version": "wrong",
+            "resource_id": "",
+            "status": "blocked_until_resource_lock",
+            "version": "required_before_full_mode",
+            "source": "pending",
+            "hash": {"algorithm": "", "value": "required_before_full_mode"},
+            "license": "tbd",
+            "cache_path": "missing/cache/path",
+            "runtime_download_allowed": True,
+            "approved_for_modules": ["unknown"],
+            "evidence_files": ["missing/evidence.json"],
+        },
+        manifest=manifest,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_const_mismatch:schema_version" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_min_length_invalid:resource_id" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_const_mismatch:status" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_runtime_download_not_forbidden" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_hash_algorithm_missing" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_hash_value_missing" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_placeholder_field:version" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_cache_path_not_found:missing/cache/path" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_file_not_found:missing/evidence.json" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_approved_modules_mismatch" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_manifest_field_mismatch:hash" in validation["blockers"]
 
 
 def test_analysis_environment_registry_is_authoritative_for_module_worker_boundaries() -> None:
@@ -450,6 +508,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     result_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "result.schema.json")
     provenance_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json")
     invocation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json")
+    resource_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
     provenance = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "provenance.json")
 
@@ -464,6 +523,8 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     runtime_required = set(provenance_schema["properties"]["runtime"]["required"])  # type: ignore[index]
     assert {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"} <= runtime_required
     assert invocation_schema["$id"] == "biomedpilot.analysis.worker_invocation.v1"
+    assert resource_lock_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence.v1"
+    assert "runtime_download_allowed" in resource_lock_schema["required"]
     assert "worker_backend" in invocation_schema["required"]
     assert "invocation_status" in invocation_schema["required"]
     assert "runtime_install_policy" in invocation_schema["required"]

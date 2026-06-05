@@ -23,6 +23,7 @@ This audit added a minimal boundary scaffold:
 - `analysis/schemas/output/provenance.schema.json`
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/schemas/output/worker_invocation.schema.json`
+- `analysis/schemas/output/resource_lock_evidence.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
@@ -81,9 +82,11 @@ Resource governance now has a programmatic gate:
 
 - `analysis/resources/manifest.json` records mock fixture resources and full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
 - `app/analysis_runtime/resources.py` validates required fields, forbids runtime downloads, and reports module-specific full-mode blockers.
+- `locked` resources must now reference a schema-valid evidence payload under `analysis/resources/locks/`. That payload records resource id, version, source, hash, license, cache path, approved modules, evidence files, and `runtime_download_allowed=false`; missing or mismatched evidence blocks the resource lock.
 - `app/analysis_runtime/resources.py` now also reports module-specific full-environment blockers. Full mode is blocked unless the module's registered full environment has an existing Dockerfile and a restored environment lock; current full locks are still `scaffold_only_not_restored`, so they remain blockers even if resource locks are later filled in.
 - `app/analysis_runtime/resources.py` now validates the environment registry itself. `validate_analysis_environment_registry()` reports structural blockers separately from readiness blockers, so the current scaffold can be structurally valid while still returning `full_mode_ready=false` for unrestored full locks.
 - `locked` resources are rejected if version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`; this prevents a resource from being falsely marked full-mode ready.
+- `locked` resources are also rejected if their evidence file is missing, malformed, points at a missing cache path/evidence file, allows runtime downloads, mismatches required modules, or disagrees with the manifest version/source/hash/license/cache path.
 - Blocked resources may carry partial future lock metadata, but they still produce module-specific full-mode blockers until their status is changed to a fully validated `locked` entry.
 - Full mode remains blocked until these resources have real version, hash, license, and cache-path locks.
 - `app/bioinformatics/gene_set_resources.py` now aligns with that policy for enrichment resources: Reactome, GO, and KEGG catalog rows are visible but not runtime-downloadable by default. User/UI flows must import GMT files or use externally prepared prelocked resources; parser/download tests opt in explicitly.
@@ -398,6 +401,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added per-module fixed mock inputs and fixed standard result package fixtures for all registered modules.
 - Added DEG to the standard analysis module registry with a mock input, mock standard result package, and base R lite fixture standard package; full standard worker execution remains blocked.
 - Added resource manifest skeleton with blocked full resources.
+- Added resource lock evidence schema and a mock fixture resource evidence payload; locked resources now require schema-valid evidence before they can pass manifest validation.
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.

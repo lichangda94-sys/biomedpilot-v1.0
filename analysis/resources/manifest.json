@@ -13,6 +13,7 @@
       "hash": "not_applicable_repository_fixture",
       "license": "internal_test_fixture",
       "cache_path": "analysis/fixtures",
+      "lock_evidence": "analysis/resources/locks/mock_fixture_builtin_v1.lock.json",
       "status": "locked",
       "runtime_download_allowed": false,
       "required_for_modules": [

@@ -10,6 +10,7 @@ from .registry import REPO_ROOT
 RESOURCE_MANIFEST_PATH = REPO_ROOT / "analysis" / "resources" / "manifest.json"
 ENVIRONMENT_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_environments.json"
 MODULE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_modules.json"
+RESOURCE_LOCK_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json"
 REQUIRED_RESOURCE_FIELDS = (
     "resource_id",
     "title",
@@ -99,6 +100,24 @@ def validate_analysis_resource_manifest(manifest: dict[str, Any] | None = None) 
                 blockers.append(
                     f"analysis_resource_locked_with_placeholder_fields:{resource_id or 'unknown'}:{','.join(placeholder_fields)}"
                 )
+            lock_evidence_path = str(item.get("lock_evidence") or "")
+            if not lock_evidence_path:
+                blockers.append(f"analysis_resource_lock_evidence_missing:{resource_id or 'unknown'}")
+            else:
+                evidence_path = REPO_ROOT / lock_evidence_path
+                if not evidence_path.is_file():
+                    blockers.append(f"analysis_resource_lock_evidence_not_found:{resource_id or 'unknown'}:{lock_evidence_path}")
+                else:
+                    try:
+                        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+                    except json.JSONDecodeError:
+                        blockers.append(f"analysis_resource_lock_evidence_invalid_json:{resource_id or 'unknown'}:{lock_evidence_path}")
+                    else:
+                        evidence_validation = validate_analysis_resource_lock_evidence(resource_id, evidence, manifest=payload)
+                        blockers.extend(
+                            f"analysis_resource_lock_evidence:{resource_id or 'unknown'}:{blocker}"
+                            for blocker in evidence_validation.get("blockers", [])
+                        )
         elif status in BLOCKED_RESOURCE_STATUSES:
             blocked_resource_ids.append(resource_id)
             if _blocked_resource_has_partial_final_lock(item):
@@ -116,6 +135,100 @@ def validate_analysis_resource_manifest(manifest: dict[str, Any] | None = None) 
         "locked_resource_ids": locked_resource_ids,
         "blocked_resource_ids": blocked_resource_ids,
         "blockers": blockers,
+        "warnings": warnings,
+    }
+
+
+def validate_analysis_resource_lock_evidence(
+    resource_id: str,
+    evidence: dict[str, Any],
+    *,
+    manifest: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate a resource lock evidence payload before a resource can be locked."""
+
+    payload = manifest or load_analysis_resource_manifest()
+    resources = {
+        str(item.get("resource_id") or ""): item
+        for item in payload.get("resources", [])
+        if isinstance(item, dict) and item.get("resource_id")
+    }
+    blockers: list[str] = []
+    warnings: list[str] = []
+    blockers.extend(_resource_lock_evidence_schema_blockers(evidence))
+    resource_key = str(resource_id or evidence.get("resource_id") or "")
+    resource = resources.get(resource_key)
+    if resource is None:
+        blockers.append(f"analysis_resource_lock_evidence_resource_unregistered:{resource_key}")
+    if str(evidence.get("resource_id") or resource_key) != resource_key:
+        blockers.append("analysis_resource_lock_evidence_resource_id_mismatch")
+
+    status = str(evidence.get("status") or "")
+    if status != "locked":
+        blockers.append("analysis_resource_lock_evidence_status_not_locked")
+    if evidence.get("runtime_download_allowed") is not False:
+        blockers.append("analysis_resource_lock_evidence_runtime_download_not_forbidden")
+
+    hash_payload = evidence.get("hash")
+    if not isinstance(hash_payload, dict):
+        blockers.append("analysis_resource_lock_evidence_hash_invalid")
+    else:
+        algorithm = str(hash_payload.get("algorithm") or "")
+        value = str(hash_payload.get("value") or "")
+        if not algorithm:
+            blockers.append("analysis_resource_lock_evidence_hash_algorithm_missing")
+        if _is_placeholder_resource_value(value):
+            blockers.append("analysis_resource_lock_evidence_hash_value_missing")
+
+    for field in FINAL_LOCK_REQUIRED_FIELDS:
+        value: Any
+        if field == "hash":
+            value = hash_payload.get("value") if isinstance(hash_payload, dict) else None
+        else:
+            value = evidence.get(field)
+        if _is_placeholder_resource_value(value):
+            blockers.append(f"analysis_resource_lock_evidence_placeholder_field:{field}")
+
+    cache_path = str(evidence.get("cache_path") or "")
+    if cache_path and not (REPO_ROOT / cache_path).exists():
+        blockers.append(f"analysis_resource_lock_evidence_cache_path_not_found:{cache_path}")
+
+    evidence_files = evidence.get("evidence_files")
+    if not isinstance(evidence_files, list) or not evidence_files:
+        blockers.append("analysis_resource_lock_evidence_files_missing")
+    else:
+        for item in evidence_files:
+            evidence_file = str(item or "")
+            if not evidence_file:
+                blockers.append("analysis_resource_lock_evidence_file_invalid")
+            elif not (REPO_ROOT / evidence_file).is_file():
+                blockers.append(f"analysis_resource_lock_evidence_file_not_found:{evidence_file}")
+
+    approved_modules = evidence.get("approved_for_modules")
+    approved = {str(item) for item in approved_modules if item is not None} if isinstance(approved_modules, list) else set()
+    if not approved:
+        blockers.append("analysis_resource_lock_evidence_approved_modules_missing")
+    if resource is not None:
+        required = {
+            str(item)
+            for item in resource.get("required_for_modules", [])
+            if item is not None
+        }
+        if approved != required:
+            blockers.append("analysis_resource_lock_evidence_approved_modules_mismatch")
+        for field in ("version", "source", "license", "cache_path"):
+            if str(evidence.get(field) or "") != str(resource.get(field) or ""):
+                blockers.append(f"analysis_resource_lock_evidence_manifest_field_mismatch:{field}")
+        manifest_hash = str(resource.get("hash") or "")
+        evidence_hash = str(hash_payload.get("value") or "") if isinstance(hash_payload, dict) else ""
+        if manifest_hash != evidence_hash:
+            blockers.append("analysis_resource_lock_evidence_manifest_field_mismatch:hash")
+
+    return {
+        "schema_version": "biomedpilot.analysis.resource_lock_evidence_validation.v1",
+        "status": "blocked" if blockers else "passed",
+        "resource_id": resource_key,
+        "blockers": list(dict.fromkeys(blockers)),
         "warnings": warnings,
     }
 
@@ -247,6 +360,55 @@ def _is_placeholder_resource_value(value: Any) -> bool:
 
 def _blocked_resource_has_partial_final_lock(item: dict[str, Any]) -> bool:
     return any(not _is_placeholder_resource_value(item.get(field)) for field in FINAL_LOCK_REQUIRED_FIELDS)
+
+
+def _resource_lock_evidence_schema_blockers(evidence: dict[str, Any]) -> list[str]:
+    schema = _read_json(RESOURCE_LOCK_EVIDENCE_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in evidence:
+            blockers.append(f"analysis_resource_lock_evidence_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in evidence or not isinstance(field_schema, dict):
+            continue
+        value = evidence[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"analysis_resource_lock_evidence_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"analysis_resource_lock_evidence_type_invalid:{field}")
+            continue
+        min_length = field_schema.get("minLength")
+        if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+            blockers.append(f"analysis_resource_lock_evidence_min_length_invalid:{field}")
+    return blockers
+
+
+def _schema_type_matches(value: Any, expected_type: str) -> bool:
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    if expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "array":
+        return isinstance(value, list)
+    if expected_type == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if expected_type == "null":
+        return value is None
+    return True
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
 def _environment_file_policy_blockers(environment: dict[str, Any], environment_id: str) -> list[str]:

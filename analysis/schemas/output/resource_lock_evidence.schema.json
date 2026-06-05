@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.resource_lock_evidence.v1",
+  "title": "BioMedPilot analysis resource lock evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "resource_id",
+    "status",
+    "version",
+    "source",
+    "hash",
+    "license",
+    "cache_path",
+    "runtime_download_allowed",
+    "approved_for_modules",
+    "evidence_files"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.resource_lock_evidence.v1"},
+    "resource_id": {"type": "string", "minLength": 1},
+    "status": {"const": "locked"},
+    "version": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "hash": {"type": "object"},
+    "license": {"type": "string", "minLength": 1},
+    "cache_path": {"type": "string", "minLength": 1},
+    "runtime_download_allowed": {"const": false},
+    "approved_for_modules": {"type": "array"},
+    "evidence_files": {"type": "array"},
+    "created_at": {"type": "string"},
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": true
+}
