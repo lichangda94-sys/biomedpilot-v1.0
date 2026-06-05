@@ -82,6 +82,7 @@ Resource governance now has a programmatic gate:
 - `analysis/resources/manifest.json` records mock fixture resources and full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
 - `app/analysis_runtime/resources.py` validates required fields, forbids runtime downloads, and reports module-specific full-mode blockers.
 - `app/analysis_runtime/resources.py` now also reports module-specific full-environment blockers. Full mode is blocked unless the module's registered full environment has an existing Dockerfile and a restored environment lock; current full locks are still `scaffold_only_not_restored`, so they remain blockers even if resource locks are later filled in.
+- `app/analysis_runtime/resources.py` now validates the environment registry itself. `validate_analysis_environment_registry()` reports structural blockers separately from readiness blockers, so the current scaffold can be structurally valid while still returning `full_mode_ready=false` for unrestored full locks.
 - `locked` resources are rejected if version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`; this prevents a resource from being falsely marked full-mode ready.
 - Blocked resources may carry partial future lock metadata, but they still produce module-specific full-mode blockers until their status is changed to a fully validated `locked` entry.
 - Full mode remains blocked until these resources have real version, hash, license, and cache-path locks.
@@ -252,7 +253,7 @@ The main-backend task bridge now also treats the module input schema as an execu
 | Runtime R package installation in user flow | PASS | Search found no active non-legacy `install.packages`, `BiocManager::install`, `pak::pkg_install`, or `remotes::install_github`. |
 | Runtime large resource download in user flow | PASS/WARN | Gene-set resource UI/gates now block Reactome/GO/KEGG runtime downloads by default and require GMT import or prelocked resources; real full resource locks are still incomplete. |
 | Heavy dependencies in default dev env | PASS/WARN | Heavy R packages and external tools are detect-first external dependencies, not default Python/app-dev deps; tests guard `requirements.txt`, `pyproject.toml`, `docker/Dockerfile.app-dev`, and `renv/renv.app.lock` against ReactomePA, Seurat, CellChat, GSVA, AutoDock Vina, GROMACS, limma, DESeq2, edgeR, clusterProfiler, fgsea, and related full-stack names. `config/bioinformatics/package_requirements.yaml` is explicitly guarded as a capability/detection inventory, and `analysis_defaults.yaml`, `enrichment_defaults.yaml`, and `survival_defaults.yaml` are now explicitly guarded as gated capability/default-parameter configs, not install manifests, with runtime install/download and default-app dependency flags set false. Full env split is not build/restoration proven. |
-| Environment split | WARN | Docker/renv scaffold and `analysis/registry/analysis_environments.json` exist for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; module manifests are tested against this registry, but images/lock restoration are not build proven. |
+| Environment split | WARN | Docker/renv scaffold and `analysis/registry/analysis_environments.json` exist for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; module manifests and the environment registry are validated, but full image builds and lock restoration are not proven. |
 | `renv.lock` equivalent | WARN | Empty policy lockfiles exist; real package locks are not restored or approved. |
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; gene-set runtime downloads are blocked by default; real resource locks are incomplete. |
@@ -416,6 +417,7 @@ New architecture boundary files:
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added `analysis/registry/analysis_environments.json` as the central environment boundary registry, with tests that module manifests match registered Dockerfiles, renv locks, allowed-module lists, heavy-dependency policy, and runtime-install policy.
+- Added `validate_analysis_environment_registry()` to make environment-registry validity and full-readiness status consumable by runtime gates, UI diagnostics, and future reports.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

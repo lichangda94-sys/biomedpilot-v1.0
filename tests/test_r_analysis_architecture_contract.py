@@ -12,6 +12,7 @@ from app.analysis_runtime.standard_package import validate_standard_result_packa
 from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
     full_mode_resource_blockers,
+    validate_analysis_environment_registry,
     validate_analysis_resource_manifest,
 )
 from app.analysis_runtime.registry import build_result_index_task_type_module_map
@@ -250,6 +251,36 @@ def test_analysis_environment_registry_is_authoritative_for_module_worker_bounda
         assert manifest["environment_lock"] == full_environment["renv_lock"]
         assert manifest["dependency_policy"]["runtime_install"] == "forbidden"
         assert manifest["dependency_policy"]["default_app_dependency"] is False
+
+
+def test_analysis_environment_registry_validator_separates_structure_from_full_readiness() -> None:
+    validation = validate_analysis_environment_registry()
+
+    assert validation["schema_version"] == "biomedpilot.analysis_environment_registry_validation.v1"
+    assert validation["status"] == "passed"
+    assert validation["full_mode_ready"] is False
+    assert set(validation["blocked_environment_ids"]) == {
+        "r-bio-full",
+        "r-spatial-full",
+        "r-chem-full",
+        "r-chem-gpu",
+    }
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in validation["readiness_blockers"]
+    assert validation["blockers"] == []
+
+
+def test_analysis_environment_registry_validator_blocks_invalid_app_dev_and_unknown_modules() -> None:
+    environment_registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_environments.json"))
+    environments = {item["environment_id"]: item for item in environment_registry["environments"]}  # type: ignore[index]
+    environments["app-dev"]["allowed_module_ids"] = ["deg"]
+    environments["r-bio-core"]["allowed_module_ids"].append("unknown_module")
+
+    validation = validate_analysis_environment_registry(environment_registry)
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_app_dev_allows_analysis_modules" in validation["blockers"]
+    assert "analysis_environment_allowed_module_unregistered:r-bio-core:unknown_module" in validation["blockers"]
+    assert validation["full_mode_ready"] is False
 
 
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:
