@@ -22,9 +22,11 @@ from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
     full_mode_resource_blockers,
     load_analysis_environment_lock_evidence_registry,
+    load_analysis_resource_lock_evidence_registry,
     validate_analysis_environment_lock_evidence,
     validate_analysis_environment_lock_evidence_registry,
     validate_analysis_resource_lock_evidence,
+    validate_analysis_resource_lock_evidence_registry,
     validate_analysis_environment_registry,
     validate_analysis_resource_manifest,
 )
@@ -221,7 +223,56 @@ def test_locked_analysis_resource_requires_schema_valid_lock_evidence() -> None:
     assert validation["status"] == "passed"
     assert validation["blockers"] == []
     assert manifest_validation["status"] == "passed"
+    assert manifest_validation["evidence_registry_status"] == "passed"
+    assert manifest_validation["evidence_registry_entry_count"] == 0
     assert "mock_fixture_builtin_v1" in manifest_validation["locked_resource_ids"]
+
+
+def test_analysis_resource_lock_evidence_registry_is_authoritative_and_empty_by_default() -> None:
+    registry = load_analysis_resource_lock_evidence_registry()
+    validation = validate_analysis_resource_lock_evidence_registry(registry)
+
+    assert registry["schema_version"] == "biomedpilot.analysis.resource_lock_evidence_registry.v1"
+    assert registry["policy"]["registry_is_authoritative"] is True
+    assert registry["evidence_entries"] == []
+    assert validation["schema_version"] == "biomedpilot.analysis.resource_lock_evidence_registry_validation.v1"
+    assert validation["status"] == "passed"
+    assert validation["entry_count"] == 0
+
+
+def test_locked_analysis_resource_can_use_registry_evidence_path() -> None:
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resource = manifest["resources"][0]  # type: ignore[index]
+    resource.pop("lock_evidence")
+    evidence_registry = {
+        "schema_version": "biomedpilot.analysis.resource_lock_evidence_registry.v1",
+        "policy": {
+            "registry_is_authoritative": True,
+            "locked_resource_requires_schema_valid_evidence": True,
+            "manual_scoped_resource_lock_only": True,
+            "runtime_download_allowed": False,
+        },
+        "evidence_entries": [
+            {
+                "resource_id": "mock_fixture_builtin_v1",
+                "evidence_path": "analysis/resources/locks/mock_fixture_builtin_v1.lock.json",
+            }
+        ],
+    }
+
+    registry_validation = validate_analysis_resource_lock_evidence_registry(
+        evidence_registry,
+        manifest=manifest,
+    )
+    manifest_validation = validate_analysis_resource_manifest(
+        manifest,
+        resource_lock_evidence_registry=evidence_registry,
+    )
+
+    assert registry_validation["status"] == "passed"
+    assert registry_validation["registered_resource_ids"] == ["mock_fixture_builtin_v1"]
+    assert manifest_validation["status"] == "passed"
+    assert manifest_validation["evidence_registry_entry_count"] == 1
 
 
 def test_locked_analysis_resource_without_evidence_is_blocked() -> None:
@@ -633,7 +684,9 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert "analysis/schemas/output/environment_lock_evidence_registry.schema.json" in items["restore_full_analysis_environment_locks"]["recommended_files"]
     assert "each restored full environment lock has schema-valid environment_lock_evidence" in items["restore_full_analysis_environment_locks"]["required_evidence"]
     assert "analysis/resources/manifest.json" in items["lock_full_analysis_resources"]["recommended_files"]
+    assert "analysis/registry/resource_lock_evidence.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "analysis/schemas/output/resource_lock_evidence.schema.json" in items["lock_full_analysis_resources"]["recommended_files"]
+    assert "analysis/schemas/output/resource_lock_evidence_registry.schema.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "each locked full resource has schema-valid resource_lock_evidence" in items["lock_full_analysis_resources"]["required_evidence"]
     assert (
         "analysis/registry/standard_worker_migration_evidence.json"
@@ -832,6 +885,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     full_activation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json")
     remediation_queue_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "remediation_queue.schema.json")
     resource_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json")
+    resource_lock_registry_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence_registry.schema.json")
     environment_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json")
     environment_lock_registry_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence_registry.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
@@ -856,6 +910,8 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "install_policy" in remediation_queue_schema["required"]
     assert resource_lock_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence.v1"
     assert "runtime_download_allowed" in resource_lock_schema["required"]
+    assert resource_lock_registry_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence_registry.v1"
+    assert "evidence_entries" in resource_lock_registry_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"
     assert "package_lock_hash" in environment_lock_schema["required"]
     assert "runtime_package_install" in environment_lock_schema["required"]

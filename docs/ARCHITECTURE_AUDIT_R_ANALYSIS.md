@@ -18,6 +18,7 @@ This audit added a minimal boundary scaffold:
 
 - `analysis/registry/analysis_modules.json`
 - `analysis/registry/analysis_environments.json`
+- `analysis/registry/resource_lock_evidence.json`
 - `analysis/registry/environment_lock_evidence.json`
 - `analysis/registry/standard_worker_migration_evidence.json`
 - `analysis/schemas/input/module_input.schema.json`
@@ -26,6 +27,7 @@ This audit added a minimal boundary scaffold:
 - `analysis/schemas/output/result_package.schema.json`
 - `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/schemas/output/resource_lock_evidence.schema.json`
+- `analysis/schemas/output/resource_lock_evidence_registry.schema.json`
 - `analysis/schemas/output/environment_lock_evidence.schema.json`
 - `analysis/schemas/output/environment_lock_evidence_registry.schema.json`
 - `analysis/schemas/output/full_analysis_activation_gate.schema.json`
@@ -106,6 +108,7 @@ Standard package discovery is now available to the UI state layer:
 - Analysis Center exposes that activation gate as a visible row with disabled reasons, so full-mode blockers are not hidden in developer-only diagnostics.
 - `build_analysis_remediation_queue()` now self-checks against `analysis/schemas/output/remediation_queue.schema.json`, keeping P1 remediation queue consumers on a stable contract.
 - `analysis/registry/environment_lock_evidence.json` is now the authoritative registry for restored full environment evidence. It is intentionally empty, so no full environment is restored; `validate_analysis_environment_lock_evidence_registry()` provides the future evidence entry point without changing the default app-dev dependency boundary.
+- `analysis/registry/resource_lock_evidence.json` is now the authoritative registry for externally prepared full resource lock evidence. It is intentionally empty, so no Reactome/MSigDB/spatial/chem resource is locked; `validate_analysis_resource_lock_evidence_registry()` provides the future evidence entry point without permitting runtime downloads.
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - Result-index `task_type` to standard module mapping is now owned by `analysis/registry/analysis_modules.json` through `result_index_task_types`; the catalog no longer carries its own hard-coded Bioinformatics task-type map, and `analysis:<module_id>` entries are blocked when the module is not registered.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
@@ -400,7 +403,7 @@ The current machine-readable queue exposes these P1 items:
 | Queue item | Priority files | Required evidence |
 | --- | --- | --- |
 | `restore_full_analysis_environment_locks` | `analysis/registry/analysis_environments.json`, `analysis/registry/environment_lock_evidence.json`, `renv/renv.bio-full.lock`, `renv/renv.spatial-full.lock`, `renv/renv.chem-full.lock`, `analysis/schemas/output/environment_lock_evidence.schema.json`, `analysis/schemas/output/environment_lock_evidence_registry.schema.json`, `external_analysis_environments/`, `docker/Dockerfile.r-bio-full`, `docker/Dockerfile.r-spatial-full`, `docker/Dockerfile.r-chem-full`, `docker/Dockerfile.r-chem-gpu` | Full environment locks restored from controlled external environments; every restored full environment lock has schema-valid registry evidence; image build evidence captured outside default app-dev; environment validator reports full readiness. |
-| `lock_full_analysis_resources` | `analysis/resources/manifest.json`, `analysis/schemas/output/resource_lock_evidence.schema.json`, `analysis/resources/locks/`, `external_analysis_resources/` | Every full resource declares version, source, hash, license, and cache path; every locked full resource has schema-valid evidence; resource validator reports full readiness. |
+| `lock_full_analysis_resources` | `analysis/resources/manifest.json`, `analysis/registry/resource_lock_evidence.json`, `analysis/schemas/output/resource_lock_evidence.schema.json`, `analysis/schemas/output/resource_lock_evidence_registry.schema.json`, `analysis/resources/locks/`, `external_analysis_resources/` | Every full resource declares version, source, hash, license, and cache path; every locked full resource has schema-valid registry evidence; resource validator reports full readiness. |
 | `migrate_formal_algorithms_to_isolated_standard_worker` | `app/bioinformatics/`, `analysis/registry/standard_worker_migration_evidence.json`, `analysis/runners/run_module.R`, `analysis/modules/`, `analysis/schemas/input/module_input.schema.json`, `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, `analysis/schemas/output/result_package.schema.json` | Selected formal module has registry-owned schema-valid migration evidence, executes through the task bridge and standard worker boundary, and frontend consumes the standard package instead of module-private output paths. |
 
 The current standard-worker migration matrix is intentionally still `partial`: all registered modules have mock packages and lite worker fixture paths, but full/formal migration remains blocked or pending until a selected formal module has a registry-owned payload in `analysis/registry/standard_worker_migration_evidence.json`, that payload matches `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, passes `validate_standard_worker_migration_evidence()`, and passes isolated environment/resource gates.

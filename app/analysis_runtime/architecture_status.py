@@ -439,7 +439,9 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
             "status": "blocked",
             "recommended_files": [
                 "analysis/resources/manifest.json",
+                "analysis/registry/resource_lock_evidence.json",
                 "analysis/schemas/output/resource_lock_evidence.schema.json",
+                "analysis/schemas/output/resource_lock_evidence_registry.schema.json",
                 "analysis/resources/locks/",
                 "external_analysis_resources/",
             ],
@@ -749,6 +751,7 @@ def _required_schemas_exist() -> bool:
         "analysis/schemas/output/full_analysis_activation_gate.schema.json",
         "analysis/schemas/output/remediation_queue.schema.json",
         "analysis/schemas/output/resource_lock_evidence.schema.json",
+        "analysis/schemas/output/resource_lock_evidence_registry.schema.json",
         "analysis/schemas/output/environment_lock_evidence.schema.json",
         "analysis/schemas/output/environment_lock_evidence_registry.schema.json",
     )

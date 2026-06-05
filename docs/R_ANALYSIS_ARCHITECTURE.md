@@ -35,12 +35,14 @@ The initial contract is declared under:
 analysis/
   registry/analysis_modules.json
   registry/analysis_environments.json
+  registry/resource_lock_evidence.json
   registry/environment_lock_evidence.json
   registry/standard_worker_migration_evidence.json
   schemas/input/module_input.schema.json
   schemas/output/result_package.schema.json
   schemas/output/worker_invocation.schema.json
   schemas/output/resource_lock_evidence.schema.json
+  schemas/output/resource_lock_evidence_registry.schema.json
   schemas/output/environment_lock_evidence.schema.json
   schemas/output/environment_lock_evidence_registry.schema.json
   schemas/output/full_analysis_activation_gate.schema.json
@@ -113,7 +115,7 @@ For transitional controlled adapters that still need module-specific R scripts, 
 
 Resource governance is centralized in `analysis/resources/manifest.json` and validated by `app/analysis_runtime/resources.py`. The manifest records mock fixtures plus blocked full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and molecular dynamics templates. These entries are not installations and do not enable full mode; they are explicit cache/version/hash/license requirements that must be satisfied before future full workers can run. A resource cannot be marked `locked` while version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`; such entries block full mode instead of being treated as valid locks.
 
-Locked resources must also point to a schema-valid evidence payload under `analysis/resources/locks/` using `analysis/schemas/output/resource_lock_evidence.schema.json`. That payload records resource id, version, source, hash, license, cache path, approved modules, evidence files, and `runtime_download_allowed=false`. Missing evidence, malformed evidence, missing cache/evidence files, manifest/evidence mismatches, or any runtime-download permission block the resource lock. The current repository-local mock fixture has lock evidence; full Reactome/MSigDB/spatial/chem resources remain blocked until real external lock evidence exists.
+Locked resources must also point to a schema-valid evidence payload using `analysis/schemas/output/resource_lock_evidence.schema.json`. Evidence paths may be declared directly in the resource manifest for repository-local fixtures or registered through `analysis/registry/resource_lock_evidence.json` for externally prepared full resources. That payload records resource id, version, source, hash, license, cache path, approved modules, evidence files, and `runtime_download_allowed=false`. Missing evidence, malformed evidence, missing cache/evidence files, manifest/evidence mismatches, or any runtime-download permission block the resource lock. The current repository-local mock fixture has lock evidence; `analysis/registry/resource_lock_evidence.json` is intentionally empty, so full Reactome/MSigDB/spatial/chem resources remain blocked until real external lock evidence exists.
 
 The Bioinformatics gene-set resource manager follows the same resource boundary. Common Reactome, GO, and KEGG catalog rows remain visible for repair guidance, but they are no longer runtime-downloadable from UI/user flows. `download_gene_set_resource()` and `refresh_downloaded_gene_set()` default to `runtime_gene_set_download_forbidden_import_or_prelocked_resource_required`; parser/download internals are reachable only through an explicit test/developer override. Formal and full enrichment resources must be imported as GMT files or supplied as externally prepared, versioned, hashed, licensed, prelocked resources.
 

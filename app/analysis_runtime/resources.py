@@ -8,10 +8,12 @@ from .registry import REPO_ROOT
 
 
 RESOURCE_MANIFEST_PATH = REPO_ROOT / "analysis" / "resources" / "manifest.json"
+RESOURCE_LOCK_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "resource_lock_evidence.json"
 ENVIRONMENT_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_environments.json"
 ENVIRONMENT_LOCK_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "environment_lock_evidence.json"
 MODULE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_modules.json"
 RESOURCE_LOCK_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json"
+RESOURCE_LOCK_EVIDENCE_REGISTRY_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence_registry.schema.json"
 ENVIRONMENT_LOCK_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json"
 ENVIRONMENT_LOCK_EVIDENCE_REGISTRY_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence_registry.schema.json"
 REQUIRED_RESOURCE_FIELDS = (
@@ -59,6 +61,11 @@ def load_analysis_resource_manifest(path: str | Path | None = None) -> dict[str,
     return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
+def load_analysis_resource_lock_evidence_registry(path: str | Path | None = None) -> dict[str, Any]:
+    registry_path = Path(path).expanduser().resolve() if path else RESOURCE_LOCK_EVIDENCE_REGISTRY_PATH
+    return json.loads(registry_path.read_text(encoding="utf-8"))
+
+
 def load_analysis_environment_registry(path: str | Path | None = None) -> dict[str, Any]:
     registry_path = Path(path).expanduser().resolve() if path else ENVIRONMENT_REGISTRY_PATH
     return json.loads(registry_path.read_text(encoding="utf-8"))
@@ -69,11 +76,28 @@ def load_analysis_environment_lock_evidence_registry(path: str | Path | None = N
     return json.loads(registry_path.read_text(encoding="utf-8"))
 
 
-def validate_analysis_resource_manifest(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
+def validate_analysis_resource_manifest(
+    manifest: dict[str, Any] | None = None,
+    *,
+    resource_lock_evidence_registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     payload = manifest or load_analysis_resource_manifest()
+    evidence_registry = (
+        resource_lock_evidence_registry
+        if isinstance(resource_lock_evidence_registry, dict)
+        else load_analysis_resource_lock_evidence_registry()
+    )
     blockers: list[str] = []
     warnings: list[str] = []
     resources = payload.get("resources")
+    evidence_registry_validation = validate_analysis_resource_lock_evidence_registry(
+        evidence_registry,
+        manifest=payload,
+    )
+    blockers.extend(
+        f"analysis_resource_lock_evidence_registry:{blocker}"
+        for blocker in evidence_registry_validation.get("blockers", [])
+    )
     if payload.get("schema_version") != "biomedpilot.analysis_resources.v1":
         blockers.append("analysis_resource_manifest_schema_version_mismatch")
     if not isinstance(resources, list) or not resources:
@@ -110,6 +134,8 @@ def validate_analysis_resource_manifest(manifest: dict[str, Any] | None = None) 
                 )
             lock_evidence_path = str(item.get("lock_evidence") or "")
             if not lock_evidence_path:
+                lock_evidence_path = _resource_lock_evidence_path_from_registry(resource_id, evidence_registry)
+            if not lock_evidence_path:
                 blockers.append(f"analysis_resource_lock_evidence_missing:{resource_id or 'unknown'}")
             else:
                 evidence_path = REPO_ROOT / lock_evidence_path
@@ -142,6 +168,8 @@ def validate_analysis_resource_manifest(manifest: dict[str, Any] | None = None) 
         "resource_count": len(resources),
         "locked_resource_ids": locked_resource_ids,
         "blocked_resource_ids": blocked_resource_ids,
+        "evidence_registry_status": evidence_registry_validation.get("status"),
+        "evidence_registry_entry_count": evidence_registry_validation.get("entry_count"),
         "blockers": blockers,
         "warnings": warnings,
     }
@@ -238,6 +266,80 @@ def validate_analysis_resource_lock_evidence(
         "resource_id": resource_key,
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": warnings,
+    }
+
+
+def validate_analysis_resource_lock_evidence_registry(
+    registry: dict[str, Any] | None = None,
+    *,
+    manifest: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate the authoritative registry for resource lock evidence."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_resource_lock_evidence_registry()
+    manifest_payload = manifest or load_analysis_resource_manifest()
+    blockers: list[str] = []
+    warnings: list[str] = []
+    blockers.extend(_resource_lock_evidence_registry_schema_blockers(payload))
+    policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
+    if not policy:
+        blockers.append("analysis_resource_lock_evidence_registry_policy_missing")
+    else:
+        if policy.get("registry_is_authoritative") is not True:
+            blockers.append("analysis_resource_lock_evidence_registry_authoritative_policy_invalid")
+        if policy.get("locked_resource_requires_schema_valid_evidence") is not True:
+            blockers.append("analysis_resource_lock_evidence_registry_locked_policy_invalid")
+        if policy.get("runtime_download_allowed") is not False:
+            blockers.append("analysis_resource_lock_evidence_registry_runtime_download_policy_invalid")
+
+    entries = payload.get("evidence_entries")
+    if not isinstance(entries, list):
+        blockers.append("analysis_resource_lock_evidence_registry_entries_invalid")
+        entries = []
+    seen: set[str] = set()
+    registered_resource_ids: list[str] = []
+    for item in entries:
+        if not isinstance(item, dict):
+            blockers.append("analysis_resource_lock_evidence_registry_entry_invalid")
+            continue
+        resource_id = str(item.get("resource_id") or "")
+        evidence_path = str(item.get("evidence_path") or "")
+        if not resource_id:
+            blockers.append("analysis_resource_lock_evidence_registry_resource_id_missing")
+            continue
+        if resource_id in seen:
+            blockers.append(f"analysis_resource_lock_evidence_registry_duplicate:{resource_id}")
+        seen.add(resource_id)
+        registered_resource_ids.append(resource_id)
+        if not evidence_path:
+            blockers.append(f"analysis_resource_lock_evidence_registry_evidence_path_missing:{resource_id}")
+            continue
+        full_path = REPO_ROOT / evidence_path
+        if not full_path.is_file():
+            blockers.append(f"analysis_resource_lock_evidence_registry_evidence_not_found:{resource_id}:{evidence_path}")
+            continue
+        try:
+            evidence = json.loads(full_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            blockers.append(f"analysis_resource_lock_evidence_registry_evidence_invalid_json:{resource_id}:{evidence_path}")
+            continue
+        validation = validate_analysis_resource_lock_evidence(resource_id, evidence, manifest=manifest_payload)
+        blockers.extend(
+            f"analysis_resource_lock_evidence_registry:{resource_id}:{blocker}"
+            for blocker in validation.get("blockers", [])
+        )
+        warnings.extend(
+            f"analysis_resource_lock_evidence_registry:{resource_id}:{warning}"
+            for warning in validation.get("warnings", [])
+        )
+
+    return {
+        "schema_version": "biomedpilot.analysis.resource_lock_evidence_registry_validation.v1",
+        "status": "blocked" if blockers else "passed",
+        "entry_count": len(entries),
+        "registered_resource_ids": registered_resource_ids,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
     }
 
 
@@ -583,6 +685,26 @@ def _resource_lock_evidence_schema_blockers(evidence: dict[str, Any]) -> list[st
     return blockers
 
 
+def _resource_lock_evidence_registry_schema_blockers(payload: dict[str, Any]) -> list[str]:
+    schema = _read_json(RESOURCE_LOCK_EVIDENCE_REGISTRY_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"analysis_resource_lock_evidence_registry_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        value = payload[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"analysis_resource_lock_evidence_registry_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"analysis_resource_lock_evidence_registry_type_invalid:{field}")
+    return blockers
+
+
 def _environment_lock_evidence_schema_blockers(evidence: dict[str, Any]) -> list[str]:
     schema = _read_json(ENVIRONMENT_LOCK_EVIDENCE_SCHEMA_PATH)
     blockers: list[str] = []
@@ -719,6 +841,16 @@ def _blocked_environment_ids_from_readiness(readiness_blockers: list[str]) -> li
         if len(parts) >= 2:
             ids.append(parts[1])
     return list(dict.fromkeys(ids))
+
+
+def _resource_lock_evidence_path_from_registry(resource_id: str, evidence_registry: dict[str, Any]) -> str:
+    entries = evidence_registry.get("evidence_entries") if isinstance(evidence_registry, dict) else []
+    if not isinstance(entries, list):
+        return ""
+    for item in entries:
+        if isinstance(item, dict) and str(item.get("resource_id") or "") == resource_id:
+            return str(item.get("evidence_path") or "")
+    return ""
 
 
 def full_mode_resource_blockers(module_id: str, manifest: dict[str, Any] | None = None) -> list[str]:
