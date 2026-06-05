@@ -33,6 +33,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["gate_rows"]
     assert state["enrichment_gate_rows"]
     assert state["analysis_architecture_gate_rows"]
+    assert state["full_activation_module_rows"]
     assert state["standard_worker_migration_rows"]
     assert state["analysis_architecture_remediation_rows"]
     assert state["analysis_environment_gate_rows"]
@@ -87,6 +88,15 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "full_analysis_resource_locks_not_ready" in architecture_gate_text
     assert "full_analysis_standard_worker_migration_incomplete" in architecture_gate_text
     assert "partial_with_p1_gaps" in architecture_gate_text
+    full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
+    assert "Full analysis module activation matrix" in full_activation_text
+    assert "Full activation: deg" in full_activation_text
+    assert "Full activation: enrichment" in full_activation_text
+    assert "analysis_full_environment_lock_not_restored:r-bio-full=7" in full_activation_text
+    assert "analysis_resource_not_locked:reactome_full=1" in full_activation_text
+    assert "resources=not_required" in full_activation_text
+    assert "resources=blocked" in full_activation_text
+    assert "r-bio-core->r-chem-gpu" in full_activation_text
     worker_migration_text = "\n".join(str(row) for row in state["standard_worker_migration_rows"])
     assert "R standard worker migration matrix" in worker_migration_text
     assert "R worker migration evidence coverage" in worker_migration_text
@@ -139,6 +149,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert remediation_queue["schema_validation_status"] == "passed"
     assert remediation_queue["schema_blockers"] == []
     assert state["developer_diagnostics"]["analysis_architecture_gate_rows"] == state["analysis_architecture_gate_rows"]
+    assert state["developer_diagnostics"]["full_activation_module_matrix"]["status"] == "blocked"
+    assert state["developer_diagnostics"]["full_activation_module_matrix"]["blocked_module_count"] == 10
+    assert state["developer_diagnostics"]["full_activation_module_rows"] == state["full_activation_module_rows"]
     migration_matrix = state["developer_diagnostics"]["standard_worker_migration_matrix"]
     assert migration_matrix["formal_pending_count"] == migration_matrix["module_count"]
     assert migration_matrix["passed_evidence_module_ids"] == []

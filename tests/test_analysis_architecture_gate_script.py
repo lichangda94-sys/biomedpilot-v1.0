@@ -162,6 +162,14 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["standard_worker_migration_matrix"]["migration_blocker_counts"][
         "registry_evidence_entry_missing_or_blocked"
     ] == payload["standard_worker_migration_matrix"]["module_count"]
+    assert payload["full_activation_module_matrix"]["status"] == "blocked"
+    assert payload["full_activation_module_matrix"]["blocked_module_count"] == 10
+    assert payload["full_activation_module_matrix"]["blocker_counts"]["full_mode_not_supported_in_registry"] == 10
+    full_rows = {row["module_id"]: row for row in payload["full_activation_module_rows"]}
+    assert full_rows["deg"]["resource_status"] == "not_required"
+    assert full_rows["enrichment"]["resource_status"] == "blocked"
+    assert "analysis_resource_not_locked:reactome_full" in full_rows["enrichment"]["blockers"]
+    assert full_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert migration_rows["deg"]["migration_readiness_status"] == "blocked"
     assert migration_rows["deg"]["migration_prerequisite_status"]["overall"] == "blocked"
     assert migration_rows["deg"]["migration_prerequisite_status"]["required_environment_lock"] == "required_before_migration_evidence"
@@ -375,6 +383,9 @@ def test_analysis_architecture_gate_full_required_writes_blocked_markdown_report
     assert payload["blockers"] == ["full_analysis_activation_gate_not_ready"]
     assert "| Gate status | `blocked` |" in text
     assert "| Require full ready | `True` |" in text
+    assert "Full Activation Module Matrix" in text
+    assert "Full activation" not in text  # section is summary-only, no UI labels in report
+    assert "analysis_resource_not_locked:reactome_full" in text
     assert "Full analysis activation remains explicitly blocked rather than silently enabled" in text
 
 
@@ -402,11 +413,15 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "environment_readiness" in schema["required"]
     assert "resource_readiness" in schema["required"]
     assert "standard_worker_migration_matrix" in schema["required"]
+    assert "full_activation_module_matrix" in schema["required"]
+    assert "full_activation_module_rows" in schema["required"]
     assert "standard_worker_migration_rows" in schema["required"]
     assert "remediation_queue" in schema["required"]
     assert "remediation_summary" in schema["required"]
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.architecture_gate_report.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
+    assert schema["properties"]["full_activation_module_matrix"]["type"] == "object"
+    assert schema["properties"]["full_activation_module_rows"]["type"] == "array"
 
 
 def test_analysis_evidence_template_package_schema_is_present_and_matches_payload_contract() -> None:

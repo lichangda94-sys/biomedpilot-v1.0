@@ -66,6 +66,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     )
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
+    full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
     environment_validation = architecture_status.get("environment_validation") if isinstance(architecture_status.get("environment_validation"), dict) else {}
     resource_validation = architecture_status.get("resource_validation") if isinstance(architecture_status.get("resource_validation"), dict) else {}
     migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
@@ -142,6 +143,21 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "blocked_evidence_module_ids": migration_matrix.get("blocked_evidence_module_ids", []),
             "missing_evidence_module_ids": migration_matrix.get("missing_evidence_module_ids", []),
         },
+        "full_activation_module_matrix": {
+            "schema_version": full_activation_module_matrix.get("schema_version"),
+            "status": full_activation_module_matrix.get("status"),
+            "module_count": full_activation_module_matrix.get("module_count"),
+            "eligible_module_count": full_activation_module_matrix.get("eligible_module_count"),
+            "blocked_module_count": full_activation_module_matrix.get("blocked_module_count"),
+            "status_counts": full_activation_module_matrix.get("status_counts", {}),
+            "blocker_counts": full_activation_module_matrix.get("blocker_counts", {}),
+            "boundary": full_activation_module_matrix.get("boundary"),
+        },
+        "full_activation_module_rows": [
+            dict(row)
+            for row in full_activation_module_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
         "standard_worker_migration_rows": migration_rows,
         "remediation_queue": {
             "schema_version": remediation_queue.get("schema_version"),
@@ -406,6 +422,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     requirement_summary = payload.get("requirement_summary") if isinstance(payload.get("requirement_summary"), dict) else {}
     full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
+    full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
+    full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
     remediation_summary = payload.get("remediation_summary") if isinstance(payload.get("remediation_summary"), dict) else {}
     remediation_queue = payload.get("remediation_queue") if isinstance(payload.get("remediation_queue"), dict) else {}
     remediation_items = [item for item in remediation_queue.get("items", []) if isinstance(item, dict)]
@@ -454,6 +472,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_migration_evidence_coverage_table(migration_matrix))
+    lines.extend(
+        [
+            "",
+            "### Full Activation Module Matrix",
+            "",
+        ]
+    )
+    lines.extend(_full_activation_module_summary_table(full_activation_module_matrix, full_activation_module_rows))
     lines.extend(
         [
             "",
@@ -846,6 +872,37 @@ def _migration_evidence_coverage_table(matrix: dict[str, Any]) -> list[str]:
         },
     ]
     return _markdown_table(["Metric", "Count", "Modules"], rows, ["metric", "count", "modules"])
+
+
+def _full_activation_module_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Eligible modules",
+            "count": matrix.get("eligible_module_count", 0),
+            "detail": "",
+        },
+        {
+            "metric": "Blocked modules",
+            "count": matrix.get("blocked_module_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    module_rows = [
+        {
+            "module_id": row.get("module_id"),
+            "environment": f"{row.get('analysis_environment')}->{row.get('full_environment')}",
+            "resources": row.get("resource_status"),
+            "worker": row.get("standard_worker_migration_status"),
+            "blockers": row.get("blockers", []),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Module", "Environment", "Resources", "Worker", "Blockers"], module_rows, ["module_id", "environment", "resources", "worker", "blockers"]),
+    ]
 
 
 def _markdown_table(headers: list[str], rows: list[dict[str, Any]], fields: list[str]) -> list[str]:

@@ -72,6 +72,12 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         resource_validation=resource_validation,
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
+    full_activation_module_matrix = build_full_activation_module_matrix(
+        registry=registry,
+        environment_validation=environment_validation,
+        resource_validation=resource_validation,
+        standard_worker_migration_matrix=standard_worker_migration_matrix,
+    )
     active_install_hits = _active_runtime_install_hits()
     active_download_hits = _active_runtime_resource_download_hits()
     heavy_default_hits = _default_dependency_hits()
@@ -233,9 +239,111 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "p0_issues": p0,
         "p1_issues": p1,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
+        "full_activation_module_matrix": full_activation_module_matrix,
         "full_analysis_activation_gate": full_analysis_activation_gate,
         "environment_validation": environment_validation,
         "resource_validation": resource_validation,
+    }
+
+
+def build_full_activation_module_matrix(
+    *,
+    registry: dict[str, Any] | None = None,
+    environment_validation: dict[str, Any] | None = None,
+    resource_validation: dict[str, Any] | None = None,
+    standard_worker_migration_matrix: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return a module-by-module full activation blocker matrix.
+
+    The matrix is diagnostic only. It does not relax the global full activation
+    gate, execute workers, restore environments, lock resources, or register
+    migration evidence.
+    """
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    env_validation = environment_validation if isinstance(environment_validation, dict) else validate_analysis_environment_registry(module_registry=payload)
+    resources = resource_validation if isinstance(resource_validation, dict) else validate_analysis_resource_manifest()
+    migration_matrix = standard_worker_migration_matrix if isinstance(standard_worker_migration_matrix, dict) else build_standard_worker_migration_matrix(payload)
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
+    ]
+    migration_by_module = {
+        str(row.get("module_id") or ""): row
+        for row in migration_matrix.get("rows", [])
+        if isinstance(row, dict) and row.get("module_id")
+    }
+    resource_templates = [
+        item
+        for item in resources.get("resource_lock_evidence_templates", [])
+        if isinstance(item, dict)
+    ]
+    blocked_resource_ids = {str(item) for item in resources.get("blocked_resource_ids", []) if item}
+    blocked_environment_ids = {str(item) for item in env_validation.get("blocked_environment_ids", []) if item}
+    rows = [
+        _full_activation_module_row(
+            module,
+            migration_row=migration_by_module.get(str(module.get("module_id") or ""), {}),
+            resource_templates=resource_templates,
+            blocked_resource_ids=blocked_resource_ids,
+            blocked_environment_ids=blocked_environment_ids,
+        )
+        for module in modules
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.full_activation_module_matrix.v1",
+        "status": "eligible" if rows and all(row.get("status") == "eligible" for row in rows) else "blocked",
+        "module_count": len(rows),
+        "eligible_module_count": sum(1 for row in rows if row.get("status") == "eligible"),
+        "blocked_module_count": sum(1 for row in rows if row.get("status") != "eligible"),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "rows": rows,
+        "boundary": "read_only_module_level_full_activation_diagnostics",
+    }
+
+
+def _full_activation_module_row(
+    module: dict[str, Any],
+    *,
+    migration_row: dict[str, Any],
+    resource_templates: list[dict[str, Any]],
+    blocked_resource_ids: set[str],
+    blocked_environment_ids: set[str],
+) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    full_environment = str(module.get("full_environment") or "")
+    required_resource_ids = [
+        str(template.get("resource_id") or "")
+        for template in resource_templates
+        if module_id in {str(value) for value in template.get("approved_for_modules", []) if value is not None}
+    ]
+    required_resource_ids = [item for item in required_resource_ids if item]
+    blocked_required_resources = [resource_id for resource_id in required_resource_ids if resource_id in blocked_resource_ids]
+    environment_blockers: list[str] = []
+    if not full_environment:
+        environment_blockers.append(f"analysis_full_environment_missing:{module_id}")
+    elif full_environment in blocked_environment_ids:
+        environment_blockers.append(f"analysis_full_environment_lock_not_restored:{full_environment}")
+    migration_blockers = [str(item) for item in migration_row.get("migration_blockers", []) if item]
+    resource_blockers = [f"analysis_resource_not_locked:{resource_id}" for resource_id in blocked_required_resources]
+    blockers = [*environment_blockers, *resource_blockers, *migration_blockers]
+    return {
+        "module_id": module_id,
+        "title": str(module.get("title") or module_id),
+        "status": "eligible" if not blockers else "blocked",
+        "analysis_environment": str(module.get("analysis_environment") or ""),
+        "full_environment": full_environment,
+        "required_resource_ids": required_resource_ids,
+        "blocked_required_resource_ids": blocked_required_resources,
+        "environment_status": "passed" if not environment_blockers else "blocked",
+        "resource_status": "not_required" if not required_resource_ids else ("passed" if not resource_blockers else "blocked"),
+        "standard_worker_migration_status": str(migration_row.get("formal_worker_status") or "pending_standard_worker_migration"),
+        "migration_next_action": str(migration_row.get("migration_next_action") or "inspect_migration_blockers"),
+        "blockers": list(dict.fromkeys(blockers)),
     }
 
 

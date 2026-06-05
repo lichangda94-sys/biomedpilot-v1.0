@@ -12,6 +12,7 @@ import pytest
 from app.analysis_runtime.architecture_status import (
     build_analysis_architecture_status,
     build_full_analysis_activation_gate,
+    build_full_activation_module_matrix,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
     load_standard_worker_migration_evidence_registry,
@@ -1648,6 +1649,40 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+
+
+def test_full_activation_module_matrix_is_module_level_and_read_only() -> None:
+    matrix = build_full_activation_module_matrix()
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.full_activation_module_matrix.v1"
+    assert matrix["status"] == "blocked"
+    assert matrix["boundary"] == "read_only_module_level_full_activation_diagnostics"
+    assert matrix["module_count"] == 10
+    assert matrix["eligible_module_count"] == 0
+    assert matrix["blocked_module_count"] == 10
+    assert matrix["status_counts"]["blocked"] == 10
+    assert matrix["blocker_counts"]["full_mode_not_supported_in_registry"] == 10
+    assert matrix["blocker_counts"]["registry_evidence_entry_missing_or_blocked"] == 10
+    assert matrix["blocker_counts"]["analysis_full_environment_lock_not_restored:r-bio-full"] == 7
+    assert matrix["blocker_counts"]["analysis_resource_not_locked:reactome_full"] == 1
+    assert matrix["blocker_counts"]["analysis_resource_not_locked:gromacs_tool"] == 1
+    assert rows["deg"]["resource_status"] == "not_required"
+    assert rows["deg"]["environment_status"] == "blocked"
+    assert rows["deg"]["standard_worker_migration_status"] == "pending_standard_worker_migration"
+    assert rows["enrichment"]["required_resource_ids"] == [
+        "reactome_full",
+        "msigdb_full",
+        "go_full",
+        "kegg_full",
+        "orgdb_human_full",
+    ]
+    assert rows["enrichment"]["resource_status"] == "blocked"
+    assert "analysis_resource_not_locked:reactome_full" in rows["enrichment"]["blockers"]
+    assert rows["docking"]["full_environment"] == "r-chem-full"
+    assert rows["docking"]["required_resource_ids"] == ["autodock_vina_tool", "docking_template_bundle"]
+    assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert rows["molecular_dynamics"]["required_resource_ids"] == ["gromacs_tool", "md_forcefield_template_bundle"]
 
 
 def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_by_default() -> None:
