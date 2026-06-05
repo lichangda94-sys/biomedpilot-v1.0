@@ -52,6 +52,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             provenance_payload = _read_json(package_dir / "provenance.json")
             invocation_payload = _read_json(package_dir / "logs" / "worker_invocation.json")
             result_index_log_blockers = _result_index_worker_invocation_blockers(entry, root, package_dir)
+            task_system_blockers = _catalog_task_system_boundary_blockers(invocation_payload, provenance_payload)
             detail = build_standard_analysis_package_detail(
                 package_dir,
                 project_root=root,
@@ -115,6 +116,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                                 *result_payload.get("blockers", []),
                                 *result_index_log_blockers,
                                 *result_index_module_blockers,
+                                *task_system_blockers,
                             ]
                         )
                     ),
@@ -304,6 +306,18 @@ def _result_index_worker_invocation_blockers(entry: dict[str, Any], root: Path, 
         if not declared.is_file():
             blockers.append("result_index_worker_invocation_manifest_file_missing")
     return list(dict.fromkeys(blockers))
+
+
+def _catalog_task_system_boundary_blockers(invocation: dict[str, Any], provenance: dict[str, Any]) -> list[str]:
+    invocation_boundary = invocation.get("worker_boundary") if isinstance(invocation.get("worker_boundary"), dict) else {}
+    provenance_boundary = provenance.get("worker_boundary") if isinstance(provenance.get("worker_boundary"), dict) else {}
+    boundary = invocation_boundary or provenance_boundary
+    if boundary.get("boundary_type") != "standard_r_worker":
+        return []
+    task_system_invocation = str(boundary.get("task_system_invocation") or "")
+    if task_system_invocation == "task_center_registered":
+        return []
+    return [f"standard_r_worker_package_not_task_center_registered:{task_system_invocation or 'missing'}"]
 
 
 def _resolve_artifact_path(root: Path, value: object) -> Path:

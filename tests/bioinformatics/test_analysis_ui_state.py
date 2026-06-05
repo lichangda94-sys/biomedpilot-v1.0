@@ -310,6 +310,34 @@ def test_analysis_center_state_blocks_standard_package_paths_outside_project_roo
     assert any("standard_result_package_path_outside_project_root" in item for item in state["top_blockers"])
 
 
+def test_analysis_center_state_blocks_direct_cli_standard_worker_packages(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, _module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    invocation_path = package_dir / "logs" / "worker_invocation.json"
+    invocation = json.loads(invocation_path.read_text(encoding="utf-8"))
+    invocation["worker_backend"] = "rscript"
+    invocation["worker_boundary"] = {
+        "boundary_type": "standard_r_worker",
+        "task_system_invocation": "standard_worker_direct_cli",
+        "migration_status": "standard_worker_direct_cli_contract",
+    }
+    invocation_path.write_text(json.dumps(invocation, indent=2), encoding="utf-8")
+
+    state = build_analysis_center_state(tmp_path)
+    rows = {row["gate"]: row for row in state["standard_package_gate_rows"]}
+    package_row = state["standard_analysis_packages"]["rows"][0]
+
+    assert state["standard_analysis_packages"]["status"] == "blocked"
+    assert rows["Standard package validation"]["status"] == "blocked"
+    assert package_row["worker_boundary_type"] == "standard_r_worker"
+    assert package_row["worker_migration_status"] == "standard_worker_direct_cli_contract"
+    assert "standard_r_worker_package_not_task_center_registered:standard_worker_direct_cli" in rows["Standard package validation"]["blockers"]
+    assert any(
+        "standard_r_worker_package_not_task_center_registered:standard_worker_direct_cli" in item
+        for item in state["top_blockers"]
+    )
+
+
 def test_result_rows_show_missing_standard_package_for_non_package_results(tmp_path: Path) -> None:
     register_result(
         tmp_path,

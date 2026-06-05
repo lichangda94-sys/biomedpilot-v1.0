@@ -359,6 +359,34 @@ def test_standard_analysis_package_catalog_blocks_packages_outside_project_root(
     assert any("standard_result_package_path_outside_project_root" in item for item in catalog["blockers"])
 
 
+def test_standard_analysis_package_catalog_blocks_direct_cli_standard_worker_as_task_result(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    invocation_path = package_dir / "logs" / "worker_invocation.json"
+    invocation = read_json(invocation_path)
+    invocation["worker_backend"] = "rscript"
+    invocation["worker_boundary"] = {
+        "boundary_type": "standard_r_worker",
+        "task_system_invocation": "standard_worker_direct_cli",
+        "migration_status": "standard_worker_direct_cli_contract",
+    }
+    invocation_path.write_text(json.dumps(invocation, indent=2), encoding="utf-8")
+
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    row = catalog["rows"][0]
+
+    assert catalog["status"] == "blocked"
+    assert row["worker_boundary_type"] == "standard_r_worker"
+    assert row["worker_migration_status"] == "standard_worker_direct_cli_contract"
+    assert row["validation_status"] == "passed"
+    assert row["artifact_counts"]["tables"] == 1
+    assert "standard_r_worker_package_not_task_center_registered:standard_worker_direct_cli" in row["blockers"]
+    assert any(
+        "standard_r_worker_package_not_task_center_registered:standard_worker_direct_cli" in item
+        for item in catalog["blockers"]
+    )
+
+
 def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(tmp_path: Path) -> None:
     result = run_analysis_module_task(tmp_path, module_input(tmp_path))
     package_dir = Path(result["result_package_dir"])
