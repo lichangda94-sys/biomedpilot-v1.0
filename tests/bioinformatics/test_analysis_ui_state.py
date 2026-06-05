@@ -88,6 +88,12 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "full_analysis_resource_locks_not_ready" in architecture_gate_text
     assert "full_analysis_standard_worker_migration_incomplete" in architecture_gate_text
     assert "partial_with_p1_gaps" in architecture_gate_text
+    assert "Runtime acquisition scan" in architecture_gate_text
+    assert "runtime_package_install_and_resource_download_forbidden_in_active_app_analysis_scripts_config" in architecture_gate_text
+    assert "roots=app；analysis；scripts；config" in architecture_gate_text
+    assert "Default dependency scan" in architecture_gate_text
+    assert "heavy_full_analysis_dependencies_excluded_from_default_app_dev_surface" in architecture_gate_text
+    assert "files=requirements.txt；pyproject.toml；docker/Dockerfile.app-dev；renv/renv.app.lock" in architecture_gate_text
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text

@@ -66,6 +66,15 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
     }
     assert payload["full_analysis_activation_gate"]["status"] == "blocked"
+    assert payload["runtime_acquisition_scan"]["schema_version"] == "biomedpilot.analysis.runtime_acquisition_scan.v1"
+    assert payload["runtime_acquisition_scan"]["status"] == "passed"
+    assert payload["runtime_acquisition_scan"]["hit_count"] == 0
+    assert payload["runtime_acquisition_scan"]["scanned_roots"] == ["app", "analysis", "scripts", "config"]
+    assert payload["runtime_acquisition_scan"]["install_scan"]["scanned_file_count"] > 0
+    assert payload["default_dependency_scan"]["schema_version"] == "biomedpilot.analysis.default_dependency_scan.v1"
+    assert payload["default_dependency_scan"]["status"] == "passed"
+    assert payload["default_dependency_scan"]["heavy_dependency_hits"] == []
+    assert "docker/Dockerfile.app-dev" in payload["default_dependency_scan"]["scanned_files"]
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False
     assert set(payload["environment_readiness"]["blocked_environment_ids"]) == {
@@ -422,6 +431,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "priority_issue_lists" in schema["required"]
     assert "top_architecture_risks" in schema["required"]
     assert "full_analysis_activation_gate" in schema["required"]
+    assert "runtime_acquisition_scan" in schema["required"]
+    assert "default_dependency_scan" in schema["required"]
     assert "environment_readiness" in schema["required"]
     assert "resource_readiness" in schema["required"]
     assert "standard_worker_migration_matrix" in schema["required"]
@@ -432,6 +443,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "remediation_summary" in schema["required"]
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.architecture_gate_report.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
+    assert schema["properties"]["runtime_acquisition_scan"]["type"] == "object"
+    assert schema["properties"]["default_dependency_scan"]["type"] == "object"
     assert schema["properties"]["full_activation_module_matrix"]["type"] == "object"
     assert schema["properties"]["full_activation_module_rows"]["type"] == "array"
 

@@ -78,9 +78,11 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         resource_validation=resource_validation,
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
-    active_install_hits = _active_runtime_install_hits()
-    active_download_hits = _active_runtime_resource_download_hits()
-    heavy_default_hits = _default_dependency_hits()
+    runtime_acquisition_scan = build_runtime_acquisition_scan_summary()
+    default_dependency_scan = build_default_dependency_scan_summary()
+    active_install_hits = list(runtime_acquisition_scan.get("install_hits", []))
+    active_download_hits = list(runtime_acquisition_scan.get("resource_download_hits", []))
+    heavy_default_hits = list(default_dependency_scan.get("heavy_dependency_hits", []))
     rows = [
         _row(
             "RARCH-01",
@@ -240,9 +242,68 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "p1_issues": p1,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "full_activation_module_matrix": full_activation_module_matrix,
+        "runtime_acquisition_scan": runtime_acquisition_scan,
+        "default_dependency_scan": default_dependency_scan,
         "full_analysis_activation_gate": full_analysis_activation_gate,
         "environment_validation": environment_validation,
         "resource_validation": resource_validation,
+    }
+
+
+def build_runtime_acquisition_scan_summary() -> dict[str, Any]:
+    install_scan = _active_runtime_command_scan(
+        BANNED_RUNTIME_INSTALL_PATTERNS,
+        scan_id="runtime_install_command_scan",
+    )
+    download_scan = _active_runtime_command_scan(
+        BANNED_RUNTIME_RESOURCE_DOWNLOAD_PATTERNS,
+        scan_id="runtime_resource_download_command_scan",
+    )
+    install_hits = list(install_scan.get("hits", []))
+    download_hits = list(download_scan.get("hits", []))
+    return {
+        "schema_version": "biomedpilot.analysis.runtime_acquisition_scan.v1",
+        "status": "passed" if not install_hits and not download_hits else "blocked",
+        "install_scan": install_scan,
+        "resource_download_scan": download_scan,
+        "install_hits": install_hits,
+        "resource_download_hits": download_hits,
+        "hit_count": len(install_hits) + len(download_hits),
+        "scanned_roots": install_scan.get("scanned_roots", []),
+        "excluded_path_parts": install_scan.get("excluded_path_parts", []),
+        "policy": "runtime_package_install_and_resource_download_forbidden_in_active_app_analysis_scripts_config",
+    }
+
+
+def build_default_dependency_scan_summary() -> dict[str, Any]:
+    paths = [
+        REPO_ROOT / "requirements.txt",
+        REPO_ROOT / "pyproject.toml",
+        REPO_ROOT / "docker" / "Dockerfile.app-dev",
+        REPO_ROOT / "renv" / "renv.app.lock",
+    ]
+    hits: list[str] = []
+    scanned_files: list[str] = []
+    missing_files: list[str] = []
+    for path in paths:
+        relative = str(path.relative_to(REPO_ROOT))
+        if not path.is_file():
+            missing_files.append(relative)
+            continue
+        scanned_files.append(relative)
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for name in HEAVY_DEFAULT_DEPENDENCY_NAMES:
+            if name in text:
+                hits.append(f"{relative}:{name}")
+    return {
+        "schema_version": "biomedpilot.analysis.default_dependency_scan.v1",
+        "status": "passed" if not hits else "blocked",
+        "scanned_files": scanned_files,
+        "missing_files": missing_files,
+        "heavy_dependency_names": list(HEAVY_DEFAULT_DEPENDENCY_NAMES),
+        "heavy_dependency_hits": sorted(set(hits)),
+        "hit_count": len(set(hits)),
+        "policy": "heavy_full_analysis_dependencies_excluded_from_default_app_dev_surface",
     }
 
 
@@ -1432,16 +1493,18 @@ def _chem_modules_use_external_tool_policy() -> bool:
 
 
 def _active_runtime_install_hits() -> list[str]:
-    return _active_runtime_command_hits(BANNED_RUNTIME_INSTALL_PATTERNS)
+    return list(_active_runtime_command_scan(BANNED_RUNTIME_INSTALL_PATTERNS, scan_id="runtime_install_command_scan").get("hits", []))
 
 
 def _active_runtime_resource_download_hits() -> list[str]:
-    return _active_runtime_command_hits(BANNED_RUNTIME_RESOURCE_DOWNLOAD_PATTERNS)
+    return list(_active_runtime_command_scan(BANNED_RUNTIME_RESOURCE_DOWNLOAD_PATTERNS, scan_id="runtime_resource_download_command_scan").get("hits", []))
 
 
-def _active_runtime_command_hits(patterns: tuple[str, ...]) -> list[str]:
+def _active_runtime_command_scan(patterns: tuple[str, ...], *, scan_id: str) -> dict[str, Any]:
     roots = [REPO_ROOT / "app", REPO_ROOT / "analysis", REPO_ROOT / "scripts", REPO_ROOT / "config"]
     hits: list[str] = []
+    scanned_files: list[str] = []
+    skipped_non_text_files: list[str] = []
     for root in roots:
         if not root.exists():
             continue
@@ -1451,29 +1514,29 @@ def _active_runtime_command_hits(patterns: tuple[str, ...]) -> list[str]:
             try:
                 text = path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
+                skipped_non_text_files.append(str(path.relative_to(REPO_ROOT)))
                 continue
+            scanned_files.append(str(path.relative_to(REPO_ROOT)))
             for pattern in patterns:
                 if pattern in text:
                     hits.append(f"{path.relative_to(REPO_ROOT)}:{pattern}")
-    return sorted(set(hits))
+    return {
+        "schema_version": "biomedpilot.analysis.active_runtime_command_scan.v1",
+        "scan_id": scan_id,
+        "status": "passed" if not hits else "blocked",
+        "scanned_roots": [str(root.relative_to(REPO_ROOT)) for root in roots if root.exists()],
+        "excluded_path_parts": ["legacy", "__pycache__", ".git"],
+        "patterns": list(patterns),
+        "scanned_file_count": len(scanned_files),
+        "skipped_non_text_file_count": len(skipped_non_text_files),
+        "skipped_non_text_files": skipped_non_text_files[:20],
+        "hits": sorted(set(hits)),
+        "hit_count": len(set(hits)),
+    }
 
 
 def _default_dependency_hits() -> list[str]:
-    paths = [
-        REPO_ROOT / "requirements.txt",
-        REPO_ROOT / "pyproject.toml",
-        REPO_ROOT / "docker" / "Dockerfile.app-dev",
-        REPO_ROOT / "renv" / "renv.app.lock",
-    ]
-    hits: list[str] = []
-    for path in paths:
-        if not path.is_file():
-            continue
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        for name in HEAVY_DEFAULT_DEPENDENCY_NAMES:
-            if name in text:
-                hits.append(f"{path.relative_to(REPO_ROOT)}:{name}")
-    return sorted(set(hits))
+    return list(build_default_dependency_scan_summary().get("heavy_dependency_hits", []))
 
 
 def _is_excluded_source(path: Path) -> bool:

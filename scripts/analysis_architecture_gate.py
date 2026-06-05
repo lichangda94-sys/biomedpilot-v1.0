@@ -67,6 +67,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
     full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
+    runtime_acquisition_scan = architecture_status.get("runtime_acquisition_scan") if isinstance(architecture_status.get("runtime_acquisition_scan"), dict) else {}
+    default_dependency_scan = architecture_status.get("default_dependency_scan") if isinstance(architecture_status.get("default_dependency_scan"), dict) else {}
     environment_validation = architecture_status.get("environment_validation") if isinstance(architecture_status.get("environment_validation"), dict) else {}
     resource_validation = architecture_status.get("resource_validation") if isinstance(architecture_status.get("resource_validation"), dict) else {}
     migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
@@ -94,6 +96,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "p0_issues": [str(item) for item in architecture_status.get("p0_issues", []) if item],
         "p1_issues": p1_issues,
         "full_analysis_activation_gate": full_gate,
+        "runtime_acquisition_scan": runtime_acquisition_scan,
+        "default_dependency_scan": default_dependency_scan,
         "environment_readiness": {
             "schema_version": environment_validation.get("schema_version"),
             "status": environment_validation.get("status"),

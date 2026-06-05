@@ -1378,6 +1378,25 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert rows["RARCH-18"]["blockers"] == []
     assert "lite_mode_writes_command_manifest_only_no_AutoDock_or_GROMACS_execution" in rows["RARCH-18"]["warnings"]
     assert rows["RARCH-20"]["status"] == "pass"
+    runtime_scan = status["runtime_acquisition_scan"]
+    dependency_scan = status["default_dependency_scan"]
+    assert runtime_scan["schema_version"] == "biomedpilot.analysis.runtime_acquisition_scan.v1"
+    assert runtime_scan["status"] == "passed"
+    assert runtime_scan["install_hits"] == []
+    assert runtime_scan["resource_download_hits"] == []
+    assert runtime_scan["hit_count"] == 0
+    assert runtime_scan["scanned_roots"] == ["app", "analysis", "scripts", "config"]
+    assert runtime_scan["install_scan"]["scan_id"] == "runtime_install_command_scan"
+    assert runtime_scan["resource_download_scan"]["scan_id"] == "runtime_resource_download_command_scan"
+    assert runtime_scan["install_scan"]["scanned_file_count"] > 0
+    assert "install.packages" in runtime_scan["install_scan"]["patterns"]
+    assert "download.file" in runtime_scan["resource_download_scan"]["patterns"]
+    assert dependency_scan["schema_version"] == "biomedpilot.analysis.default_dependency_scan.v1"
+    assert dependency_scan["status"] == "passed"
+    assert dependency_scan["heavy_dependency_hits"] == []
+    assert dependency_scan["hit_count"] == 0
+    assert "requirements.txt" in dependency_scan["scanned_files"]
+    assert "ReactomePA" in dependency_scan["heavy_dependency_names"]
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
     assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"

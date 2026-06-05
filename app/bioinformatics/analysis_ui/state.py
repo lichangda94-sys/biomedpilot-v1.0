@@ -1113,6 +1113,8 @@ def build_analysis_architecture_gate_rows(status: dict[str, Any]) -> list[dict[s
     p0_issues = _list(status.get("p0_issues"))
     p1_issues = _list(status.get("p1_issues"))
     full_gate = status.get("full_analysis_activation_gate") if isinstance(status.get("full_analysis_activation_gate"), dict) else {}
+    runtime_scan = status.get("runtime_acquisition_scan") if isinstance(status.get("runtime_acquisition_scan"), dict) else {}
+    dependency_scan = status.get("default_dependency_scan") if isinstance(status.get("default_dependency_scan"), dict) else {}
     return [
         _formal_deg_gate_row(
             "R analysis architecture snapshot",
@@ -1134,6 +1136,26 @@ def build_analysis_architecture_gate_rows(status: dict[str, Any]) -> list[dict[s
             _list(full_gate.get("blockers")),
             [],
             basis=str(full_gate.get("policy") or "full_analysis_requires_environment_resource_and_standard_worker_evidence"),
+        ),
+        _formal_deg_gate_row(
+            "Runtime acquisition scan",
+            runtime_scan.get("status") or "blocked",
+            [*_list(runtime_scan.get("install_hits")), *_list(runtime_scan.get("resource_download_hits"))],
+            [
+                f"hits={runtime_scan.get('hit_count', 0)}",
+                f"roots={compact_list(_list(runtime_scan.get('scanned_roots')))}",
+            ],
+            basis=str(runtime_scan.get("policy") or "runtime_package_install_and_resource_download_forbidden"),
+        ),
+        _formal_deg_gate_row(
+            "Default dependency scan",
+            dependency_scan.get("status") or "blocked",
+            _list(dependency_scan.get("heavy_dependency_hits")),
+            [
+                f"hits={dependency_scan.get('hit_count', 0)}",
+                f"files={compact_list(_list(dependency_scan.get('scanned_files')))}",
+            ],
+            basis=str(dependency_scan.get("policy") or "heavy_dependencies_excluded_from_app_dev"),
         ),
     ]
 
