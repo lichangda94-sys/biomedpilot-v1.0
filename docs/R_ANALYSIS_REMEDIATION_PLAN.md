@@ -514,6 +514,7 @@ Completed:
   - `lock_full_analysis_resources`
   - `migrate_formal_algorithms_to_isolated_standard_worker`
 - Each item records source issue, priority, blocked status, recommended files, required evidence, and architecture boundary.
+- Environment/resource queue items explicitly name their lock-evidence schemas. Restored full environment locks must pass `validate_analysis_environment_lock_evidence()`, and locked full resources must pass `validate_analysis_resource_lock_evidence()` before either can contribute to full-mode readiness.
 
 Remaining:
 

@@ -466,7 +466,11 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     }
     assert items["restore_full_analysis_environment_locks"]["source_issue"] == "full_analysis_environment_locks_not_restored"
     assert "renv/renv.bio-full.lock" in items["restore_full_analysis_environment_locks"]["recommended_files"]
+    assert "analysis/schemas/output/environment_lock_evidence.schema.json" in items["restore_full_analysis_environment_locks"]["recommended_files"]
+    assert "each restored full environment lock has schema-valid environment_lock_evidence" in items["restore_full_analysis_environment_locks"]["required_evidence"]
     assert "analysis/resources/manifest.json" in items["lock_full_analysis_resources"]["recommended_files"]
+    assert "analysis/schemas/output/resource_lock_evidence.schema.json" in items["lock_full_analysis_resources"]["recommended_files"]
+    assert "each locked full resource has schema-valid resource_lock_evidence" in items["lock_full_analysis_resources"]["required_evidence"]
     assert "analysis/runners/run_module.R" in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
     assert all(item["status"] == "blocked" for item in items.values())
 

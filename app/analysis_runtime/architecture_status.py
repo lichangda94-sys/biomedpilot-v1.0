@@ -261,6 +261,8 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
                 "renv/renv.bio-full.lock",
                 "renv/renv.spatial-full.lock",
                 "renv/renv.chem-full.lock",
+                "analysis/schemas/output/environment_lock_evidence.schema.json",
+                "external_analysis_environments/",
                 "docker/Dockerfile.r-bio-full",
                 "docker/Dockerfile.r-spatial-full",
                 "docker/Dockerfile.r-chem-full",
@@ -268,6 +270,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
             ],
             "required_evidence": [
                 "full environment locks restored from controlled external analysis environments",
+                "each restored full environment lock has schema-valid environment_lock_evidence",
                 "Docker image build evidence captured outside default app-dev",
                 "validate_analysis_environment_registry.full_mode_ready becomes true",
             ],
@@ -281,10 +284,13 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
             "status": "blocked",
             "recommended_files": [
                 "analysis/resources/manifest.json",
+                "analysis/schemas/output/resource_lock_evidence.schema.json",
+                "analysis/resources/locks/",
                 "external_analysis_resources/",
             ],
             "required_evidence": [
                 "each full resource declares version, source, hash, license, and cache path",
+                "each locked full resource has schema-valid resource_lock_evidence",
                 "large resources are prelocked or explicitly imported before full mode",
                 "validate_analysis_resource_manifest.full_mode_ready becomes true",
             ],
