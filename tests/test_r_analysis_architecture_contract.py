@@ -47,6 +47,19 @@ REQUIRED_MODULES = {
     "docking",
     "molecular_dynamics",
 }
+REQUIRED_FULL_RESOURCE_IDS = [
+    "reactome_full",
+    "msigdb_full",
+    "go_full",
+    "kegg_full",
+    "orgdb_human_full",
+    "spatial_reference_full",
+    "cellchatdb_full",
+    "autodock_vina_tool",
+    "docking_template_bundle",
+    "gromacs_tool",
+    "md_forcefield_template_bundle",
+]
 RESULT_PAYLOAD_SCHEMA = "analysis/schemas/output/result.schema.json"
 PROVENANCE_PAYLOAD_SCHEMA = "analysis/schemas/output/provenance.schema.json"
 
@@ -614,10 +627,15 @@ def test_analysis_resource_lock_evidence_registry_is_authoritative_and_empty_by_
 
     assert registry["schema_version"] == "biomedpilot.analysis.resource_lock_evidence_registry.v1"
     assert registry["policy"]["registry_is_authoritative"] is True
+    assert registry["policy"]["expected_resource_ids_are_authoritative"] is True
+    assert registry["expected_resource_ids"] == REQUIRED_FULL_RESOURCE_IDS
     assert registry["evidence_entries"] == []
     assert validation["schema_version"] == "biomedpilot.analysis.resource_lock_evidence_registry_validation.v1"
     assert validation["status"] == "passed"
     assert validation["entry_count"] == 0
+    assert validation["expected_resource_ids"] == REQUIRED_FULL_RESOURCE_IDS
+    assert validation["missing_resource_ids"] == REQUIRED_FULL_RESOURCE_IDS
+    assert validation["missing_count"] == len(REQUIRED_FULL_RESOURCE_IDS)
 
 
 def test_locked_analysis_resource_can_use_registry_evidence_path() -> None:
@@ -628,10 +646,12 @@ def test_locked_analysis_resource_can_use_registry_evidence_path() -> None:
         "schema_version": "biomedpilot.analysis.resource_lock_evidence_registry.v1",
         "policy": {
             "registry_is_authoritative": True,
+            "expected_resource_ids_are_authoritative": True,
             "locked_resource_requires_schema_valid_evidence": True,
             "manual_scoped_resource_lock_only": True,
             "runtime_download_allowed": False,
         },
+        "expected_resource_ids": REQUIRED_FULL_RESOURCE_IDS,
         "evidence_entries": [
             {
                 "resource_id": "mock_fixture_builtin_v1",
@@ -653,6 +673,32 @@ def test_locked_analysis_resource_can_use_registry_evidence_path() -> None:
     assert registry_validation["registered_resource_ids"] == ["mock_fixture_builtin_v1"]
     assert manifest_validation["status"] == "passed"
     assert manifest_validation["evidence_registry_entry_count"] == 1
+
+
+def test_analysis_resource_lock_evidence_registry_blocks_expected_scope_drift() -> None:
+    registry = deepcopy(load_analysis_resource_lock_evidence_registry())
+    registry["expected_resource_ids"] = ["reactome_full"]
+
+    validation = validate_analysis_resource_lock_evidence_registry(registry)
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_registry_expected_resource_ids_mismatch" in validation["blockers"]
+    assert validation["expected_resource_ids"] == REQUIRED_FULL_RESOURCE_IDS
+
+
+def test_analysis_resource_lock_evidence_registry_blocks_unregistered_entries() -> None:
+    registry = deepcopy(load_analysis_resource_lock_evidence_registry())
+    registry["evidence_entries"] = [
+        {
+            "resource_id": "unknown_resource",
+            "evidence_path": "analysis/resources/locks/mock_fixture_builtin_v1.lock.json",
+        }
+    ]
+
+    validation = validate_analysis_resource_lock_evidence_registry(registry)
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_registry_unregistered_resource:unknown_resource" in validation["blockers"]
 
 
 def test_locked_analysis_resource_without_evidence_is_blocked() -> None:
@@ -1808,6 +1854,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert resource_lock_schema["properties"]["hash"]["required"] == ["algorithm", "value"]
     assert resource_lock_schema["properties"]["cache_content"]["required"] == ["non_empty"]
     assert resource_lock_registry_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence_registry.v1"
+    assert "expected_resource_ids" in resource_lock_registry_schema["required"]
     assert "evidence_entries" in resource_lock_registry_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"
     assert "renv_lock_content" in environment_lock_schema["required"]
@@ -2177,19 +2224,7 @@ def test_analysis_resource_manifest_declares_full_mode_resource_locks_without_do
     assert validation["status"] == "passed"
     assert validation["full_mode_ready"] is False
     assert resources["mock_fixture_builtin_v1"]["status"] == "locked"
-    required_resource_ids = {
-        "reactome_full",
-        "msigdb_full",
-        "go_full",
-        "kegg_full",
-        "orgdb_human_full",
-        "spatial_reference_full",
-        "cellchatdb_full",
-        "autodock_vina_tool",
-        "docking_template_bundle",
-        "gromacs_tool",
-        "md_forcefield_template_bundle",
-    }
+    required_resource_ids = set(REQUIRED_FULL_RESOURCE_IDS)
     assert required_resource_ids <= set(resources)
     templates = {item["resource_id"]: item for item in validation["resource_lock_evidence_templates"]}
     assert required_resource_ids <= set(templates)

@@ -126,6 +126,7 @@ Standard package discovery is now available to the UI state layer:
 - `analysis/registry/environment_lock_evidence.json` is now the authoritative registry for restored full environment evidence. It is intentionally empty, so no full environment is restored; `validate_analysis_environment_lock_evidence_registry()` provides the future evidence entry point without changing the default app-dev dependency boundary.
 - Full environment lock evidence now requires Docker image build proof. A future restored environment evidence payload must include `docker_image.image_ref`, SHA-256 image digest, architecture, `build_status=built`, and an existing build log; a Dockerfile path alone is not sufficient to make full mode ready.
 - `analysis/registry/resource_lock_evidence.json` is now the authoritative registry for externally prepared full resource lock evidence. It is intentionally empty, so no Reactome/MSigDB/spatial/chem resource is locked; `validate_analysis_resource_lock_evidence_registry()` provides the future evidence entry point without permitting runtime downloads.
+- Full resource lock evidence registry now declares the expected full resource/tool scope. The validator blocks expected-resource scope drift and unregistered evidence entries, while the current empty `evidence_entries` list keeps every full resource/tool blocked.
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - Result-index `task_type` to standard module mapping is now owned by `analysis/registry/analysis_modules.json` through `result_index_task_types`; the catalog no longer carries its own hard-coded Bioinformatics task-type map, and `analysis:<module_id>` entries are blocked when the module is not registered.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
@@ -492,6 +493,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Hardened full environment lock evidence so a matching SHA-256 for an empty or scaffold-only renv lock cannot satisfy restored environment proof.
 - Hardened full environment lock evidence so restored full locks must also carry Docker image build evidence instead of relying on a Dockerfile scaffold alone.
 - Hardened full resource lock evidence so the declared SHA-256 must match the referenced `cache_path` file or deterministic directory content, and empty cache directories are blocked.
+- Hardened full resource lock registry evidence so the expected external full resource/tool scope is explicit and cannot silently drift.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

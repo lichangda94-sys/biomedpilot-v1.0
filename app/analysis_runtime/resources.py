@@ -313,16 +313,58 @@ def validate_analysis_resource_lock_evidence_registry(
     blockers: list[str] = []
     warnings: list[str] = []
     blockers.extend(_resource_lock_evidence_registry_schema_blockers(payload))
+    resources = [
+        item
+        for item in manifest_payload.get("resources", [])
+        if isinstance(item, dict)
+    ]
+    known_resource_ids = {
+        str(item.get("resource_id") or "")
+        for item in resources
+        if item.get("resource_id")
+    }
+    expected_resource_ids = [
+        str(item.get("resource_id") or "")
+        for item in resources
+        if item.get("resource_id")
+        and str(item.get("resource_id") or "") != MOCK_FIXTURE_RESOURCE_ID
+        and str(item.get("cache_path") or "").startswith("external_analysis_resources/")
+    ]
     policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
     if not policy:
         blockers.append("analysis_resource_lock_evidence_registry_policy_missing")
     else:
         if policy.get("registry_is_authoritative") is not True:
             blockers.append("analysis_resource_lock_evidence_registry_authoritative_policy_invalid")
+        if policy.get("expected_resource_ids_are_authoritative") is not True:
+            blockers.append("analysis_resource_lock_evidence_registry_expected_resource_policy_invalid")
         if policy.get("locked_resource_requires_schema_valid_evidence") is not True:
             blockers.append("analysis_resource_lock_evidence_registry_locked_policy_invalid")
         if policy.get("runtime_download_allowed") is not False:
             blockers.append("analysis_resource_lock_evidence_registry_runtime_download_policy_invalid")
+    declared_expected_resource_ids = payload.get("expected_resource_ids")
+    if not isinstance(declared_expected_resource_ids, list):
+        blockers.append("analysis_resource_lock_evidence_registry_expected_resource_ids_invalid")
+        declared_expected_resource_ids = []
+    else:
+        normalized_expected_resource_ids = [
+            str(item)
+            for item in declared_expected_resource_ids
+            if isinstance(item, str) and item
+        ]
+        if len(normalized_expected_resource_ids) != len(declared_expected_resource_ids):
+            blockers.append("analysis_resource_lock_evidence_registry_expected_resource_ids_invalid")
+        duplicate_expected_ids = sorted(
+            resource_id
+            for resource_id in set(normalized_expected_resource_ids)
+            if normalized_expected_resource_ids.count(resource_id) > 1
+        )
+        blockers.extend(
+            f"analysis_resource_lock_evidence_registry_expected_resource_id_duplicate:{resource_id}"
+            for resource_id in duplicate_expected_ids
+        )
+        if normalized_expected_resource_ids != expected_resource_ids:
+            blockers.append("analysis_resource_lock_evidence_registry_expected_resource_ids_mismatch")
 
     entries = payload.get("evidence_entries")
     if not isinstance(entries, list):
@@ -343,6 +385,8 @@ def validate_analysis_resource_lock_evidence_registry(
             blockers.append(f"analysis_resource_lock_evidence_registry_duplicate:{resource_id}")
         seen.add(resource_id)
         registered_resource_ids.append(resource_id)
+        if resource_id not in known_resource_ids:
+            blockers.append(f"analysis_resource_lock_evidence_registry_unregistered_resource:{resource_id}")
         if not evidence_path:
             blockers.append(f"analysis_resource_lock_evidence_registry_evidence_path_missing:{resource_id}")
             continue
@@ -370,6 +414,9 @@ def validate_analysis_resource_lock_evidence_registry(
         "status": "blocked" if blockers else "passed",
         "entry_count": len(entries),
         "registered_resource_ids": registered_resource_ids,
+        "expected_resource_ids": expected_resource_ids,
+        "missing_resource_ids": [resource_id for resource_id in expected_resource_ids if resource_id not in set(registered_resource_ids)],
+        "missing_count": len([resource_id for resource_id in expected_resource_ids if resource_id not in set(registered_resource_ids)]),
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }

@@ -2,9 +2,23 @@
   "schema_version": "biomedpilot.analysis.resource_lock_evidence_registry.v1",
   "policy": {
     "registry_is_authoritative": true,
+    "expected_resource_ids_are_authoritative": true,
     "locked_resource_requires_schema_valid_evidence": true,
     "manual_scoped_resource_lock_only": true,
     "runtime_download_allowed": false
   },
+  "expected_resource_ids": [
+    "reactome_full",
+    "msigdb_full",
+    "go_full",
+    "kegg_full",
+    "orgdb_human_full",
+    "spatial_reference_full",
+    "cellchatdb_full",
+    "autodock_vina_tool",
+    "docking_template_bundle",
+    "gromacs_tool",
+    "md_forcefield_template_bundle"
+  ],
   "evidence_entries": []
 }
