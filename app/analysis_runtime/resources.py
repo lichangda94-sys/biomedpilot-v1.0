@@ -437,6 +437,12 @@ def validate_analysis_environment_lock_evidence(
             blockers.append("analysis_environment_lock_evidence_renv_lock_content_status_not_restored")
         if renv_lock_content.get("packages_non_empty") is not True:
             blockers.append("analysis_environment_lock_evidence_renv_lock_content_packages_not_confirmed")
+        elif "package_count" in renv_lock_content and (
+            not isinstance(renv_lock_content.get("package_count"), int)
+            or isinstance(renv_lock_content.get("package_count"), bool)
+            or renv_lock_content.get("package_count") < 1
+        ):
+            blockers.append("analysis_environment_lock_evidence_renv_lock_content_package_count_invalid")
 
     dockerfile = str(evidence.get("dockerfile") or "")
     renv_lock = str(evidence.get("renv_lock") or "")
@@ -449,7 +455,18 @@ def validate_analysis_environment_lock_evidence(
         actual_hash = _sha256_file(renv_lock_path)
         if actual_hash != package_hash_value.lower():
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_mismatch")
-        blockers.extend(_environment_lock_evidence_renv_lock_content_blockers(environment_key, renv_lock_path))
+        expected_package_count = (
+            renv_lock_content.get("package_count")
+            if isinstance(renv_lock_content, dict) and isinstance(renv_lock_content.get("package_count"), int)
+            else None
+        )
+        blockers.extend(
+            _environment_lock_evidence_renv_lock_content_blockers(
+                environment_key,
+                renv_lock_path,
+                expected_package_count=expected_package_count,
+            )
+        )
 
     evidence_files = evidence.get("evidence_files")
     if not isinstance(evidence_files, list) or not evidence_files:
@@ -943,7 +960,12 @@ def _environment_lock_evidence_registry_schema_blockers(payload: dict[str, Any])
     return blockers
 
 
-def _environment_lock_evidence_renv_lock_content_blockers(environment_id: str, lock_path: Path) -> list[str]:
+def _environment_lock_evidence_renv_lock_content_blockers(
+    environment_id: str,
+    lock_path: Path,
+    *,
+    expected_package_count: int | None = None,
+) -> list[str]:
     try:
         lock = json.loads(lock_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
@@ -961,6 +983,8 @@ def _environment_lock_evidence_renv_lock_content_blockers(environment_id: str, l
         blockers.append("analysis_environment_lock_evidence_renv_lock_runtime_install_policy_invalid")
     if not isinstance(packages, dict) or not packages:
         blockers.append("analysis_environment_lock_evidence_renv_lock_packages_empty")
+    elif expected_package_count is not None and len(packages) != expected_package_count:
+        blockers.append("analysis_environment_lock_evidence_renv_lock_content_package_count_mismatch")
     return blockers
 
 
