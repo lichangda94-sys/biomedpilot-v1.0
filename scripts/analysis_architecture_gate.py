@@ -15,6 +15,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the BioMedPilot analysis architecture readiness gate.")
     parser.add_argument("--json-output", default="", help="Optional JSON output path.")
     parser.add_argument("--markdown-output", default="", help="Optional Markdown report output path.")
+    parser.add_argument("--evidence-template-output", default="", help="Optional JSON output path for external evidence templates.")
     parser.add_argument("--require-full-ready", action="store_true", help="Fail unless the full analysis activation gate is eligible.")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     return parser.parse_args(argv)
@@ -36,6 +37,10 @@ def main(argv: list[str] | None = None) -> int:
         markdown_output = Path(args.markdown_output).expanduser().resolve()
         markdown_output.parent.mkdir(parents=True, exist_ok=True)
         markdown_output.write_text(render_markdown_report(payload), encoding="utf-8")
+    if args.evidence_template_output:
+        template_output = Path(args.evidence_template_output).expanduser().resolve()
+        template_output.parent.mkdir(parents=True, exist_ok=True)
+        template_output.write_text(json.dumps(build_evidence_template_package(payload), ensure_ascii=False, indent=2), encoding="utf-8")
     print(text)
     return 0 if payload["status"] == "passed" else 1
 
@@ -483,6 +488,75 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     lines.extend(_markdown_table(["Item", "Decision Required", "Required Evidence"], decisions, ["item_id", "decision_required", "required_evidence"]))
     lines.append("")
     return "\n".join(lines)
+
+
+def build_evidence_template_package(payload: dict[str, Any]) -> dict[str, Any]:
+    environment_readiness = payload.get("environment_readiness") if isinstance(payload.get("environment_readiness"), dict) else {}
+    resource_readiness = payload.get("resource_readiness") if isinstance(payload.get("resource_readiness"), dict) else {}
+    migration_rows = [row for row in payload.get("standard_worker_migration_rows", []) if isinstance(row, dict)]
+    migration_templates = [
+        row.get("migration_evidence_template")
+        for row in migration_rows
+        if isinstance(row.get("migration_evidence_template"), dict)
+    ]
+    migration_blockers = {
+        str(row.get("module_id") or ""): row.get("migration_blockers", [])
+        for row in migration_rows
+        if row.get("module_id")
+    }
+    environment_templates = [
+        item
+        for item in environment_readiness.get("environment_lock_evidence_templates", [])
+        if isinstance(item, dict)
+    ]
+    resource_templates = [
+        item
+        for item in resource_readiness.get("resource_lock_evidence_templates", [])
+        if isinstance(item, dict)
+    ]
+    return {
+        "schema_version": "biomedpilot.analysis.evidence_template_package.v1",
+        "created_at": payload.get("created_at"),
+        "worktree": payload.get("worktree"),
+        "architecture_status": payload.get("architecture_status"),
+        "full_analysis_activation_gate_status": (
+            payload.get("full_analysis_activation_gate", {}).get("status")
+            if isinstance(payload.get("full_analysis_activation_gate"), dict)
+            else "unknown"
+        ),
+        "execution_policy": payload.get("execution_policy"),
+        "install_policy": "no_runtime_package_install_or_resource_download",
+        "template_policy": {
+            "templates_are_not_readiness_evidence": True,
+            "external_evidence_must_be_registered": True,
+            "runtime_install_forbidden": True,
+            "runtime_download_forbidden": True,
+            "mock_lite_and_legacy_sidecar_evidence_forbidden": True,
+        },
+        "registry_paths": {
+            "environment_lock_evidence_registry": "analysis/registry/environment_lock_evidence.json",
+            "resource_lock_evidence_registry": "analysis/registry/resource_lock_evidence.json",
+            "standard_worker_migration_evidence_registry": "analysis/registry/standard_worker_migration_evidence.json",
+        },
+        "environment_lock_evidence_templates": environment_templates,
+        "resource_lock_evidence_templates": resource_templates,
+        "standard_worker_migration_evidence_templates": migration_templates,
+        "blockers": {
+            "environment_readiness": environment_readiness.get("readiness_blockers", []),
+            "resource_readiness": resource_readiness.get("blocked_resource_ids", []),
+            "standard_worker_migration": migration_blockers,
+            "full_analysis_activation_gate": (
+                payload.get("full_analysis_activation_gate", {}).get("blockers", [])
+                if isinstance(payload.get("full_analysis_activation_gate"), dict)
+                else []
+            ),
+        },
+        "template_counts": {
+            "environment_lock_evidence_templates": len(environment_templates),
+            "resource_lock_evidence_templates": len(resource_templates),
+            "standard_worker_migration_evidence_templates": len(migration_templates),
+        },
+    }
 
 
 def _priority_file_lines(remediation_items: list[dict[str, Any]]) -> list[str]:

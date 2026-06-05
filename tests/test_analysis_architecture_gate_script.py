@@ -189,6 +189,52 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Current P0 issue list is empty" in text
 
 
+def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_path: Path) -> None:
+    output = tmp_path / "analysis_architecture_gate.json"
+    template_output = tmp_path / "analysis_architecture_evidence_templates.json"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--json-output",
+            str(output),
+            "--evidence-template-output",
+            str(template_output),
+            "--pretty",
+        ],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    template_package = json.loads(template_output.read_text(encoding="utf-8"))
+    assert template_package["schema_version"] == "biomedpilot.analysis.evidence_template_package.v1"
+    assert template_package["architecture_status"] == "partial_with_p1_gaps"
+    assert template_package["full_analysis_activation_gate_status"] == "blocked"
+    assert template_package["template_policy"]["templates_are_not_readiness_evidence"] is True
+    assert template_package["template_policy"]["runtime_install_forbidden"] is True
+    assert template_package["template_policy"]["runtime_download_forbidden"] is True
+    assert template_package["registry_paths"] == {
+        "environment_lock_evidence_registry": "analysis/registry/environment_lock_evidence.json",
+        "resource_lock_evidence_registry": "analysis/registry/resource_lock_evidence.json",
+        "standard_worker_migration_evidence_registry": "analysis/registry/standard_worker_migration_evidence.json",
+    }
+    assert template_package["template_counts"]["environment_lock_evidence_templates"] == 4
+    assert template_package["template_counts"]["resource_lock_evidence_templates"] == 11
+    assert template_package["template_counts"]["standard_worker_migration_evidence_templates"] == len(payload["standard_worker_migration_rows"])
+    environment_templates = {item["environment_id"]: item for item in template_package["environment_lock_evidence_templates"]}
+    resource_templates = {item["resource_id"]: item for item in template_package["resource_lock_evidence_templates"]}
+    migration_templates = {item["module_id"]: item for item in template_package["standard_worker_migration_evidence_templates"]}
+    assert environment_templates["r-bio-full"]["runtime_package_install"] == "forbidden"
+    assert resource_templates["reactome_full"]["runtime_download_allowed"] is False
+    assert migration_templates["deg"]["required_worker_boundary"] == "standard_r_worker"
+    assert "registry_evidence_entry_missing_or_blocked" in template_package["blockers"]["standard_worker_migration"]["deg"]
+
+
 def test_analysis_architecture_gate_full_required_writes_blocked_markdown_report(tmp_path: Path) -> None:
     output = tmp_path / "analysis_architecture_full_required.json"
     markdown = tmp_path / "analysis_architecture_full_required.md"
