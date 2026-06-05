@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.environment_lock_evidence_registry.v1",
+  "title": "BioMedPilot analysis environment lock evidence registry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "policy",
+    "evidence_entries"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.environment_lock_evidence_registry.v1"},
+    "policy": {"type": "object"},
+    "evidence_entries": {"type": "array"}
+  },
+  "additionalProperties": true
+}

@@ -20,6 +20,7 @@ Completed in this audit:
 
 - `analysis/registry/analysis_modules.json`
 - `analysis/registry/analysis_environments.json`
+- `analysis/registry/environment_lock_evidence.json`
 - `analysis/registry/standard_worker_migration_evidence.json`
 - `analysis/schemas/input/module_input.schema.json`
 - `analysis/schemas/output/result.schema.json`
@@ -28,6 +29,7 @@ Completed in this audit:
 - `analysis/schemas/output/worker_invocation.schema.json`
 - `analysis/schemas/output/resource_lock_evidence.schema.json`
 - `analysis/schemas/output/environment_lock_evidence.schema.json`
+- `analysis/schemas/output/environment_lock_evidence_registry.schema.json`
 - `analysis/schemas/output/full_analysis_activation_gate.schema.json`
 - `analysis/schemas/output/remediation_queue.schema.json`
 - `analysis/runners/run_module.R`
@@ -150,6 +152,8 @@ Update: `build_full_analysis_activation_gate()` now combines full environment re
 Update: Analysis Center now renders the full-mode decision as a dedicated `Full analysis activation gate` row inside `analysis_architecture_gate_rows`, so UI users can see the exact disabled reasons without reading developer diagnostics.
 
 Update: `build_analysis_remediation_queue()` now validates its payload against `analysis/schemas/output/remediation_queue.schema.json` and exposes `schema_validation_status` plus `schema_blockers`. This keeps manual P1 remediation queues stable for UI, reports, and handoff consumers.
+
+Update: restored full environment evidence is now routed through `analysis/registry/environment_lock_evidence.json` and validated by `validate_analysis_environment_lock_evidence_registry()`. The registry is intentionally empty; it establishes the audited handoff point for external environment build evidence without marking any full analysis environment as ready.
 
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 

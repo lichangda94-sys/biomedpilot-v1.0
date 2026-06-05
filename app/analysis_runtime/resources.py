@@ -9,9 +9,11 @@ from .registry import REPO_ROOT
 
 RESOURCE_MANIFEST_PATH = REPO_ROOT / "analysis" / "resources" / "manifest.json"
 ENVIRONMENT_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_environments.json"
+ENVIRONMENT_LOCK_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "environment_lock_evidence.json"
 MODULE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "analysis_modules.json"
 RESOURCE_LOCK_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json"
 ENVIRONMENT_LOCK_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json"
+ENVIRONMENT_LOCK_EVIDENCE_REGISTRY_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence_registry.schema.json"
 REQUIRED_RESOURCE_FIELDS = (
     "resource_id",
     "title",
@@ -59,6 +61,11 @@ def load_analysis_resource_manifest(path: str | Path | None = None) -> dict[str,
 
 def load_analysis_environment_registry(path: str | Path | None = None) -> dict[str, Any]:
     registry_path = Path(path).expanduser().resolve() if path else ENVIRONMENT_REGISTRY_PATH
+    return json.loads(registry_path.read_text(encoding="utf-8"))
+
+
+def load_analysis_environment_lock_evidence_registry(path: str | Path | None = None) -> dict[str, Any]:
+    registry_path = Path(path).expanduser().resolve() if path else ENVIRONMENT_LOCK_EVIDENCE_REGISTRY_PATH
     return json.loads(registry_path.read_text(encoding="utf-8"))
 
 
@@ -325,10 +332,93 @@ def validate_analysis_environment_lock_evidence(
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": warnings,
     }
+
+
+def validate_analysis_environment_lock_evidence_registry(
+    registry: dict[str, Any] | None = None,
+    *,
+    environment_registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate the authoritative registry for restored full environment evidence."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_environment_lock_evidence_registry()
+    environment_payload = environment_registry or load_analysis_environment_registry()
+    blockers: list[str] = []
+    warnings: list[str] = []
+    blockers.extend(_environment_lock_evidence_registry_schema_blockers(payload))
+    policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
+    if not policy:
+        blockers.append("analysis_environment_lock_evidence_registry_policy_missing")
+    else:
+        if policy.get("registry_is_authoritative") is not True:
+            blockers.append("analysis_environment_lock_evidence_registry_authoritative_policy_invalid")
+        if policy.get("restored_full_environment_requires_schema_valid_evidence") is not True:
+            blockers.append("analysis_environment_lock_evidence_registry_restored_policy_invalid")
+        if policy.get("runtime_package_install") != "forbidden":
+            blockers.append("analysis_environment_lock_evidence_registry_runtime_install_policy_invalid")
+        if policy.get("runtime_resource_download") != "forbidden":
+            blockers.append("analysis_environment_lock_evidence_registry_runtime_download_policy_invalid")
+
+    entries = payload.get("evidence_entries")
+    if not isinstance(entries, list):
+        blockers.append("analysis_environment_lock_evidence_registry_entries_invalid")
+        entries = []
+    seen: set[str] = set()
+    registered_environment_ids: list[str] = []
+    for item in entries:
+        if not isinstance(item, dict):
+            blockers.append("analysis_environment_lock_evidence_registry_entry_invalid")
+            continue
+        environment_id = str(item.get("environment_id") or "")
+        evidence_path = str(item.get("evidence_path") or "")
+        if not environment_id:
+            blockers.append("analysis_environment_lock_evidence_registry_environment_id_missing")
+            continue
+        if environment_id in seen:
+            blockers.append(f"analysis_environment_lock_evidence_registry_duplicate:{environment_id}")
+        seen.add(environment_id)
+        registered_environment_ids.append(environment_id)
+        if not evidence_path:
+            blockers.append(f"analysis_environment_lock_evidence_registry_evidence_path_missing:{environment_id}")
+            continue
+        full_path = REPO_ROOT / evidence_path
+        if not full_path.is_file():
+            blockers.append(f"analysis_environment_lock_evidence_registry_evidence_not_found:{environment_id}:{evidence_path}")
+            continue
+        try:
+            evidence = json.loads(full_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            blockers.append(f"analysis_environment_lock_evidence_registry_evidence_invalid_json:{environment_id}:{evidence_path}")
+            continue
+        validation = validate_analysis_environment_lock_evidence(
+            environment_id,
+            evidence,
+            environment_registry=environment_payload,
+        )
+        blockers.extend(
+            f"analysis_environment_lock_evidence_registry:{environment_id}:{blocker}"
+            for blocker in validation.get("blockers", [])
+        )
+        warnings.extend(
+            f"analysis_environment_lock_evidence_registry:{environment_id}:{warning}"
+            for warning in validation.get("warnings", [])
+        )
+
+    return {
+        "schema_version": "biomedpilot.analysis.environment_lock_evidence_registry_validation.v1",
+        "status": "blocked" if blockers else "passed",
+        "entry_count": len(entries),
+        "registered_environment_ids": registered_environment_ids,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
 def validate_analysis_environment_registry(
     environment_registry: dict[str, Any] | None = None,
     *,
     module_registry: dict[str, Any] | None = None,
+    environment_lock_evidence_registry: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate the environment split without claiming full readiness.
 
@@ -338,10 +428,23 @@ def validate_analysis_environment_registry(
     """
 
     environment_payload = environment_registry or load_analysis_environment_registry()
+    evidence_registry = (
+        environment_lock_evidence_registry
+        if isinstance(environment_lock_evidence_registry, dict)
+        else load_analysis_environment_lock_evidence_registry()
+    )
     module_payload = module_registry or json.loads(MODULE_REGISTRY_PATH.read_text(encoding="utf-8"))
     blockers: list[str] = []
     readiness_blockers: list[str] = []
     warnings: list[str] = []
+    evidence_registry_validation = validate_analysis_environment_lock_evidence_registry(
+        evidence_registry,
+        environment_registry=environment_payload,
+    )
+    blockers.extend(
+        f"analysis_environment_lock_evidence_registry:{blocker}"
+        for blocker in evidence_registry_validation.get("blockers", [])
+    )
     environments = environment_payload.get("environments")
     modules = module_payload.get("modules")
     if environment_payload.get("schema_version") != "biomedpilot.analysis_environments.v1":
@@ -396,7 +499,7 @@ def validate_analysis_environment_registry(
         for module_id in {str(value) for value in allowed_modules if value is not None}:
             if module_id not in registered_modules:
                 blockers.append(f"analysis_environment_allowed_module_unregistered:{environment_id}:{module_id}")
-        blockers.extend(_environment_file_policy_blockers(item, environment_id))
+        blockers.extend(_environment_file_policy_blockers(item, environment_id, evidence_registry=evidence_registry, environment_registry=environment_payload))
         readiness_blockers.extend(_environment_readiness_blockers(item, environment_id))
         if environment_id == "app-dev":
             if allowed_modules:
@@ -437,6 +540,8 @@ def validate_analysis_environment_registry(
         "environment_count": len(environments),
         "environment_ids": environment_ids,
         "blocked_environment_ids": _blocked_environment_ids_from_readiness(readiness_blockers),
+        "evidence_registry_status": evidence_registry_validation.get("status"),
+        "evidence_registry_entry_count": evidence_registry_validation.get("entry_count"),
         "blockers": list(dict.fromkeys(blockers)),
         "readiness_blockers": list(dict.fromkeys(readiness_blockers)),
         "warnings": warnings,
@@ -502,6 +607,26 @@ def _environment_lock_evidence_schema_blockers(evidence: dict[str, Any]) -> list
     return blockers
 
 
+def _environment_lock_evidence_registry_schema_blockers(payload: dict[str, Any]) -> list[str]:
+    schema = _read_json(ENVIRONMENT_LOCK_EVIDENCE_REGISTRY_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"analysis_environment_lock_evidence_registry_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        value = payload[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"analysis_environment_lock_evidence_registry_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"analysis_environment_lock_evidence_registry_type_invalid:{field}")
+    return blockers
+
+
 def _schema_type_matches(value: Any, expected_type: str) -> bool:
     if expected_type == "string":
         return isinstance(value, str)
@@ -527,7 +652,13 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
-def _environment_file_policy_blockers(environment: dict[str, Any], environment_id: str) -> list[str]:
+def _environment_file_policy_blockers(
+    environment: dict[str, Any],
+    environment_id: str,
+    *,
+    evidence_registry: dict[str, Any] | None = None,
+    environment_registry: dict[str, Any] | None = None,
+) -> list[str]:
     blockers: list[str] = []
     blockers.extend(_dockerfile_environment_blockers(environment_id, str(environment.get("dockerfile") or "")))
     lockfile = str(environment.get("renv_lock") or "")
@@ -547,7 +678,14 @@ def _environment_file_policy_blockers(environment: dict[str, Any], environment_i
                 blockers.append(f"analysis_environment_renv_lock_environment_mismatch:{environment_id}")
             if policy.get("runtime_package_install") != "forbidden":
                 blockers.append(f"analysis_environment_renv_lock_runtime_install_policy_invalid:{environment_id}")
-            blockers.extend(_environment_lock_evidence_blockers(environment_id, policy, environment_registry=None))
+            blockers.extend(
+                _environment_lock_evidence_blockers(
+                    environment_id,
+                    policy,
+                    environment_registry=environment_registry,
+                    evidence_registry=evidence_registry,
+                )
+            )
     return blockers
 
 
@@ -605,6 +743,7 @@ def full_mode_environment_blockers(
     *,
     module_registry: dict[str, Any] | None = None,
     environment_registry: dict[str, Any] | None = None,
+    environment_lock_evidence_registry: dict[str, Any] | None = None,
 ) -> list[str]:
     """Return blockers proving full mode is isolated and lock-restored.
 
@@ -615,6 +754,11 @@ def full_mode_environment_blockers(
 
     module_payload = module_registry or json.loads(MODULE_REGISTRY_PATH.read_text(encoding="utf-8"))
     environment_payload = environment_registry or load_analysis_environment_registry()
+    evidence_registry = (
+        environment_lock_evidence_registry
+        if isinstance(environment_lock_evidence_registry, dict)
+        else load_analysis_environment_lock_evidence_registry()
+    )
     modules = {
         str(item.get("module_id") or ""): item
         for item in module_payload.get("modules", [])
@@ -656,7 +800,14 @@ def full_mode_environment_blockers(
     dockerfile = str(environment.get("dockerfile") or "")
     lockfile = str(environment.get("renv_lock") or "")
     blockers.extend(_dockerfile_environment_blockers(environment_id, dockerfile))
-    blockers.extend(_renv_lock_environment_blockers(environment_id, lockfile))
+    blockers.extend(
+        _renv_lock_environment_blockers(
+            environment_id,
+            lockfile,
+            evidence_registry=evidence_registry,
+            environment_registry=environment_payload,
+        )
+    )
     return list(dict.fromkeys(blockers))
 
 
@@ -675,7 +826,13 @@ def _dockerfile_environment_blockers(environment_id: str, dockerfile: str) -> li
     return blockers
 
 
-def _renv_lock_environment_blockers(environment_id: str, lockfile: str) -> list[str]:
+def _renv_lock_environment_blockers(
+    environment_id: str,
+    lockfile: str,
+    *,
+    evidence_registry: dict[str, Any] | None = None,
+    environment_registry: dict[str, Any] | None = None,
+) -> list[str]:
     if not lockfile:
         return [f"analysis_environment_renv_lock_missing:{environment_id}"]
     lock_path = REPO_ROOT / lockfile
@@ -695,7 +852,14 @@ def _renv_lock_environment_blockers(environment_id: str, lockfile: str) -> list[
     status = str(policy.get("status") or "missing")
     if status not in RESTORED_LOCK_STATUSES:
         blockers.append(f"analysis_environment_renv_lock_not_restored:{environment_id}:{status}")
-    blockers.extend(_environment_lock_evidence_blockers(environment_id, policy, environment_registry=None))
+    blockers.extend(
+        _environment_lock_evidence_blockers(
+            environment_id,
+            policy,
+            environment_registry=environment_registry,
+            evidence_registry=evidence_registry,
+        )
+    )
     return blockers
 
 
@@ -704,11 +868,19 @@ def _environment_lock_evidence_blockers(
     policy: dict[str, Any],
     *,
     environment_registry: dict[str, Any] | None,
+    evidence_registry: dict[str, Any] | None = None,
 ) -> list[str]:
     status = str(policy.get("status") or "missing")
     if status not in RESTORED_LOCK_STATUSES:
         return []
     evidence_path = str(policy.get("lock_evidence") or "")
+    if not evidence_path and isinstance(evidence_registry, dict):
+        entries = evidence_registry.get("evidence_entries")
+        if isinstance(entries, list):
+            for item in entries:
+                if isinstance(item, dict) and str(item.get("environment_id") or "") == environment_id:
+                    evidence_path = str(item.get("evidence_path") or "")
+                    break
     if not evidence_path:
         return [f"analysis_environment_lock_evidence_missing:{environment_id}"]
     full_path = REPO_ROOT / evidence_path

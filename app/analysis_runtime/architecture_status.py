@@ -411,10 +411,12 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
             "status": "blocked",
             "recommended_files": [
                 "analysis/registry/analysis_environments.json",
+                "analysis/registry/environment_lock_evidence.json",
                 "renv/renv.bio-full.lock",
                 "renv/renv.spatial-full.lock",
                 "renv/renv.chem-full.lock",
                 "analysis/schemas/output/environment_lock_evidence.schema.json",
+                "analysis/schemas/output/environment_lock_evidence_registry.schema.json",
                 "external_analysis_environments/",
                 "docker/Dockerfile.r-bio-full",
                 "docker/Dockerfile.r-spatial-full",
@@ -748,6 +750,7 @@ def _required_schemas_exist() -> bool:
         "analysis/schemas/output/remediation_queue.schema.json",
         "analysis/schemas/output/resource_lock_evidence.schema.json",
         "analysis/schemas/output/environment_lock_evidence.schema.json",
+        "analysis/schemas/output/environment_lock_evidence_registry.schema.json",
     )
     return all((REPO_ROOT / path).is_file() for path in paths)
 

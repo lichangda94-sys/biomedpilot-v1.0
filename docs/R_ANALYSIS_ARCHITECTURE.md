@@ -35,12 +35,14 @@ The initial contract is declared under:
 analysis/
   registry/analysis_modules.json
   registry/analysis_environments.json
+  registry/environment_lock_evidence.json
   registry/standard_worker_migration_evidence.json
   schemas/input/module_input.schema.json
   schemas/output/result_package.schema.json
   schemas/output/worker_invocation.schema.json
   schemas/output/resource_lock_evidence.schema.json
   schemas/output/environment_lock_evidence.schema.json
+  schemas/output/environment_lock_evidence_registry.schema.json
   schemas/output/full_analysis_activation_gate.schema.json
   schemas/output/remediation_queue.schema.json
   modules/<module_id>/module.json
@@ -118,6 +120,8 @@ The Bioinformatics gene-set resource manager follows the same resource boundary.
 The default dependency surface is guarded by tests. `requirements.txt`, `pyproject.toml`, `docker/Dockerfile.app-dev`, and `renv/renv.app.lock` must not include full R analysis packages or external simulation/docking tool names such as ReactomePA, Seurat, CellChat, GSVA, AutoDock Vina, GROMACS, limma, DESeq2, edgeR, clusterProfiler, fgsea, or msigdbr. `config/bioinformatics/package_requirements.yaml` may list detect-first external capabilities, but it must not be interpreted as an app-dev install list.
 
 Environment governance is centralized in `analysis/registry/analysis_environments.json`. This registry is the authoritative map for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; it records the Dockerfile, renv lock, allowed modules, heavy-dependency policy, runtime-install policy, resource-lock requirement, and external-tool-lock requirement for each environment. Module manifests are tested against this registry so a module cannot silently point full analysis at `app-dev` or an unregistered worker environment.
+
+Restored full environment evidence is centralized in `analysis/registry/environment_lock_evidence.json`. This registry is intentionally empty in the current developer checkout, so no full environment is marked restored. Future external environment build evidence must be registered there and pass `analysis/schemas/output/environment_lock_evidence_registry.schema.json` plus each entry's `analysis/schemas/output/environment_lock_evidence.schema.json` before a full environment can become ready. The registry is detect-first and forbids runtime package installation or runtime resource downloads.
 
 `app/analysis_runtime/resources.py` now exposes `validate_analysis_environment_registry()`. The validator separates structural validity from full readiness: the current registry is structurally valid, but `full_mode_ready=false` because `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu` still point to `scaffold_only_not_restored` locks. This prevents a future resource-lock update from accidentally activating full mode before the isolated runtime locks are restored.
 
