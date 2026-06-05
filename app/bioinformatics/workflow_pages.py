@@ -5799,6 +5799,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                     *(analysis_state.get("formal_deg_gate_rows", []) or []),
                     *(analysis_state.get("multifactor_deg_gate_rows", []) or []),
                     *(analysis_state.get("enrichment_gate_rows", []) or []),
+                    *(analysis_state.get("analysis_environment_gate_rows", []) or []),
                 ]
             ),
         )

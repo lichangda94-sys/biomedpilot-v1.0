@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from app.analysis_runtime.package_catalog import build_standard_analysis_package_catalog
+from app.analysis_runtime.resources import validate_analysis_environment_registry
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.acquisition_adapters.legacy_contract import LEGACY_ADAPTER_MANIFEST_DIR
 from app.bioinformatics.acquisition_adapters.materialization import LEGACY_MATERIALIZATION_MANIFEST_PATH
@@ -66,6 +67,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     result_index = load_result_index(root)
     result_entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
     standard_package_catalog = build_standard_analysis_package_catalog(root)
+    analysis_environment_validation = validate_analysis_environment_registry()
+    analysis_environment_gate_rows = build_analysis_environment_gate_rows(analysis_environment_validation)
     deg_dependency = check_deg_backend_dependencies()
     survival_dependency = check_survival_backend_dependencies()
     enrichment_backend_gate = build_enrichment_backend_gate(root, analysis_type="ora")
@@ -129,6 +132,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "result_rows": result_rows,
         "standard_analysis_packages": standard_package_catalog,
         "standard_package_gate_rows": standard_package_gate_rows,
+        "analysis_environment_gate_rows": analysis_environment_gate_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
         "enrichment_gate_rows": enrichment_gates["gate_rows"],
@@ -140,6 +144,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "result_index": result_index,
             "standard_analysis_package_catalog": standard_package_catalog,
             "standard_package_gate_rows": standard_package_gate_rows,
+            "analysis_environment_registry_validation": analysis_environment_validation,
+            "analysis_environment_gate_rows": analysis_environment_gate_rows,
             "analysis_input_resolver": resolver,
             "deg_dependency_snapshot": deg_dependency,
             "formal_deg_gate_state": deg_gates,
@@ -1051,6 +1057,29 @@ def build_standard_package_gate_rows(catalog: dict[str, Any]) -> list[dict[str, 
             input_manifest_blockers,
             [],
             basis=f"worker_invocation.input_manifest diagnostics={compact_list(input_manifest_statuses)}",
+        ),
+    ]
+
+
+def build_analysis_environment_gate_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
+    structural_blockers = _list(validation.get("blockers"))
+    readiness_blockers = _list(validation.get("readiness_blockers"))
+    environment_ids = _list(validation.get("environment_ids"))
+    blocked_environment_ids = _list(validation.get("blocked_environment_ids"))
+    return [
+        _formal_deg_gate_row(
+            "Analysis environment registry",
+            validation.get("status") or "blocked",
+            structural_blockers,
+            _list(validation.get("warnings")),
+            basis="analysis/registry/analysis_environments.json",
+        ),
+        _formal_deg_gate_row(
+            "Full R environment readiness",
+            "passed" if validation.get("full_mode_ready") is True else "blocked",
+            readiness_blockers,
+            [f"blocked_full_environments={','.join(blocked_environment_ids)}"] if blocked_environment_ids else [],
+            basis=f"environments={','.join(environment_ids)}",
         ),
     ]
 

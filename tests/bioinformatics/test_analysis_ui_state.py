@@ -31,6 +31,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["dependency_rows"]
     assert state["gate_rows"]
     assert state["enrichment_gate_rows"]
+    assert state["analysis_environment_gate_rows"]
     assert state["survival_clinical_rows"]
     assert _file_set(tmp_path) == before
 
@@ -70,6 +71,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Enrichment section report" in enrichment_gate_text
     assert "Enrichment production audit package" in enrichment_gate_text
     assert "Enrichment cross-library acceptance" in enrichment_gate_text
+    environment_gate_text = "\n".join(str(row) for row in state["analysis_environment_gate_rows"])
+    assert "Analysis environment registry" in environment_gate_text
+    assert "Full R environment readiness" in environment_gate_text
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in environment_gate_text
+    assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["status"] == "passed"
+    assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["full_mode_ready"] is False
+    assert state["developer_diagnostics"]["analysis_environment_gate_rows"] == state["analysis_environment_gate_rows"]
     assert _action(state, "enrichment_production_audit_preview")["enabled"] is False
     enrichment_state = state["developer_diagnostics"]["enrichment_gate_state"]
     assert enrichment_state["production_preview_status"] == "blocked"

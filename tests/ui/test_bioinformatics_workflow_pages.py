@@ -3055,6 +3055,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "ORA execution gate" in formal_deg_gate_text
     assert "Preranked GSEA execution gate" in formal_deg_gate_text
     assert "Enrichment section report" in formal_deg_gate_text
+    assert "Analysis environment registry" in formal_deg_gate_text
+    assert "Full R environment readiness" in formal_deg_gate_text
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in formal_deg_gate_text
 
     confirmation_table = widget.findChild(QTableWidget, "analysisFormalDegConfirmationTable")
     assert confirmation_table is not None
