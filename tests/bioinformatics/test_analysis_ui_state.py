@@ -88,6 +88,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "partial_with_p1_gaps" in architecture_gate_text
     worker_migration_text = "\n".join(str(row) for row in state["standard_worker_migration_rows"])
     assert "R standard worker migration matrix" in worker_migration_text
+    assert "R worker migration evidence coverage" in worker_migration_text
+    assert "missing_standard_worker_migration_evidence:deg" in worker_migration_text
+    assert "missing_standard_worker_migration_evidence:molecular_dynamics" in worker_migration_text
     assert "R worker migration: deg" in worker_migration_text
     assert "pending_standard_worker_migration" in worker_migration_text
     assert "standard_worker_lite_ready" in worker_migration_text
@@ -114,6 +117,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["analysis_architecture_gate_rows"] == state["analysis_architecture_gate_rows"]
     migration_matrix = state["developer_diagnostics"]["standard_worker_migration_matrix"]
     assert migration_matrix["formal_pending_count"] == migration_matrix["module_count"]
+    assert migration_matrix["passed_evidence_module_ids"] == []
+    assert migration_matrix["blocked_evidence_module_ids"] == []
+    assert migration_matrix["missing_evidence_module_ids"] == migration_matrix["expected_evidence_module_ids"]
     assert state["developer_diagnostics"]["standard_worker_migration_rows"] == state["standard_worker_migration_rows"]
     assert state["developer_diagnostics"]["analysis_architecture_remediation_rows"] == state["analysis_architecture_remediation_rows"]
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["status"] == "passed"

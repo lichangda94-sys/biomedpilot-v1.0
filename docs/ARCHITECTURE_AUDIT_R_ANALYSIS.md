@@ -117,6 +117,7 @@ Standard package discovery is now available to the UI state layer:
 - The same script can write a human-readable nine-section Markdown report with `--markdown-output <path>`. The Markdown is rendered from the same gate payload, covering current fit, PASS/WARN/FAIL counts, top five risks, P0/P1/P2/P3 issues, involved files, minimal remediation path, priority files, completed changes, and manual decisions. It is a report rendering path only; it does not execute workers, install R packages, download resources, or mark full analysis ready.
 - The same script can export an external handoff package with `--evidence-template-output <path>`. The package contains environment lock templates, resource/tool lock templates, standard-worker migration templates, registry paths, blockers, and counts, and self-checks against `analysis/schemas/output/evidence_template_package.schema.json`. It is a template package only and is not accepted as full-readiness evidence by itself.
 - Analysis Center exposes that activation gate as a visible row with disabled reasons, so full-mode blockers are not hidden in developer-only diagnostics.
+- Analysis Center also exposes a `R worker migration evidence coverage` row derived from the standard-worker migration matrix. It lists missing migration evidence per module, so users and internal testers can see that lite readiness is not full/formal isolated-worker migration.
 - `build_analysis_remediation_queue()` now self-checks against `analysis/schemas/output/remediation_queue.schema.json`, keeping P1 remediation queue consumers on a stable contract.
 - `analysis/registry/environment_lock_evidence.json` is now the authoritative registry for restored full environment evidence. It is intentionally empty, so no full environment is restored; `validate_analysis_environment_lock_evidence_registry()` provides the future evidence entry point without changing the default app-dev dependency boundary.
 - `analysis/registry/resource_lock_evidence.json` is now the authoritative registry for externally prepared full resource lock evidence. It is intentionally empty, so no Reactome/MSigDB/spatial/chem resource is locked; `validate_analysis_resource_lock_evidence_registry()` provides the future evidence entry point without permitting runtime downloads.
@@ -475,6 +476,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added per-module standard-worker migration evidence templates and blockers to the migration matrix so every module has a concrete future evidence checklist while sidecar/mock/lite packages remain forbidden as migration-completion proof.
 - Added module-level standard-worker migration evidence diagnostics for expected, passed, blocked, and missing evidence module IDs.
 - Added Analysis Center remediation rows so the UI can display full environment, full resource, and isolated worker migration blockers without implying full analysis readiness.
+- Added Analysis Center standard-worker migration evidence coverage row so missing module-level migration evidence is visible in the UI state.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

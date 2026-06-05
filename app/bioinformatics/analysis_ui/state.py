@@ -1158,6 +1158,10 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
 
 def build_standard_worker_migration_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
     module_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    expected_modules = _list(matrix.get("expected_evidence_module_ids"))
+    passed_modules = _list(matrix.get("passed_evidence_module_ids"))
+    blocked_modules = _list(matrix.get("blocked_evidence_module_ids"))
+    missing_modules = _list(matrix.get("missing_evidence_module_ids"))
     rows = [
         _formal_deg_gate_row(
             "R standard worker migration matrix",
@@ -1165,6 +1169,13 @@ def build_standard_worker_migration_rows(matrix: dict[str, Any]) -> list[dict[st
             [f"formal_pending_count={matrix.get('formal_pending_count', 0)}"] if int(matrix.get("formal_pending_count") or 0) else [],
             [f"full_blocked_count={matrix.get('full_blocked_count', 0)}"] if int(matrix.get("full_blocked_count") or 0) else [],
             basis=f"modules={matrix.get('module_count', 0)}; {matrix.get('boundary', 'matrix_is_read_only_no_worker_execution')}",
+        ),
+        _formal_deg_gate_row(
+            "R worker migration evidence coverage",
+            "passed" if expected_modules and not missing_modules and not blocked_modules else "blocked",
+            [f"missing_standard_worker_migration_evidence:{module_id}" for module_id in missing_modules],
+            [f"passed={len(passed_modules)}", f"blocked={len(blocked_modules)}"],
+            basis=f"expected={len(expected_modules)}; missing={len(missing_modules)}; modules={compact_list(missing_modules)}",
         )
     ]
     for row in module_rows:
