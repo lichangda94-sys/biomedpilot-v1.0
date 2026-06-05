@@ -790,6 +790,21 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert matrix["evidence_registry_status"] == "passed"
     assert matrix["evidence_entry_count"] == 0
     assert matrix["evidence_registry_blockers"] == []
+    assert matrix["expected_evidence_module_ids"] == [
+        "deg",
+        "survival",
+        "univariate",
+        "multivariate",
+        "enrichment",
+        "immune_infiltration",
+        "correlation",
+        "spatial_transcriptomics",
+        "docking",
+        "molecular_dynamics",
+    ]
+    assert matrix["passed_evidence_module_ids"] == []
+    assert matrix["blocked_evidence_module_ids"] == []
+    assert matrix["missing_evidence_module_ids"] == matrix["expected_evidence_module_ids"]
     assert matrix["module_count"] >= 10
     assert matrix["formal_pending_count"] == matrix["module_count"]
     assert matrix["full_blocked_count"] == matrix["module_count"]
@@ -829,6 +844,22 @@ def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_
     assert validation["status"] == "passed"
     assert validation["schema_validation_status"] == "passed"
     assert validation["entry_count"] == 0
+    assert validation["expected_module_ids"] == [
+        "deg",
+        "survival",
+        "univariate",
+        "multivariate",
+        "enrichment",
+        "immune_infiltration",
+        "correlation",
+        "spatial_transcriptomics",
+        "docking",
+        "molecular_dynamics",
+    ]
+    assert validation["passed_module_ids"] == []
+    assert validation["blocked_module_ids"] == []
+    assert validation["missing_module_ids"] == validation["expected_module_ids"]
+    assert validation["missing_count"] == len(validation["expected_module_ids"])
     assert validation["blockers"] == []
 
 
@@ -895,6 +926,8 @@ def test_standard_worker_migration_evidence_registry_blocks_bad_entries() -> Non
 
     assert validation["status"] == "blocked"
     assert validation["entry_count"] == 1
+    assert validation["blocked_module_ids"] == ["deg"]
+    assert "deg" in validation["missing_module_ids"]
     assert any(
         blocker.startswith("standard_worker_migration_evidence_registry_entry:deg:")
         for blocker in validation["blockers"]

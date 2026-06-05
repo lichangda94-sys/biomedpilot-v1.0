@@ -313,6 +313,10 @@ def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = Non
         "evidence_registry_status": str(evidence_registry_validation.get("status") or "blocked"),
         "evidence_entry_count": int(evidence_registry_validation.get("entry_count") or 0),
         "evidence_registry_blockers": list(evidence_registry_validation.get("blockers", [])),
+        "expected_evidence_module_ids": list(evidence_registry_validation.get("expected_module_ids", [])),
+        "passed_evidence_module_ids": list(evidence_registry_validation.get("passed_module_ids", [])),
+        "blocked_evidence_module_ids": list(evidence_registry_validation.get("blocked_module_ids", [])),
+        "missing_evidence_module_ids": list(evidence_registry_validation.get("missing_module_ids", [])),
         "migration_policy": "module_by_module_standard_worker_migration_required",
         "boundary": "matrix_is_read_only_no_worker_execution",
     }
@@ -337,6 +341,12 @@ def validate_standard_worker_migration_evidence_registry(
     entries = payload.get("evidence_entries")
     schema_blockers = _migration_evidence_registry_schema_blockers(payload)
     blockers.extend(schema_blockers)
+    module_ids = [
+        str(item.get("module_id") or "")
+        for item in module_registry.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id")
+    ]
+    expected_module_ids = [module_id for module_id in TARGET_MODULE_IDS if module_id in set(module_ids)]
     if payload.get("schema_version") != "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1":
         blockers.append("standard_worker_migration_evidence_registry_schema_version_mismatch")
     policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
@@ -386,11 +396,27 @@ def validate_standard_worker_migration_evidence_registry(
                 "warnings": list(validation.get("warnings", [])),
             }
         )
+    passed_module_ids = sorted(
+        str(item.get("module_id") or "")
+        for item in entry_results
+        if item.get("module_id") and item.get("status") == "passed"
+    )
+    blocked_module_ids = sorted(
+        str(item.get("module_id") or "")
+        for item in entry_results
+        if item.get("module_id") and item.get("status") != "passed"
+    )
+    missing_module_ids = [module_id for module_id in expected_module_ids if module_id not in set(passed_module_ids)]
     return {
         "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence_registry_validation.v1",
         "status": "blocked" if blockers else "passed",
         "entry_count": len(entries),
         "entries": entry_results,
+        "expected_module_ids": expected_module_ids,
+        "passed_module_ids": passed_module_ids,
+        "blocked_module_ids": blocked_module_ids,
+        "missing_module_ids": missing_module_ids,
+        "missing_count": len(missing_module_ids),
         "schema_validation_status": "blocked" if schema_blockers else "passed",
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": warnings,

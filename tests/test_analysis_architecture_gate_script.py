@@ -79,6 +79,9 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["standard_worker_migration_matrix"]["status"] == "partial"
     assert payload["standard_worker_migration_matrix"]["evidence_registry_status"] == "passed"
     assert payload["standard_worker_migration_matrix"]["evidence_entry_count"] == 0
+    assert payload["standard_worker_migration_matrix"]["passed_evidence_module_ids"] == []
+    assert payload["standard_worker_migration_matrix"]["blocked_evidence_module_ids"] == []
+    assert payload["standard_worker_migration_matrix"]["missing_evidence_module_ids"] == payload["standard_worker_migration_matrix"]["expected_evidence_module_ids"]
     assert payload["remediation_queue"]["item_count"] == 3
     assert len(payload["remediation_queue"]["items"]) == 3
     assert payload["remediation_queue"]["automation_policy"] == "manual_scoped_changes_only"

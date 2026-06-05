@@ -128,6 +128,10 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "evidence_registry_status": migration_matrix.get("evidence_registry_status"),
             "evidence_entry_count": migration_matrix.get("evidence_entry_count"),
             "evidence_registry_blockers": migration_matrix.get("evidence_registry_blockers", []),
+            "expected_evidence_module_ids": migration_matrix.get("expected_evidence_module_ids", []),
+            "passed_evidence_module_ids": migration_matrix.get("passed_evidence_module_ids", []),
+            "blocked_evidence_module_ids": migration_matrix.get("blocked_evidence_module_ids", []),
+            "missing_evidence_module_ids": migration_matrix.get("missing_evidence_module_ids", []),
         },
         "standard_worker_migration_rows": migration_rows,
         "remediation_queue": {
