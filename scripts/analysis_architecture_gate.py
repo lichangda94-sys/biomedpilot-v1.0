@@ -59,6 +59,14 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     resource_validation = architecture_status.get("resource_validation") if isinstance(architecture_status.get("resource_validation"), dict) else {}
     migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
     requirement_rows = [dict(row) for row in architecture_status.get("requirement_rows", []) if isinstance(row, dict)]
+    priority_issues = _priority_issue_lists(
+        p0_issues=[str(item) for item in architecture_status.get("p0_issues", []) if item],
+        p1_issues=p1_issues,
+        requirement_rows=requirement_rows,
+        environment_validation=environment_validation,
+        resource_validation=resource_validation,
+        migration_matrix=migration_matrix,
+    )
     payload = {
         "schema_version": "biomedpilot.analysis.architecture_gate_report.v1",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -68,6 +76,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "architecture_status": architecture_status.get("status"),
         "requirement_summary": _requirement_summary(requirement_rows),
         "requirement_rows": requirement_rows,
+        "priority_issue_lists": priority_issues,
+        "top_architecture_risks": _top_architecture_risks(priority_issues),
         "p0_issues": [str(item) for item in architecture_status.get("p0_issues", []) if item],
         "p1_issues": p1_issues,
         "full_analysis_activation_gate": full_gate,
@@ -178,6 +188,109 @@ def _requirement_summary(requirement_rows: list[dict[str, Any]]) -> dict[str, An
         "other_count": counts["other"],
         "status_order": ["fail", "warn", "pass"],
     }
+
+
+def _priority_issue_lists(
+    *,
+    p0_issues: list[str],
+    p1_issues: list[str],
+    requirement_rows: list[dict[str, Any]],
+    environment_validation: dict[str, Any],
+    resource_validation: dict[str, Any],
+    migration_matrix: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    p0 = [
+        _issue("P0", issue, "architecture_p0_guard", "P0 issue is present in architecture status.")
+        for issue in p0_issues
+    ]
+    p1: list[dict[str, Any]] = []
+    if "full_analysis_environment_locks_not_restored" in p1_issues:
+        p1.append(
+            _issue(
+                "P1",
+                "full_analysis_environment_locks_not_restored",
+                "environment_readiness",
+                "Full analysis environments remain scaffold-only or lack restored lock evidence.",
+                evidence={
+                    "blocked_environment_ids": environment_validation.get("blocked_environment_ids", []),
+                    "readiness_blockers": environment_validation.get("readiness_blockers", []),
+                },
+            )
+        )
+    if "full_analysis_resource_locks_not_complete" in p1_issues:
+        p1.append(
+            _issue(
+                "P1",
+                "full_analysis_resource_locks_not_complete",
+                "resource_readiness",
+                "Full analysis resources/tools remain blocked until version/hash/license/cache evidence is complete.",
+                evidence={
+                    "blocked_resource_ids": resource_validation.get("blocked_resource_ids", []),
+                    "warnings": resource_validation.get("warnings", []),
+                },
+            )
+        )
+    if "formal_algorithms_not_universally_migrated_to_isolated_standard_worker" in p1_issues:
+        p1.append(
+            _issue(
+                "P1",
+                "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
+                "standard_worker_migration_matrix",
+                "Formal algorithms still have pending isolated standard-worker migration rows.",
+                evidence={
+                    "formal_pending_count": migration_matrix.get("formal_pending_count"),
+                    "full_blocked_count": migration_matrix.get("full_blocked_count"),
+                    "evidence_entry_count": migration_matrix.get("evidence_entry_count"),
+                },
+            )
+        )
+    p2_requirement_ids = {"RARCH-03", "RARCH-08", "RARCH-09", "RARCH-16", "RARCH-17"}
+    p3_requirement_ids = {"RARCH-04", "RARCH-12", "RARCH-13", "RARCH-14", "RARCH-15", "RARCH-18"}
+    p2 = [_issue_from_requirement("P2", row) for row in requirement_rows if row.get("requirement_id") in p2_requirement_ids and row.get("status") == "warn"]
+    p3 = [_issue_from_requirement("P3", row) for row in requirement_rows if row.get("requirement_id") in p3_requirement_ids and row.get("status") == "warn"]
+    return {"P0": p0, "P1": p1, "P2": p2, "P3": p3}
+
+
+def _issue_from_requirement(priority: str, row: dict[str, Any]) -> dict[str, Any]:
+    return _issue(
+        priority,
+        str(row.get("requirement_id") or "unknown_requirement"),
+        str(row.get("evidence") or ""),
+        str(row.get("label") or ""),
+        evidence={
+            "status": row.get("status"),
+            "warnings": row.get("warnings", []),
+            "blockers": row.get("blockers", []),
+        },
+    )
+
+
+def _issue(priority: str, issue_id: str, source: str, summary: str, *, evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+    return {
+        "priority": priority,
+        "issue_id": issue_id,
+        "source": source,
+        "summary": summary,
+        "evidence": evidence or {},
+    }
+
+
+def _top_architecture_risks(priority_issues: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    risks: list[dict[str, Any]] = []
+    for priority in ("P0", "P1", "P2", "P3"):
+        for issue in priority_issues.get(priority, []):
+            risks.append(
+                {
+                    "priority": priority,
+                    "risk_id": str(issue.get("issue_id") or ""),
+                    "source": str(issue.get("source") or ""),
+                    "summary": str(issue.get("summary") or ""),
+                    "evidence": issue.get("evidence", {}),
+                }
+            )
+            if len(risks) >= 5:
+                return risks
+    return risks
 
 
 def _gate_report_schema_blockers(payload: dict[str, Any], *, root: Path) -> list[str]:

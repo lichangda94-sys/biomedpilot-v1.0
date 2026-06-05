@@ -39,6 +39,16 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert requirement_rows["RARCH-03"]["status"] == "warn"
     assert requirement_rows["RARCH-10"]["status"] == "pass"
     assert requirement_rows["RARCH-11"]["status"] == "pass"
+    assert payload["priority_issue_lists"]["P0"] == []
+    assert {item["issue_id"] for item in payload["priority_issue_lists"]["P1"]} == {
+        "full_analysis_environment_locks_not_restored",
+        "full_analysis_resource_locks_not_complete",
+        "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
+    }
+    assert any(item["issue_id"] == "RARCH-08" for item in payload["priority_issue_lists"]["P2"])
+    assert any(item["issue_id"] == "RARCH-12" for item in payload["priority_issue_lists"]["P3"])
+    assert len(payload["top_architecture_risks"]) == 5
+    assert payload["top_architecture_risks"][0]["risk_id"] == "full_analysis_environment_locks_not_restored"
     assert payload["p0_issues"] == []
     assert set(payload["p1_issues"]) == {
         "full_analysis_environment_locks_not_restored",
@@ -124,6 +134,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "schema_version" in schema["required"]
     assert "requirement_summary" in schema["required"]
     assert "requirement_rows" in schema["required"]
+    assert "priority_issue_lists" in schema["required"]
+    assert "top_architecture_risks" in schema["required"]
     assert "full_analysis_activation_gate" in schema["required"]
     assert "environment_readiness" in schema["required"]
     assert "resource_readiness" in schema["required"]
