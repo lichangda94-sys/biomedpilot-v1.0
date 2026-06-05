@@ -83,6 +83,19 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert module_interface_rows["deg"]["mock_fixture_validation_status"] == "passed"
     assert module_interface_rows["deg"]["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
     assert module_interface_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert payload["external_tool_adapter_matrix"]["schema_version"] == "biomedpilot.analysis.external_tool_adapter_matrix.v1"
+    assert payload["external_tool_adapter_matrix"]["status"] == "passed"
+    assert payload["external_tool_adapter_matrix"]["passed_module_count"] == 2
+    assert payload["external_tool_adapter_matrix"]["blocked_module_count"] == 0
+    external_tool_rows = {row["module_id"]: row for row in payload["external_tool_adapter_rows"]}
+    assert external_tool_rows["docking"]["lite_external_tool_execution"] == "not_executed_in_lite_mode"
+    assert external_tool_rows["docking"]["external_tool_policy"] == "R_adapter_calls_AutoDock_Vina_in_chem_environment_only"
+    assert external_tool_rows["docking"]["full_environment"] == "r-chem-full"
+    assert external_tool_rows["docking"]["required_resource_ids"] == ["autodock_vina_tool", "docking_template_bundle"]
+    assert external_tool_rows["molecular_dynamics"]["external_tool_policy"] == "R_adapter_calls_GROMACS_in_chem_gpu_environment_only"
+    assert external_tool_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert external_tool_rows["molecular_dynamics"]["required_resource_ids"] == ["gromacs_tool", "md_forcefield_template_bundle"]
+    assert external_tool_rows["molecular_dynamics"]["blockers"] == []
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False
     assert set(payload["environment_readiness"]["blocked_environment_ids"]) == {
@@ -270,7 +283,11 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
         assert heading in text
     assert "Runtime Boundary Scan Evidence" in text
     assert "Module Interface Matrix" in text
+    assert "External Tool Adapter Isolation Matrix" in text
     assert "mock=True; lite=True; full=False" in text
+    assert "not_executed_in_lite_mode" in text
+    assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in text
+    assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in text
     assert "Runtime package install" in text
     assert "Runtime resource download" in text
     assert "Default app-dev heavy dependency" in text
@@ -449,6 +466,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "full_analysis_activation_gate" in schema["required"]
     assert "module_interface_matrix" in schema["required"]
     assert "module_interface_rows" in schema["required"]
+    assert "external_tool_adapter_matrix" in schema["required"]
+    assert "external_tool_adapter_rows" in schema["required"]
     assert "runtime_acquisition_scan" in schema["required"]
     assert "default_dependency_scan" in schema["required"]
     assert "environment_readiness" in schema["required"]
@@ -463,6 +482,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
     assert schema["properties"]["module_interface_matrix"]["type"] == "object"
     assert schema["properties"]["module_interface_rows"]["type"] == "array"
+    assert schema["properties"]["external_tool_adapter_matrix"]["type"] == "object"
+    assert schema["properties"]["external_tool_adapter_rows"]["type"] == "array"
     assert schema["properties"]["runtime_acquisition_scan"]["type"] == "object"
     assert schema["properties"]["default_dependency_scan"]["type"] == "object"
     assert schema["properties"]["full_activation_module_matrix"]["type"] == "object"

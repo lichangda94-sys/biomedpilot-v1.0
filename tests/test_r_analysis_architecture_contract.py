@@ -11,6 +11,7 @@ import pytest
 
 from app.analysis_runtime.architecture_status import (
     build_analysis_architecture_status,
+    build_external_tool_adapter_matrix,
     build_full_analysis_activation_gate,
     build_full_activation_module_matrix,
     build_module_interface_matrix,
@@ -1401,6 +1402,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["module_interface_matrix"]["status"] == "passed"
     assert status["module_interface_matrix"]["passed_module_count"] == 10
     assert status["module_interface_matrix"]["blocked_module_count"] == 0
+    assert status["external_tool_adapter_matrix"]["status"] == "passed"
+    assert status["external_tool_adapter_matrix"]["passed_module_count"] == 2
+    assert status["external_tool_adapter_matrix"]["blocked_module_count"] == 0
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
     assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
@@ -1706,6 +1710,45 @@ def test_full_activation_module_matrix_is_module_level_and_read_only() -> None:
     assert rows["docking"]["required_resource_ids"] == ["autodock_vina_tool", "docking_template_bundle"]
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert rows["molecular_dynamics"]["required_resource_ids"] == ["gromacs_tool", "md_forcefield_template_bundle"]
+
+
+def test_external_tool_adapter_matrix_tracks_chem_tool_isolation_without_execution() -> None:
+    matrix = build_external_tool_adapter_matrix()
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.external_tool_adapter_matrix.v1"
+    assert matrix["status"] == "passed"
+    assert matrix["boundary"] == "read_only_external_tool_adapter_isolation_diagnostics"
+    assert matrix["module_count"] == 2
+    assert matrix["passed_module_count"] == 2
+    assert matrix["blocked_module_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert matrix["warning_counts"]["lite_mode_writes_command_manifest_only_no_external_tool_execution"] == 2
+    assert set(rows) == {"docking", "molecular_dynamics"}
+    assert rows["docking"]["module_manifest"] == "analysis/modules/docking/module.json"
+    assert rows["docking"]["analysis_environment"] == "r-bio-core"
+    assert rows["docking"]["lite_environment"] == "r-bio-core"
+    assert rows["docking"]["lite_worker_backend"] == "rscript"
+    assert rows["docking"]["lite_external_tool_execution"] == "not_executed_in_lite_mode"
+    assert rows["docking"]["full_supported"] is False
+    assert rows["docking"]["full_environment"] == "r-chem-full"
+    assert rows["docking"]["environment_lock"] == "renv/renv.chem-full.lock"
+    assert rows["docking"]["dockerfile"] == "docker/Dockerfile.r-chem-full"
+    assert rows["docking"]["external_tool_policy"] == "R_adapter_calls_AutoDock_Vina_in_chem_environment_only"
+    assert rows["docking"]["runtime_install_policy"] == "forbidden"
+    assert rows["docking"]["default_app_dependency"] is False
+    assert rows["docking"]["required_resource_ids"] == ["autodock_vina_tool", "docking_template_bundle"]
+    assert rows["docking"]["blocked_required_resource_ids"] == ["autodock_vina_tool", "docking_template_bundle"]
+    assert rows["docking"]["blockers"] == []
+    assert "lite_mode_writes_command_manifest_only_no_external_tool_execution" in rows["docking"]["warnings"]
+    assert rows["molecular_dynamics"]["lite_external_tool_execution"] == "not_executed_in_lite_mode"
+    assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert rows["molecular_dynamics"]["dockerfile"] == "docker/Dockerfile.r-chem-gpu"
+    assert rows["molecular_dynamics"]["external_tool_policy"] == "R_adapter_calls_GROMACS_in_chem_gpu_environment_only"
+    assert rows["molecular_dynamics"]["required_resource_ids"] == ["gromacs_tool", "md_forcefield_template_bundle"]
+    assert rows["molecular_dynamics"]["blocked_required_resource_ids"] == ["gromacs_tool", "md_forcefield_template_bundle"]
+    assert rows["molecular_dynamics"]["blockers"] == []
+    assert not any("AutoDock" in str(item) or "GROMACS" in str(item) for item in matrix["blocker_counts"])
 
 
 def test_module_interface_matrix_tracks_standard_module_contracts() -> None:

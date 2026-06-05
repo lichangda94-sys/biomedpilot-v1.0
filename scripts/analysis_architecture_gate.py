@@ -67,6 +67,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
     module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
+    external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
     runtime_acquisition_scan = architecture_status.get("runtime_acquisition_scan") if isinstance(architecture_status.get("runtime_acquisition_scan"), dict) else {}
     default_dependency_scan = architecture_status.get("default_dependency_scan") if isinstance(architecture_status.get("default_dependency_scan"), dict) else {}
@@ -109,6 +110,21 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "module_interface_rows": [
             dict(row)
             for row in module_interface_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "external_tool_adapter_matrix": {
+            "schema_version": external_tool_adapter_matrix.get("schema_version"),
+            "status": external_tool_adapter_matrix.get("status"),
+            "module_count": external_tool_adapter_matrix.get("module_count"),
+            "passed_module_count": external_tool_adapter_matrix.get("passed_module_count"),
+            "blocked_module_count": external_tool_adapter_matrix.get("blocked_module_count"),
+            "blocker_counts": external_tool_adapter_matrix.get("blocker_counts", {}),
+            "warning_counts": external_tool_adapter_matrix.get("warning_counts", {}),
+            "boundary": external_tool_adapter_matrix.get("boundary"),
+        },
+        "external_tool_adapter_rows": [
+            dict(row)
+            for row in external_tool_adapter_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -442,6 +458,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
     module_interface_matrix = payload.get("module_interface_matrix") if isinstance(payload.get("module_interface_matrix"), dict) else {}
     module_interface_rows = [row for row in payload.get("module_interface_rows", []) if isinstance(row, dict)]
+    external_tool_adapter_matrix = payload.get("external_tool_adapter_matrix") if isinstance(payload.get("external_tool_adapter_matrix"), dict) else {}
+    external_tool_adapter_rows = [row for row in payload.get("external_tool_adapter_rows", []) if isinstance(row, dict)]
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
@@ -494,6 +512,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_module_interface_summary_table(module_interface_matrix, module_interface_rows))
+    lines.extend(
+        [
+            "",
+            "### External Tool Adapter Isolation Matrix",
+            "",
+        ]
+    )
+    lines.extend(_external_tool_adapter_summary_table(external_tool_adapter_matrix, external_tool_adapter_rows))
     lines.extend(
         [
             "",
@@ -945,6 +971,38 @@ def _module_interface_summary_table(matrix: dict[str, Any], rows: list[dict[str,
         *table,
         "",
         *_markdown_table(["Module", "Status", "Modes", "Mock Fixture", "Environment"], module_rows, ["module_id", "status", "modes", "fixture", "environment"]),
+    ]
+
+
+def _external_tool_adapter_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed adapters",
+            "count": matrix.get("passed_module_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked adapters",
+            "count": matrix.get("blocked_module_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    adapter_rows = [
+        {
+            "module_id": row.get("module_id"),
+            "status": row.get("status"),
+            "lite": f"{row.get('lite_environment')}; {row.get('lite_external_tool_execution')}",
+            "full": f"{row.get('full_environment')}; supported={row.get('full_supported')}",
+            "resources": row.get("required_resource_ids", []),
+            "policy": row.get("external_tool_policy", ""),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Module", "Status", "Lite", "Full", "Resources", "Policy"], adapter_rows, ["module_id", "status", "lite", "full", "resources", "policy"]),
     ]
 
 

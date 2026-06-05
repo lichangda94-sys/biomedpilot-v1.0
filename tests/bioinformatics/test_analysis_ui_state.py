@@ -106,6 +106,20 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "fixture=passed" in module_interface_text
     assert "analysis/modules/deg/module.json" in module_interface_text
     assert "r-bio-core->r-chem-gpu" in module_interface_text
+    external_tool_text = "\n".join(str(row) for row in state["external_tool_adapter_rows"])
+    assert "External tool adapter isolation matrix" in external_tool_text
+    assert "passed=2" in external_tool_text
+    assert "blocked=0" in external_tool_text
+    assert "External tool adapter: docking" in external_tool_text
+    assert "External tool adapter: molecular_dynamics" in external_tool_text
+    assert "exec=not_executed_in_lite_mode" in external_tool_text
+    assert "full=r-chem-full" in external_tool_text
+    assert "full=r-chem-gpu" in external_tool_text
+    assert "resources=autodock_vina_tool；docking_template_bundle" in external_tool_text
+    assert "resources=gromacs_tool；md_forcefield_template_bundle" in external_tool_text
+    assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in external_tool_text
+    assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in external_tool_text
+    assert "default_app_dependency=False" in external_tool_text
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text
@@ -170,6 +184,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["module_interface_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["module_interface_matrix"]["passed_module_count"] == 10
     assert state["developer_diagnostics"]["module_interface_rows"] == state["module_interface_rows"]
+    assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["status"] == "passed"
+    assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["passed_module_count"] == 2
+    assert state["developer_diagnostics"]["external_tool_adapter_rows"] == state["external_tool_adapter_rows"]
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["status"] == "blocked"
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["blocked_module_count"] == 10
     assert state["developer_diagnostics"]["full_activation_module_rows"] == state["full_activation_module_rows"]

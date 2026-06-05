@@ -79,6 +79,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         resource_validation=resource_validation,
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
+    external_tool_adapter_matrix = build_external_tool_adapter_matrix(
+        registry=registry,
+        resource_validation=resource_validation,
+    )
     runtime_acquisition_scan = build_runtime_acquisition_scan_summary()
     default_dependency_scan = build_default_dependency_scan_summary()
     active_install_hits = list(runtime_acquisition_scan.get("install_hits", []))
@@ -242,6 +246,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "p0_issues": p0,
         "p1_issues": p1,
         "module_interface_matrix": module_interface_matrix,
+        "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "full_activation_module_matrix": full_activation_module_matrix,
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -394,6 +399,138 @@ def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -
         "full_environment": str(source.get("full_environment") or module.get("full_environment") or ""),
         "result_package_required": [str(item) for item in source.get("result_package_required", []) if item],
         "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def build_external_tool_adapter_matrix(
+    *,
+    registry: dict[str, Any] | None = None,
+    resource_validation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return read-only isolation evidence for chemistry external-tool adapters."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    resources = resource_validation if isinstance(resource_validation, dict) else validate_analysis_resource_manifest()
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in {"docking", "molecular_dynamics"}
+    ]
+    resource_templates = [
+        item
+        for item in resources.get("resource_lock_evidence_templates", [])
+        if isinstance(item, dict)
+    ]
+    blocked_resource_ids = {str(item) for item in resources.get("blocked_resource_ids", []) if item}
+    rows = [
+        _external_tool_adapter_row(
+            module,
+            resource_templates=resource_templates,
+            blocked_resource_ids=blocked_resource_ids,
+        )
+        for module in modules
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    return {
+        "schema_version": "biomedpilot.analysis.external_tool_adapter_matrix.v1",
+        "status": "passed" if rows and not blocker_counts else "blocked",
+        "module_count": len(rows),
+        "passed_module_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "blocked_module_count": sum(1 for row in rows if row.get("status") != "passed"),
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "rows": rows,
+        "boundary": "read_only_external_tool_adapter_isolation_diagnostics",
+    }
+
+
+def _external_tool_adapter_row(
+    module: dict[str, Any],
+    *,
+    resource_templates: list[dict[str, Any]],
+    blocked_resource_ids: set[str],
+) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    module_manifest = str(module.get("module_manifest") or f"analysis/modules/{module_id}/module.json")
+    manifest_payload = _read_json(REPO_ROOT / module_manifest) if (REPO_ROOT / module_manifest).is_file() else {}
+    source = manifest_payload if isinstance(manifest_payload, dict) and manifest_payload else module
+    modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
+    lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+    full = modes.get("full") if isinstance(modes.get("full"), dict) else {}
+    dependency_policy = source.get("dependency_policy") if isinstance(source.get("dependency_policy"), dict) else {}
+    expected_full_environment = {
+        "docking": "r-chem-full",
+        "molecular_dynamics": "r-chem-gpu",
+    }.get(module_id, "")
+    expected_tool_name = {
+        "docking": "AutoDock_Vina",
+        "molecular_dynamics": "GROMACS",
+    }.get(module_id, "")
+    required_resource_ids = [
+        str(template.get("resource_id") or "")
+        for template in resource_templates
+        if module_id in {str(value) for value in template.get("approved_for_modules", []) if value is not None}
+    ]
+    required_resource_ids = [item for item in required_resource_ids if item]
+    blocked_required_resources = [resource_id for resource_id in required_resource_ids if resource_id in blocked_resource_ids]
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if not module_id:
+        blockers.append("external_tool_adapter_module_id_missing")
+    if not (REPO_ROOT / module_manifest).is_file():
+        blockers.append(f"external_tool_adapter_manifest_missing:{module_id}:{module_manifest}")
+    if source.get("schema_version") != "biomedpilot.analysis_module_manifest.v1":
+        blockers.append(f"external_tool_adapter_manifest_schema_version_invalid:{module_id}")
+    policy = str(source.get("external_tool_policy") or "")
+    if not policy:
+        blockers.append(f"external_tool_adapter_policy_missing:{module_id}")
+    elif expected_tool_name and f"R_adapter_calls_{expected_tool_name}" not in policy:
+        blockers.append(f"external_tool_adapter_policy_tool_mismatch:{module_id}")
+    if expected_full_environment and str(source.get("full_environment") or "") != expected_full_environment:
+        blockers.append(f"external_tool_adapter_full_environment_mismatch:{module_id}:{expected_full_environment}")
+    if str(source.get("analysis_environment") or "") != "r-bio-core":
+        blockers.append(f"external_tool_adapter_lite_analysis_environment_not_core:{module_id}")
+    if str(lite.get("environment") or "") != "r-bio-core":
+        blockers.append(f"external_tool_adapter_lite_environment_not_core:{module_id}")
+    if str(lite.get("external_tool_execution") or "") != "not_executed_in_lite_mode":
+        blockers.append(f"external_tool_adapter_lite_executes_external_tool:{module_id}")
+    if str(lite.get("worker_backend") or "") != "rscript":
+        blockers.append(f"external_tool_adapter_lite_worker_backend_invalid:{module_id}")
+    if dependency_policy.get("runtime_install") != "forbidden":
+        blockers.append(f"external_tool_adapter_runtime_install_not_forbidden:{module_id}")
+    if dependency_policy.get("default_app_dependency") is not False:
+        blockers.append(f"external_tool_adapter_default_app_dependency_not_false:{module_id}")
+    if not required_resource_ids:
+        blockers.append(f"external_tool_adapter_required_resources_missing:{module_id}")
+    if str(full.get("blocker") or ""):
+        warnings.append(str(full.get("blocker")))
+    if blocked_required_resources:
+        warnings.append(f"full_mode_blocked_until_tool_or_resource_lock:{','.join(blocked_required_resources)}")
+    if not blockers:
+        warnings.append("lite_mode_writes_command_manifest_only_no_external_tool_execution")
+    return {
+        "module_id": module_id,
+        "title": str(source.get("title") or module.get("title") or module_id),
+        "status": "blocked" if blockers else "passed",
+        "module_manifest": module_manifest,
+        "analysis_environment": str(source.get("analysis_environment") or ""),
+        "lite_environment": str(lite.get("environment") or ""),
+        "lite_worker_backend": str(lite.get("worker_backend") or ""),
+        "lite_capability": str(lite.get("capability") or ""),
+        "lite_external_tool_execution": str(lite.get("external_tool_execution") or ""),
+        "full_supported": bool(full.get("supported")),
+        "full_blocker": str(full.get("blocker") or ""),
+        "full_environment": str(source.get("full_environment") or ""),
+        "environment_lock": str(source.get("environment_lock") or ""),
+        "dockerfile": str(source.get("dockerfile") or ""),
+        "external_tool_policy": policy,
+        "runtime_install_policy": str(dependency_policy.get("runtime_install") or ""),
+        "default_app_dependency": dependency_policy.get("default_app_dependency"),
+        "required_resource_ids": required_resource_ids,
+        "blocked_required_resource_ids": blocked_required_resources,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
     }
 
 
