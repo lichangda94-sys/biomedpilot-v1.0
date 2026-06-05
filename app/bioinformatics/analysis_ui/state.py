@@ -69,6 +69,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     result_entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
     analysis_architecture_status = build_analysis_architecture_status()
     analysis_architecture_gate_rows = build_analysis_architecture_gate_rows(analysis_architecture_status)
+    standard_worker_migration_matrix = analysis_architecture_status.get("standard_worker_migration_matrix") if isinstance(analysis_architecture_status.get("standard_worker_migration_matrix"), dict) else {}
+    standard_worker_migration_rows = build_standard_worker_migration_rows(standard_worker_migration_matrix)
     analysis_architecture_remediation_queue = build_analysis_remediation_queue(analysis_architecture_status)
     analysis_architecture_remediation_rows = build_analysis_architecture_remediation_rows(analysis_architecture_remediation_queue)
     standard_package_catalog = build_standard_analysis_package_catalog(root)
@@ -138,6 +140,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "standard_analysis_packages": standard_package_catalog,
         "analysis_architecture_status": analysis_architecture_status,
         "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
+        "standard_worker_migration_matrix": standard_worker_migration_matrix,
+        "standard_worker_migration_rows": standard_worker_migration_rows,
         "analysis_architecture_remediation_queue": analysis_architecture_remediation_queue,
         "analysis_architecture_remediation_rows": analysis_architecture_remediation_rows,
         "standard_package_gate_rows": standard_package_gate_rows,
@@ -153,6 +157,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "result_index": result_index,
             "analysis_architecture_status": analysis_architecture_status,
             "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
+            "standard_worker_migration_matrix": standard_worker_migration_matrix,
+            "standard_worker_migration_rows": standard_worker_migration_rows,
             "analysis_architecture_remediation_queue": analysis_architecture_remediation_queue,
             "analysis_architecture_remediation_rows": analysis_architecture_remediation_rows,
             "standard_analysis_package_catalog": standard_package_catalog,
@@ -1137,6 +1143,30 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
                 [str(item.get("source_issue") or "")],
                 _list(item.get("required_evidence"))[:2],
                 basis=f"{item.get('priority', 'P1')}; files={compact_list(_list(item.get('recommended_files'))[:3])}",
+            )
+        )
+    return rows
+
+
+def build_standard_worker_migration_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    module_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    rows = [
+        _formal_deg_gate_row(
+            "R standard worker migration matrix",
+            matrix.get("status") or "blocked",
+            [f"formal_pending_count={matrix.get('formal_pending_count', 0)}"] if int(matrix.get("formal_pending_count") or 0) else [],
+            [f"full_blocked_count={matrix.get('full_blocked_count', 0)}"] if int(matrix.get("full_blocked_count") or 0) else [],
+            basis=f"modules={matrix.get('module_count', 0)}; {matrix.get('boundary', 'matrix_is_read_only_no_worker_execution')}",
+        )
+    ]
+    for row in module_rows:
+        rows.append(
+            _formal_deg_gate_row(
+                f"R worker migration: {row.get('module_id')}",
+                "passed" if row.get("formal_worker_status") == "migrated_to_isolated_standard_worker" else "blocked",
+                [str(row.get("formal_worker_status") or "")],
+                [f"lite={row.get('lite_status')}", f"full={row.get('full_status')}"],
+                basis=f"{row.get('analysis_environment')}->{row.get('full_environment')}; {row.get('current_adapter_status')}",
             )
         )
     return rows

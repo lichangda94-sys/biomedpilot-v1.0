@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from app.analysis_runtime.architecture_status import build_analysis_architecture_status, build_analysis_remediation_queue
+from app.analysis_runtime.architecture_status import build_analysis_architecture_status, build_analysis_remediation_queue, build_standard_worker_migration_matrix
 from app.analysis_runtime.standard_package import validate_standard_result_package
 from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
@@ -325,6 +325,26 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert "analysis/resources/manifest.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "analysis/runners/run_module.R" in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
     assert all(item["status"] == "blocked" for item in items.values())
+
+
+def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> None:
+    matrix = build_standard_worker_migration_matrix()
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.standard_worker_migration_matrix.v1"
+    assert matrix["status"] == "partial"
+    assert matrix["boundary"] == "matrix_is_read_only_no_worker_execution"
+    assert matrix["module_count"] >= 10
+    assert matrix["formal_pending_count"] == matrix["module_count"]
+    assert matrix["full_blocked_count"] == matrix["module_count"]
+    assert {"deg", "survival", "univariate", "multivariate", "enrichment", "immune_infiltration", "spatial_transcriptomics", "docking", "molecular_dynamics"} <= set(rows)
+    assert rows["deg"]["mock_status"] == "passed"
+    assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"
+    assert rows["deg"]["full_status"] == "blocked"
+    assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
+    assert rows["docking"]["full_environment"] == "r-chem-full"
+    assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
 
 
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:

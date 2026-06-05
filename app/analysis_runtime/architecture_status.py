@@ -49,6 +49,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
     registry = load_analysis_module_registry()
     modules = [item for item in registry.get("modules", []) if isinstance(item, dict)]
     module_ids = [str(item.get("module_id") or "") for item in modules if item.get("module_id")]
+    standard_worker_migration_matrix = build_standard_worker_migration_matrix(registry)
     environment_validation = validate_analysis_environment_registry(module_registry=registry)
     resource_validation = validate_analysis_resource_manifest()
     active_install_hits = _active_runtime_install_hits()
@@ -171,7 +172,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
             "warn" if set(TARGET_MODULE_IDS) <= set(module_ids) else "fail",
             "analysis/registry/analysis_modules.json and analysis/modules/*/module.json",
             blockers=[] if set(TARGET_MODULE_IDS) <= set(module_ids) else [f"target_module_missing:{item}" for item in sorted(set(TARGET_MODULE_IDS) - set(module_ids))],
-            warnings=["formal_full_migration_pending_for_multiple_modules"],
+            warnings=[f"formal_standard_worker_pending_modules={standard_worker_migration_matrix.get('formal_pending_count', 0)}"],
         ),
         _row(
             "RARCH-18",
@@ -197,7 +198,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         ),
     ]
     p0 = _p0_issues(rows)
-    p1 = _p1_issues(environment_validation, resource_validation)
+    p1 = _p1_issues(environment_validation, resource_validation, standard_worker_migration_matrix)
     status = "failed" if p0 else ("partial_with_p1_gaps" if p1 else "passed")
     return {
         "schema_version": "biomedpilot.analysis.architecture_status.v1",
@@ -209,8 +210,31 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "requirement_rows": rows,
         "p0_issues": p0,
         "p1_issues": p1,
+        "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "environment_validation": environment_validation,
         "resource_validation": resource_validation,
+    }
+
+
+def build_standard_worker_migration_matrix(registry: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Summarize module-by-module migration toward the standard worker boundary."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    modules = [item for item in payload.get("modules", []) if isinstance(item, dict)]
+    standard_entrypoint = str(payload.get("standard_entrypoint") or "analysis/runners/run_module.R")
+    rows = [_standard_worker_migration_row(module, standard_entrypoint=standard_entrypoint) for module in modules]
+    formal_pending = [row for row in rows if row["formal_worker_status"] != "migrated_to_isolated_standard_worker"]
+    full_blocked = [row for row in rows if row["full_status"] == "blocked"]
+    return {
+        "schema_version": "biomedpilot.analysis.standard_worker_migration_matrix.v1",
+        "status": "passed" if not formal_pending and not full_blocked else "partial",
+        "standard_entrypoint": standard_entrypoint,
+        "module_count": len(rows),
+        "formal_pending_count": len(formal_pending),
+        "full_blocked_count": len(full_blocked),
+        "rows": rows,
+        "migration_policy": "module_by_module_standard_worker_migration_required",
+        "boundary": "matrix_is_read_only_no_worker_execution",
     }
 
 
@@ -278,6 +302,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
                 "analysis/schemas/output/result_package.schema.json",
             ],
             "required_evidence": [
+                "selected formal module has formal_worker_status=migrated_to_isolated_standard_worker",
                 "selected formal module executes through the task bridge and standard worker boundary",
                 "standard package includes result.json, provenance.json, tables, plots, reports, and logs",
                 "frontend consumes the standard package instead of module-private output paths",
@@ -296,6 +321,41 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
         "execution_policy": "read_only_no_runtime_mutation",
         "install_policy": "no_runtime_package_install_or_resource_download",
         "full_mode_policy": "full_mode_remains_blocked_until_environment_and_resource_evidence_passes",
+    }
+
+
+def _standard_worker_migration_row(module: dict[str, Any], *, standard_entrypoint: str) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    modes = module.get("modes") if isinstance(module.get("modes"), dict) else {}
+    mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
+    lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+    full = modes.get("full") if isinstance(modes.get("full"), dict) else {}
+    mock_package = REPO_ROOT / str(mock.get("fixture_output_package") or "")
+    mock_ready = bool(mock.get("supported")) and mock_package.joinpath("result.json").is_file() and mock_package.joinpath("provenance.json").is_file()
+    lite_uses_standard_worker = (
+        bool(lite.get("supported"))
+        and str(lite.get("runner") or "") == standard_entrypoint
+        and str(lite.get("worker_backend") or "") == "rscript"
+    )
+    full_supported = bool(full.get("supported"))
+    current_adapter_status = str(module.get("current_adapter_status") or "")
+    formal_worker_status = "migrated_to_isolated_standard_worker" if full_supported and lite_uses_standard_worker else "pending_standard_worker_migration"
+    if current_adapter_status.startswith("contract_required"):
+        formal_worker_status = "contract_only_pending_standard_worker_migration"
+    return {
+        "module_id": module_id,
+        "title": str(module.get("title") or module_id),
+        "mock_status": "passed" if mock_ready else "blocked",
+        "lite_status": "standard_worker_lite_ready" if lite_uses_standard_worker else "blocked",
+        "full_status": "ready_unverified" if full_supported else "blocked",
+        "formal_worker_status": formal_worker_status,
+        "current_adapter_status": current_adapter_status,
+        "standard_entrypoint": standard_entrypoint if lite_uses_standard_worker else "",
+        "analysis_environment": str(module.get("analysis_environment") or ""),
+        "full_environment": str(module.get("full_environment") or ""),
+        "full_blocker": str(full.get("blocker") or ""),
+        "result_index_task_types": [str(item) for item in module.get("result_index_task_types", []) if item],
+        "risk": "P1" if formal_worker_status != "migrated_to_isolated_standard_worker" else "none",
     }
 
 
@@ -426,11 +486,12 @@ def _p0_issues(rows: list[dict[str, Any]]) -> list[str]:
     return [f"{row['requirement_id']}:{row['label']}" for row in rows if row["requirement_id"] in p0_ids and row["status"] == "fail"]
 
 
-def _p1_issues(environment_validation: dict[str, Any], resource_validation: dict[str, Any]) -> list[str]:
+def _p1_issues(environment_validation: dict[str, Any], resource_validation: dict[str, Any], standard_worker_migration_matrix: dict[str, Any]) -> list[str]:
     issues: list[str] = []
     if environment_validation.get("full_mode_ready") is not True:
         issues.append("full_analysis_environment_locks_not_restored")
     if resource_validation.get("full_mode_ready") is not True:
         issues.append("full_analysis_resource_locks_not_complete")
-    issues.append("formal_algorithms_not_universally_migrated_to_isolated_standard_worker")
+    if int(standard_worker_migration_matrix.get("formal_pending_count") or 0) > 0:
+        issues.append("formal_algorithms_not_universally_migrated_to_isolated_standard_worker")
     return issues

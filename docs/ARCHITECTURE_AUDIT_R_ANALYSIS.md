@@ -373,9 +373,10 @@ New architecture boundary files:
 2. Add standard result package schema, registry, mock runner, and fixtures. **Completed in this audit.**
 3. Wrap one existing R-native module behind the standard worker in mock mode first. **Started with `app/analysis_runtime/task_bridge.py` and `app/analysis_runtime/r_worker.py`.**
 4. Add lite mode for selected modules with lightweight fixture data and no large downloads. **Started with DEG, enrichment, survival, univariate, multivariate, immune infiltration, spatial transcriptomics, docking command-manifest, and molecular dynamics command-manifest fixtures.**
-5. Turn current P1 gaps into an auditable remediation queue. **Completed with `build_analysis_remediation_queue()` and Analysis Center rows.**
-6. Move full mode to an isolated `renv`/Docker environment.
-7. Repeat module by module: survival, univariate, multivariate, enrichment, immune infiltration, then spatial/chem.
+5. Turn formal algorithm migration into a module-level standard-worker matrix. **Completed with `build_standard_worker_migration_matrix()` and Analysis Center rows.**
+6. Turn current P1 gaps into an auditable remediation queue. **Completed with `build_analysis_remediation_queue()` and Analysis Center rows.**
+7. Move full mode to an isolated `renv`/Docker environment.
+8. Repeat module by module: survival, univariate, multivariate, enrichment, immune infiltration, then spatial/chem.
 
 ## 7. Recommended First Files to Modify Next
 
@@ -386,6 +387,8 @@ The current machine-readable queue exposes these P1 items:
 | `restore_full_analysis_environment_locks` | `analysis/registry/analysis_environments.json`, `renv/renv.bio-full.lock`, `renv/renv.spatial-full.lock`, `renv/renv.chem-full.lock`, `docker/Dockerfile.r-bio-full`, `docker/Dockerfile.r-spatial-full`, `docker/Dockerfile.r-chem-full`, `docker/Dockerfile.r-chem-gpu` | Full environment locks restored from controlled external environments; image build evidence captured outside default app-dev; environment validator reports full readiness. |
 | `lock_full_analysis_resources` | `analysis/resources/manifest.json`, `external_analysis_resources/` | Every full resource declares version, source, hash, license, and cache path; resource validator reports full readiness. |
 | `migrate_formal_algorithms_to_isolated_standard_worker` | `app/bioinformatics/`, `analysis/runners/run_module.R`, `analysis/modules/`, `analysis/schemas/input/module_input.schema.json`, `analysis/schemas/output/result_package.schema.json` | Selected formal module executes through the task bridge and standard worker boundary; frontend consumes the standard package instead of module-private output paths. |
+
+The current standard-worker migration matrix is intentionally still `partial`: all registered modules have mock packages and lite worker fixture paths, but full/formal migration remains blocked or pending until a selected formal module has `formal_worker_status=migrated_to_isolated_standard_worker` and passes isolated environment/resource gates.
 
 ## 8. Completed Changes in This Audit
 
@@ -427,6 +430,7 @@ The current machine-readable queue exposes these P1 items:
 - Added `validate_analysis_environment_registry()` to make environment-registry validity and full-readiness status consumable by runtime gates, UI diagnostics, and future reports.
 - Added Analysis Center environment gate rows for registry structure and full R environment readiness.
 - Added `build_analysis_remediation_queue()` to expose current P1 architecture gaps as blocked, manual, read-only remediation items with source issues, recommended files, and required evidence.
+- Added `build_standard_worker_migration_matrix()` to expose module-level mock/lite/full/formal migration status and to drive the formal-standard-worker P1 issue from evidence instead of a static string.
 - Added Analysis Center remediation rows so the UI can display full environment, full resource, and isolated worker migration blockers without implying full analysis readiness.
 - Added architecture and remediation docs.
 
