@@ -1304,11 +1304,11 @@ Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch
 
 ## Current Latest Phase 2.5 Snapshot
 
-Date: 2026-06-04
+Date: 2026-06-05
 
-Latest refreshed audit baseline: `dev/bioinformatics` at `25e179d238b762fc63a69b802f4f231f01effdbe`.
+Latest refreshed audit baseline: `dev/bioinformatics` at `c4bf747881c0cf4828eb19bdd54a0885ccc3d98a`.
 
-The detailed current refresh entry is recorded below as `Phase 2.5 Refresh: Full Branch Inventory at 25e179d`. It supersedes older Phase 2.5 entries for current-state reporting while preserving them as historical worklog records.
+The detailed current refresh entry is recorded as `Phase 2.5 Refresh: Full Branch Inventory at c4bf7478`. It supersedes older Phase 2.5 entries for current-state reporting while preserving them as historical worklog records.
 
 Current decision remains unchanged: no old branch, legacy directory, archive source, mock output, placeholder output, testing-level output, or branch-only implementation is approved for direct carry-over. The current UI remains the only mainline, and old branches remain material libraries only.
 
@@ -1379,11 +1379,102 @@ No migration candidate is approved for direct carry-over. Future work must selec
 
 Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
 
+## Phase 2.5 Refresh: Full Branch Inventory at `c4bf7478`
+
+Date: 2026-06-05
+
+### Scope
+
+This refresh updated the full-branch and legacy inventory against the current `dev/bioinformatics` HEAD:
+
+```text
+c4bf747881c0cf4828eb19bdd54a0885ccc3d98a
+add full analysis activation gate schema
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories, archive sources, and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Worktree Boundaries
+
+The refresh intentionally modified only Phase 2.5 report files. These unrelated dirty or untracked paths were observed and preserved:
+
+```text
+ M app/analysis_runtime/architecture_status.py
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M docs/R_ANALYSIS_REMEDIATION_PLAN.md
+ M tests/bioinformatics/test_analysis_ui_state.py
+ M tests/test_r_analysis_architecture_contract.py
+?? analysis/schemas/output/remediation_queue.schema.json
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+They were not treated as Phase 2.5 migration outputs.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `git status --short` | Passed |
+| `git branch --show-current` | Passed, `dev/bioinformatics` |
+| `git rev-parse HEAD` | Passed, `c4bf747881c0cf4828eb19bdd54a0885ccc3d98a` |
+| `git show -s --format='%h\|%H\|%ci\|%s' HEAD` | Passed, `add full analysis activation gate schema` |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' --sort=refname refs/heads refs/remotes` | Passed |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -type f` | Passed, 920 files observed in the boundary |
+| `git diff --shortstat HEAD..<branch> -- app analysis tests scripts docs` | Passed for selected high-relevance branches |
+| `rg -n "full analysis\|activation\|full_mode\|remediation queue\|migration evidence\|lock evidence\|standard worker" ...` | Passed |
+| `rg --files analysis app/analysis_runtime` | Passed |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|Meta" ...` | Passed |
+| `rg --files tests/meta_analysis app/meta_analysis` | Passed |
+
+No functional tests were run because this phase was documentation-only and audit-only. Functional tests would validate the current checkout, not prove old-branch runtime availability.
+
+### Findings
+
+Current `dev/bioinformatics` has advanced beyond earlier Phase 2.5 snapshots and now includes a full analysis activation gate schema on top of analysis architecture status gates, remediation queue rows, standard worker migration matrix rows, lock evidence validation, standard worker migration evidence validation, and standard package/result/input manifest governance. These are current contract and audit surfaces, not approval to migrate any old branch or to treat old implementations as current available features.
+
+Selected high-relevance branch deltas remain large:
+
+- `dev/release-internal-test`: 2645 files changed.
+- `codex/releasebuild-formal-deg-carryover`: 1574 files changed.
+- `codex/mainline-survival-clinical-carryover`: 963 files changed.
+- `dev/meta-analysis`: 685 files changed.
+- `dev/ui-shell`: 2226 files changed.
+- `feature/meta-l3-ui-loop`: 177 files changed.
+
+Legacy directories remain quarantined:
+
+```text
+app/bioinformatics/legacy/**
+app/meta_analysis/legacy/**
+archive/legacy_sources/**
+```
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one current UI entry and one candidate, then adapt or rewrite it against current contracts with current tests and real output evidence. Mock, placeholder, dry-run, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
+
 ## Current Latest Phase 2.5 Snapshot
 
 Date: 2026-06-05
 
-The latest current-state Phase 2.5 refresh in this worklog is `Phase 2.5 Refresh: Full Branch Inventory at a6ccd8c2`. It supersedes older Phase 2.5 entries for current-state reporting while preserving those older entries as historical audit records.
+The latest current-state Phase 2.5 refresh in this worklog is `Phase 2.5 Refresh: Full Branch Inventory at c4bf7478`. It supersedes older Phase 2.5 entries for current-state reporting while preserving those older entries as historical audit records.
 
 ## Phase 2.5 Refresh: Full Branch Inventory at `a6ccd8c2`
 
@@ -2000,4 +2091,4 @@ Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch
 
 Date: 2026-06-05
 
-The latest current-state Phase 2.5 refresh in this worklog is `Phase 2.5 Refresh: Full Branch Inventory at a6ccd8c2`. It supersedes older Phase 2.5 entries for current-state reporting while preserving those older entries as historical audit records.
+The latest current-state Phase 2.5 refresh in this worklog is `Phase 2.5 Refresh: Full Branch Inventory at c4bf7478`. It supersedes older Phase 2.5 entries for current-state reporting while preserving those older entries as historical audit records.

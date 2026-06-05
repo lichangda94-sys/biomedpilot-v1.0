@@ -2,7 +2,7 @@
 
 Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `a6ccd8c2ed8d30a769dd7eb849b0daad29e0e43f`
+Baseline: `dev/bioinformatics` at `c4bf747881c0cf4828eb19bdd54a0885ccc3d98a`
 
 ## Scope
 
@@ -14,7 +14,7 @@ app/meta_analysis/legacy/**
 archive/legacy_sources/**
 ```
 
-Current scan count for this boundary is 920 files. The count includes source, tests, static assets, archived mirrors, docs, demo data, and cached artifacts when present. It is an inventory size, not a current-feature count. The scan was refreshed at current `dev/bioinformatics` HEAD `a6ccd8c2`; no legacy file was executed or imported.
+Current scan count for this boundary is 920 files. The count includes source, tests, static assets, archived mirrors, docs, demo data, and cached artifacts when present. It is an inventory size, not a current-feature count. The scan was refreshed at current `dev/bioinformatics` HEAD `c4bf7478`; no legacy file was executed or imported.
 
 Legacy code was read only. It was not imported, executed, adapted, merged, or promoted. Legacy tests are evidence that historical code once had checks, not evidence that the current UI can run those features.
 
