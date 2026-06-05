@@ -352,10 +352,35 @@ def validate_standard_worker_migration_evidence_registry(
     policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
     if policy.get("registry_is_authoritative") is not True:
         blockers.append("standard_worker_migration_evidence_registry_authoritative_policy_invalid")
+    if policy.get("expected_module_ids_are_authoritative") is not True:
+        blockers.append("standard_worker_migration_evidence_registry_expected_module_policy_invalid")
     if policy.get("migration_completion_requires_schema_valid_evidence") is not True:
         blockers.append("standard_worker_migration_evidence_registry_schema_policy_invalid")
     if policy.get("mock_lite_and_legacy_sidecar_evidence_forbidden") is not True:
         blockers.append("standard_worker_migration_evidence_registry_sidecar_policy_invalid")
+    declared_expected_module_ids = payload.get("expected_module_ids")
+    if not isinstance(declared_expected_module_ids, list):
+        blockers.append("standard_worker_migration_evidence_registry_expected_module_ids_invalid")
+        declared_expected_module_ids = []
+    else:
+        normalized_expected_module_ids = [
+            str(item)
+            for item in declared_expected_module_ids
+            if isinstance(item, str) and item
+        ]
+        if len(normalized_expected_module_ids) != len(declared_expected_module_ids):
+            blockers.append("standard_worker_migration_evidence_registry_expected_module_ids_invalid")
+        duplicate_expected_ids = sorted(
+            module_id
+            for module_id in set(normalized_expected_module_ids)
+            if normalized_expected_module_ids.count(module_id) > 1
+        )
+        blockers.extend(
+            f"standard_worker_migration_evidence_registry_expected_module_id_duplicate:{module_id}"
+            for module_id in duplicate_expected_ids
+        )
+        if normalized_expected_module_ids != expected_module_ids:
+            blockers.append("standard_worker_migration_evidence_registry_expected_module_ids_mismatch")
     if not isinstance(entries, list):
         blockers.append("standard_worker_migration_evidence_registry_entries_invalid")
         entries = []
@@ -371,6 +396,8 @@ def validate_standard_worker_migration_evidence_registry(
             blockers.append("standard_worker_migration_evidence_registry_entry_module_id_missing")
         elif module_id in seen:
             blockers.append(f"standard_worker_migration_evidence_registry_entry_duplicate:{module_id}")
+        elif module_id not in expected_module_ids:
+            blockers.append(f"standard_worker_migration_evidence_registry_entry_unexpected_module:{module_id}")
         seen.add(module_id)
         evidence = entry.get("evidence") if isinstance(entry.get("evidence"), dict) else {}
         if not evidence:

@@ -1414,8 +1414,21 @@ def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_
 
     assert registry["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1"
     assert registry["policy"]["registry_is_authoritative"] is True
+    assert registry["policy"]["expected_module_ids_are_authoritative"] is True
     assert registry["policy"]["migration_completion_requires_schema_valid_evidence"] is True
     assert registry["policy"]["mock_lite_and_legacy_sidecar_evidence_forbidden"] is True
+    assert registry["expected_module_ids"] == [
+        "deg",
+        "survival",
+        "univariate",
+        "multivariate",
+        "enrichment",
+        "immune_infiltration",
+        "correlation",
+        "spatial_transcriptomics",
+        "docking",
+        "molecular_dynamics",
+    ]
     assert registry["evidence_entries"] == []
     assert validation["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry_validation.v1"
     assert validation["status"] == "passed"
@@ -1453,7 +1466,31 @@ def test_standard_worker_migration_evidence_registry_schema_blocks_shape_drift()
     assert validation["schema_validation_status"] == "blocked"
     assert "standard_worker_migration_evidence_registry_const_mismatch:schema_version" in validation["blockers"]
     assert "standard_worker_migration_evidence_registry_type_invalid:policy" in validation["blockers"]
+    assert "standard_worker_migration_evidence_registry_required_field_missing:expected_module_ids" in validation["blockers"]
+    assert "standard_worker_migration_evidence_registry_expected_module_ids_invalid" in validation["blockers"]
     assert "standard_worker_migration_evidence_registry_type_invalid:evidence_entries" in validation["blockers"]
+
+
+def test_standard_worker_migration_evidence_registry_blocks_expected_module_scope_drift() -> None:
+    registry = deepcopy(load_standard_worker_migration_evidence_registry())
+    registry["expected_module_ids"] = ["deg"]
+
+    validation = validate_standard_worker_migration_evidence_registry(registry)
+
+    assert validation["status"] == "blocked"
+    assert "standard_worker_migration_evidence_registry_expected_module_ids_mismatch" in validation["blockers"]
+    assert validation["expected_module_ids"] == [
+        "deg",
+        "survival",
+        "univariate",
+        "multivariate",
+        "enrichment",
+        "immune_infiltration",
+        "correlation",
+        "spatial_transcriptomics",
+        "docking",
+        "molecular_dynamics",
+    ]
 
 
 def test_standard_worker_migration_matrix_does_not_accept_full_supported_module_without_registry_evidence() -> None:

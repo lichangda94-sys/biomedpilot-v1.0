@@ -6,6 +6,7 @@
   "required": [
     "schema_version",
     "policy",
+    "expected_module_ids",
     "evidence_entries"
   ],
   "properties": {
@@ -13,10 +14,43 @@
       "const": "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1"
     },
     "policy": {
-      "type": "object"
+      "type": "object",
+      "required": [
+        "registry_is_authoritative",
+        "expected_module_ids_are_authoritative",
+        "migration_completion_requires_schema_valid_evidence",
+        "mock_lite_and_legacy_sidecar_evidence_forbidden",
+        "manual_scoped_migration_only"
+      ],
+      "properties": {
+        "registry_is_authoritative": {"const": true},
+        "expected_module_ids_are_authoritative": {"const": true},
+        "migration_completion_requires_schema_valid_evidence": {"const": true},
+        "mock_lite_and_legacy_sidecar_evidence_forbidden": {"const": true},
+        "manual_scoped_migration_only": {"const": true}
+      },
+      "additionalProperties": true
+    },
+    "expected_module_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
     },
     "evidence_entries": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "module_id",
+          "evidence"
+        ],
+        "properties": {
+          "module_id": {"type": "string", "minLength": 1},
+          "evidence": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
     }
   },
   "additionalProperties": true
