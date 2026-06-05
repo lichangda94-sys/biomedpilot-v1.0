@@ -158,7 +158,7 @@ Update: `validate_analysis_environment_registry()` now turns the environment reg
 
 Update: restored full environment locks now require schema-valid evidence. `analysis/schemas/output/environment_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_environment_lock_evidence()` blocks missing evidence, non-restored status, placeholder R/Bioconductor/package-lock data, missing Dockerfile/renv/evidence files, registry mismatch, allowed-module mismatch, or runtime install/download allowance. Current full locks remain `scaffold_only_not_restored`, so this does not activate full mode.
 
-Update: restored full environment evidence now requires `package_lock_hash.algorithm=sha256` and a 64-character hex package-lock hash value. Arbitrary non-empty hash algorithm labels are blocked before an environment can contribute to full-mode readiness.
+Update: restored full environment evidence now requires `package_lock_hash.algorithm=sha256` and a 64-character hex package-lock hash value. The hash must match the referenced `renv_lock` file content. Arbitrary non-empty hash algorithm labels or mismatched lock hashes are blocked before an environment can contribute to full-mode readiness.
 
 Update: Analysis Center state now exposes `analysis_environment_gate_rows` and developer diagnostics for `validate_analysis_environment_registry()`. The current UI gate table can show registry structural status and full R environment readiness blockers without reading Dockerfiles, renv locks, or module-private R outputs directly.
 

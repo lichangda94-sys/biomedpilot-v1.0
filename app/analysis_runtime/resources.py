@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -384,18 +385,20 @@ def validate_analysis_environment_lock_evidence(
         blockers.append("analysis_environment_lock_evidence_runtime_download_not_forbidden")
 
     package_hash = evidence.get("package_lock_hash")
+    package_hash_algorithm = ""
+    package_hash_value = ""
     if not isinstance(package_hash, dict):
         blockers.append("analysis_environment_lock_evidence_package_lock_hash_invalid")
     else:
-        algorithm = str(package_hash.get("algorithm") or "")
-        value = str(package_hash.get("value") or "")
-        if not algorithm:
+        package_hash_algorithm = str(package_hash.get("algorithm") or "")
+        package_hash_value = str(package_hash.get("value") or "")
+        if not package_hash_algorithm:
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_algorithm_missing")
-        elif algorithm != "sha256":
+        elif package_hash_algorithm != "sha256":
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_algorithm_not_sha256")
-        if _is_placeholder_resource_value(value):
+        if _is_placeholder_resource_value(package_hash_value):
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_value_missing")
-        elif algorithm == "sha256" and not _is_sha256_hex(value):
+        elif package_hash_algorithm == "sha256" and not _is_sha256_hex(package_hash_value):
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_value_not_sha256")
 
     for field in ("r_version", "bioconductor_version", "dockerfile", "renv_lock"):
@@ -408,6 +411,10 @@ def validate_analysis_environment_lock_evidence(
         blockers.append(f"analysis_environment_lock_evidence_dockerfile_not_found:{dockerfile}")
     if renv_lock and not (REPO_ROOT / renv_lock).is_file():
         blockers.append(f"analysis_environment_lock_evidence_renv_lock_not_found:{renv_lock}")
+    elif renv_lock and package_hash_algorithm == "sha256" and _is_sha256_hex(package_hash_value):
+        actual_hash = _sha256_file(REPO_ROOT / renv_lock)
+        if actual_hash != package_hash_value.lower():
+            blockers.append("analysis_environment_lock_evidence_package_lock_hash_mismatch")
 
     evidence_files = evidence.get("evidence_files")
     if not isinstance(evidence_files, list) or not evidence_files:
@@ -679,6 +686,14 @@ def _resource_hash_algorithm_allowed(resource_id: str, algorithm: str) -> bool:
 def _is_sha256_hex(value: str) -> bool:
     text = str(value or "")
     return len(text) == 64 and all(char in "0123456789abcdefABCDEF" for char in text)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _blocked_resource_has_partial_final_lock(item: dict[str, Any]) -> bool:

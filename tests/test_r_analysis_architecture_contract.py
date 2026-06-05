@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -699,6 +700,7 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
     )
     evidence_note = tmp_path / "bio_full_environment_build_evidence.txt"
     evidence_note.write_text("controlled external environment build evidence\n", encoding="utf-8")
+    restored_lock_hash = hashlib.sha256(restored_lock.read_bytes()).hexdigest()
     evidence_path = tmp_path / "r-bio-full.environment_lock_evidence.json"
     evidence_path.write_text(
         json.dumps(
@@ -708,7 +710,7 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
                 "status": "restored",
                 "r_version": "R 4.4.2",
                 "bioconductor_version": "3.20",
-                "package_lock_hash": {"algorithm": "sha256", "value": "a" * 64},
+                "package_lock_hash": {"algorithm": "sha256", "value": restored_lock_hash},
                 "dockerfile": "docker/Dockerfile.r-bio-full",
                 "renv_lock": str(restored_lock),
                 "runtime_package_install": "forbidden",
@@ -819,6 +821,51 @@ def test_environment_lock_evidence_requires_sha256_hex_package_lock_hash() -> No
 
     assert validation["status"] == "blocked"
     assert "analysis_environment_lock_evidence_package_lock_hash_value_not_sha256" in validation["blockers"]
+
+
+def test_environment_lock_evidence_package_lock_hash_must_match_renv_lock(tmp_path: Path) -> None:
+    environment_registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_environments.json"))
+    environments = {item["environment_id"]: item for item in environment_registry["environments"]}  # type: ignore[index]
+    restored_lock = tmp_path / "renv.bio-full.restored.lock"
+    restored_lock.write_text(
+        json.dumps(
+            {
+                "R": {"Version": "4.4.2", "Repositories": []},
+                "Packages": {},
+                "BioMedPilotPolicy": {
+                    "schema_version": "biomedpilot.renv_policy.v1",
+                    "environment": "r-bio-full",
+                    "status": "restored",
+                    "heavy_analysis_dependencies_allowed": True,
+                    "runtime_package_install": "forbidden",
+                    "resource_lock_required": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    environments["r-bio-full"]["renv_lock"] = str(restored_lock)
+    validation = validate_analysis_environment_lock_evidence(
+        "r-bio-full",
+        {
+            "schema_version": "biomedpilot.analysis.environment_lock_evidence.v1",
+            "environment_id": "r-bio-full",
+            "status": "restored",
+            "r_version": "R 4.4.2",
+            "bioconductor_version": "3.20",
+            "package_lock_hash": {"algorithm": "sha256", "value": "b" * 64},
+            "dockerfile": "docker/Dockerfile.r-bio-full",
+            "renv_lock": str(restored_lock),
+            "runtime_package_install": "forbidden",
+            "runtime_resource_download": "forbidden",
+            "allowed_module_ids": environments["r-bio-full"]["allowed_module_ids"],
+            "evidence_files": ["analysis/registry/analysis_environments.json"],
+        },
+        environment_registry=environment_registry,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_lock_evidence_package_lock_hash_mismatch" in validation["blockers"]
 
 
 def test_full_mode_environment_blockers_allow_chem_gpu_shared_lock_policy() -> None:
