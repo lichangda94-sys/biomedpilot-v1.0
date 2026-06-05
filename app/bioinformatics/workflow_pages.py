@@ -5811,6 +5811,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                     *(analysis_state.get("standard_worker_migration_rows", []) or []),
                     *(analysis_state.get("analysis_architecture_remediation_rows", []) or []),
                     *(analysis_state.get("analysis_environment_gate_rows", []) or []),
+                    *(analysis_state.get("analysis_resource_gate_rows", []) or []),
                 ]
             ),
         )

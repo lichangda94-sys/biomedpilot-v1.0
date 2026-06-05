@@ -38,6 +38,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["standard_worker_migration_rows"]
     assert state["analysis_architecture_remediation_rows"]
     assert state["analysis_environment_gate_rows"]
+    assert state["analysis_resource_gate_rows"]
     assert state["survival_clinical_rows"]
     assert _file_set(tmp_path) == before
 
@@ -81,6 +82,14 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Analysis environment registry" in environment_gate_text
     assert "Full R environment readiness" in environment_gate_text
     assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in environment_gate_text
+    resource_gate_text = "\n".join(str(row) for row in state["analysis_resource_gate_rows"])
+    assert "Analysis resource manifest" in resource_gate_text
+    assert "Full analysis resource lock evidence registry" in resource_gate_text
+    assert "Full analysis resource readiness" in resource_gate_text
+    assert "analysis_resource_not_locked:reactome_full" in resource_gate_text
+    assert "missing_resource=reactome_full" in resource_gate_text
+    assert "locked_resources=mock_fixture_builtin_v1" in resource_gate_text
+    assert "blocked_resources=reactome_full" in resource_gate_text
     architecture_gate_text = "\n".join(str(row) for row in state["analysis_architecture_gate_rows"])
     assert "R analysis architecture snapshot" in architecture_gate_text
     assert "R architecture P0 guard" in architecture_gate_text
@@ -274,6 +283,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["status"] == "passed"
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["full_mode_ready"] is False
     assert state["developer_diagnostics"]["analysis_environment_gate_rows"] == state["analysis_environment_gate_rows"]
+    assert state["developer_diagnostics"]["analysis_resource_manifest_validation"]["status"] == "passed"
+    assert state["developer_diagnostics"]["analysis_resource_manifest_validation"]["full_mode_ready"] is False
+    assert state["developer_diagnostics"]["analysis_resource_gate_rows"] == state["analysis_resource_gate_rows"]
     assert _action(state, "enrichment_production_audit_preview")["enabled"] is False
     enrichment_state = state["developer_diagnostics"]["enrichment_gate_state"]
     assert enrichment_state["production_preview_status"] == "blocked"
