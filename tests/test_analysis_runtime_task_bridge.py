@@ -184,6 +184,11 @@ def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index
 
     assert result["status"] == "passed"
     assert validation["status"] == "passed"
+    assert validation["result_package_schema"] == "analysis/schemas/output/result_package.schema.json"
+    assert validation["package_manifest"]["schema_version"] == "biomedpilot.analysis.result_package.v1"
+    assert validation["package_manifest"]["directories"] == ["tables", "plots", "reports", "logs"]
+    assert validation["package_manifest"]["result_json"] == "result.json"
+    assert validation["package_manifest"]["provenance_json"] == "provenance.json"
     assert result_json["status"] == "passed"
     assert result_json["summary"]["clinical_conclusion_status"] == "not_generated"  # type: ignore[index]
     assert "mock enrichment package" in result_json["summary"]["message"].lower()  # type: ignore[index]
@@ -340,6 +345,24 @@ def test_standard_package_validation_blocks_missing_or_outside_declared_artifact
     assert "declared_artifact_reports_0_invalid" in validation["blockers"]
 
 
+def test_standard_package_validation_enforces_result_package_schema_directories(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    shutil.rmtree(package_dir / "logs")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "missing_required_directory:logs" in validation["blockers"]
+    assert "result_package_schema_array_contains_missing:directories" in validation["blockers"]
+    assert "logs" not in validation["package_manifest"]["directories"]
+
+
 def test_standard_package_validation_blocks_result_and_provenance_schema_version_drift(tmp_path: Path) -> None:
     result = run_analysis_module_task(tmp_path, module_input(tmp_path))
     package_dir = Path(result["result_package_dir"])
@@ -415,6 +438,7 @@ def test_standard_package_validation_blocks_payload_schema_shape_drift(tmp_path:
     )
 
     assert validation["status"] == "blocked"
+    assert "result_package_schema_field_enum_invalid:mode" in validation["blockers"]
     assert "result_schema_field_enum_invalid:mode" in validation["blockers"]
     assert "result_schema_field_type_invalid:tables" in validation["blockers"]
     assert "result_schema_field_type_invalid:warnings[0]" in validation["blockers"]

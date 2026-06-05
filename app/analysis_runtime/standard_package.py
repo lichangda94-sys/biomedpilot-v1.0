@@ -6,6 +6,7 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+RESULT_PACKAGE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "result_package.schema.json"
 RESULT_PAYLOAD_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "result.schema.json"
 PROVENANCE_PAYLOAD_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json"
 REQUIRED_FILES = ("result.json", "provenance.json")
@@ -98,12 +99,17 @@ def validate_standard_result_package(
 
     result = _load_json(root / "result.json") if (root / "result.json").is_file() else {}
     provenance = _load_json(root / "provenance.json") if (root / "provenance.json").is_file() else {}
+    package_manifest = _standard_result_package_manifest(root, result)
     invocation_path = root / "logs" / "worker_invocation.json"
     invocation = _load_json(invocation_path) if invocation_path.is_file() else {}
+    if package_manifest.get("schema_version") != "biomedpilot.analysis.result_package.v1":
+        blockers.append("result_package_schema_version_mismatch")
     if result.get("schema_version") != "biomedpilot.analysis.result.v1":
         blockers.append("result_schema_version_mismatch")
     if provenance.get("schema_version") != "biomedpilot.analysis.provenance.v1":
         blockers.append("provenance_schema_version_mismatch")
+    blockers.extend(_payload_required_field_blockers("result_package", package_manifest, RESULT_PACKAGE_SCHEMA_PATH))
+    blockers.extend(_payload_schema_shape_blockers("result_package", package_manifest, RESULT_PACKAGE_SCHEMA_PATH))
     blockers.extend(_payload_required_field_blockers("result", result, RESULT_PAYLOAD_SCHEMA_PATH))
     blockers.extend(_payload_required_field_blockers("provenance", provenance, PROVENANCE_PAYLOAD_SCHEMA_PATH))
     blockers.extend(_payload_schema_shape_blockers("result", result, RESULT_PAYLOAD_SCHEMA_PATH))
@@ -142,10 +148,38 @@ def validate_standard_result_package(
         "status": "blocked" if blockers else "passed",
         "package_dir": str(root),
         "result_status": str(result.get("status") or ""),
+        "result_package_schema": str(RESULT_PACKAGE_SCHEMA_PATH.relative_to(REPO_ROOT)),
+        "package_manifest": package_manifest,
         "blockers": blockers,
         "warnings": warnings,
         "required_files": list(REQUIRED_FILES),
         "required_directories": list(REQUIRED_DIRECTORIES),
+    }
+
+
+def _standard_result_package_manifest(root: Path, result: dict[str, Any]) -> dict[str, Any]:
+    artifacts = {
+        "tables": result.get("tables") if isinstance(result.get("tables"), list) else [],
+        "plots": result.get("plots") if isinstance(result.get("plots"), list) else [],
+        "reports": result.get("reports") if isinstance(result.get("reports"), list) else [],
+        "logs": [
+            {"artifact_type": "analysis_worker_log", "path": "logs/worker.log"}
+        ]
+        if (root / "logs" / "worker.log").is_file()
+        else [],
+    }
+    if (root / "logs" / "worker_invocation.json").is_file():
+        artifacts["logs"].append({"artifact_type": "analysis_worker_invocation_manifest", "path": "logs/worker_invocation.json"})
+    return {
+        "schema_version": "biomedpilot.analysis.result_package.v1",
+        "module_id": str(result.get("module_id") or ""),
+        "mode": str(result.get("mode") or ""),
+        "task_id": str(result.get("task_id") or ""),
+        "status": str(result.get("status") or ""),
+        "result_json": "result.json" if (root / "result.json").is_file() else "",
+        "provenance_json": "provenance.json" if (root / "provenance.json").is_file() else "",
+        "directories": [dirname for dirname in REQUIRED_DIRECTORIES if (root / dirname).is_dir()],
+        "artifacts": artifacts,
     }
 
 
@@ -220,6 +254,9 @@ def _schema_value_blockers(payload_name: str, field_path: str, value: Any, schem
         item_schema = schema.get("items")
         if isinstance(item_schema, dict):
             blockers.extend(_array_item_blockers(payload_name, field_path, value, item_schema))
+        contains_schema = schema.get("contains")
+        if isinstance(contains_schema, dict) and not any(_schema_contains_match(item, contains_schema) for item in value):
+            blockers.append(f"{payload_name}_schema_array_contains_missing:{field_path}")
     if expected_type == "object" and isinstance(value, dict):
         blockers.extend(_object_nested_blockers(payload_name, field_path, value, schema))
     return blockers
@@ -242,14 +279,22 @@ def _object_nested_blockers(payload_name: str, field_path: str, value: dict[str,
 
 def _array_item_blockers(payload_name: str, field_path: str, values: list[Any], item_schema: dict[str, Any]) -> list[str]:
     blockers: list[str] = []
-    item_type = item_schema.get("type")
-    if not isinstance(item_type, str):
-        return blockers
     for index, item in enumerate(values):
         item_path = f"{field_path}[{index}]"
-        if not _value_matches_schema_type(item, item_type):
-            blockers.append(f"{payload_name}_schema_field_type_invalid:{item_path}")
+        blockers.extend(_schema_value_blockers(payload_name, item_path, item, item_schema))
     return blockers
+
+
+def _schema_contains_match(value: Any, schema: dict[str, Any]) -> bool:
+    if "const" in schema and value != schema["const"]:
+        return False
+    enum = schema.get("enum")
+    if isinstance(enum, list) and value not in enum:
+        return False
+    expected_type = schema.get("type")
+    if isinstance(expected_type, str) and not _value_matches_schema_type(value, expected_type):
+        return False
+    return True
 
 
 def _value_matches_schema_type(value: Any, expected_type: str) -> bool:
