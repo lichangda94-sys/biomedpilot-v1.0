@@ -1,0 +1,22 @@
+{
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "module_id": "correlation",
+  "mode": "lite",
+  "task_id": "correlation-lite-fixture",
+  "project_id": "analysis-fixture",
+  "inputs": {
+    "input_package_id": "fixture-correlation-lite-input",
+    "source_dataset_id": "fixture-correlation-lite-dataset",
+    "expression_matrix_path": "analysis/fixtures/inputs/correlation/lite_expression.tsv"
+  },
+  "parameters": {
+    "analysis_family": "expression_correlation",
+    "method": "base_r_pearson_correlation_fixture",
+    "target_gene": "TP53",
+    "clinical_conclusion_policy": "not_generated"
+  },
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-bio-core-lite"
+  }
+}

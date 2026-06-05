@@ -108,7 +108,7 @@ Update: exploratory immune / TME scoring now mirrors score matrix, signature cov
 
 Update: local expression correlation now mirrors Pearson correlation result tables and summary logs into a standard result package sidecar and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable report-ready output, causal interpretation, clinical interpretation, or complete isolated worker migration.
 
-Update: correlation is now registered as a standard analysis module with a fixed mock input/output package and full-mode blocking. The existing runtime remains a testing-level legacy service-adapter sidecar until a standard worker migration is implemented.
+Update: correlation is now registered as a standard analysis module with fixed mock and lite input/output contracts plus full-mode blocking. The existing production-facing runtime remains a testing-level legacy service-adapter sidecar until a standard worker migration is implemented.
 
 Update: result-index task type aliases are now declared in `analysis/registry/analysis_modules.json` as `result_index_task_types`. The standard package catalog uses that registry-owned mapping when validating whether a result-index entry belongs to a package module, instead of carrying a separate hard-coded task-type map. `analysis:<module_id>` result-index entries are also blocked if the module id is not registered.
 
@@ -119,6 +119,8 @@ Update: univariate clinical association now has a `lite` standard worker path. `
 Update: multivariate clinical association now has a `lite` standard worker path. `run_module.R` can execute a base R linear model fixture on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, model selection recommendations, risk scores, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
 
 Update: immune infiltration now has a `lite` standard worker path. `run_module.R` can execute base R signature mean scoring on fixed local expression/signature fixture data and write a testing-level standard result package with a real SVG heatmap fixture. It does not use GSVA, CellChat, Seurat, large signature databases, report-ready immune interpretation, diagnosis, prognosis, or treatment guidance.
+
+Update: expression correlation now has a `lite` standard worker path. `run_module.R` can execute base R Pearson correlation on fixed local expression fixture data and write a testing-level standard result package with `tables/lite_correlation_result.tsv`. It does not generate causal interpretation, clinical interpretation, report-ready output, or formal result semantics.
 
 Update: spatial transcriptomics now has a `lite` standard worker path. `run_module.R` can execute base R spot QC and coordinate SVG preview on fixed local expression/coordinate fixture data and write a testing-level standard result package. It does not use Seurat, CellChat, spacexr, spatial references, clustering, deconvolution, spatial domain calling, cell-cell communication, or report-ready spatial interpretation.
 

@@ -168,6 +168,9 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "immune_infiltration" && mode == "lite" && table_file == "lite_immune_scores.tsv") {
     return("lite_immune_infiltration_score_table")
   }
+  if (module_id == "correlation" && mode == "lite" && table_file == "lite_correlation_result.tsv") {
+    return("lite_expression_correlation_table")
+  }
   if (module_id == "spatial_transcriptomics" && mode == "lite" && table_file == "lite_spatial_spot_metrics.tsv") {
     return("lite_spatial_transcriptomics_spot_metrics_table")
   }
@@ -839,6 +842,96 @@ run_lite_immune_infiltration <- function() {
   quit(status = 0)
 }
 
+run_lite_expression_correlation <- function() {
+  expression_matrix_path <- resolve_input_path(read_string_field(input_text, "expression_matrix_path", ""))
+  target_gene <- read_string_field(input_text, "target_gene", "TP53")
+  blockers <- character(0)
+  if (expression_matrix_path == "" || !file.exists(expression_matrix_path)) {
+    blockers <- c(blockers, "lite_correlation_expression_matrix_missing")
+  }
+  if (target_gene == "") {
+    blockers <- c(blockers, "lite_correlation_target_gene_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Lite expression correlation blocked because required fixture inputs are missing.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  matrix <- read.delim(expression_matrix_path, stringsAsFactors = FALSE, check.names = FALSE)
+  if (!("feature_id" %in% colnames(matrix)) || ncol(matrix) < 4) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_correlation_expression_matrix_schema_invalid"), c(), "Lite expression correlation blocked because expression matrix columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "expression_matrix_schema_invalid"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  sample_columns <- setdiff(colnames(matrix), "feature_id")
+  numeric_values <- suppressWarnings(as.matrix(data.frame(lapply(matrix[, sample_columns, drop = FALSE], as.numeric), check.names = FALSE)))
+  if (any(is.na(numeric_values))) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_correlation_expression_matrix_non_numeric"), c(), "Lite expression correlation blocked because expression values are not numeric.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "expression_matrix_non_numeric"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  if (!(target_gene %in% matrix$feature_id)) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_correlation_target_gene_not_found"), c(), "Lite expression correlation blocked because the target gene is not present.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "target_gene_not_found"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  target_values <- as.numeric(numeric_values[match(target_gene, matrix$feature_id), ])
+  if (length(target_values) < 3 || sd(target_values) == 0) {
+    write_result(module_id, task_id, mode, "blocked", c("lite_correlation_target_gene_zero_variance_or_too_few_samples"), c(), "Lite expression correlation blocked because the target gene is not variable enough.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "target_gene_zero_variance_or_too_few_samples"), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+  rows <- list()
+  for (index in seq_len(nrow(matrix))) {
+    values <- as.numeric(numeric_values[index, ])
+    if (sd(values) == 0) {
+      estimate <- NA_real_
+      pvalue <- NA_real_
+    } else {
+      test <- suppressWarnings(cor.test(target_values, values, method = "pearson"))
+      estimate <- unname(test$estimate)
+      pvalue <- test$p.value
+    }
+    rows[[length(rows) + 1]] <- data.frame(
+      target_gene = target_gene,
+      feature_id = matrix$feature_id[index],
+      correlation = estimate,
+      p_value = pvalue,
+      n_samples = length(target_values),
+      method = "pearson",
+      stringsAsFactors = FALSE
+    )
+  }
+  result_table <- do.call(rbind, rows)
+  result_table$adjusted_p_value <- p.adjust(result_table$p_value, method = "BH")
+  result_table <- result_table[, c("target_gene", "feature_id", "correlation", "p_value", "adjusted_p_value", "n_samples", "method")]
+  result_path <- file.path(output_dir, "tables", "lite_correlation_result.tsv")
+  write.table(result_table, file = result_path, sep = "\t", quote = FALSE, row.names = FALSE)
+  writeLines(c(
+    "# Lite expression correlation limitations",
+    "",
+    "This is a lightweight fixture Pearson correlation result for worker and package-contract validation.",
+    "It is not a formal correlation analysis result and is not report-ready."
+  ), file.path(output_dir, "reports", "README_lite.md"))
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("lite_result_not_formal_analysis", "base_r_fixture_only_no_heavy_resources", "clinical_conclusion_not_generated"),
+    "Lite expression correlation completed with base R fixture data."
+  )
+  write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), paste0("result_table=", result_path)), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
 run_lite_spatial_transcriptomics <- function() {
   expression_matrix_path <- resolve_input_path(read_string_field(input_text, "expression_matrix_path", ""))
   coordinate_table_path <- resolve_input_path(read_string_field(input_text, "coordinate_table_path", ""))
@@ -1334,6 +1427,10 @@ if (mode == "lite" && module_id == "multivariate") {
 
 if (mode == "lite" && module_id == "immune_infiltration") {
   run_lite_immune_infiltration()
+}
+
+if (mode == "lite" && module_id == "correlation") {
+  run_lite_expression_correlation()
 }
 
 if (mode == "lite" && module_id == "spatial_transcriptomics") {

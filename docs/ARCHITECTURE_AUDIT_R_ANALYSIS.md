@@ -177,7 +177,7 @@ Existing local expression correlation now writes a standard result package sidec
 - The sidecar includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
 - The sidecar records `mode=lite`, `result_semantics=testing_level`, and `worker_boundary.boundary_type=legacy_service_adapter_sidecar`.
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
-- Correlation is now registered in `analysis/registry/analysis_modules.json` and `analysis/modules/correlation/module.json` with a fixed mock package and full-mode blocking. Its existing runtime remains a legacy service-adapter sidecar until migrated behind the standard worker.
+- Correlation is now registered in `analysis/registry/analysis_modules.json` and `analysis/modules/correlation/module.json` with fixed mock and lite fixture packages plus full-mode blocking. Its existing production-facing runtime remains a legacy service-adapter sidecar until migrated behind the standard worker.
 - This is a package-contract migration step, not a claim that correlation has been migrated into the isolated standard worker or that report-ready output, causal interpretation, or clinical interpretation are enabled.
 
 The first lightweight worker paths are now available:
@@ -188,6 +188,7 @@ The first lightweight worker paths are now available:
 - `analysis/runners/run_module.R` supports `module_id=univariate`, `mode=lite` using base R univariate clinical association calculations and fixed repository clinical fixture data.
 - `analysis/runners/run_module.R` supports `module_id=multivariate`, `mode=lite` using base R linear model calculations and fixed repository clinical fixture data.
 - `analysis/runners/run_module.R` supports `module_id=immune_infiltration`, `mode=lite` using base R signature mean scoring and fixed repository expression/signature fixture data.
+- `analysis/runners/run_module.R` supports `module_id=correlation`, `mode=lite` using base R Pearson correlation calculations and fixed repository expression fixture data.
 - `analysis/runners/run_module.R` supports `module_id=spatial_transcriptomics`, `mode=lite` using base R spot QC and fixed repository expression/coordinate fixture data.
 - `analysis/runners/run_module.R` supports `module_id=docking`, `mode=lite` as an external-tool adapter contract fixture that writes an AutoDock Vina command manifest without executing AutoDock Vina.
 - `analysis/runners/run_module.R` supports `module_id=molecular_dynamics`, `mode=lite` as an external-tool adapter contract fixture that writes a GROMACS command manifest without executing GROMACS.
@@ -197,6 +198,7 @@ The first lightweight worker paths are now available:
 - The univariate lite path writes a standard result package with `tables/lite_univariate_association.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - The multivariate lite path writes a standard result package with `tables/lite_multivariate_association.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - The immune infiltration lite path writes a standard result package with `tables/lite_immune_scores.tsv`, `plots/lite_immune_heatmap.svg`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
+- The correlation lite path writes a standard result package with `tables/lite_correlation_result.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`.
 - The spatial transcriptomics lite path writes a standard result package with `tables/lite_spatial_spot_metrics.tsv`, `tables/lite_spatial_qc_summary.tsv`, `plots/lite_spatial_spot_qc.svg`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`; it does not use Seurat, CellChat, spacexr, spatial references, clustering, deconvolution, spatial domain calling, cell-cell communication, or report-ready interpretation.
 - The docking lite path writes a standard result package with `tables/lite_docking_command_manifest.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`; it records AutoDock Vina as `not_executed_lite_contract` and does not generate docking scores, poses, affinities, or scientific docking results.
 - The molecular dynamics lite path writes a standard result package with `tables/lite_md_command_manifest.tsv`, `result.json`, `provenance.json`, `reports/README_lite.md`, and `logs/worker.log`; it records GROMACS as `not_executed_lite_contract` and does not generate trajectory, energy, RMSD, simulation metrics, or scientific molecular dynamics results.
@@ -210,7 +212,7 @@ The first lightweight worker paths are now available:
 A first environment isolation scaffold now also exists:
 
 - `analysis/registry/analysis_environments.json`
-- `analysis/modules/<module_id>/module.json` for DEG, survival, univariate, multivariate, enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics.
+- `analysis/modules/<module_id>/module.json` for DEG, survival, univariate, multivariate, enrichment, immune infiltration, correlation, spatial transcriptomics, docking, and molecular dynamics.
 - `docker/Dockerfile.app-dev`
 - `docker/Dockerfile.r-bio-core`
 - `docker/Dockerfile.r-bio-full`
@@ -282,7 +284,7 @@ The main-backend task bridge now also treats the module input schema as an execu
 | Full analysis Docker image | WARN | Dedicated Dockerfile scaffolds exist; no full image build or package restoration is proven. |
 | Large resources version/hash/license/cache | WARN | Added blocked full-mode resource ledger and validator; `locked` resources with placeholder fields now fail validation; gene-set runtime downloads are blocked by default; real resource locks are incomplete. |
 | Provenance captures versions/hashes/seed/command | WARN | The standard R worker records separate input and parameter hashes plus seed and command; bridge-blocked full packages now record and validate target environment Dockerfile/renv/resource-lock snapshots; every passed standard package is blocked if required reproducibility provenance containers are missing, but package/tool version capture is still incomplete for unmigrated formal/full modules. |
-| DEG/survival/univariate/multivariate/enrichment/immune/correlation/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, first R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, immune infiltration, and spatial transcriptomics, and docking/MD have lite external-tool command-manifest contract fixtures. Correlation is registered with mock/full-blocked contract while its current runtime remains a testing-level legacy service-adapter sidecar; formal/full migration remains pending. |
+| DEG/survival/univariate/multivariate/enrichment/immune/correlation/spatial/docking/MD share interface | WARN | Registry declares target modules; mock packages exist for all registered modules, R-native lite workers exist for DEG, enrichment, survival, univariate, multivariate, immune infiltration, correlation, and spatial transcriptomics, and docking/MD have lite external-tool command-manifest contract fixtures. Formal/full migration remains pending. |
 | Docking/MD external tool adapters | WARN | Docking and molecular dynamics have testing-level command-manifest adapter contracts that do not execute AutoDock Vina or GROMACS and do not generate scientific docking or MD outputs. |
 | Default dev can start without full analysis deps | PASS | Current source smoke historically works without requiring full R environments; scaffold test does not require R. |
 

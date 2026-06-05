@@ -12,9 +12,10 @@
       "fixture_output_package": "analysis/fixtures/outputs/correlation/mock_result_package"
     },
     "lite": {
-      "supported": false,
+      "supported": true,
       "environment": "r-bio-core",
-      "blocker": "correlation_lite_standard_r_worker_not_enabled"
+      "worker_backend": "rscript",
+      "fixture_input": "analysis/fixtures/inputs/correlation/module_input_lite.json"
     },
     "full": {
       "supported": false,

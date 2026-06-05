@@ -117,6 +117,19 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
             "clinical_conclusion_policy": "not_generated",
         }
         payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
+    if module_id == "correlation" and mode == "lite":
+        payload["inputs"] = {
+            "input_package_id": "fixture-correlation-lite-input",
+            "source_dataset_id": "fixture-correlation-lite-dataset",
+            "expression_matrix_path": "analysis/fixtures/inputs/correlation/lite_expression.tsv",
+        }
+        payload["parameters"] = {
+            "analysis_family": "expression_correlation",
+            "method": "base_r_pearson_correlation_fixture",
+            "target_gene": "TP53",
+            "clinical_conclusion_policy": "not_generated",
+        }
+        payload["runtime"] = {"random_seed": 7, "requested_environment": "r-bio-core-lite"}
     if module_id == "spatial_transcriptomics" and mode == "lite":
         payload["inputs"] = {
             "input_package_id": "fixture-spatial-lite-input",
@@ -1141,6 +1154,49 @@ def test_immune_lite_mode_runs_through_standard_r_worker_with_real_heatmap_artif
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 1
+
+
+def test_correlation_lite_mode_runs_through_standard_r_worker_without_formal_upgrade(tmp_path: Path) -> None:
+    if shutil.which("Rscript") is None:
+        pytest.skip("Rscript is not available in this environment")
+    task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
+
+    result = run_analysis_module_task(
+        tmp_path,
+        module_input(tmp_path, mode="lite", module_id="correlation"),
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    table = (package_dir / "tables" / "lite_correlation_result.tsv").read_text(encoding="utf-8")
+    catalog = build_standard_analysis_package_catalog(tmp_path)
+    registry = load_registry(tmp_path)
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="correlation",
+        expected_task_id="correlation-lite-task",
+        expected_mode="lite",
+    )
+
+    assert result["status"] == "passed"
+    assert validation["status"] == "passed"
+    assert result_json["module_id"] == "correlation"
+    assert result_json["mode"] == "lite"
+    assert result_json["result_semantics"] == "testing_level"
+    assert "formal_computed_result" not in str(result_json)
+    assert "lite_expression_correlation_table" in str(result_json["tables"])
+    assert "TP53" in table
+    assert "adjusted_p_value" in table
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert provenance["runtime"]["bioconductor_version"] == "not_required_for_lite_base_r"  # type: ignore[index]
+    assert registry["results"][0]["result_semantics"] == "testing_level"
+    assert registry["results"][0]["report_ready_eligible"] is False
+    assert catalog["rows"][0]["module_id"] == "correlation"
+    assert catalog["rows"][0]["mode"] == "lite"
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
 
 
 def test_docking_lite_mode_writes_external_tool_command_manifest_without_execution(tmp_path: Path) -> None:
