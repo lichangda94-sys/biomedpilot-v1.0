@@ -103,6 +103,9 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "evidence_registry_entry_count": environment_validation.get("evidence_registry_entry_count"),
             "environment_lock_evidence_templates": environment_validation.get("environment_lock_evidence_templates", []),
             "readiness_blockers": environment_validation.get("readiness_blockers", []),
+            "expected_environment_ids": environment_validation.get("expected_environment_ids", []),
+            "missing_environment_ids": environment_validation.get("missing_environment_ids", []),
+            "missing_environment_count": environment_validation.get("missing_environment_count", 0),
             "blockers": environment_validation.get("blockers", []),
             "warnings": environment_validation.get("warnings", []),
         },
@@ -116,6 +119,9 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "resource_lock_evidence_templates": resource_validation.get("resource_lock_evidence_templates", []),
             "evidence_registry_status": resource_validation.get("evidence_registry_status"),
             "evidence_registry_entry_count": resource_validation.get("evidence_registry_entry_count"),
+            "expected_resource_ids": resource_validation.get("expected_resource_ids", []),
+            "missing_resource_ids": resource_validation.get("missing_resource_ids", []),
+            "missing_resource_count": resource_validation.get("missing_resource_count", 0),
             "blockers": resource_validation.get("blockers", []),
             "warnings": resource_validation.get("warnings", []),
         },
@@ -530,6 +536,7 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
         for item in resource_readiness.get("resource_lock_evidence_templates", [])
         if isinstance(item, dict)
     ]
+    migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     template_package = {
         "schema_version": "biomedpilot.analysis.evidence_template_package.v1",
         "created_at": payload.get("created_at"),
@@ -553,6 +560,17 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
             "environment_lock_evidence_registry": "analysis/registry/environment_lock_evidence.json",
             "resource_lock_evidence_registry": "analysis/registry/resource_lock_evidence.json",
             "standard_worker_migration_evidence_registry": "analysis/registry/standard_worker_migration_evidence.json",
+        },
+        "expected_evidence_scope": {
+            "scope_policy": "authoritative_registry_scope",
+            "expected_environment_ids": environment_readiness.get("expected_environment_ids", []),
+            "missing_environment_ids": environment_readiness.get("missing_environment_ids", []),
+            "expected_resource_ids": resource_readiness.get("expected_resource_ids", []),
+            "missing_resource_ids": resource_readiness.get("missing_resource_ids", []),
+            "expected_module_ids": migration_matrix.get("expected_evidence_module_ids", []),
+            "passed_module_ids": migration_matrix.get("passed_evidence_module_ids", []),
+            "blocked_module_ids": migration_matrix.get("blocked_evidence_module_ids", []),
+            "missing_module_ids": migration_matrix.get("missing_evidence_module_ids", []),
         },
         "environment_lock_evidence_templates": environment_templates,
         "resource_lock_evidence_templates": resource_templates,
@@ -620,6 +638,30 @@ def _evidence_template_package_schema_blockers(payload: dict[str, Any], *, root:
             blockers.append(f"analysis_evidence_template_package_min_length_invalid:{field}")
     blockers.extend(_environment_template_package_item_blockers(payload.get("environment_lock_evidence_templates")))
     blockers.extend(_resource_template_package_item_blockers(payload.get("resource_lock_evidence_templates")))
+    blockers.extend(_evidence_template_scope_blockers(payload))
+    return blockers
+
+
+def _evidence_template_scope_blockers(payload: dict[str, Any]) -> list[str]:
+    scope = payload.get("expected_evidence_scope")
+    if not isinstance(scope, dict):
+        return ["analysis_evidence_template_package_expected_scope_missing"]
+    blockers: list[str] = []
+    for field in (
+        "expected_environment_ids",
+        "missing_environment_ids",
+        "expected_resource_ids",
+        "missing_resource_ids",
+        "expected_module_ids",
+        "passed_module_ids",
+        "blocked_module_ids",
+        "missing_module_ids",
+    ):
+        value = scope.get(field)
+        if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
+            blockers.append(f"analysis_evidence_template_package_expected_scope_invalid:{field}")
+    if scope.get("scope_policy") != "authoritative_registry_scope":
+        blockers.append("analysis_evidence_template_package_expected_scope_policy_invalid")
     return blockers
 
 

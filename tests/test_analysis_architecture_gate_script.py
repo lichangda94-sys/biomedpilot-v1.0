@@ -248,6 +248,25 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     assert template_package["template_counts"]["environment_lock_evidence_templates"] == 4
     assert template_package["template_counts"]["resource_lock_evidence_templates"] == 11
     assert template_package["template_counts"]["standard_worker_migration_evidence_templates"] == len(payload["standard_worker_migration_rows"])
+    assert template_package["expected_evidence_scope"] == {
+        "scope_policy": "authoritative_registry_scope",
+        "expected_environment_ids": payload["environment_readiness"]["expected_environment_ids"],
+        "missing_environment_ids": payload["environment_readiness"]["missing_environment_ids"],
+        "expected_resource_ids": payload["resource_readiness"]["expected_resource_ids"],
+        "missing_resource_ids": payload["resource_readiness"]["missing_resource_ids"],
+        "expected_module_ids": payload["standard_worker_migration_matrix"]["expected_evidence_module_ids"],
+        "passed_module_ids": payload["standard_worker_migration_matrix"]["passed_evidence_module_ids"],
+        "blocked_module_ids": payload["standard_worker_migration_matrix"]["blocked_evidence_module_ids"],
+        "missing_module_ids": payload["standard_worker_migration_matrix"]["missing_evidence_module_ids"],
+    }
+    assert template_package["expected_evidence_scope"]["expected_environment_ids"] == [
+        "r-bio-full",
+        "r-spatial-full",
+        "r-chem-full",
+        "r-chem-gpu",
+    ]
+    assert "reactome_full" in template_package["expected_evidence_scope"]["expected_resource_ids"]
+    assert "molecular_dynamics" in template_package["expected_evidence_scope"]["missing_module_ids"]
     remediation_scope = {
         item["item_id"]: item
         for item in template_package["remediation_scope"]["manual_decision_points"]
@@ -339,8 +358,11 @@ def test_analysis_evidence_template_package_schema_is_present_and_matches_payloa
     assert "standard_worker_migration_evidence_templates" in schema["required"]
     assert "template_policy" in schema["required"]
     assert "registry_paths" in schema["required"]
+    assert "expected_evidence_scope" in schema["required"]
     assert "template_counts" in schema["required"]
     assert schema["properties"]["remediation_scope"]["type"] == "object"
+    assert schema["properties"]["expected_evidence_scope"]["type"] == "object"
+    assert "expected_module_ids" in schema["properties"]["expected_evidence_scope"]["required"]
     assert "renv_lock_content" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
     assert "docker_image" in schema["properties"]["environment_lock_evidence_templates"]["items"]["required"]
     assert "cache_content" in schema["properties"]["resource_lock_evidence_templates"]["items"]["required"]
@@ -362,6 +384,7 @@ def test_analysis_evidence_template_package_schema_blocks_missing_content_declar
             "install_policy": "no_runtime_package_install_or_resource_download",
             "template_policy": {},
             "registry_paths": {},
+            "expected_evidence_scope": {},
             "environment_lock_evidence_templates": [{"environment_id": "r-bio-full"}],
             "resource_lock_evidence_templates": [{"resource_id": "reactome_full"}],
             "standard_worker_migration_evidence_templates": [],
@@ -374,3 +397,5 @@ def test_analysis_evidence_template_package_schema_blocks_missing_content_declar
     assert "analysis_evidence_template_package_environment_template_renv_lock_content_missing:r-bio-full" in blockers
     assert "analysis_evidence_template_package_environment_template_docker_image_missing:r-bio-full" in blockers
     assert "analysis_evidence_template_package_resource_template_cache_content_missing:reactome_full" in blockers
+    assert "analysis_evidence_template_package_expected_scope_policy_invalid" in blockers
+    assert "analysis_evidence_template_package_expected_scope_invalid:expected_environment_ids" in blockers
