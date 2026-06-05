@@ -1372,9 +1372,26 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["schema_version"] == "biomedpilot.analysis.architecture_status.v1"
     assert status["requirement_count"] == 20
     assert status["status"] == "partial_with_p1_gaps"
+    assert status["requirement_summary"]["requirement_count"] == 20
+    assert status["requirement_summary"]["pass_count"] == status["pass_count"]
+    assert status["requirement_summary"]["warn_count"] == status["warn_count"]
+    assert status["requirement_summary"]["fail_count"] == status["fail_count"]
     assert status["p0_issues"] == []
     assert "full_analysis_environment_locks_not_restored" in status["p1_issues"]
     assert "full_analysis_resource_locks_not_complete" in status["p1_issues"]
+    assert "RARCH-03" in status["p2_issues"]
+    assert "RARCH-08" in status["p2_issues"]
+    assert "RARCH-12" in status["p3_issues"]
+    assert status["priority_issue_lists"]["P0"] == []
+    assert {item["issue_id"] for item in status["priority_issue_lists"]["P1"]} == {
+        "full_analysis_environment_locks_not_restored",
+        "full_analysis_resource_locks_not_complete",
+        "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
+    }
+    assert any(item["issue_id"] == "RARCH-16" for item in status["priority_issue_lists"]["P2"])
+    assert any(item["issue_id"] == "RARCH-15" for item in status["priority_issue_lists"]["P3"])
+    assert len(status["top_architecture_risks"]) == 5
+    assert status["top_architecture_risks"][0]["risk_id"] == "full_analysis_environment_locks_not_restored"
     assert rows["RARCH-01"]["status"] == "pass"
     assert rows["RARCH-10"]["status"] == "pass"
     assert rows["RARCH-10"]["label"] == "No active runtime R package install or resource download commands"

@@ -166,6 +166,8 @@ Update: Analysis Center state now exposes `analysis_environment_gate_rows` and d
 
 Update: `build_analysis_architecture_status()` now provides a read-only, machine-consumable snapshot of the 20 R analysis architecture requirements. It reports current status as `partial_with_p1_gaps`: no P0 failure is present, but full environment locks, full resource locks, and universal isolated-worker migration remain incomplete.
 
+Update: `build_analysis_architecture_status()` now also exposes `requirement_summary`, `priority_issue_lists`, `p2_issues`, `p3_issues`, and `top_architecture_risks`. The architecture gate script reuses these fields, so UI, script, and handoff consumers share the same P0/P1/P2/P3 classification instead of duplicating priority logic.
+
 Update: Analysis Center state now exposes `analysis_architecture_status` and `analysis_architecture_gate_rows`. The visible gate table shows the architecture snapshot summary and P0 guard status, while P1 gaps remain warnings instead of being mislabeled as completed full-mode readiness.
 
 Update: formal standard-worker migration evidence is now centralized in `analysis/registry/standard_worker_migration_evidence.json`. `build_standard_worker_migration_matrix()` reads this registry and will not mark any module `migrated_to_isolated_standard_worker` unless a registry-owned evidence entry passes `validate_standard_worker_migration_evidence()`. The registry now declares the authoritative expected module scope, while `evidence_entries` is intentionally empty, so all formal modules remain pending.
@@ -616,6 +618,7 @@ Completed:
 - The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
 - Added `standard_worker_entrypoint_matrix` to audit `analysis/runners/run_module.R`, standard package output, lite dispatch coverage, main-backend standard-worker invocation, and runtime install/download absence separately from formal migration evidence.
 - Added Analysis Center `analysis_resource_gate_rows` so full resource lock blockers are visible independently from environment readiness and remediation queue rows.
+- Added `requirement_summary`, `priority_issue_lists`, `p2_issues`, `p3_issues`, and `top_architecture_risks` directly to `build_analysis_architecture_status()` and made the gate script reuse them.
 - Added `analysis/registry/standard_worker_migration_evidence.json` as the authoritative migration evidence registry; an empty registry means no formal module is migrated.
 - Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` so malformed, mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
 - Standard-worker migration evidence now requires schema-level declarations for `required_worker_boundary=standard_r_worker`, `required_task_system_invocation=task_center_registered`, `required_worker_migration_status=standard_worker_contract`, and forbidden evidence sources. This keeps external registry entries from relying on sidecar, mock, lite, or module-private output evidence even before package inspection.

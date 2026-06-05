@@ -104,6 +104,11 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Default dependency scan" in architecture_gate_text
     assert "heavy_full_analysis_dependencies_excluded_from_default_app_dev_surface" in architecture_gate_text
     assert "files=requirements.txt；pyproject.toml；docker/Dockerfile.app-dev；renv/renv.app.lock" in architecture_gate_text
+    architecture_status = state["developer_diagnostics"]["analysis_architecture_status"]
+    assert architecture_status["requirement_summary"]["requirement_count"] == 20
+    assert "RARCH-03" in architecture_status["p2_issues"]
+    assert "RARCH-15" in architecture_status["p3_issues"]
+    assert architecture_status["top_architecture_risks"][0]["risk_id"] == "full_analysis_environment_locks_not_restored"
     module_interface_text = "\n".join(str(row) for row in state["module_interface_rows"])
     assert "Analysis module interface matrix" in module_interface_text
     assert "passed=10" in module_interface_text

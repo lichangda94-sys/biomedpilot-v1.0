@@ -81,7 +81,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
     requirement_rows = [dict(row) for row in architecture_status.get("requirement_rows", []) if isinstance(row, dict)]
     remediation_items = [dict(item) for item in remediation_queue.get("items", []) if isinstance(item, dict)]
-    priority_issues = _priority_issue_lists(
+    priority_issues = architecture_status.get("priority_issue_lists") if isinstance(architecture_status.get("priority_issue_lists"), dict) else _priority_issue_lists(
         p0_issues=[str(item) for item in architecture_status.get("p0_issues", []) if item],
         p1_issues=p1_issues,
         requirement_rows=requirement_rows,
@@ -89,6 +89,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         resource_validation=resource_validation,
         migration_matrix=migration_matrix,
     )
+    requirement_summary = architecture_status.get("requirement_summary") if isinstance(architecture_status.get("requirement_summary"), dict) else _requirement_summary(requirement_rows)
+    top_architecture_risks = architecture_status.get("top_architecture_risks") if isinstance(architecture_status.get("top_architecture_risks"), list) else _top_architecture_risks(priority_issues)
     payload = {
         "schema_version": "biomedpilot.analysis.architecture_gate_report.v1",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -96,10 +98,10 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "status": "blocked" if blockers else "passed",
         "require_full_ready": require_full_ready,
         "architecture_status": architecture_status.get("status"),
-        "requirement_summary": _requirement_summary(requirement_rows),
+        "requirement_summary": requirement_summary,
         "requirement_rows": requirement_rows,
         "priority_issue_lists": priority_issues,
-        "top_architecture_risks": _top_architecture_risks(priority_issues),
+        "top_architecture_risks": top_architecture_risks,
         "p0_issues": [str(item) for item in architecture_status.get("p0_issues", []) if item],
         "p1_issues": p1_issues,
         "full_analysis_activation_gate": full_gate,

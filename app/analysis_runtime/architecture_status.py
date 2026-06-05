@@ -249,6 +249,16 @@ def build_analysis_architecture_status() -> dict[str, Any]:
     ]
     p0 = _p0_issues(rows)
     p1 = _p1_issues(environment_validation, resource_validation, standard_worker_migration_matrix)
+    requirement_summary = _requirement_summary(rows)
+    priority_issue_lists = _priority_issue_lists(
+        p0_issues=p0,
+        p1_issues=p1,
+        requirement_rows=rows,
+        environment_validation=environment_validation,
+        resource_validation=resource_validation,
+        standard_worker_migration_matrix=standard_worker_migration_matrix,
+    )
+    top_architecture_risks = _top_architecture_risks(priority_issue_lists)
     status = "failed" if p0 else ("partial_with_p1_gaps" if p1 else "passed")
     return {
         "schema_version": "biomedpilot.analysis.architecture_status.v1",
@@ -257,9 +267,14 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "pass_count": sum(1 for row in rows if row["status"] == "pass"),
         "warn_count": sum(1 for row in rows if row["status"] == "warn"),
         "fail_count": sum(1 for row in rows if row["status"] == "fail"),
+        "requirement_summary": requirement_summary,
         "requirement_rows": rows,
         "p0_issues": p0,
         "p1_issues": p1,
+        "p2_issues": [str(item.get("issue_id") or "") for item in priority_issue_lists.get("P2", []) if isinstance(item, dict)],
+        "p3_issues": [str(item.get("issue_id") or "") for item in priority_issue_lists.get("P3", []) if isinstance(item, dict)],
+        "priority_issue_lists": priority_issue_lists,
+        "top_architecture_risks": top_architecture_risks,
         "module_interface_matrix": module_interface_matrix,
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
@@ -2550,3 +2565,130 @@ def _p1_issues(environment_validation: dict[str, Any], resource_validation: dict
     if int(standard_worker_migration_matrix.get("formal_pending_count") or 0) > 0:
         issues.append("formal_algorithms_not_universally_migrated_to_isolated_standard_worker")
     return issues
+
+
+def _requirement_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    counts = {"pass": 0, "warn": 0, "fail": 0, "other": 0}
+    for row in rows:
+        status = str(row.get("status") or "other")
+        if status in counts:
+            counts[status] += 1
+        else:
+            counts["other"] += 1
+    return {
+        "requirement_count": len(rows),
+        "pass_count": counts["pass"],
+        "warn_count": counts["warn"],
+        "fail_count": counts["fail"],
+        "other_count": counts["other"],
+        "status_order": ["fail", "warn", "pass"],
+    }
+
+
+def _priority_issue_lists(
+    *,
+    p0_issues: list[str],
+    p1_issues: list[str],
+    requirement_rows: list[dict[str, Any]],
+    environment_validation: dict[str, Any],
+    resource_validation: dict[str, Any],
+    standard_worker_migration_matrix: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    p0 = [
+        _issue("P0", issue, "architecture_p0_guard", "P0 issue is present in architecture status.")
+        for issue in p0_issues
+    ]
+    p1: list[dict[str, Any]] = []
+    if "full_analysis_environment_locks_not_restored" in p1_issues:
+        p1.append(
+            _issue(
+                "P1",
+                "full_analysis_environment_locks_not_restored",
+                "environment_readiness",
+                "Full analysis environments remain scaffold-only or lack restored lock evidence.",
+                evidence={
+                    "blocked_environment_ids": environment_validation.get("blocked_environment_ids", []),
+                    "readiness_blockers": environment_validation.get("readiness_blockers", []),
+                },
+            )
+        )
+    if "full_analysis_resource_locks_not_complete" in p1_issues:
+        p1.append(
+            _issue(
+                "P1",
+                "full_analysis_resource_locks_not_complete",
+                "resource_readiness",
+                "Full analysis resources/tools remain blocked until version/hash/license/cache evidence is complete.",
+                evidence={
+                    "blocked_resource_ids": resource_validation.get("blocked_resource_ids", []),
+                    "warnings": resource_validation.get("warnings", []),
+                },
+            )
+        )
+    if "formal_algorithms_not_universally_migrated_to_isolated_standard_worker" in p1_issues:
+        p1.append(
+            _issue(
+                "P1",
+                "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
+                "standard_worker_migration_matrix",
+                "Formal algorithms still have pending isolated standard-worker migration rows.",
+                evidence={
+                    "formal_pending_count": standard_worker_migration_matrix.get("formal_pending_count"),
+                    "full_blocked_count": standard_worker_migration_matrix.get("full_blocked_count"),
+                    "evidence_entry_count": standard_worker_migration_matrix.get("evidence_entry_count"),
+                },
+            )
+        )
+    p2_requirement_ids = {"RARCH-03", "RARCH-08", "RARCH-09", "RARCH-16", "RARCH-17"}
+    p3_requirement_ids = {"RARCH-04", "RARCH-12", "RARCH-13", "RARCH-14", "RARCH-15", "RARCH-18"}
+    p2 = [
+        _issue_from_requirement("P2", row)
+        for row in requirement_rows
+        if row.get("requirement_id") in p2_requirement_ids and row.get("status") == "warn"
+    ]
+    p3 = [
+        _issue_from_requirement("P3", row)
+        for row in requirement_rows
+        if row.get("requirement_id") in p3_requirement_ids and row.get("status") == "warn"
+    ]
+    return {"P0": p0, "P1": p1, "P2": p2, "P3": p3}
+
+
+def _issue_from_requirement(priority: str, row: dict[str, Any]) -> dict[str, Any]:
+    return _issue(
+        priority,
+        str(row.get("requirement_id") or "unknown_requirement"),
+        str(row.get("evidence") or ""),
+        str(row.get("label") or ""),
+        evidence={
+            "status": row.get("status"),
+            "warnings": row.get("warnings", []),
+            "blockers": row.get("blockers", []),
+        },
+    )
+
+
+def _issue(priority: str, issue_id: str, source: str, summary: str, *, evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+    return {
+        "priority": priority,
+        "issue_id": issue_id,
+        "source": source,
+        "summary": summary,
+        "evidence": evidence or {},
+    }
+
+
+def _top_architecture_risks(priority_issues: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    risks: list[dict[str, Any]] = []
+    for priority in ("P0", "P1", "P2", "P3"):
+        for issue in priority_issues.get(priority, []):
+            risks.append(
+                {
+                    "priority": priority,
+                    "risk_id": str(issue.get("issue_id") or ""),
+                    "source": str(issue.get("source") or ""),
+                    "summary": str(issue.get("summary") or ""),
+                    "evidence": issue.get("evidence", {}),
+                }
+            )
+    return risks[:5]
