@@ -356,6 +356,7 @@ def test_standard_worker_migration_evidence_blocks_missing_package_and_ui_contra
     validation = validate_standard_worker_migration_evidence(
         "deg",
         {
+            "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
             "module_id": "deg",
             "mode": "full",
             "task_id": "task-deg-full",
@@ -373,10 +374,36 @@ def test_standard_worker_migration_evidence_blocks_missing_package_and_ui_contra
     assert "standard_worker_migration_formal_result_semantics_not_preserved" in validation["blockers"]
 
 
+def test_standard_worker_migration_evidence_schema_is_checked_before_completion_claim() -> None:
+    schema = read_json(ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json")
+    validation = validate_standard_worker_migration_evidence(
+        "deg",
+        {
+            "schema_version": "wrong",
+            "module_id": "",
+            "mode": "lite",
+            "task_id": "",
+            "result_package_dir": "",
+            "frontend_consumes_standard_package": "yes",
+            "result_index_registered": "yes",
+            "formal_result_semantics_preserved": "yes",
+        },
+    )
+
+    assert schema["$id"] == "biomedpilot.analysis.standard_worker_migration_evidence.v1"
+    assert "standard_worker_migration_evidence_const_mismatch:schema_version" in validation["blockers"]
+    assert "standard_worker_migration_evidence_const_mismatch:mode" in validation["blockers"]
+    assert "standard_worker_migration_evidence_min_length_invalid:module_id" in validation["blockers"]
+    assert "standard_worker_migration_evidence_type_invalid:frontend_consumes_standard_package" in validation["blockers"]
+    assert "standard_worker_migration_evidence_type_invalid:result_index_registered" in validation["blockers"]
+    assert "standard_worker_migration_evidence_type_invalid:formal_result_semantics_preserved" in validation["blockers"]
+
+
 def test_standard_worker_migration_evidence_does_not_accept_mock_or_lite_fixture_package() -> None:
     validation = validate_standard_worker_migration_evidence(
         "deg",
         {
+            "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
             "module_id": "deg",
             "mode": "mock",
             "task_id": "mock-deg",

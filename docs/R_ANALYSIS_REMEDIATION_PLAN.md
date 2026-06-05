@@ -499,7 +499,7 @@ Completed:
 
 - Added `build_standard_worker_migration_matrix()` with one row per registered module.
 - The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
-- Added `validate_standard_worker_migration_evidence()` so mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
+- Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` so malformed, mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
 - Added a deterministic remediation queue derived from `build_analysis_architecture_status()`.
 - Exposed the queue through Analysis Center state and the existing formal gate table.
 - Current queue items:
@@ -517,7 +517,7 @@ Remaining:
 Acceptance:
 
 - Lite standard worker readiness must not be displayed as full/formal migration completion.
-- A module can only leave pending migration after `validate_standard_worker_migration_evidence()` passes for its full-mode standard package and current UI/result-index evidence.
+- A module can only leave pending migration after a schema-valid evidence payload passes `validate_standard_worker_migration_evidence()` for its full-mode standard package and current UI/result-index evidence.
 - Queue remains read-only.
 - Full mode remains blocked until environment and resource validators pass.
 - Current UI can show disabled reasons without implying formal/full analysis completion.

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+  "title": "BioMedPilot standard worker migration evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "module_id",
+    "mode",
+    "task_id",
+    "result_package_dir",
+    "frontend_consumes_standard_package",
+    "result_index_registered",
+    "formal_result_semantics_preserved"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.standard_worker_migration_evidence.v1"},
+    "module_id": {"type": "string", "minLength": 1},
+    "mode": {"const": "full"},
+    "task_id": {"type": "string", "minLength": 1},
+    "result_package_dir": {"type": "string", "minLength": 1},
+    "frontend_consumes_standard_package": {"type": "boolean"},
+    "result_index_registered": {"type": "boolean"},
+    "formal_result_semantics_preserved": {"type": "boolean"},
+    "created_at": {"type": "string"},
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": true
+}

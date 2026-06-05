@@ -9,6 +9,7 @@ from .resources import validate_analysis_environment_registry, validate_analysis
 from .standard_package import validate_standard_result_package
 
 
+STANDARD_WORKER_MIGRATION_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json"
 TARGET_MODULE_IDS = (
     "deg",
     "survival",
@@ -342,6 +343,7 @@ def validate_standard_worker_migration_evidence(
     }
     blockers: list[str] = []
     warnings: list[str] = []
+    blockers.extend(_migration_evidence_schema_blockers(evidence))
     module_key = str(module_id or evidence.get("module_id") or "")
     if module_key not in registered:
         blockers.append(f"standard_worker_migration_module_unregistered:{module_key}")
@@ -397,6 +399,48 @@ def validate_standard_worker_migration_evidence(
         "required_invocation": "task_center_registered",
         "required_migration_status": "standard_worker_contract",
     }
+
+
+def _migration_evidence_schema_blockers(evidence: dict[str, Any]) -> list[str]:
+    schema = _read_json(STANDARD_WORKER_MIGRATION_EVIDENCE_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in evidence:
+            blockers.append(f"standard_worker_migration_evidence_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in evidence or not isinstance(field_schema, dict):
+            continue
+        value = evidence[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"standard_worker_migration_evidence_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"standard_worker_migration_evidence_type_invalid:{field}")
+            continue
+        min_length = field_schema.get("minLength")
+        if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+            blockers.append(f"standard_worker_migration_evidence_min_length_invalid:{field}")
+    return blockers
+
+
+def _schema_type_matches(value: Any, expected_type: str) -> bool:
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    if expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "array":
+        return isinstance(value, list)
+    if expected_type == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if expected_type == "null":
+        return value is None
+    return True
 
 
 def _standard_worker_migration_row(module: dict[str, Any], *, standard_entrypoint: str) -> dict[str, Any]:
@@ -472,6 +516,7 @@ def _required_schemas_exist() -> bool:
         "analysis/schemas/output/provenance.schema.json",
         "analysis/schemas/output/result_package.schema.json",
         "analysis/schemas/output/worker_invocation.schema.json",
+        "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
     )
     return all((REPO_ROOT / path).is_file() for path in paths)
 
