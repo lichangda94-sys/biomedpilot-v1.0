@@ -14,6 +14,7 @@ GATE_REPORT_SCHEMA_RELATIVE_PATH = Path("analysis") / "schemas" / "output" / "ar
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the BioMedPilot analysis architecture readiness gate.")
     parser.add_argument("--json-output", default="", help="Optional JSON output path.")
+    parser.add_argument("--markdown-output", default="", help="Optional Markdown report output path.")
     parser.add_argument("--require-full-ready", action="store_true", help="Fail unless the full analysis activation gate is eligible.")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     return parser.parse_args(argv)
@@ -31,6 +32,10 @@ def main(argv: list[str] | None = None) -> int:
         output = Path(args.json_output).expanduser().resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    if args.markdown_output:
+        markdown_output = Path(args.markdown_output).expanduser().resolve()
+        markdown_output.parent.mkdir(parents=True, exist_ok=True)
+        markdown_output.write_text(render_markdown_report(payload), encoding="utf-8")
     print(text)
     return 0 if payload["status"] == "passed" else 1
 
@@ -370,6 +375,173 @@ def _matches_json_type(value: Any, expected_type: str) -> bool:
     if expected_type == "integer":
         return isinstance(value, int) and not isinstance(value, bool)
     return True
+
+
+def render_markdown_report(payload: dict[str, Any]) -> str:
+    requirement_summary = payload.get("requirement_summary") if isinstance(payload.get("requirement_summary"), dict) else {}
+    full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
+    remediation_summary = payload.get("remediation_summary") if isinstance(payload.get("remediation_summary"), dict) else {}
+    remediation_queue = payload.get("remediation_queue") if isinstance(payload.get("remediation_queue"), dict) else {}
+    remediation_items = [item for item in remediation_queue.get("items", []) if isinstance(item, dict)]
+
+    lines: list[str] = [
+        "# BioMedPilot R Analysis Architecture Gate Report",
+        "",
+        f"Generated: `{_markdown_text(payload.get('created_at'))}`",
+        "",
+        f"Worktree: `{_markdown_text(payload.get('worktree'))}`",
+        "",
+        "## 1. 当前是否符合目标模式",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+        f"| Gate status | `{_markdown_text(payload.get('status'))}` |",
+        f"| Architecture status | `{_markdown_text(payload.get('architecture_status'))}` |",
+        f"| Schema validation | `{_markdown_text(payload.get('schema_validation_status'))}` |",
+        f"| Full analysis activation gate | `{_markdown_text(full_gate.get('status'))}` |",
+        f"| Require full ready | `{_markdown_text(payload.get('require_full_ready'))}` |",
+        "",
+        "Current interpretation: the architecture gate proves the current source has no P0 blocker and the report contract is schema-valid. It does not prove full analysis readiness while the full activation gate remains blocked.",
+        "",
+        "## 2. PASS / WARN / FAIL 总表",
+        "",
+        "| Requirements | PASS | WARN | FAIL | Other |",
+        "| --- | ---: | ---: | ---: | ---: |",
+        (
+            f"| {_markdown_text(requirement_summary.get('requirement_count'))} | "
+            f"{_markdown_text(requirement_summary.get('pass_count'))} | "
+            f"{_markdown_text(requirement_summary.get('warn_count'))} | "
+            f"{_markdown_text(requirement_summary.get('fail_count'))} | "
+            f"{_markdown_text(requirement_summary.get('other_count'))} |"
+        ),
+        "",
+        "## 3. 最大的 5 个架构风险",
+        "",
+    ]
+    risks = [risk for risk in payload.get("top_architecture_risks", []) if isinstance(risk, dict)]
+    lines.extend(_markdown_table(["Priority", "Risk ID", "Source", "Summary"], risks, ["priority", "risk_id", "source", "summary"]))
+    lines.extend(
+        [
+            "",
+            "## 4. P0/P1/P2/P3 问题清单",
+            "",
+        ]
+    )
+    priority_lists = payload.get("priority_issue_lists") if isinstance(payload.get("priority_issue_lists"), dict) else {}
+    for priority in ("P0", "P1", "P2", "P3"):
+        issues = [issue for issue in priority_lists.get(priority, []) if isinstance(issue, dict)]
+        lines.extend([f"### {priority}", ""])
+        lines.extend(_markdown_table(["Issue ID", "Source", "Summary"], issues, ["issue_id", "source", "summary"]))
+        lines.append("")
+    lines.extend(
+        [
+            "## 5. 涉及的文件路径",
+            "",
+        ]
+    )
+    for path in remediation_summary.get("involved_files", []):
+        lines.append(f"- `{_markdown_text(path)}`")
+    if not remediation_summary.get("involved_files"):
+        lines.append("- None reported.")
+    lines.extend(
+        [
+            "",
+            "## 6. 最小可行整改路径",
+            "",
+        ]
+    )
+    for index, item_id in enumerate(remediation_summary.get("minimal_remediation_path", []), start=1):
+        lines.append(f"{index}. `{_markdown_text(item_id)}`")
+    if not remediation_summary.get("minimal_remediation_path"):
+        lines.append("No remediation item is currently required by the gate.")
+    lines.extend(
+        [
+            "",
+            "## 7. 建议优先修改的文件",
+            "",
+        ]
+    )
+    lines.extend(_priority_file_lines(remediation_items))
+    lines.extend(
+        [
+            "",
+            "## 8. 已完成的修改",
+            "",
+        ]
+    )
+    lines.extend(_completed_change_lines(payload))
+    lines.extend(
+        [
+            "",
+            "## 9. 尚需人工决定的问题",
+            "",
+        ]
+    )
+    decisions = [item for item in remediation_summary.get("manual_decision_points", []) if isinstance(item, dict)]
+    lines.extend(_markdown_table(["Item", "Decision Required", "Required Evidence"], decisions, ["item_id", "decision_required", "required_evidence"]))
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _priority_file_lines(remediation_items: list[dict[str, Any]]) -> list[str]:
+    lines: list[str] = []
+    for item in remediation_items:
+        item_id = _markdown_text(item.get("item_id"))
+        files = [str(path) for path in item.get("recommended_files", []) if path]
+        if not files:
+            continue
+        lines.append(f"- `{item_id}`")
+        for path in files[:8]:
+            lines.append(f"  - `{_markdown_text(path)}`")
+        if len(files) > 8:
+            lines.append(f"  - ... {len(files) - 8} more files")
+    return lines or ["- No priority files reported by remediation queue."]
+
+
+def _completed_change_lines(payload: dict[str, Any]) -> list[str]:
+    lines = [
+        "- Architecture gate script exists and emits a schema-versioned JSON payload.",
+        "- The gate reports PASS/WARN/FAIL requirement rows, priority issues, top risks, and remediation guidance from one machine-readable source.",
+        "- Default gate policy remains read-only and does not execute workers, install R packages, or download resources.",
+    ]
+    if payload.get("schema_validation_status") == "passed":
+        lines.append("- Architecture gate report schema validation is currently `passed`.")
+    if not payload.get("p0_issues"):
+        lines.append("- Current P0 issue list is empty.")
+    full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
+    if full_gate.get("status") == "blocked":
+        lines.append("- Full analysis activation remains explicitly blocked rather than silently enabled.")
+    return lines
+
+
+def _markdown_table(headers: list[str], rows: list[dict[str, Any]], fields: list[str]) -> list[str]:
+    if not rows:
+        return ["No rows reported."]
+    table = [
+        "| " + " | ".join(_escape_markdown_cell(header) for header in headers) + " |",
+        "| " + " | ".join("---" for _ in headers) + " |",
+    ]
+    for row in rows:
+        table.append("| " + " | ".join(_escape_markdown_cell(row.get(field)) for field in fields) + " |")
+    return table
+
+
+def _escape_markdown_cell(value: Any) -> str:
+    if isinstance(value, list):
+        text = ", ".join(str(item) for item in value)
+    elif isinstance(value, dict):
+        text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    else:
+        text = str(value) if value is not None else ""
+    return text.replace("\n", " ").replace("|", "\\|")
+
+
+def _markdown_text(value: Any) -> str:
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return str(value) if value is not None else ""
 
 
 if __name__ == "__main__":

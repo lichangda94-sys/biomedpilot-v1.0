@@ -129,6 +129,83 @@ def test_analysis_architecture_gate_script_can_require_full_ready(tmp_path: Path
     assert payload["exit_policy"] == "exit_nonzero_until_full_analysis_activation_gate_is_eligible"
 
 
+def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path) -> None:
+    output = tmp_path / "analysis_architecture_gate.json"
+    markdown = tmp_path / "analysis_architecture_gate.md"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--json-output",
+            str(output),
+            "--markdown-output",
+            str(markdown),
+            "--pretty",
+        ],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    text = markdown.read_text(encoding="utf-8")
+    assert "# BioMedPilot R Analysis Architecture Gate Report" in text
+    expected_headings = [
+        "## 1. 当前是否符合目标模式",
+        "## 2. PASS / WARN / FAIL 总表",
+        "## 3. 最大的 5 个架构风险",
+        "## 4. P0/P1/P2/P3 问题清单",
+        "## 5. 涉及的文件路径",
+        "## 6. 最小可行整改路径",
+        "## 7. 建议优先修改的文件",
+        "## 8. 已完成的修改",
+        "## 9. 尚需人工决定的问题",
+    ]
+    for heading in expected_headings:
+        assert heading in text
+    assert payload["architecture_status"] == "partial_with_p1_gaps"
+    assert "`partial_with_p1_gaps`" in text
+    assert "`blocked`" in text
+    assert "full_analysis_environment_locks_not_restored" in text
+    assert "restore_full_analysis_environment_locks" in text
+    assert "analysis/registry/analysis_environments.json" in text
+    assert "Architecture gate report schema validation is currently `passed`" in text
+    assert "Current P0 issue list is empty" in text
+
+
+def test_analysis_architecture_gate_full_required_writes_blocked_markdown_report(tmp_path: Path) -> None:
+    output = tmp_path / "analysis_architecture_full_required.json"
+    markdown = tmp_path / "analysis_architecture_full_required.md"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--require-full-ready",
+            "--json-output",
+            str(output),
+            "--markdown-output",
+            str(markdown),
+        ],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+
+    assert completed.returncode == 1
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    text = markdown.read_text(encoding="utf-8")
+    assert payload["status"] == "blocked"
+    assert payload["blockers"] == ["full_analysis_activation_gate_not_ready"]
+    assert "| Gate status | `blocked` |" in text
+    assert "| Require full ready | `True` |" in text
+    assert "Full analysis activation remains explicitly blocked rather than silently enabled" in text
+
+
 def test_analysis_architecture_gate_script_is_read_only_and_has_no_runtime_acquisition_commands() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
 
