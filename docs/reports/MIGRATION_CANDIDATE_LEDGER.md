@@ -6,7 +6,7 @@ Baseline:
 
 ```text
 branch: dev/bioinformatics
-HEAD: 2fefc2c5e47b285683fbbbc304176fa73135bba7
+HEAD: e3157fb2fb91b03174975c5774234c03970dd4aa
 audit mode: Phase 2.5 read-only inventory
 ```
 
@@ -54,6 +54,7 @@ No candidate below is marked current available solely because it exists on a bra
 | Meta OCR/fulltext | `dev/meta-analysis` | `fulltext/image_ocr_worker.py`, `ocr_runtime_service.py`, `paddleocr_subprocess_runner.py`, branch tests | OCR/fulltext candidate | Fulltext pages, not proven current | Not current-proven | Not rerun | Branch evidence only | No current result claim | External OCR dependency/package divergence | High | rewrite/adapter later |
 | Meta legacy bias/profile/readiness helpers | `app/meta_analysis/legacy/bias/**`, `legacy/reporting/**`, `legacy/core/profile_*` | Bias, readiness, profile, and reporting helper concepts | Meta quality/reporting pages only conceptually | No direct current use | Legacy-only | Legacy tests only | No current figure/table/report claim | Old profile store/task state | Medium/high | adapter/rewrite |
 | Meta old workbench | `app/meta_analysis/legacy/app/**`, `app_meta/**`, archive mirror | Old dashboard/sidebar/pages/icons | None | No | Legacy only | Legacy tests only | Old reporting summaries | Old app shell/state | High | deprecated |
+| Meta OCR/fulltext branch material | `dev/meta-analysis` | `app/meta_analysis/fulltext/image_ocr_worker.py`, `ocr_runtime_service.py`, `paddleocr_subprocess_runner.py`, `tests/meta_analysis/test_ocr_fulltext_workers.py`, `test_paddleocr_subprocess_runner.py` | OCR/fulltext extraction workers and runtime detection candidates | Current fulltext workflow/dashboard pages only partially map | Branch/current material exists, but not proven in this Phase 2.5 audit | Not rerun here | Branch/current test inventory exists | No current canonical report claim from this audit | External OCR runtime and branch package state | High | adapter/rewrite |
 | UI shell/status/icon/export design | `dev/ui-shell`, `integration/*ui*` | `docs/ui/**`, screenshots, shell tests | UI design and shell material | Shared UI shell/report export shell | Branch-only/design material | Not analysis run | Branch evidence only | Visual assets only | UI branch state | Medium | adapter only after UI owner selection |
 | Shared AI gateway / vocabulary | `dev/ai-gateway`, `dev/shared-vocabulary`, related branches | gateway/provider/vocabulary resources | AI draft routing and search terms | AI/search pages | Not analysis runtime | Not relevant | Branch tests unknown | No analysis output | Shared provider/resource state | Low/medium | ignore or resource review |
 

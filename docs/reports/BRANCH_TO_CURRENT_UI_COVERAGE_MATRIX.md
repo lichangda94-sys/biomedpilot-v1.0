@@ -2,7 +2,7 @@
 
 Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `2fefc2c5e47b285683fbbbc304176fa73135bba7`
+Baseline: `dev/bioinformatics` at `e3157fb2fb91b03174975c5774234c03970dd4aa`
 
 ## Rule
 
@@ -41,6 +41,7 @@ The current UI is the only mainline. A branch feature is not available merely be
 | Older figure/result table path | `analysis_run_service.py`, `figure_result_service.py` | Existing tests by inventory; can create PNG/CSV, but some paths are separate from v2 contract | old Meta branches | Partly covered | Adapter to canonical run/hash |
 | Reporting/export | `pages/reporting_page.py`, `services/publication_export_service.py`, `formal_report_service.py` | Testing report/export path exists; not production/clinical | old reporting widgets | Partly covered | Adapter to canonical contract |
 | OCR/fulltext | `dev/meta-analysis`, current fulltext pages/services | Branch has extra OCR/fulltext history; current proof not refreshed | `dev/meta-analysis`, OCR branch | Not fully covered | Rewrite/adapter later |
+| Result/report/export split shell | `tests/ui/test_meta_analysis_result_report_export_gates.py`, `test_result_report_export_shell.py`, current report/export pages | Current UI/test inventory includes split result/report/export gates, but this audit did not prove new runtime output | UI shell/integration branches | Partly covered | Reuse current shell only after focused proof |
 | Quality/bias/profile readiness | current quality namespace plus `app/meta_analysis/legacy/bias/**`, `legacy/reporting/**` | Current proof does not establish a canonical quality/bias/profile report loop | Legacy Meta profile/readiness stack | Not covered as current L3 output | Adapter/rewrite later |
 | Legacy dashboard/sidebar | `app/meta_analysis/legacy/app/**`, `app_meta/**` | No current mainline mapping | old Meta workbench | Not covered | Deprecated |
 

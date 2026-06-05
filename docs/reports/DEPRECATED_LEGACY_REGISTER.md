@@ -2,7 +2,7 @@
 
 Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `2fefc2c5e47b285683fbbbc304176fa73135bba7`
+Baseline: `dev/bioinformatics` at `e3157fb2fb91b03174975c5774234c03970dd4aa`
 
 ## Deprecation Rule
 

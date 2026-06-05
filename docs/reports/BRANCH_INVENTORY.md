@@ -6,9 +6,9 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `2fefc2c5e47b285683fbbbc304176fa73135bba7`
+Current HEAD: `e3157fb2fb91b03174975c5774234c03970dd4aa`
 
-Current subject: `block standard payload schema drift`
+Current subject: `show standard input manifests in results browser`
 
 ## Audit Scope
 
@@ -30,17 +30,12 @@ Branch-only, legacy-only, mock, placeholder, dry-run, and testing-level outputs 
 The worktree was already dirty before this Phase 2.5 refresh. These non-report changes were preserved and excluded from audit claims:
 
 ```text
- M analysis/modules/correlation/module.json
- M analysis/modules/deg/module.json
- M analysis/modules/docking/module.json
- M analysis/modules/enrichment/module.json
- M analysis/modules/immune_infiltration/module.json
- M analysis/modules/molecular_dynamics/module.json
- M analysis/modules/multivariate/module.json
- M analysis/modules/spatial_transcriptomics/module.json
- M analysis/modules/survival/module.json
- M analysis/modules/univariate/module.json
- M analysis/registry/analysis_modules.json
+ M app/analysis_runtime/package_catalog.py
+ M app/bioinformatics/workflow_pages.py
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_REMEDIATION_PLAN.md
+ M tests/test_analysis_runtime_task_bridge.py
+ M tests/ui/test_bioinformatics_workflow_pages.py
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
@@ -55,11 +50,11 @@ Only `docs/reports/**` files are Phase 2.5 outputs.
 | `sed -n '1,220p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Read real-loop rules. |
 | `git status --short --branch` | Captured branch and dirty worktree. |
 | `git branch --show-current` | Confirmed `dev/bioinformatics`. |
-| `git rev-parse HEAD` | Confirmed `2fefc2c5e47b285683fbbbc304176fa73135bba7`. |
+| `git rev-parse HEAD` | Confirmed `e3157fb2fb91b03174975c5774234c03970dd4aa`. |
 | `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads refs/remotes` | Enumerated local branch heads. |
 | `git log --all --decorate --oneline --max-count=120` | Reviewed recent multi-branch history. |
 | `find . ... -name '*legacy*'` | Located legacy directories without executing them. |
-| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -type f \| wc -l` | Counted 920 tracked legacy/archive files in the audited boundary. |
+| `find app/bioinformatics app/meta_analysis archive/legacy_sources -path '*legacy*' -type f \| wc -l` | Counted 924 legacy/archive files in the audited boundary. |
 | `git diff --shortstat HEAD..<branch> -- ...` | Sampled branch divergence without checkout. |
 | `git ls-tree -r --name-only <branch> -- ...` | Sampled branch-only candidate files without checkout. |
 | `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|Meta\|Bioinformatics" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Sampled current UI/action/test surfaces. |
@@ -70,7 +65,7 @@ No functional tests were required for this documentation-only inventory. Tests w
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `2fefc2c` | 2026-06-05 | block standard payload schema drift | Current source of truth for this worktree | source of truth |
+| `dev/bioinformatics` | `e3157fb` | 2026-06-05 | show standard input manifests in results browser | Current source of truth for this worktree | source of truth |
 | `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | Rich Bio DEG/enrichment/survival/risk/report history | candidate library only |
 | `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | Formal DEG and ReleaseBuild gate material | candidate library only |
 | `codex/mainline-survival-clinical-carryover` | `74775fe` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Survival/clinical and enrichment convergence material | candidate library only |
@@ -104,13 +99,13 @@ Selected branch deltas are large. Whole-branch carry-over is unsafe because thes
 
 | Branch | Shortstat in audited paths | Practical implication |
 | --- | --- | --- |
-| `dev/release-internal-test` | 2130 files changed, 135504 insertions, 85272 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
-| `codex/releasebuild-formal-deg-carryover` | 1104 files changed, 91914 insertions, 78237 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
-| `codex/mainline-survival-clinical-carryover` | 744 files changed, 15914 insertions, 69529 deletions | Survival/clinical history, but older than current standard package work. |
+| `dev/release-internal-test` | 1134 files changed, 94509 insertions, 86013 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
+| `codex/releasebuild-formal-deg-carryover` | 1072 files changed, 76449 insertions, 78974 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
+| `codex/mainline-survival-clinical-carryover` | 735 files changed, 13723 insertions, 70266 deletions | Survival/clinical history, but older than current standard package work. |
 | `stable/mainline` | 801 files changed, 14358 insertions, 80408 deletions | Historical formal DEG baseline only. |
 | `feature/meta-l3-ui-loop` | 165 files changed, 334 insertions, 8997 deletions | Focused Meta proof; already represented by current history. |
-| `dev/meta-analysis` | 617 files changed, 20790 insertions, 78060 deletions | OCR/fulltext/package material; not current-proven. |
-| `dev/ui-shell` | 2128 files changed, 66130 insertions, 170085 deletions; rename detection warning | UI design/shell material only; direct migration unsafe. |
+| `dev/meta-analysis` | 617 files changed, 20785 insertions, 78792 deletions | OCR/fulltext/package material; not current-proven. |
+| `dev/ui-shell` | 1142 files changed, 27679 insertions, 170821 deletions | UI design/shell material only; direct migration unsafe. |
 
 ## Inventory Conclusion
 
