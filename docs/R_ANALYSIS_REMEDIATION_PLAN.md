@@ -155,6 +155,8 @@ Update: standard package validation now follows `logs/worker_invocation.json -> 
 
 Update: standard package catalog and detail payloads now expose an `input_manifest` summary from `worker_invocation.input_manifest`. For package-local `module_input.json`, UI/report consumers can read relative path, validation status, schema path, module/mode/task, project id, input keys, and parameter keys without inspecting module-private output folders.
 
+Update: Analysis Center standard package gate rows now include a dedicated input-manifest gate. Missing, malformed, or mismatched package-local `module_input.json` appears as a UI-visible blocker rather than staying hidden in developer diagnostics.
+
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.

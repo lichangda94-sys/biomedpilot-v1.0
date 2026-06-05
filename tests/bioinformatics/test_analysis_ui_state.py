@@ -151,6 +151,10 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert row["worker_boundary_type"] == "analysis_task_bridge_fixture"
     assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
     assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
+    assert row["input_manifest"]["validation_status"] == "passed"
+    assert row["input_manifest"]["package_relative_path"] == "module_input.json"
+    assert row["input_manifest"]["schema"] == "analysis/schemas/input/module_input.schema.json"
+    assert row["input_manifest_path_relative"] == "analysis_results/enrichment-mock-task/module_input.json"
     assert row["artifact_counts"]["tables"] == 1
     assert row["artifact_counts"]["logs"] == 2
     assert row["artifact_manifest"]["tables"][0]["package_relative_path"] == "tables/mock_summary.tsv"
@@ -161,6 +165,8 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert "Standard package catalog source" in package_gate_text
     assert "Standard package validation" in package_gate_text
     assert "Standard package artifact manifest" in package_gate_text
+    assert "Standard package input manifest" in package_gate_text
+    assert "worker_invocation.input_manifest diagnostics" in package_gate_text
     assert all(row["status"] == "passed" for row in state["standard_package_gate_rows"])
     assert state["developer_diagnostics"]["standard_analysis_package_catalog"]["package_count"] == 1
     assert state["developer_diagnostics"]["standard_package_gate_rows"] == state["standard_package_gate_rows"]
@@ -190,6 +196,24 @@ def test_analysis_center_state_surfaces_standard_package_artifact_gate_blockers(
     assert rows["Standard package artifact manifest"]["status"] == "blocked"
     assert "declared_artifact_tables_0_file_missing" in rows["Standard package artifact manifest"]["blockers"]
     assert any("declared_artifact_tables_0_file_missing" in item for item in state["top_blockers"])
+
+
+def test_analysis_center_state_surfaces_standard_package_input_manifest_gate_blockers(tmp_path: Path) -> None:
+    result = run_analysis_module_task(tmp_path, _module_input(tmp_path))
+    package_dir = Path(result["result_package_dir"])
+    input_path = package_dir / "module_input.json"
+    payload = json.loads(input_path.read_text(encoding="utf-8"))
+    payload["task_id"] = "wrong-task"
+    input_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    state = build_analysis_center_state(tmp_path)
+    rows = {row["gate"]: row for row in state["standard_package_gate_rows"]}
+
+    assert rows["Standard package validation"]["status"] == "blocked"
+    assert "module_input_manifest_task_id_mismatch" in rows["Standard package validation"]["blockers"]
+    assert rows["Standard package input manifest"]["status"] == "blocked"
+    assert "module_input_manifest_task_id_mismatch" in rows["Standard package input manifest"]["blockers"]
+    assert any("module_input_manifest_task_id_mismatch" in item for item in state["top_blockers"])
 
 
 def test_result_rows_show_missing_standard_package_for_non_package_results(tmp_path: Path) -> None:

@@ -91,7 +91,7 @@ Standard package discovery is now available to the UI state layer:
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - Result-index `task_type` to standard module mapping is now owned by `analysis/registry/analysis_modules.json` through `result_index_task_types`; the catalog no longer carries its own hard-coded Bioinformatics task-type map, and `analysis:<module_id>` entries are blocked when the module is not registered.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
-- `build_analysis_center_state()` now also exposes `standard_package_gate_rows`, giving the UI direct gate rows for catalog source policy, package validation status, and artifact-manifest validity without inspecting module-private output folders.
+- `build_analysis_center_state()` now also exposes `standard_package_gate_rows`, giving the UI direct gate rows for catalog source policy, package validation status, artifact-manifest validity, and input-manifest validity without inspecting module-private output folders.
 - `build_result_gate_rows()` now joins result-index rows with the standard package catalog by `result_id`, so Analysis Center result rows can show standard package registration status, validation status, package path, and artifact counts without reading module-specific R outputs.
 - `BioinformaticsResultsBrowserWidget` now carries those standard package fields into the current results table, so ordinary result browsing surfaces whether each result has a registered standard package, its validation state, relative package path, and artifact counts.
 - The standard package catalog rows now expose provenance digests (`input_hash`, `parameter_hash`, `random_seed`) alongside runtime, command, engine, worker backend, and worker boundary metadata.
@@ -394,6 +394,7 @@ New architecture boundary files:
 - Added schema-driven module input validation in the task bridge so required-field, enum, type, minLength, and nested runtime field drift from `analysis/schemas/input/module_input.schema.json` is blocked before worker execution.
 - Added standard package validation for materialized task-center input manifests: `worker_invocation.input_manifest` must point to package-local `module_input.json`, and that manifest must pass schema and expected module/task/mode checks.
 - Exposed materialized input manifest metadata in `build_standard_analysis_package_catalog()` and `build_standard_analysis_package_detail()` so UI/report consumers can discover package-local `module_input.json` without reading worker-private output conventions.
+- Added an Analysis Center standard package input-manifest gate row so malformed or missing package-local `module_input.json` appears in UI blockers.
 - Split standard R worker provenance hashing so `input_hash` tracks the full input manifest and `parameter_hash` tracks the `parameters` object separately.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.

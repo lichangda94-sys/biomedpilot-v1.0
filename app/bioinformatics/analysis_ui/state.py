@@ -1013,6 +1013,16 @@ def build_standard_package_gate_rows(catalog: dict[str, Any]) -> list[dict[str, 
         for item in blockers
         if any(marker in item for marker in ("declared_artifact", "artifact_manifest", "standard_result_package"))
     ]
+    input_manifest_blockers = [
+        item
+        for item in blockers
+        if any(marker in item for marker in ("input_manifest", "module_input_manifest"))
+    ]
+    input_manifest_statuses = [
+        f"{row.get('result_id') or row.get('package_path_relative') or 'package'}={row.get('input_manifest_validation_status') or 'missing'}"
+        for row in rows
+        if isinstance(row, dict)
+    ]
     return [
         _formal_deg_gate_row(
             "Standard package catalog source",
@@ -1034,6 +1044,13 @@ def build_standard_package_gate_rows(catalog: dict[str, Any]) -> list[dict[str, 
             artifact_blockers,
             [],
             basis="UI may read only declared tables/plots/reports/logs inside the standard result package.",
+        ),
+        _formal_deg_gate_row(
+            "Standard package input manifest",
+            "blocked" if input_manifest_blockers else "passed",
+            input_manifest_blockers,
+            [],
+            basis=f"worker_invocation.input_manifest diagnostics={compact_list(input_manifest_statuses)}",
         ),
     ]
 
