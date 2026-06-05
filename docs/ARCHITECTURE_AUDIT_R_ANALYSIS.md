@@ -373,16 +373,19 @@ New architecture boundary files:
 2. Add standard result package schema, registry, mock runner, and fixtures. **Completed in this audit.**
 3. Wrap one existing R-native module behind the standard worker in mock mode first. **Started with `app/analysis_runtime/task_bridge.py` and `app/analysis_runtime/r_worker.py`.**
 4. Add lite mode for selected modules with lightweight fixture data and no large downloads. **Started with DEG, enrichment, survival, univariate, multivariate, immune infiltration, spatial transcriptomics, docking command-manifest, and molecular dynamics command-manifest fixtures.**
-5. Move full mode to an isolated `renv`/Docker environment.
-6. Repeat module by module: survival, univariate, multivariate, enrichment, immune infiltration, then spatial/chem.
+5. Turn current P1 gaps into an auditable remediation queue. **Completed with `build_analysis_remediation_queue()` and Analysis Center rows.**
+6. Move full mode to an isolated `renv`/Docker environment.
+7. Repeat module by module: survival, univariate, multivariate, enrichment, immune infiltration, then spatial/chem.
 
 ## 7. Recommended First Files to Modify Next
 
-1. `app/bioinformatics/enrichment_r_adapter.py`
-2. `app/bioinformatics/deg_engine/multifactor_r_runner.py`
-3. `app/bioinformatics/analysis_task_runs.py`
-4. `app/bioinformatics/results/registry.py`
-5. `app/bioinformatics/analysis_ui/state.py`
+The current machine-readable queue exposes these P1 items:
+
+| Queue item | Priority files | Required evidence |
+| --- | --- | --- |
+| `restore_full_analysis_environment_locks` | `analysis/registry/analysis_environments.json`, `renv/renv.bio-full.lock`, `renv/renv.spatial-full.lock`, `renv/renv.chem-full.lock`, `docker/Dockerfile.r-bio-full`, `docker/Dockerfile.r-spatial-full`, `docker/Dockerfile.r-chem-full`, `docker/Dockerfile.r-chem-gpu` | Full environment locks restored from controlled external environments; image build evidence captured outside default app-dev; environment validator reports full readiness. |
+| `lock_full_analysis_resources` | `analysis/resources/manifest.json`, `external_analysis_resources/` | Every full resource declares version, source, hash, license, and cache path; resource validator reports full readiness. |
+| `migrate_formal_algorithms_to_isolated_standard_worker` | `app/bioinformatics/`, `analysis/runners/run_module.R`, `analysis/modules/`, `analysis/schemas/input/module_input.schema.json`, `analysis/schemas/output/result_package.schema.json` | Selected formal module executes through the task bridge and standard worker boundary; frontend consumes the standard package instead of module-private output paths. |
 
 ## 8. Completed Changes in This Audit
 
@@ -423,6 +426,8 @@ New architecture boundary files:
 - Added `analysis/registry/analysis_environments.json` as the central environment boundary registry, with tests that module manifests match registered Dockerfiles, renv locks, allowed-module lists, heavy-dependency policy, and runtime-install policy.
 - Added `validate_analysis_environment_registry()` to make environment-registry validity and full-readiness status consumable by runtime gates, UI diagnostics, and future reports.
 - Added Analysis Center environment gate rows for registry structure and full R environment readiness.
+- Added `build_analysis_remediation_queue()` to expose current P1 architecture gaps as blocked, manual, read-only remediation items with source issues, recommended files, and required evidence.
+- Added Analysis Center remediation rows so the UI can display full environment, full resource, and isolated worker migration blockers without implying full analysis readiness.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

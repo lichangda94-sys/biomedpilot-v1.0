@@ -484,6 +484,37 @@ Rules:
 - Docking/MD use R adapters to external tools only.
 - Docking/MD never share the normal bio-core environment.
 
+## Phase R8: Architecture Remediation Queue
+
+Scope:
+
+- Make the remaining P1 architecture gaps machine-readable for UI, report, and handoff consumers.
+- Keep the queue advisory and manual; it must not execute workers, install dependencies, download resources, or mutate project storage.
+
+Status: present.
+
+Completed:
+
+- Added a deterministic remediation queue derived from `build_analysis_architecture_status()`.
+- Exposed the queue through Analysis Center state and the existing formal gate table.
+- Current queue items:
+  - `restore_full_analysis_environment_locks`
+  - `lock_full_analysis_resources`
+  - `migrate_formal_algorithms_to_isolated_standard_worker`
+- Each item records source issue, priority, blocked status, recommended files, required evidence, and architecture boundary.
+
+Remaining:
+
+- Restore approved full `renv` locks and Docker image evidence outside default `app-dev`.
+- Replace resource placeholders with approved version/source/hash/license/cache metadata.
+- Migrate formal algorithms one module at a time from transitional sidecar outputs to the isolated standard worker boundary.
+
+Acceptance:
+
+- Queue remains read-only.
+- Full mode remains blocked until environment and resource validators pass.
+- Current UI can show disabled reasons without implying formal/full analysis completion.
+
 ## Current Stop Rule
 
 Do not migrate algorithms until the standard package validator and one mock-mode task-system bridge are in place.

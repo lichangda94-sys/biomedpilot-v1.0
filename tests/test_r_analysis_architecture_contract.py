@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from app.analysis_runtime.architecture_status import build_analysis_architecture_status
+from app.analysis_runtime.architecture_status import build_analysis_architecture_status, build_analysis_remediation_queue
 from app.analysis_runtime.standard_package import validate_standard_result_package
 from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
@@ -301,6 +301,30 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert rows["RARCH-20"]["status"] == "pass"
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
+
+
+def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> None:
+    status = build_analysis_architecture_status()
+    queue = build_analysis_remediation_queue(status)
+    items = {item["item_id"]: item for item in queue["items"]}
+
+    assert queue["schema_version"] == "biomedpilot.analysis.remediation_queue.v1"
+    assert queue["status"] == "open"
+    assert queue["source_status"] == "partial_with_p1_gaps"
+    assert queue["automation_policy"] == "manual_scoped_changes_only"
+    assert queue["execution_policy"] == "read_only_no_runtime_mutation"
+    assert queue["install_policy"] == "no_runtime_package_install_or_resource_download"
+    assert queue["full_mode_policy"] == "full_mode_remains_blocked_until_environment_and_resource_evidence_passes"
+    assert set(items) == {
+        "restore_full_analysis_environment_locks",
+        "lock_full_analysis_resources",
+        "migrate_formal_algorithms_to_isolated_standard_worker",
+    }
+    assert items["restore_full_analysis_environment_locks"]["source_issue"] == "full_analysis_environment_locks_not_restored"
+    assert "renv/renv.bio-full.lock" in items["restore_full_analysis_environment_locks"]["recommended_files"]
+    assert "analysis/resources/manifest.json" in items["lock_full_analysis_resources"]["recommended_files"]
+    assert "analysis/runners/run_module.R" in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
+    assert all(item["status"] == "blocked" for item in items.values())
 
 
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:

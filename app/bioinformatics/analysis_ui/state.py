@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from app.analysis_runtime.architecture_status import build_analysis_architecture_status
+from app.analysis_runtime.architecture_status import build_analysis_architecture_status, build_analysis_remediation_queue
 from app.analysis_runtime.package_catalog import build_standard_analysis_package_catalog
 from app.analysis_runtime.resources import validate_analysis_environment_registry
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
@@ -69,6 +69,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     result_entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
     analysis_architecture_status = build_analysis_architecture_status()
     analysis_architecture_gate_rows = build_analysis_architecture_gate_rows(analysis_architecture_status)
+    analysis_architecture_remediation_queue = build_analysis_remediation_queue(analysis_architecture_status)
+    analysis_architecture_remediation_rows = build_analysis_architecture_remediation_rows(analysis_architecture_remediation_queue)
     standard_package_catalog = build_standard_analysis_package_catalog(root)
     analysis_environment_validation = validate_analysis_environment_registry()
     analysis_environment_gate_rows = build_analysis_environment_gate_rows(analysis_environment_validation)
@@ -136,6 +138,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "standard_analysis_packages": standard_package_catalog,
         "analysis_architecture_status": analysis_architecture_status,
         "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
+        "analysis_architecture_remediation_queue": analysis_architecture_remediation_queue,
+        "analysis_architecture_remediation_rows": analysis_architecture_remediation_rows,
         "standard_package_gate_rows": standard_package_gate_rows,
         "analysis_environment_gate_rows": analysis_environment_gate_rows,
         "gate_rows": gate_rows,
@@ -149,6 +153,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "result_index": result_index,
             "analysis_architecture_status": analysis_architecture_status,
             "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
+            "analysis_architecture_remediation_queue": analysis_architecture_remediation_queue,
+            "analysis_architecture_remediation_rows": analysis_architecture_remediation_rows,
             "standard_analysis_package_catalog": standard_package_catalog,
             "standard_package_gate_rows": standard_package_gate_rows,
             "analysis_environment_registry_validation": analysis_environment_validation,
@@ -1110,6 +1116,30 @@ def build_analysis_architecture_gate_rows(status: dict[str, Any]) -> list[dict[s
             basis="default app-dev, mock package, result.json, and runtime install boundaries",
         ),
     ]
+
+
+def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[dict[str, Any]]:
+    items = [item for item in queue.get("items", []) or [] if isinstance(item, dict)]
+    rows = [
+        _formal_deg_gate_row(
+            "R architecture remediation queue",
+            queue.get("status") or "blocked",
+            [],
+            [f"items={queue.get('item_count', 0)}", str(queue.get("install_policy") or "")],
+            basis=str(queue.get("execution_policy") or "read_only_no_runtime_mutation"),
+        )
+    ]
+    for item in items:
+        rows.append(
+            _formal_deg_gate_row(
+                f"R remediation: {item.get('item_id')}",
+                item.get("status") or "blocked",
+                [str(item.get("source_issue") or "")],
+                _list(item.get("required_evidence"))[:2],
+                basis=f"{item.get('priority', 'P1')}; files={compact_list(_list(item.get('recommended_files'))[:3])}",
+            )
+        )
+    return rows
 
 
 def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate: dict[str, Any], formal_deg_report_gate: dict[str, Any] | None = None) -> list[dict[str, Any]]:

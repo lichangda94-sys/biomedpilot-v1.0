@@ -214,6 +214,91 @@ def build_analysis_architecture_status() -> dict[str, Any]:
     }
 
 
+def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return a deterministic, read-only remediation queue for architecture gaps.
+
+    The queue is advisory. It does not execute workers, mutate project storage,
+    install packages, download resources, or mark full mode as ready.
+    """
+
+    snapshot = status if isinstance(status, dict) else build_analysis_architecture_status()
+    p1_issues = [str(item) for item in snapshot.get("p1_issues", []) if item]
+    issue_items = {
+        "full_analysis_environment_locks_not_restored": {
+            "item_id": "restore_full_analysis_environment_locks",
+            "title": "Restore full analysis environment locks",
+            "source_issue": "full_analysis_environment_locks_not_restored",
+            "priority": "P1",
+            "status": "blocked",
+            "recommended_files": [
+                "analysis/registry/analysis_environments.json",
+                "renv/renv.bio-full.lock",
+                "renv/renv.spatial-full.lock",
+                "renv/renv.chem-full.lock",
+                "docker/Dockerfile.r-bio-full",
+                "docker/Dockerfile.r-spatial-full",
+                "docker/Dockerfile.r-chem-full",
+                "docker/Dockerfile.r-chem-gpu",
+            ],
+            "required_evidence": [
+                "full environment locks restored from controlled external analysis environments",
+                "Docker image build evidence captured outside default app-dev",
+                "validate_analysis_environment_registry.full_mode_ready becomes true",
+            ],
+            "boundary": "detect-first external full environments only; default app-dev remains lightweight",
+        },
+        "full_analysis_resource_locks_not_complete": {
+            "item_id": "lock_full_analysis_resources",
+            "title": "Lock full analysis resources",
+            "source_issue": "full_analysis_resource_locks_not_complete",
+            "priority": "P1",
+            "status": "blocked",
+            "recommended_files": [
+                "analysis/resources/manifest.json",
+                "external_analysis_resources/",
+            ],
+            "required_evidence": [
+                "each full resource declares version, source, hash, license, and cache path",
+                "large resources are prelocked or explicitly imported before full mode",
+                "validate_analysis_resource_manifest.full_mode_ready becomes true",
+            ],
+            "boundary": "resource lock only; no runtime database fetch in user request flow",
+        },
+        "formal_algorithms_not_universally_migrated_to_isolated_standard_worker": {
+            "item_id": "migrate_formal_algorithms_to_isolated_standard_worker",
+            "title": "Migrate formal algorithms to isolated standard worker",
+            "source_issue": "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
+            "priority": "P1",
+            "status": "blocked",
+            "recommended_files": [
+                "app/bioinformatics/",
+                "analysis/runners/run_module.R",
+                "analysis/modules/",
+                "analysis/schemas/input/module_input.schema.json",
+                "analysis/schemas/output/result_package.schema.json",
+            ],
+            "required_evidence": [
+                "selected formal module executes through the task bridge and standard worker boundary",
+                "standard package includes result.json, provenance.json, tables, plots, reports, and logs",
+                "frontend consumes the standard package instead of module-private output paths",
+            ],
+            "boundary": "one module at a time; sidecar-only legacy adapter output is not full migration",
+        },
+    }
+    items = [issue_items[issue] for issue in p1_issues if issue in issue_items]
+    return {
+        "schema_version": "biomedpilot.analysis.remediation_queue.v1",
+        "status": "open" if items else "empty",
+        "source_status": str(snapshot.get("status") or ""),
+        "item_count": len(items),
+        "items": items,
+        "automation_policy": "manual_scoped_changes_only",
+        "execution_policy": "read_only_no_runtime_mutation",
+        "install_policy": "no_runtime_package_install_or_resource_download",
+        "full_mode_policy": "full_mode_remains_blocked_until_environment_and_resource_evidence_passes",
+    }
+
+
 def _row(
     requirement_id: str,
     label: str,

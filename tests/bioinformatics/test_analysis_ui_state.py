@@ -32,6 +32,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["gate_rows"]
     assert state["enrichment_gate_rows"]
     assert state["analysis_architecture_gate_rows"]
+    assert state["analysis_architecture_remediation_rows"]
     assert state["analysis_environment_gate_rows"]
     assert state["survival_clinical_rows"]
     assert _file_set(tmp_path) == before
@@ -80,9 +81,19 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "R analysis architecture snapshot" in architecture_gate_text
     assert "R architecture P0 guard" in architecture_gate_text
     assert "partial_with_p1_gaps" in architecture_gate_text
+    remediation_text = "\n".join(str(row) for row in state["analysis_architecture_remediation_rows"])
+    assert "R architecture remediation queue" in remediation_text
+    assert "restore_full_analysis_environment_locks" in remediation_text
+    assert "lock_full_analysis_resources" in remediation_text
+    assert "migrate_formal_algorithms_to_isolated_standard_worker" in remediation_text
     assert state["developer_diagnostics"]["analysis_architecture_status"]["p0_issues"] == []
     assert "full_analysis_environment_locks_not_restored" in state["developer_diagnostics"]["analysis_architecture_status"]["p1_issues"]
+    remediation_queue = state["developer_diagnostics"]["analysis_architecture_remediation_queue"]
+    assert remediation_queue["status"] == "open"
+    assert remediation_queue["execution_policy"] == "read_only_no_runtime_mutation"
+    assert remediation_queue["item_count"] == 3
     assert state["developer_diagnostics"]["analysis_architecture_gate_rows"] == state["analysis_architecture_gate_rows"]
+    assert state["developer_diagnostics"]["analysis_architecture_remediation_rows"] == state["analysis_architecture_remediation_rows"]
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["status"] == "passed"
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["full_mode_ready"] is False
     assert state["developer_diagnostics"]["analysis_environment_gate_rows"] == state["analysis_environment_gate_rows"]
