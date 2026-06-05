@@ -37,6 +37,8 @@ This audit added a minimal boundary scaffold:
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
 - `analysis/resources/manifest.json`
+- `external_analysis_environments/README.md`
+- `external_analysis_resources/README.md`
 - `docs/R_ANALYSIS_ARCHITECTURE.md`
 
 The scaffold fixes the most basic registry/schema/mock result-package boundary. A minimal main-backend task bridge now also exists for mock-mode standard result packages:
@@ -213,6 +215,8 @@ A first environment isolation scaffold now also exists:
 
 - `analysis/registry/analysis_environments.json`
 - `analysis/modules/<module_id>/module.json` for DEG, survival, univariate, multivariate, enrichment, immune infiltration, correlation, spatial transcriptomics, docking, and molecular dynamics.
+- `external_analysis_environments/README.md`
+- `external_analysis_resources/README.md`
 - `docker/Dockerfile.app-dev`
 - `docker/Dockerfile.r-bio-core`
 - `docker/Dockerfile.r-bio-full`
@@ -225,7 +229,7 @@ A first environment isolation scaffold now also exists:
 - `renv/renv.spatial-full.lock`
 - `renv/renv.chem-full.lock`
 
-These files are policy scaffolds only. They do not restore packages, install full R dependencies, or prove full analysis readiness. The environment registry is now the authoritative map for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; tests verify module manifests cannot silently point lite/full analysis at unregistered environments or at `app-dev`.
+These files are policy scaffolds only. They do not restore packages, install full R dependencies, or prove full analysis readiness. The external handoff directories are lightweight evidence/log areas with `.gitignore` guards; they are not resource caches, Docker layer stores, R package libraries, or user-request download locations. The environment registry is now the authoritative map for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; tests verify module manifests cannot silently point lite/full analysis at unregistered environments or at `app-dev`.
 
 The standard result payload schema contract is now explicit in the module registry and in every module manifest:
 
@@ -450,6 +454,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added per-module manifest scaffolds for all target modules.
 - Added Docker/renv environment split scaffolds with explicit detect-first and no runtime-install policy.
 - Added `analysis/registry/analysis_environments.json` as the central environment boundary registry, with tests that module manifests match registered Dockerfiles, renv locks, allowed-module lists, heavy-dependency policy, and runtime-install policy.
+- Added `external_analysis_environments/` and `external_analysis_resources/` lightweight evidence handoff directories with `.gitignore` guards. They establish where external environment/resource evidence can be placed without committing heavy dependencies or resource caches, and they do not change full-mode readiness.
 - Added `validate_analysis_environment_registry()` to make environment-registry validity and full-readiness status consumable by runtime gates, UI diagnostics, and future reports.
 - Added Analysis Center environment gate rows for registry structure and full R environment readiness.
 - Added `build_analysis_remediation_queue()` to expose current P1 architecture gaps as blocked, manual, read-only remediation items with source issues, recommended files, and required evidence.

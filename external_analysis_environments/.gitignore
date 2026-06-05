@@ -1,0 +1,12 @@
+*
+!.gitignore
+!README.md
+!evidence/
+!logs/
+evidence/*
+!evidence/.gitkeep
+!evidence/*.json
+logs/*
+!logs/.gitkeep
+!logs/*.txt
+!logs/*.json

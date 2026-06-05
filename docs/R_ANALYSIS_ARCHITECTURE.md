@@ -24,7 +24,7 @@ R and external tools are not default frontend or main-backend runtime dependenci
 | Mode | Purpose | Dependency policy |
 | --- | --- | --- |
 | `mock` | Frontend, API, task-flow, and result-display development | No heavy R packages; fixed fixture input/output. |
-| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. DEG, enrichment, survival, univariate, multivariate clinical association, immune infiltration, and spatial transcriptomics now have base R fixtures through the standard runner. Docking and molecular dynamics have external-tool command-manifest contract fixtures that do not execute AutoDock Vina or GROMACS and do not generate scientific external-tool results. |
+| `lite` | Lightweight real analysis during daily development | Lightweight packages/resources only; no large downloads. DEG, enrichment, survival, univariate, multivariate clinical association, immune infiltration, correlation, and spatial transcriptomics now have base R fixtures through the standard runner. Docking and molecular dynamics have external-tool command-manifest contract fixtures that do not execute AutoDock Vina or GROMACS and do not generate scientific external-tool results. |
 | `full` | Formal analysis and full integration testing | Dedicated analysis container, renv lock, or isolated analysis environment. |
 
 ## Repository Contract
@@ -52,6 +52,16 @@ analysis/
   fixtures/inputs/<module_id>/module_input.json
   fixtures/outputs/<module_id>/mock_result_package/
   resources/manifest.json
+
+external_analysis_environments/
+  README.md
+  evidence/
+  logs/
+
+external_analysis_resources/
+  README.md
+  evidence/
+  logs/
 
 docker/
   Dockerfile.app-dev
@@ -124,6 +134,8 @@ The default dependency surface is guarded by tests. `requirements.txt`, `pyproje
 Environment governance is centralized in `analysis/registry/analysis_environments.json`. This registry is the authoritative map for `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`; it records the Dockerfile, renv lock, allowed modules, heavy-dependency policy, runtime-install policy, resource-lock requirement, and external-tool-lock requirement for each environment. Module manifests are tested against this registry so a module cannot silently point full analysis at `app-dev` or an unregistered worker environment.
 
 Restored full environment evidence is centralized in `analysis/registry/environment_lock_evidence.json`. This registry is intentionally empty in the current developer checkout, so no full environment is marked restored. Future external environment build evidence must be registered there and pass `analysis/schemas/output/environment_lock_evidence_registry.schema.json` plus each entry's `analysis/schemas/output/environment_lock_evidence.schema.json` before a full environment can become ready. The registry is detect-first and forbids runtime package installation or runtime resource downloads.
+
+`external_analysis_environments/` and `external_analysis_resources/` are lightweight handoff directories for small evidence manifests and logs only. They are not part of the default app-dev runtime, not resource caches, and not places to commit R package libraries, Docker image layers, Bioconductor databases, spatial references, AutoDock Vina bundles, or GROMACS installs. Their `.gitignore` guards preserve that boundary while still allowing small JSON evidence manifests.
 
 `app/analysis_runtime/resources.py` now exposes `validate_analysis_environment_registry()`. The validator separates structural validity from full readiness: the current registry is structurally valid, but `full_mode_ready=false` because `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu` still point to `scaffold_only_not_restored` locks. This prevents a future resource-lock update from accidentally activating full mode before the isolated runtime locks are restored.
 
@@ -230,6 +242,7 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | Environment lock evidence gate | Present; `analysis/schemas/output/environment_lock_evidence.schema.json` and `validate_analysis_environment_lock_evidence()` block restored full environment locks unless package-lock hash, Dockerfile, renv lock, allowed modules, evidence files, R/Bioconductor versions, and no-install/no-download policy are schema-valid and registry-aligned. |
 | Architecture remediation queue | Present; `build_analysis_remediation_queue()` converts current P1 gaps into deterministic manual remediation items for full environment locks, full resource locks, and isolated standard-worker migration. The payload self-checks against `analysis/schemas/output/remediation_queue.schema.json`. Analysis Center exposes this as blocked remediation rows; it performs no worker execution, package installation, resource download, or project mutation. |
 | Environment registry | Present; module manifests are tested against `analysis/registry/analysis_environments.json`, Dockerfile paths, renv lock paths, heavy-dependency policy, and allowed-module lists. A runtime validator reports structural status separately from full readiness, Analysis Center exposes those gate rows, and full mode stays blocked while full locks remain scaffold-only or lack schema-valid lock evidence. |
+| External evidence handoff directories | Present; `external_analysis_environments/` and `external_analysis_resources/` are README/.gitignore guarded handoff areas for small evidence manifests and logs only, not runtime caches or default app dependencies. |
 | Per-module mock result packages | Present for all registered modules. |
 | DEG module contract | Present as a registered standard module with mock input/output package and base R lite fixture; full standard worker execution remains blocked. |
 | Standard R runner | Present for mock mode, DEG/enrichment/survival/univariate/multivariate/immune/correlation/spatial lite fixtures, docking and molecular dynamics external-tool command-manifest lite fixtures, and blocked full standard packages. |

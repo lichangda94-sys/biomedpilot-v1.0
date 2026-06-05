@@ -42,6 +42,8 @@ Completed in this audit:
 - `analysis/fixtures/outputs/<module_id>/mock_result_package/**`
 - `analysis/resources/manifest.json`
 - `analysis/resources/locks/mock_fixture_builtin_v1.lock.json`
+- `external_analysis_environments/README.md`
+- `external_analysis_resources/README.md`
 - `app/analysis_runtime/package_catalog.py`
 - `app/analysis_runtime/registry.py`
 - `app/analysis_runtime/r_worker.py`
@@ -163,6 +165,8 @@ Update: `build_analysis_remediation_queue()` now validates its payload against `
 Update: restored full environment evidence is now routed through `analysis/registry/environment_lock_evidence.json` and validated by `validate_analysis_environment_lock_evidence_registry()`. The registry is intentionally empty; it establishes the audited handoff point for external environment build evidence without marking any full analysis environment as ready.
 
 Update: externally prepared full resource evidence is now routed through `analysis/registry/resource_lock_evidence.json` and validated by `validate_analysis_resource_lock_evidence_registry()`. The registry is intentionally empty; it establishes the audited handoff point for Reactome/MSigDB/spatial/chem resource locks without allowing runtime downloads or marking any full resource ready.
+
+Update: `external_analysis_environments/` and `external_analysis_resources/` now exist as lightweight handoff directories for small evidence manifests and logs. Their `.gitignore` policies prevent heavy R package libraries, Docker image layers, scientific resource caches, and user-request downloads from becoming part of the default development tree. These directories do not mark any full environment or resource as ready.
 
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 
@@ -533,6 +537,7 @@ Completed:
 - Added `analysis/registry/standard_worker_migration_evidence.json` as the authoritative migration evidence registry; an empty registry means no formal module is migrated.
 - Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` so malformed, mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
 - Added a deterministic remediation queue derived from `build_analysis_architecture_status()`.
+- Added lightweight external evidence handoff directories for full environment and full resource evidence; these directories are guarded by README/.gitignore policy and do not contain or enable full dependencies/resources.
 - The formal-worker migration queue item now explicitly recommends `analysis/registry/standard_worker_migration_evidence.json`, `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`, and `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, and requires registry-owned migration evidence before completion.
 - Exposed the queue through Analysis Center state and the existing formal gate table.
 - Current queue items:

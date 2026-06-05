@@ -708,6 +708,37 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert all(item["status"] == "blocked" for item in items.values())
 
 
+def test_external_full_analysis_handoff_directories_are_lightweight_evidence_only() -> None:
+    environment_readme = ROOT / "external_analysis_environments" / "README.md"
+    resource_readme = ROOT / "external_analysis_resources" / "README.md"
+    environment_gitignore = ROOT / "external_analysis_environments" / ".gitignore"
+    resource_gitignore = ROOT / "external_analysis_resources" / ".gitignore"
+
+    for path in (
+        environment_readme,
+        resource_readme,
+        environment_gitignore,
+        resource_gitignore,
+        ROOT / "external_analysis_environments" / "evidence" / ".gitkeep",
+        ROOT / "external_analysis_environments" / "logs" / ".gitkeep",
+        ROOT / "external_analysis_resources" / "evidence" / ".gitkeep",
+        ROOT / "external_analysis_resources" / "logs" / ".gitkeep",
+    ):
+        assert path.exists()
+
+    environment_text = environment_readme.read_text(encoding="utf-8")
+    resource_text = resource_readme.read_text(encoding="utf-8")
+    assert "not part of the default app-dev runtime" in environment_text
+    assert "runtime_package_install=forbidden" in environment_text
+    assert "runtime_resource_download=forbidden" in environment_text
+    assert "no full environment evidence is registered" in environment_text
+    assert "not a runtime download cache for user requests" in resource_text
+    assert "runtime_download_allowed=false" in resource_text
+    assert "no full resource evidence is registered" in resource_text
+    assert "*" in environment_gitignore.read_text(encoding="utf-8")
+    assert "*" in resource_gitignore.read_text(encoding="utf-8")
+
+
 def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> None:
     matrix = build_standard_worker_migration_matrix()
     rows = {row["module_id"]: row for row in matrix["rows"]}
