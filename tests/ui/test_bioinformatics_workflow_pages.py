@@ -4175,6 +4175,23 @@ def test_results_browser_displays_standard_package_contract_status(qt_app, proje
     assert "parameters=" in provenance_text
     assert "seed=7" in provenance_text
 
+    input_manifest_table = widget.findChild(QTableWidget, "resultsStandardPackageInputManifestTable")
+    assert input_manifest_table is not None
+    input_manifest_headers = [input_manifest_table.horizontalHeaderItem(index).text() for index in range(input_manifest_table.columnCount())]
+    assert input_manifest_headers == ["Result", "Validation", "Package path", "Schema", "Module", "Mode", "Task", "Input keys", "Parameter keys"]
+    input_manifest_text = _table_text(input_manifest_table)
+    assert "analysis-package-enrichment-mock-task" in input_manifest_text
+    assert "passed" in input_manifest_text
+    assert "module_input.json" in input_manifest_text
+    assert "analysis/schemas/input/module_input.schema.json" in input_manifest_text
+    assert "enrichment" in input_manifest_text
+    assert "mock" in input_manifest_text
+    assert "enrichment-mock-task" in input_manifest_text
+    assert "fixture_matrix" in input_manifest_text
+    assert "input_package_id" in input_manifest_text
+    assert "source_dataset_id" in input_manifest_text
+    assert "comparison" in input_manifest_text
+
     artifact_table = widget.findChild(QTableWidget, "resultsStandardPackageArtifactTable")
     assert artifact_table is not None
     artifact_headers = [artifact_table.horizontalHeaderItem(index).text() for index in range(artifact_table.columnCount())]

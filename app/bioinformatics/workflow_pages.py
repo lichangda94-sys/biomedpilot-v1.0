@@ -6576,6 +6576,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         package_layout.addWidget(self._standard_package_provenance)
         _set_table_widths(self._standard_package_provenance, [180, 110, 80, 190, 160, 180, 220, 240, 220])
         self._standard_package_provenance.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
+        self._standard_package_input_manifest = _table(["Result", "Validation", "Package path", "Schema", "Module", "Mode", "Task", "Input keys", "Parameter keys"])
+        self._standard_package_input_manifest.setObjectName("resultsStandardPackageInputManifestTable")
+        package_layout.addWidget(self._standard_package_input_manifest)
+        _set_table_widths(self._standard_package_input_manifest, [190, 110, 260, 240, 110, 80, 180, 220, 220])
+        self._standard_package_input_manifest.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self._standard_package_artifacts = _table(["Result", "Validation", "Group", "Artifact", "Package path", "Exists", "Size"])
         self._standard_package_artifacts.setObjectName("resultsStandardPackageArtifactTable")
         package_layout.addWidget(self._standard_package_artifacts)
@@ -6689,6 +6694,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             _results_user_rows(self._project_root, entries, records),
         )
         _fill_table(self._standard_package_provenance, _standard_package_provenance_rows(analysis_state))
+        _fill_table(self._standard_package_input_manifest, _standard_package_input_manifest_rows(analysis_state))
         _fill_table(self._standard_package_artifacts, _standard_package_artifact_rows(analysis_state))
         review = build_formal_deg_result_review(
             self._project_root,
@@ -11119,6 +11125,28 @@ def _standard_package_provenance_rows(analysis_state: dict[str, object]) -> list
     return rows
 
 
+def _standard_package_input_manifest_rows(analysis_state: dict[str, object]) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for package_row in _standard_package_catalog_rows(analysis_state):
+        manifest = package_row.get("input_manifest")
+        if not isinstance(manifest, dict):
+            continue
+        rows.append(
+            [
+                str(package_row.get("result_id") or ""),
+                str(manifest.get("validation_status") or package_row.get("input_manifest_validation_status") or ""),
+                str(manifest.get("package_relative_path") or manifest.get("declared_path") or ""),
+                str(manifest.get("schema") or ""),
+                str(manifest.get("module_id") or ""),
+                str(manifest.get("mode") or ""),
+                str(manifest.get("task_id") or ""),
+                _join_manifest_keys(manifest.get("input_keys")),
+                _join_manifest_keys(manifest.get("parameter_keys")),
+            ]
+        )
+    return rows
+
+
 def _standard_package_artifact_rows(analysis_state: dict[str, object]) -> list[list[object]]:
     rows: list[list[object]] = []
     for package_row in _standard_package_catalog_rows(analysis_state):
@@ -11146,6 +11174,12 @@ def _standard_package_artifact_rows(analysis_state: dict[str, object]) -> list[l
                     ]
                 )
     return rows
+
+
+def _join_manifest_keys(value: object) -> str:
+    if isinstance(value, list | tuple):
+        return ", ".join(str(item) for item in value)
+    return ""
 
 
 def _standard_package_runtime_label(row: dict[str, object]) -> str:

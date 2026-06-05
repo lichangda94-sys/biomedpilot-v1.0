@@ -96,6 +96,7 @@ Standard package discovery is now available to the UI state layer:
 - `BioinformaticsResultsBrowserWidget` now carries those standard package fields into the current results table, so ordinary result browsing surfaces whether each result has a registered standard package, its validation state, relative package path, and artifact counts.
 - The standard package catalog rows now expose provenance digests (`input_hash`, `parameter_hash`, `random_seed`) alongside runtime, command, engine, worker backend, and worker boundary metadata.
 - The current Results Browser renders that standard package provenance/worker summary as a user-visible table, keeping R/runtime evidence out of developer-only JSON.
+- The current Results Browser now renders a standard package input manifest table from catalog `input_manifest` metadata, including package path, schema, module/mode/task, input keys, and parameter keys.
 - The current Results Browser also renders a standard package artifact manifest table for declared `tables`, `plots`, `reports`, and `logs`, constrained to package-relative paths from the catalog.
 - The catalog now exposes `worker_boundary_type` and `worker_migration_status`, so standard R worker packages can be distinguished from legacy service-adapter sidecars.
 - The catalog also exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`, so Analysis Center diagnostics can use standard package audit metadata rather than module-private R outputs.
@@ -395,6 +396,7 @@ New architecture boundary files:
 - Added standard package validation for materialized task-center input manifests: `worker_invocation.input_manifest` must point to package-local `module_input.json`, and that manifest must pass schema and expected module/task/mode checks.
 - Exposed materialized input manifest metadata in `build_standard_analysis_package_catalog()` and `build_standard_analysis_package_detail()` so UI/report consumers can discover package-local `module_input.json` without reading worker-private output conventions.
 - Added an Analysis Center standard package input-manifest gate row so malformed or missing package-local `module_input.json` appears in UI blockers.
+- Added a Results Browser input-manifest table so standard package input metadata is visible outside developer diagnostics.
 - Split standard R worker provenance hashing so `input_hash` tracks the full input manifest and `parameter_hash` tracks the `parameters` object separately.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.
