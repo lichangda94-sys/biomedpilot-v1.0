@@ -55,6 +55,9 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     )
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
+    environment_validation = architecture_status.get("environment_validation") if isinstance(architecture_status.get("environment_validation"), dict) else {}
+    resource_validation = architecture_status.get("resource_validation") if isinstance(architecture_status.get("resource_validation"), dict) else {}
+    migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
     payload = {
         "schema_version": "biomedpilot.analysis.architecture_gate_report.v1",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -65,6 +68,30 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "p0_issues": [str(item) for item in architecture_status.get("p0_issues", []) if item],
         "p1_issues": p1_issues,
         "full_analysis_activation_gate": full_gate,
+        "environment_readiness": {
+            "schema_version": environment_validation.get("schema_version"),
+            "status": environment_validation.get("status"),
+            "full_mode_ready": environment_validation.get("full_mode_ready"),
+            "environment_count": environment_validation.get("environment_count"),
+            "blocked_environment_ids": environment_validation.get("blocked_environment_ids", []),
+            "evidence_registry_status": environment_validation.get("evidence_registry_status"),
+            "evidence_registry_entry_count": environment_validation.get("evidence_registry_entry_count"),
+            "readiness_blockers": environment_validation.get("readiness_blockers", []),
+            "blockers": environment_validation.get("blockers", []),
+            "warnings": environment_validation.get("warnings", []),
+        },
+        "resource_readiness": {
+            "schema_version": resource_validation.get("schema_version"),
+            "status": resource_validation.get("status"),
+            "full_mode_ready": resource_validation.get("full_mode_ready"),
+            "resource_count": resource_validation.get("resource_count"),
+            "locked_resource_ids": resource_validation.get("locked_resource_ids", []),
+            "blocked_resource_ids": resource_validation.get("blocked_resource_ids", []),
+            "evidence_registry_status": resource_validation.get("evidence_registry_status"),
+            "evidence_registry_entry_count": resource_validation.get("evidence_registry_entry_count"),
+            "blockers": resource_validation.get("blockers", []),
+            "warnings": resource_validation.get("warnings", []),
+        },
         "standard_worker_migration_matrix": {
             "schema_version": migration_matrix.get("schema_version"),
             "status": migration_matrix.get("status"),
@@ -75,6 +102,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "evidence_entry_count": migration_matrix.get("evidence_entry_count"),
             "evidence_registry_blockers": migration_matrix.get("evidence_registry_blockers", []),
         },
+        "standard_worker_migration_rows": migration_rows,
         "remediation_queue": {
             "schema_version": remediation_queue.get("schema_version"),
             "status": remediation_queue.get("status"),

@@ -36,9 +36,35 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
     }
     assert payload["full_analysis_activation_gate"]["status"] == "blocked"
+    assert payload["environment_readiness"]["status"] == "passed"
+    assert payload["environment_readiness"]["full_mode_ready"] is False
+    assert set(payload["environment_readiness"]["blocked_environment_ids"]) == {
+        "r-bio-full",
+        "r-spatial-full",
+        "r-chem-full",
+        "r-chem-gpu",
+    }
+    assert payload["resource_readiness"]["status"] == "passed"
+    assert payload["resource_readiness"]["full_mode_ready"] is False
+    assert "reactome_full" in payload["resource_readiness"]["blocked_resource_ids"]
+    assert "gromacs_tool" in payload["resource_readiness"]["blocked_resource_ids"]
     assert payload["standard_worker_migration_matrix"]["status"] == "partial"
     assert payload["standard_worker_migration_matrix"]["evidence_registry_status"] == "passed"
     assert payload["standard_worker_migration_matrix"]["evidence_entry_count"] == 0
+    migration_rows = {row["module_id"]: row for row in payload["standard_worker_migration_rows"]}
+    assert set(migration_rows) >= {
+        "deg",
+        "enrichment",
+        "survival",
+        "spatial_transcriptomics",
+        "docking",
+        "molecular_dynamics",
+    }
+    assert migration_rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert migration_rows["spatial_transcriptomics"]["analysis_environment"] == "r-bio-core"
+    assert migration_rows["spatial_transcriptomics"]["full_environment"] == "r-spatial-full"
+    assert migration_rows["docking"]["full_environment"] == "r-chem-full"
+    assert migration_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert "analysis_architecture_has_p1_gaps" in payload["warnings"]
     assert "full_analysis_activation_gate_blocked_but_allowed_by_default_gate" in payload["warnings"]
     assert payload["execution_policy"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
@@ -87,7 +113,10 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["$id"] == "biomedpilot.analysis.architecture_gate_report.v1"
     assert "schema_version" in schema["required"]
     assert "full_analysis_activation_gate" in schema["required"]
+    assert "environment_readiness" in schema["required"]
+    assert "resource_readiness" in schema["required"]
     assert "standard_worker_migration_matrix" in schema["required"]
+    assert "standard_worker_migration_rows" in schema["required"]
     assert "remediation_queue" in schema["required"]
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.architecture_gate_report.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
