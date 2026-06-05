@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any
 
 
+GATE_REPORT_SCHEMA_RELATIVE_PATH = Path("analysis") / "schemas" / "output" / "architecture_gate_report.schema.json"
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the BioMedPilot analysis architecture readiness gate.")
     parser.add_argument("--json-output", default="", help="Optional JSON output path.")
@@ -52,7 +55,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     )
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
-    return {
+    payload = {
         "schema_version": "biomedpilot.analysis.architecture_gate_report.v1",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "worktree": str(root),
@@ -88,6 +91,13 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             else "exit_zero_when_p0_empty_and_contract_payloads_are_valid_even_if_full_gate_is_blocked"
         ),
     }
+    schema_blockers = _gate_report_schema_blockers(payload, root=root)
+    payload["schema_validation_status"] = "blocked" if schema_blockers else "passed"
+    payload["schema_blockers"] = schema_blockers
+    if schema_blockers:
+        payload["status"] = "blocked"
+        payload["blockers"] = [*blockers, "analysis_architecture_gate_report_schema_invalid"]
+    return payload
 
 
 def _gate_blockers(
@@ -119,6 +129,50 @@ def _gate_warnings(*, full_gate_status: str, p1_issues: list[str], require_full_
     if full_gate_status == "blocked" and not require_full_ready:
         warnings.append("full_analysis_activation_gate_blocked_but_allowed_by_default_gate")
     return warnings
+
+
+def _gate_report_schema_blockers(payload: dict[str, Any], *, root: Path) -> list[str]:
+    schema_path = root / GATE_REPORT_SCHEMA_RELATIVE_PATH
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except OSError:
+        return [f"analysis_architecture_gate_report_schema_missing:{GATE_REPORT_SCHEMA_RELATIVE_PATH}"]
+    except json.JSONDecodeError:
+        return [f"analysis_architecture_gate_report_schema_invalid_json:{GATE_REPORT_SCHEMA_RELATIVE_PATH}"]
+
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"analysis_architecture_gate_report_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        value = payload[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"analysis_architecture_gate_report_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _matches_json_type(value, expected_type):
+            blockers.append(f"analysis_architecture_gate_report_type_invalid:{field}")
+        min_length = field_schema.get("minLength")
+        if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+            blockers.append(f"analysis_architecture_gate_report_min_length_invalid:{field}")
+    return blockers
+
+
+def _matches_json_type(value: Any, expected_type: str) -> bool:
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "array":
+        return isinstance(value, list)
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    if expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    return True
 
 
 if __name__ == "__main__":

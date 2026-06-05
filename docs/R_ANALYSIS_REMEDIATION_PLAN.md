@@ -33,6 +33,7 @@ Completed in this audit:
 - `analysis/schemas/output/environment_lock_evidence.schema.json`
 - `analysis/schemas/output/environment_lock_evidence_registry.schema.json`
 - `analysis/schemas/output/full_analysis_activation_gate.schema.json`
+- `analysis/schemas/output/architecture_gate_report.schema.json`
 - `analysis/schemas/output/remediation_queue.schema.json`
 - `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`
 - `analysis/runners/run_module.R`
@@ -115,7 +116,7 @@ Update: correlation is now registered as a standard analysis module with fixed m
 
 Update: the correlation lite registry now declares the standard R runner, so architecture status reports it as `standard_worker_lite_ready` while still blocking formal/full migration.
 
-Update: `scripts/analysis_architecture_gate.py` now provides a read-only architecture gate for CI/ReleaseBuild preflight. The default mode proves P0 absence and contract payload validity without pretending full mode is ready; `--require-full-ready` blocks until full environment locks, resource locks, and standard-worker migration evidence pass.
+Update: `scripts/analysis_architecture_gate.py` now provides a read-only architecture gate for CI/ReleaseBuild preflight. Its output contract is declared in `analysis/schemas/output/architecture_gate_report.schema.json`, and the script self-reports schema validation status. The default mode proves P0 absence and contract payload validity without pretending full mode is ready; `--require-full-ready` blocks until full environment locks, resource locks, and standard-worker migration evidence pass.
 
 Update: result-index task type aliases are now declared in `analysis/registry/analysis_modules.json` as `result_index_task_types`. The standard package catalog uses that registry-owned mapping when validating whether a result-index entry belongs to a package module, instead of carrying a separate hard-coded task-type map. `analysis:<module_id>` result-index entries are also blocked if the module id is not registered.
 

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.architecture_gate_report.v1",
+  "title": "BioMedPilot analysis architecture gate report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "created_at",
+    "worktree",
+    "status",
+    "require_full_ready",
+    "architecture_status",
+    "p0_issues",
+    "p1_issues",
+    "full_analysis_activation_gate",
+    "standard_worker_migration_matrix",
+    "remediation_queue",
+    "blockers",
+    "warnings",
+    "execution_policy",
+    "exit_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.architecture_gate_report.v1"},
+    "created_at": {"type": "string", "minLength": 1},
+    "worktree": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "minLength": 1},
+    "require_full_ready": {"type": "boolean"},
+    "architecture_status": {"type": "string", "minLength": 1},
+    "p0_issues": {"type": "array"},
+    "p1_issues": {"type": "array"},
+    "full_analysis_activation_gate": {"type": "object"},
+    "standard_worker_migration_matrix": {"type": "object"},
+    "remediation_queue": {"type": "object"},
+    "blockers": {"type": "array"},
+    "warnings": {"type": "array"},
+    "execution_policy": {"const": "read_only_no_worker_execution_no_runtime_install_no_resource_download"},
+    "exit_policy": {"type": "string", "minLength": 1},
+    "schema_validation_status": {"type": "string"},
+    "schema_blockers": {"type": "array"}
+  },
+  "additionalProperties": true
+}

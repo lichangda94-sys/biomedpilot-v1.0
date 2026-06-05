@@ -24,6 +24,8 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert completed.returncode == 0
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["schema_version"] == "biomedpilot.analysis.architecture_gate_report.v1"
+    assert payload["schema_validation_status"] == "passed"
+    assert payload["schema_blockers"] == []
     assert payload["status"] == "passed"
     assert payload["require_full_ready"] is False
     assert payload["architecture_status"] == "partial_with_p1_gaps"
@@ -56,6 +58,8 @@ def test_analysis_architecture_gate_script_can_require_full_ready(tmp_path: Path
     assert completed.returncode == 1
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
+    assert payload["schema_validation_status"] == "passed"
+    assert payload["schema_blockers"] == []
     assert payload["require_full_ready"] is True
     assert payload["blockers"] == ["full_analysis_activation_gate_not_ready"]
     assert payload["full_analysis_activation_gate"]["blockers"] == [
@@ -75,3 +79,15 @@ def test_analysis_architecture_gate_script_is_read_only_and_has_no_runtime_acqui
     assert "pak::pkg_install" not in text
     assert "remotes::install_github" not in text
     assert "download.file" not in text
+
+
+def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload_contract() -> None:
+    schema = json.loads((ROOT / "analysis" / "schemas" / "output" / "architecture_gate_report.schema.json").read_text(encoding="utf-8"))
+
+    assert schema["$id"] == "biomedpilot.analysis.architecture_gate_report.v1"
+    assert "schema_version" in schema["required"]
+    assert "full_analysis_activation_gate" in schema["required"]
+    assert "standard_worker_migration_matrix" in schema["required"]
+    assert "remediation_queue" in schema["required"]
+    assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.architecture_gate_report.v1"
+    assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
