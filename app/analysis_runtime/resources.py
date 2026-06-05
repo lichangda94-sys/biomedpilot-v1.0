@@ -593,18 +593,60 @@ def validate_analysis_environment_lock_evidence_registry(
     blockers: list[str] = []
     warnings: list[str] = []
     blockers.extend(_environment_lock_evidence_registry_schema_blockers(payload))
+    environments = [
+        item
+        for item in environment_payload.get("environments", [])
+        if isinstance(item, dict)
+    ]
+    known_environment_ids = {
+        str(item.get("environment_id") or "")
+        for item in environments
+        if item.get("environment_id")
+    }
+    expected_environment_ids = [
+        str(item.get("environment_id") or "")
+        for item in environments
+        if item.get("environment_id")
+        and item.get("allows_heavy_analysis_dependencies") is True
+        and str(item.get("environment_id") or "") not in {"app-dev", "r-bio-core"}
+    ]
     policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
     if not policy:
         blockers.append("analysis_environment_lock_evidence_registry_policy_missing")
     else:
         if policy.get("registry_is_authoritative") is not True:
             blockers.append("analysis_environment_lock_evidence_registry_authoritative_policy_invalid")
+        if policy.get("expected_environment_ids_are_authoritative") is not True:
+            blockers.append("analysis_environment_lock_evidence_registry_expected_environment_policy_invalid")
         if policy.get("restored_full_environment_requires_schema_valid_evidence") is not True:
             blockers.append("analysis_environment_lock_evidence_registry_restored_policy_invalid")
         if policy.get("runtime_package_install") != "forbidden":
             blockers.append("analysis_environment_lock_evidence_registry_runtime_install_policy_invalid")
         if policy.get("runtime_resource_download") != "forbidden":
             blockers.append("analysis_environment_lock_evidence_registry_runtime_download_policy_invalid")
+    declared_expected_environment_ids = payload.get("expected_environment_ids")
+    if not isinstance(declared_expected_environment_ids, list):
+        blockers.append("analysis_environment_lock_evidence_registry_expected_environment_ids_invalid")
+        declared_expected_environment_ids = []
+    else:
+        normalized_expected_environment_ids = [
+            str(item)
+            for item in declared_expected_environment_ids
+            if isinstance(item, str) and item
+        ]
+        if len(normalized_expected_environment_ids) != len(declared_expected_environment_ids):
+            blockers.append("analysis_environment_lock_evidence_registry_expected_environment_ids_invalid")
+        duplicate_expected_ids = sorted(
+            environment_id
+            for environment_id in set(normalized_expected_environment_ids)
+            if normalized_expected_environment_ids.count(environment_id) > 1
+        )
+        blockers.extend(
+            f"analysis_environment_lock_evidence_registry_expected_environment_id_duplicate:{environment_id}"
+            for environment_id in duplicate_expected_ids
+        )
+        if normalized_expected_environment_ids != expected_environment_ids:
+            blockers.append("analysis_environment_lock_evidence_registry_expected_environment_ids_mismatch")
 
     entries = payload.get("evidence_entries")
     if not isinstance(entries, list):
@@ -625,6 +667,8 @@ def validate_analysis_environment_lock_evidence_registry(
             blockers.append(f"analysis_environment_lock_evidence_registry_duplicate:{environment_id}")
         seen.add(environment_id)
         registered_environment_ids.append(environment_id)
+        if environment_id not in known_environment_ids:
+            blockers.append(f"analysis_environment_lock_evidence_registry_unregistered_environment:{environment_id}")
         if not evidence_path:
             blockers.append(f"analysis_environment_lock_evidence_registry_evidence_path_missing:{environment_id}")
             continue
@@ -656,6 +700,9 @@ def validate_analysis_environment_lock_evidence_registry(
         "status": "blocked" if blockers else "passed",
         "entry_count": len(entries),
         "registered_environment_ids": registered_environment_ids,
+        "expected_environment_ids": expected_environment_ids,
+        "missing_environment_ids": [environment_id for environment_id in expected_environment_ids if environment_id not in set(registered_environment_ids)],
+        "missing_count": len([environment_id for environment_id in expected_environment_ids if environment_id not in set(registered_environment_ids)]),
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }

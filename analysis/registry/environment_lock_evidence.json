@@ -2,10 +2,17 @@
   "schema_version": "biomedpilot.analysis.environment_lock_evidence_registry.v1",
   "policy": {
     "registry_is_authoritative": true,
+    "expected_environment_ids_are_authoritative": true,
     "restored_full_environment_requires_schema_valid_evidence": true,
     "manual_scoped_environment_restoration_only": true,
     "runtime_package_install": "forbidden",
     "runtime_resource_download": "forbidden"
   },
+  "expected_environment_ids": [
+    "r-bio-full",
+    "r-spatial-full",
+    "r-chem-full",
+    "r-chem-gpu"
+  ],
   "evidence_entries": []
 }

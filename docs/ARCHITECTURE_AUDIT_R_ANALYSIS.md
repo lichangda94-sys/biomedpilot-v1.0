@@ -124,6 +124,7 @@ Standard package discovery is now available to the UI state layer:
 - `build_analysis_remediation_queue()` now self-checks against `analysis/schemas/output/remediation_queue.schema.json`, keeping P1 remediation queue consumers on a stable contract.
 - The `migrate_formal_algorithms_to_isolated_standard_worker` remediation item now carries `module_scope` with expected, passed, blocked, and missing migration evidence modules, so remediation planning can proceed one module at a time without treating lite fixture readiness as full migration.
 - `analysis/registry/environment_lock_evidence.json` is now the authoritative registry for restored full environment evidence. It is intentionally empty, so no full environment is restored; `validate_analysis_environment_lock_evidence_registry()` provides the future evidence entry point without changing the default app-dev dependency boundary.
+- Full environment lock evidence registry now declares the expected full environment scope. The validator blocks expected-environment scope drift and unregistered evidence entries, while the current empty `evidence_entries` list keeps every full environment unrestored.
 - Full environment lock evidence now requires Docker image build proof. A future restored environment evidence payload must include `docker_image.image_ref`, SHA-256 image digest, architecture, `build_status=built`, and an existing build log; a Dockerfile path alone is not sufficient to make full mode ready.
 - `analysis/registry/resource_lock_evidence.json` is now the authoritative registry for externally prepared full resource lock evidence. It is intentionally empty, so no Reactome/MSigDB/spatial/chem resource is locked; `validate_analysis_resource_lock_evidence_registry()` provides the future evidence entry point without permitting runtime downloads.
 - Full resource lock evidence registry now declares the expected full resource/tool scope. The validator blocks expected-resource scope drift and unregistered evidence entries, while the current empty `evidence_entries` list keeps every full resource/tool blocked.
@@ -492,6 +493,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Hardened full environment lock evidence so the declared package-lock SHA-256 must match the referenced `renv_lock` file content.
 - Hardened full environment lock evidence so a matching SHA-256 for an empty or scaffold-only renv lock cannot satisfy restored environment proof.
 - Hardened full environment lock evidence so restored full locks must also carry Docker image build evidence instead of relying on a Dockerfile scaffold alone.
+- Hardened full environment lock registry evidence so the expected external full environment scope is explicit and cannot silently drift.
 - Hardened full resource lock evidence so the declared SHA-256 must match the referenced `cache_path` file or deterministic directory content, and empty cache directories are blocked.
 - Hardened full resource lock registry evidence so the expected external full resource/tool scope is explicit and cannot silently drift.
 - Added architecture and remediation docs.

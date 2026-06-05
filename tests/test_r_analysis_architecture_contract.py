@@ -60,6 +60,12 @@ REQUIRED_FULL_RESOURCE_IDS = [
     "gromacs_tool",
     "md_forcefield_template_bundle",
 ]
+REQUIRED_FULL_ENVIRONMENT_IDS = [
+    "r-bio-full",
+    "r-spatial-full",
+    "r-chem-full",
+    "r-chem-gpu",
+]
 RESULT_PAYLOAD_SCHEMA = "analysis/schemas/output/result.schema.json"
 PROVENANCE_PAYLOAD_SCHEMA = "analysis/schemas/output/provenance.schema.json"
 
@@ -851,10 +857,41 @@ def test_analysis_environment_lock_evidence_registry_is_authoritative_and_empty_
 
     assert registry["schema_version"] == "biomedpilot.analysis.environment_lock_evidence_registry.v1"
     assert registry["policy"]["registry_is_authoritative"] is True
+    assert registry["policy"]["expected_environment_ids_are_authoritative"] is True
+    assert registry["expected_environment_ids"] == REQUIRED_FULL_ENVIRONMENT_IDS
     assert registry["evidence_entries"] == []
     assert validation["schema_version"] == "biomedpilot.analysis.environment_lock_evidence_registry_validation.v1"
     assert validation["status"] == "passed"
     assert validation["entry_count"] == 0
+    assert validation["expected_environment_ids"] == REQUIRED_FULL_ENVIRONMENT_IDS
+    assert validation["missing_environment_ids"] == REQUIRED_FULL_ENVIRONMENT_IDS
+    assert validation["missing_count"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
+
+
+def test_analysis_environment_lock_evidence_registry_blocks_expected_scope_drift() -> None:
+    registry = deepcopy(load_analysis_environment_lock_evidence_registry())
+    registry["expected_environment_ids"] = ["r-bio-full"]
+
+    validation = validate_analysis_environment_lock_evidence_registry(registry)
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_lock_evidence_registry_expected_environment_ids_mismatch" in validation["blockers"]
+    assert validation["expected_environment_ids"] == REQUIRED_FULL_ENVIRONMENT_IDS
+
+
+def test_analysis_environment_lock_evidence_registry_blocks_unregistered_entries() -> None:
+    registry = deepcopy(load_analysis_environment_lock_evidence_registry())
+    registry["evidence_entries"] = [
+        {
+            "environment_id": "unknown-environment",
+            "evidence_path": "analysis/registry/analysis_environments.json",
+        }
+    ]
+
+    validation = validate_analysis_environment_lock_evidence_registry(registry)
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_lock_evidence_registry_unregistered_environment:unknown-environment" in validation["blockers"]
 
 
 def test_restored_full_environment_lock_requires_schema_valid_evidence(tmp_path: Path) -> None:
@@ -949,11 +986,13 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
         "schema_version": "biomedpilot.analysis.environment_lock_evidence_registry.v1",
         "policy": {
             "registry_is_authoritative": True,
+            "expected_environment_ids_are_authoritative": True,
             "restored_full_environment_requires_schema_valid_evidence": True,
             "manual_scoped_environment_restoration_only": True,
             "runtime_package_install": "forbidden",
             "runtime_resource_download": "forbidden",
         },
+        "expected_environment_ids": REQUIRED_FULL_ENVIRONMENT_IDS,
         "evidence_entries": [
             {"environment_id": "r-bio-full", "evidence_path": str(evidence_path)}
         ],
@@ -1869,6 +1908,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "package_lock_hash" in environment_lock_schema["required"]
     assert "runtime_package_install" in environment_lock_schema["required"]
     assert environment_lock_registry_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence_registry.v1"
+    assert "expected_environment_ids" in environment_lock_registry_schema["required"]
     assert "evidence_entries" in environment_lock_registry_schema["required"]
     assert "worker_backend" in invocation_schema["required"]
     assert "invocation_status" in invocation_schema["required"]
