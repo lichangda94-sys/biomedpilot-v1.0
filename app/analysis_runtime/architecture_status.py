@@ -10,6 +10,7 @@ from .standard_package import validate_standard_result_package
 
 
 STANDARD_WORKER_MIGRATION_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json"
+STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence_registry.schema.json"
 STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "standard_worker_migration_evidence.json"
 FULL_ANALYSIS_ACTIVATION_GATE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json"
 REMEDIATION_QUEUE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "remediation_queue.schema.json"
@@ -334,6 +335,8 @@ def validate_standard_worker_migration_evidence_registry(
     blockers: list[str] = []
     warnings: list[str] = []
     entries = payload.get("evidence_entries")
+    schema_blockers = _migration_evidence_registry_schema_blockers(payload)
+    blockers.extend(schema_blockers)
     if payload.get("schema_version") != "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1":
         blockers.append("standard_worker_migration_evidence_registry_schema_version_mismatch")
     policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
@@ -388,6 +391,7 @@ def validate_standard_worker_migration_evidence_registry(
         "status": "blocked" if blockers else "passed",
         "entry_count": len(entries),
         "entries": entry_results,
+        "schema_validation_status": "blocked" if schema_blockers else "passed",
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": warnings,
     }
@@ -466,6 +470,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
                 "analysis/modules/",
                 "analysis/schemas/input/module_input.schema.json",
                 "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
+                "analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json",
                 "analysis/schemas/output/result_package.schema.json",
             ],
             "required_evidence": [
@@ -645,6 +650,26 @@ def _remediation_queue_schema_blockers(payload: dict[str, Any]) -> list[str]:
     return blockers
 
 
+def _migration_evidence_registry_schema_blockers(payload: dict[str, Any]) -> list[str]:
+    schema = _read_json(STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"standard_worker_migration_evidence_registry_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        value = payload[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"standard_worker_migration_evidence_registry_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"standard_worker_migration_evidence_registry_type_invalid:{field}")
+    return blockers
+
+
 def _schema_type_matches(value: Any, expected_type: str) -> bool:
     if expected_type == "string":
         return isinstance(value, str)
@@ -748,6 +773,7 @@ def _required_schemas_exist() -> bool:
         "analysis/schemas/output/result_package.schema.json",
         "analysis/schemas/output/worker_invocation.schema.json",
         "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
+        "analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json",
         "analysis/schemas/output/full_analysis_activation_gate.schema.json",
         "analysis/schemas/output/remediation_queue.schema.json",
         "analysis/schemas/output/resource_lock_evidence.schema.json",

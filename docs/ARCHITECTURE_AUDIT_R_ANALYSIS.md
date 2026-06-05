@@ -32,6 +32,7 @@ This audit added a minimal boundary scaffold:
 - `analysis/schemas/output/environment_lock_evidence_registry.schema.json`
 - `analysis/schemas/output/full_analysis_activation_gate.schema.json`
 - `analysis/schemas/output/remediation_queue.schema.json`
+- `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
@@ -104,6 +105,7 @@ Standard package discovery is now available to the UI state layer:
 
 - `build_analysis_architecture_status()` creates a read-only machine snapshot for the 20 R analysis architecture requirements, including P0/P1 issue lists plus resource and environment validator payloads.
 - `analysis/registry/standard_worker_migration_evidence.json` is now the authoritative registry for formal isolated-worker migration evidence. The registry is empty, so no formal module is marked migrated.
+- `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json` validates the authoritative migration registry shape. The current empty registry is schema-valid but still contains zero evidence entries, so every formal module remains pending.
 - `build_full_analysis_activation_gate()` combines full environment readiness, full resource locks, and standard-worker migration evidence into a single read-only activation gate. Current status is blocked; the gate performs no worker execution, package installation, or resource download, and the payload self-checks against `analysis/schemas/output/full_analysis_activation_gate.schema.json`.
 - Analysis Center exposes that activation gate as a visible row with disabled reasons, so full-mode blockers are not hidden in developer-only diagnostics.
 - `build_analysis_remediation_queue()` now self-checks against `analysis/schemas/output/remediation_queue.schema.json`, keeping P1 remediation queue consumers on a stable contract.
@@ -404,7 +406,7 @@ The current machine-readable queue exposes these P1 items:
 | --- | --- | --- |
 | `restore_full_analysis_environment_locks` | `analysis/registry/analysis_environments.json`, `analysis/registry/environment_lock_evidence.json`, `renv/renv.bio-full.lock`, `renv/renv.spatial-full.lock`, `renv/renv.chem-full.lock`, `analysis/schemas/output/environment_lock_evidence.schema.json`, `analysis/schemas/output/environment_lock_evidence_registry.schema.json`, `external_analysis_environments/`, `docker/Dockerfile.r-bio-full`, `docker/Dockerfile.r-spatial-full`, `docker/Dockerfile.r-chem-full`, `docker/Dockerfile.r-chem-gpu` | Full environment locks restored from controlled external environments; every restored full environment lock has schema-valid registry evidence; image build evidence captured outside default app-dev; environment validator reports full readiness. |
 | `lock_full_analysis_resources` | `analysis/resources/manifest.json`, `analysis/registry/resource_lock_evidence.json`, `analysis/schemas/output/resource_lock_evidence.schema.json`, `analysis/schemas/output/resource_lock_evidence_registry.schema.json`, `analysis/resources/locks/`, `external_analysis_resources/` | Every full resource declares version, source, hash, license, and cache path; every locked full resource has schema-valid registry evidence; resource validator reports full readiness. |
-| `migrate_formal_algorithms_to_isolated_standard_worker` | `app/bioinformatics/`, `analysis/registry/standard_worker_migration_evidence.json`, `analysis/runners/run_module.R`, `analysis/modules/`, `analysis/schemas/input/module_input.schema.json`, `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, `analysis/schemas/output/result_package.schema.json` | Selected formal module has registry-owned schema-valid migration evidence, executes through the task bridge and standard worker boundary, and frontend consumes the standard package instead of module-private output paths. |
+| `migrate_formal_algorithms_to_isolated_standard_worker` | `app/bioinformatics/`, `analysis/registry/standard_worker_migration_evidence.json`, `analysis/runners/run_module.R`, `analysis/modules/`, `analysis/schemas/input/module_input.schema.json`, `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`, `analysis/schemas/output/result_package.schema.json` | Selected formal module has registry-owned schema-valid migration evidence, executes through the task bridge and standard worker boundary, and frontend consumes the standard package instead of module-private output paths. |
 
 The current standard-worker migration matrix is intentionally still `partial`: all registered modules have mock packages and lite worker fixture paths, but full/formal migration remains blocked or pending until a selected formal module has a registry-owned payload in `analysis/registry/standard_worker_migration_evidence.json`, that payload matches `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, passes `validate_standard_worker_migration_evidence()`, and passes isolated environment/resource gates.
 
@@ -451,6 +453,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added `build_analysis_remediation_queue()` to expose current P1 architecture gaps as blocked, manual, read-only remediation items with source issues, recommended files, and required evidence.
 - Added `build_standard_worker_migration_matrix()` to expose module-level mock/lite/full/formal migration status and to drive the formal-standard-worker P1 issue from evidence instead of a static string.
 - Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` to block full/formal migration completion claims unless schema-valid standard package, standard R worker boundary, task-center invocation, result-index registration, UI standard-package consumption, and formal semantics preservation evidence is present.
+- Added `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json` so the authoritative migration registry itself is schema-checked before formal worker migration completion can be claimed.
 - Added Analysis Center remediation rows so the UI can display full environment, full resource, and isolated worker migration blockers without implying full analysis readiness.
 - Added architecture and remediation docs.
 

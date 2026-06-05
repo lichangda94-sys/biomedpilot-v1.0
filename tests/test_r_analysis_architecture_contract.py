@@ -698,6 +698,10 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
         in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
     )
     assert (
+        "analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json"
+        in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]
+    )
+    assert (
         "selected formal module has registry-owned schema-valid standard worker migration evidence"
         in items["migrate_formal_algorithms_to_isolated_standard_worker"]["required_evidence"]
     )
@@ -739,8 +743,25 @@ def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_
     assert registry["evidence_entries"] == []
     assert validation["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry_validation.v1"
     assert validation["status"] == "passed"
+    assert validation["schema_validation_status"] == "passed"
     assert validation["entry_count"] == 0
     assert validation["blockers"] == []
+
+
+def test_standard_worker_migration_evidence_registry_schema_blocks_shape_drift() -> None:
+    validation = validate_standard_worker_migration_evidence_registry(
+        {
+            "schema_version": "wrong",
+            "policy": [],
+            "evidence_entries": {},
+        }
+    )
+
+    assert validation["status"] == "blocked"
+    assert validation["schema_validation_status"] == "blocked"
+    assert "standard_worker_migration_evidence_registry_const_mismatch:schema_version" in validation["blockers"]
+    assert "standard_worker_migration_evidence_registry_type_invalid:policy" in validation["blockers"]
+    assert "standard_worker_migration_evidence_registry_type_invalid:evidence_entries" in validation["blockers"]
 
 
 def test_standard_worker_migration_matrix_does_not_accept_full_supported_module_without_registry_evidence() -> None:
@@ -882,6 +903,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     result_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "result.schema.json")
     provenance_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json")
     invocation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json")
+    migration_registry_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence_registry.schema.json")
     full_activation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json")
     remediation_queue_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "remediation_queue.schema.json")
     resource_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json")
@@ -902,6 +924,8 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     runtime_required = set(provenance_schema["properties"]["runtime"]["required"])  # type: ignore[index]
     assert {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"} <= runtime_required
     assert invocation_schema["$id"] == "biomedpilot.analysis.worker_invocation.v1"
+    assert migration_registry_schema["$id"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1"
+    assert "evidence_entries" in migration_registry_schema["required"]
     assert full_activation_schema["$id"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
     assert "checks" in full_activation_schema["required"]
     assert "execution_policy" in full_activation_schema["required"]
