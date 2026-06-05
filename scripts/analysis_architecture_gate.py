@@ -343,6 +343,7 @@ def _remediation_summary(remediation_items: list[dict[str, Any]]) -> dict[str, A
                 "required_evidence": [str(value) for value in item.get("required_evidence", []) if value],
                 "scope": _remediation_scope_summary(item),
                 "module_action_summary": item.get("module_action_summary", {}),
+                "resource_action_summary": item.get("resource_action_summary", {}),
             }
         )
     return {

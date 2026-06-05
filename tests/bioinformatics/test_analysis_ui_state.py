@@ -101,6 +101,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "R architecture remediation queue" in remediation_text
     assert "restore_full_analysis_environment_locks" in remediation_text
     assert "lock_full_analysis_resources" in remediation_text
+    assert "reactome_full:register_schema_valid_prelocked_resource_evidence" in remediation_text
+    assert "register_schema_valid_prelocked_resource_evidence=11" in remediation_text
     assert "migrate_formal_algorithms_to_isolated_standard_worker" in remediation_text
     assert "deg:declare_scoped_full_mode_only_after_environment_and_resource_locks" in remediation_text
     assert "univariate:declare_scoped_full_mode_only_after_environment_and_resource_locks" in remediation_text

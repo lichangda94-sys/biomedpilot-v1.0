@@ -1470,6 +1470,26 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert "analysis/schemas/output/resource_lock_evidence.schema.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "analysis/schemas/output/resource_lock_evidence_registry.schema.json" in items["lock_full_analysis_resources"]["recommended_files"]
     assert "each locked full resource has schema-valid resource_lock_evidence" in items["lock_full_analysis_resources"]["required_evidence"]
+    resource_actions = {item["resource_id"]: item for item in items["lock_full_analysis_resources"]["resource_next_actions"]}
+    resource_summary = items["lock_full_analysis_resources"]["resource_action_summary"]
+    assert resource_summary["resource_count"] == len(REQUIRED_FULL_RESOURCE_IDS)
+    assert resource_summary["blocked_resource_count"] == len(REQUIRED_FULL_RESOURCE_IDS)
+    assert resource_summary["next_action_counts"]["register_schema_valid_prelocked_resource_evidence"] == len(REQUIRED_FULL_RESOURCE_IDS)
+    assert set(resource_actions) == set(REQUIRED_FULL_RESOURCE_IDS)
+    assert resource_actions["reactome_full"]["next_action"] == "register_schema_valid_prelocked_resource_evidence"
+    assert resource_actions["reactome_full"]["runtime_download_allowed"] is False
+    assert resource_actions["reactome_full"]["required_hash_algorithm"] == "sha256"
+    assert resource_actions["reactome_full"]["required_for_modules"] == ["enrichment"]
+    assert "runtime_download" in resource_actions["reactome_full"]["forbidden_evidence_sources"]
+    assert resource_summary["module_resources"]["enrichment"] == [
+        "reactome_full",
+        "msigdb_full",
+        "go_full",
+        "kegg_full",
+        "orgdb_human_full",
+    ]
+    assert resource_summary["module_resources"]["docking"] == ["autodock_vina_tool", "docking_template_bundle"]
+    assert resource_summary["module_resources"]["molecular_dynamics"] == ["gromacs_tool", "md_forcefield_template_bundle"]
     assert (
         "analysis/registry/standard_worker_migration_evidence.json"
         in items["migrate_formal_algorithms_to_isolated_standard_worker"]["recommended_files"]

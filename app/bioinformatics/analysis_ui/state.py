@@ -1149,7 +1149,13 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
         action_summary = item.get("module_action_summary") if isinstance(item.get("module_action_summary"), dict) else {}
         next_action_counts = action_summary.get("next_action_counts") if isinstance(action_summary.get("next_action_counts"), dict) else {}
         module_next_actions = [action for action in item.get("module_next_actions", []) or [] if isinstance(action, dict)]
-        action_warnings = [f"{action}={count}" for action, count in sorted(next_action_counts.items())]
+        resource_summary = item.get("resource_action_summary") if isinstance(item.get("resource_action_summary"), dict) else {}
+        resource_next_actions = [action for action in item.get("resource_next_actions", []) or [] if isinstance(action, dict)]
+        resource_action_counts = resource_summary.get("next_action_counts") if isinstance(resource_summary.get("next_action_counts"), dict) else {}
+        action_warnings = [
+            *[f"{action}={count}" for action, count in sorted(next_action_counts.items())],
+            *[f"{action}={count}" for action, count in sorted(resource_action_counts.items())],
+        ]
         scope_basis = ""
         if module_scope:
             scope_basis = f"; missing_modules={len(missing_modules)}; modules={compact_list(missing_modules)}"
@@ -1162,6 +1168,7 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
                     *_list(item.get("required_evidence"))[:2],
                     *[f"missing_module:{module_id}" for module_id in missing_modules[:5]],
                     *[f"{action.get('module_id')}:{action.get('migration_next_action')}" for action in module_next_actions[:5]],
+                    *[f"{action.get('resource_id')}:{action.get('next_action')}" for action in resource_next_actions[:5]],
                     *action_warnings,
                 ],
                 basis=f"{item.get('priority', 'P1')}; files={compact_list(_list(item.get('recommended_files'))[:3])}{scope_basis}",

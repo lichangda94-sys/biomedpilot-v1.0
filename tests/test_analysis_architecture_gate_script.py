@@ -97,6 +97,11 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["remediation_queue"]["automation_policy"] == "manual_scoped_changes_only"
     assert payload["remediation_queue"]["install_policy"] == "no_runtime_package_install_or_resource_download"
     remediation_items = {item["item_id"]: item for item in payload["remediation_queue"]["items"]}
+    resource_remediation = remediation_items["lock_full_analysis_resources"]
+    resource_actions = {item["resource_id"]: item for item in resource_remediation["resource_next_actions"]}
+    assert resource_remediation["resource_action_summary"]["blocked_resource_count"] == len(resource_actions)
+    assert resource_actions["reactome_full"]["next_action"] == "register_schema_valid_prelocked_resource_evidence"
+    assert resource_actions["gromacs_tool"]["required_for_modules"] == ["molecular_dynamics"]
     migration_remediation = remediation_items["migrate_formal_algorithms_to_isolated_standard_worker"]
     migration_actions = {item["module_id"]: item for item in migration_remediation["module_next_actions"]}
     assert migration_remediation["module_action_summary"]["blocked_module_count"] == len(migration_actions)
@@ -114,6 +119,12 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert (
         decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["module_action_summary"]["next_action_counts"][
             "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+        ]
+        >= 1
+    )
+    assert (
+        decisions["lock_full_analysis_resources"]["resource_action_summary"]["next_action_counts"][
+            "register_schema_valid_prelocked_resource_evidence"
         ]
         >= 1
     )

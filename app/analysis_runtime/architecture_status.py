@@ -471,6 +471,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
     snapshot = status if isinstance(status, dict) else build_analysis_architecture_status()
     p1_issues = [str(item) for item in snapshot.get("p1_issues", []) if item]
     migration_matrix = snapshot.get("standard_worker_migration_matrix") if isinstance(snapshot.get("standard_worker_migration_matrix"), dict) else {}
+    resource_validation = snapshot.get("resource_validation") if isinstance(snapshot.get("resource_validation"), dict) else {}
     migration_module_scope = {
         "expected_module_ids": list(migration_matrix.get("expected_evidence_module_ids", [])),
         "passed_module_ids": list(migration_matrix.get("passed_evidence_module_ids", [])),
@@ -481,6 +482,8 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
     }
     migration_module_actions = _standard_worker_migration_remediation_actions(migration_matrix)
     migration_action_summary = _standard_worker_migration_action_summary(migration_module_actions)
+    resource_actions = _full_resource_lock_remediation_actions(resource_validation)
+    resource_action_summary = _full_resource_lock_action_summary(resource_actions)
     issue_items = {
         "full_analysis_environment_locks_not_restored": {
             "item_id": "restore_full_analysis_environment_locks",
@@ -531,6 +534,8 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
                 "validate_analysis_resource_manifest.full_mode_ready becomes true",
             ],
             "boundary": "resource lock only; no runtime database fetch in user request flow",
+            "resource_next_actions": resource_actions,
+            "resource_action_summary": resource_action_summary,
         },
         "formal_algorithms_not_universally_migrated_to_isolated_standard_worker": {
             "item_id": "migrate_formal_algorithms_to_isolated_standard_worker",
@@ -580,6 +585,64 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
     if schema_blockers:
         payload["status"] = "blocked"
     return payload
+
+
+def _full_resource_lock_remediation_actions(resource_validation: dict[str, Any]) -> list[dict[str, Any]]:
+    templates = [
+        item
+        for item in resource_validation.get("resource_lock_evidence_templates", [])
+        if isinstance(item, dict)
+    ]
+    blocked_ids = {str(item) for item in resource_validation.get("blocked_resource_ids", []) if item}
+    actions: list[dict[str, Any]] = []
+    for template in templates:
+        resource_id = str(template.get("resource_id") or "")
+        if resource_id and resource_id not in blocked_ids:
+            continue
+        approved_modules = [str(item) for item in template.get("approved_for_modules", []) if item]
+        cache_path = str(template.get("cache_path") or "")
+        evidence_files = [str(item) for item in template.get("evidence_files", []) if item]
+        actions.append(
+            {
+                "resource_id": resource_id,
+                "status": "blocked",
+                "next_action": "register_schema_valid_prelocked_resource_evidence",
+                "required_for_modules": approved_modules,
+                "cache_path": cache_path,
+                "evidence_files": evidence_files,
+                "runtime_download_allowed": template.get("runtime_download_allowed") is True,
+                "required_hash_algorithm": str((template.get("hash") if isinstance(template.get("hash"), dict) else {}).get("algorithm") or "sha256"),
+                "required_cache_content": template.get("cache_content") if isinstance(template.get("cache_content"), dict) else {},
+                "forbidden_evidence_sources": [str(item) for item in template.get("forbidden_evidence_sources", []) if item],
+                "recommended_files": [
+                    "analysis/resources/manifest.json",
+                    "analysis/registry/resource_lock_evidence.json",
+                    "analysis/schemas/output/resource_lock_evidence.schema.json",
+                    "analysis/schemas/output/resource_lock_evidence_registry.schema.json",
+                    cache_path,
+                    *evidence_files,
+                ],
+            }
+        )
+    return actions
+
+
+def _full_resource_lock_action_summary(actions: list[dict[str, Any]]) -> dict[str, Any]:
+    by_module: dict[str, list[str]] = {}
+    for action in actions:
+        for module_id in action.get("required_for_modules", []) or []:
+            module_key = str(module_id)
+            by_module.setdefault(module_key, []).append(str(action.get("resource_id") or ""))
+    return {
+        "schema_version": "biomedpilot.analysis.resource_lock_action_summary.v1",
+        "resource_count": len(actions),
+        "blocked_resource_count": sum(1 for action in actions if action.get("status") == "blocked"),
+        "module_resource_counts": {module_id: len(resources) for module_id, resources in sorted(by_module.items())},
+        "module_resources": {module_id: resources for module_id, resources in sorted(by_module.items())},
+        "next_action_counts": {
+            "register_schema_valid_prelocked_resource_evidence": len(actions),
+        },
+    }
 
 
 def _standard_worker_migration_remediation_actions(matrix: dict[str, Any]) -> list[dict[str, Any]]:
