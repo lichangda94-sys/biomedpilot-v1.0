@@ -18,6 +18,9 @@ from .resources import full_mode_resource_blockers, load_analysis_resource_manif
 from .standard_package import REQUIRED_DIRECTORIES, validate_standard_result_package
 
 
+MODULE_INPUT_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "input" / "module_input.schema.json"
+
+
 def run_analysis_module_task(
     project_root: str | Path,
     module_input: dict[str, Any],
@@ -139,6 +142,8 @@ def run_analysis_module_task(
 
 def _validate_input_payload(payload: dict[str, Any], *, module: dict[str, Any]) -> list[str]:
     blockers: list[str] = []
+    blockers.extend(_input_schema_required_field_blockers(payload))
+    blockers.extend(_input_schema_shape_blockers(payload))
     if payload.get("schema_version") != "biomedpilot.analysis.module_input.v1":
         blockers.append("module_input_schema_version_mismatch")
     if payload.get("module_id") != module.get("module_id"):
@@ -151,7 +156,88 @@ def _validate_input_payload(payload: dict[str, Any], *, module: dict[str, Any]) 
         blockers.append("module_input_inputs_missing_or_invalid")
     if not isinstance(payload.get("parameters"), dict):
         blockers.append("module_input_parameters_missing_or_invalid")
+    return list(dict.fromkeys(blockers))
+
+
+def _input_schema_required_field_blockers(payload: dict[str, Any]) -> list[str]:
+    schema = _load_json(MODULE_INPUT_SCHEMA_PATH)
+    required = schema.get("required")
+    if not isinstance(required, list):
+        return ["module_input_payload_schema_required_fields_missing"]
+    blockers: list[str] = []
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"module_input_schema_required_field_missing:{field}")
     return blockers
+
+
+def _input_schema_shape_blockers(payload: dict[str, Any]) -> list[str]:
+    schema = _load_json(MODULE_INPUT_SCHEMA_PATH)
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return ["module_input_payload_schema_properties_missing"]
+    blockers: list[str] = []
+    for field, field_schema in properties.items():
+        if isinstance(field, str) and field in payload and isinstance(field_schema, dict):
+            blockers.extend(_schema_value_blockers("module_input", field, payload[field], field_schema))
+    return blockers
+
+
+def _schema_value_blockers(payload_name: str, field_path: str, value: Any, schema: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if "const" in schema and value != schema["const"]:
+        blockers.append(f"{payload_name}_schema_field_const_mismatch:{field_path}")
+    enum = schema.get("enum")
+    if isinstance(enum, list) and value not in enum:
+        blockers.append(f"{payload_name}_schema_field_enum_invalid:{field_path}")
+    expected_type = schema.get("type")
+    if isinstance(expected_type, str) and not _value_matches_schema_type(value, expected_type):
+        blockers.append(f"{payload_name}_schema_field_type_invalid:{field_path}")
+        return blockers
+    if isinstance(expected_type, list) and not any(isinstance(item, str) and _value_matches_schema_type(value, item) for item in expected_type):
+        blockers.append(f"{payload_name}_schema_field_type_invalid:{field_path}")
+        return blockers
+    min_length = schema.get("minLength")
+    if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+        blockers.append(f"{payload_name}_schema_field_min_length_invalid:{field_path}")
+    if _schema_allows_type(expected_type, "object") and isinstance(value, dict):
+        blockers.extend(_object_nested_blockers(payload_name, field_path, value, schema))
+    return blockers
+
+
+def _object_nested_blockers(payload_name: str, field_path: str, value: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return blockers
+    for field, field_schema in properties.items():
+        if isinstance(field, str) and field in value and isinstance(field_schema, dict):
+            blockers.extend(_schema_value_blockers(payload_name, f"{field_path}.{field}", value[field], field_schema))
+    return blockers
+
+
+def _schema_allows_type(expected_type: object, type_name: str) -> bool:
+    if expected_type == type_name:
+        return True
+    return isinstance(expected_type, list) and type_name in expected_type
+
+
+def _value_matches_schema_type(value: Any, expected_type: str) -> bool:
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "array":
+        return isinstance(value, list)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    if expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == "number":
+        return isinstance(value, int | float) and not isinstance(value, bool)
+    if expected_type == "null":
+        return value is None
+    return True
 
 
 def _write_worker_input_manifest(package_dir: Path, payload: dict[str, Any]) -> Path:
@@ -437,6 +523,8 @@ def _register_standard_package(
     engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
     runtime = provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {}
     analysis_environment = provenance.get("analysis_environment") if isinstance(provenance.get("analysis_environment"), dict) else {}
+    inputs = payload.get("inputs") if isinstance(payload.get("inputs"), dict) else {}
+    parameters = payload.get("parameters") if isinstance(payload.get("parameters"), dict) else {}
     engine_name = str(engine.get("name") or "biomedpilot_analysis_task_bridge")
     engine_version = str(engine.get("version") or "v1")
     log_artifacts = [{"artifact_type": "analysis_worker_log", "path": f"{rel_package}/logs/worker.log"}]
@@ -453,10 +541,10 @@ def _register_standard_package(
         task_run_id=task_id,
         task_type=f"analysis:{module_id}",
         result_semantics="testing_level" if status == "passed" else "blocked",
-        input_package_id=str((payload.get("inputs") or {}).get("input_package_id") or ""),
-        source_dataset_id=str((payload.get("inputs") or {}).get("source_dataset_id") or ""),
+        input_package_id=str(inputs.get("input_package_id") or ""),
+        source_dataset_id=str(inputs.get("source_dataset_id") or ""),
         source_repository_manifest="analysis/registry/analysis_modules.json",
-        parameters_manifest=dict(payload.get("parameters") or {}),
+        parameters_manifest=dict(parameters),
         engine_name=engine_name,
         engine_version=engine_version,
         dependency_snapshot={

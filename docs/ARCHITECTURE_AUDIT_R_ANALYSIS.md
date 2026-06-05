@@ -212,6 +212,12 @@ The standard package validator now uses the result/provenance payload schema fil
 - It now also enforces top-level schema shape for declared `type`, `enum`, `const`, `minLength`, array item types, and one-level nested object properties such as `engine.version` and `runtime.package_versions`.
 - Main-backend task-bridge blocked packages now write `result_semantics=blocked`, keeping blocked outputs schema-complete instead of relying on result-index semantics alone.
 
+The main-backend task bridge now also treats the module input schema as an execution gate:
+
+- `run_analysis_module_task()` reads `analysis/schemas/input/module_input.schema.json` before invoking a fixture copy or R worker.
+- Missing schema-required fields such as `parameters` produce `module_input_schema_required_field_missing:<field>` blockers while preserving existing semantic blockers for UI disabled reasons.
+- Shape drift such as invalid mode enum, empty `task_id`, non-object `inputs`, and invalid nested `runtime` field types is blocked before worker execution and still writes a diagnostic standard result package plus `logs/worker_invocation.json`.
+
 ## 2. PASS / WARN / FAIL Table
 
 | Requirement | Status | Evidence |
@@ -225,6 +231,7 @@ The standard package validator now uses the result/provenance payload schema fil
 | UI-safe payload schema discovery | PASS | Standard package catalog rows and package detail payloads now expose result/provenance payload schema paths for consumers. |
 | Payload schema required-field validation | PASS | `validate_standard_result_package()` now blocks result/provenance payloads missing fields required by their schema files; task-bridge blocked packages include `result_semantics=blocked`. |
 | Payload schema shape validation | PASS | `validate_standard_result_package()` now blocks result/provenance payload enum/type/minLength drift, array item type drift, and declared one-level nested object shape drift. |
+| Module input schema validation | PASS | `run_analysis_module_task()` now blocks required-field and shape drift from `analysis/schemas/input/module_input.schema.json` before worker execution while still returning a standard diagnostic package and worker invocation manifest. |
 | Every module outputs `result.json` / `provenance.json` | WARN | Mock fixtures prove standard package shape for every registered module; controlled enrichment ORA/GSEA, controlled DEG, controlled KM/log-rank, controlled Cox univariate, exploratory immune/TME scoring, and local correlation results now write standard sidecar packages; other existing real algorithms still use varied structures. |
 | Every module outputs `tables/`, `plots/`, `reports/`, `logs/` | WARN | Mock fixtures prove required directories for every registered module; existing real algorithms not fully normalized. |
 | Frontend consumes standard package only | WARN | Analysis Center state now exposes a standard package catalog and standard-package gate rows from result-index artifacts, worker invocation diagnostics, worker-boundary metadata, full-mode environment snapshots, and a standard artifact manifest; package validation blocks declared table/plot/report artifacts that are missing or escape the standard package directories. Existing detailed result views still consume module-specific result indexes and service payloads. |
@@ -374,6 +381,7 @@ New architecture boundary files:
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
 - Added `logs/worker_invocation.json` for all standard task-bridge outcomes, and registered it in result-index log artifacts after `worker.log`.
 - Added `analysis/schemas/output/worker_invocation.schema.json` and validation blockers for missing or invalid task-bridge/standard-worker invocation manifests.
+- Added schema-driven module input validation in the task bridge so required-field, enum, type, minLength, and nested runtime field drift from `analysis/schemas/input/module_input.schema.json` is blocked before worker execution.
 - Split standard R worker provenance hashing so `input_hash` tracks the full input manifest and `parameter_hash` tracks the `parameters` object separately.
 - Expanded resource governance with blocked full-mode resource locks and module-specific full-mode resource blockers.
 - Added a standard analysis package catalog and exposed it in Analysis Center state without upgrading testing-level packages.

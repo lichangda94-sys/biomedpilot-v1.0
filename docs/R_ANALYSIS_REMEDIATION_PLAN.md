@@ -145,6 +145,8 @@ Update: standard package validation now enforces required fields from the declar
 
 Update: standard package validation now also enforces basic schema shape from the declared result/provenance payload schemas. It blocks enum/type/minLength drift, array item type drift, and one-level nested object shape drift for fields such as `mode`, `tables`, `warnings`, `engine.version`, and `runtime.package_versions`.
 
+Update: task submission now enforces the module input payload schema before worker execution. `run_analysis_module_task()` reads `analysis/schemas/input/module_input.schema.json`, blocks missing required fields, enum/type/minLength drift, and nested `runtime` field shape drift, then returns a diagnostic standard package and `logs/worker_invocation.json` instead of invoking mock fixtures or R workers with malformed input.
+
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 
 Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.
