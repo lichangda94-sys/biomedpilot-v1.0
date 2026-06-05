@@ -420,9 +420,11 @@ def validate_analysis_environment_lock_evidence(
     if renv_lock and not (REPO_ROOT / renv_lock).is_file():
         blockers.append(f"analysis_environment_lock_evidence_renv_lock_not_found:{renv_lock}")
     elif renv_lock and package_hash_algorithm == "sha256" and _is_sha256_hex(package_hash_value):
-        actual_hash = _sha256_file(REPO_ROOT / renv_lock)
+        renv_lock_path = REPO_ROOT / renv_lock
+        actual_hash = _sha256_file(renv_lock_path)
         if actual_hash != package_hash_value.lower():
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_mismatch")
+        blockers.extend(_environment_lock_evidence_renv_lock_content_blockers(environment_key, renv_lock_path))
 
     evidence_files = evidence.get("evidence_files")
     if not isinstance(evidence_files, list) or not evidence_files:
@@ -899,6 +901,27 @@ def _environment_lock_evidence_registry_schema_blockers(payload: dict[str, Any])
         expected_type = field_schema.get("type")
         if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
             blockers.append(f"analysis_environment_lock_evidence_registry_type_invalid:{field}")
+    return blockers
+
+
+def _environment_lock_evidence_renv_lock_content_blockers(environment_id: str, lock_path: Path) -> list[str]:
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return ["analysis_environment_lock_evidence_renv_lock_invalid_json"]
+    policy = lock.get("BioMedPilotPolicy") if isinstance(lock.get("BioMedPilotPolicy"), dict) else {}
+    packages = lock.get("Packages")
+    blockers: list[str] = []
+    policy_environment = str(policy.get("environment") or "")
+    if not _renv_lock_environment_matches(environment_id, policy_environment):
+        blockers.append("analysis_environment_lock_evidence_renv_lock_environment_mismatch")
+    status = str(policy.get("status") or "missing")
+    if status not in RESTORED_LOCK_STATUSES:
+        blockers.append(f"analysis_environment_lock_evidence_renv_lock_not_restored:{status}")
+    if policy.get("runtime_package_install") != "forbidden":
+        blockers.append("analysis_environment_lock_evidence_renv_lock_runtime_install_policy_invalid")
+    if not isinstance(packages, dict) or not packages:
+        blockers.append("analysis_environment_lock_evidence_renv_lock_packages_empty")
     return blockers
 
 

@@ -160,6 +160,8 @@ Update: restored full environment locks now require schema-valid evidence. `anal
 
 Update: restored full environment evidence now requires `package_lock_hash.algorithm=sha256` and a 64-character hex package-lock hash value. The hash must match the referenced `renv_lock` file content. Arbitrary non-empty hash algorithm labels or mismatched lock hashes are blocked before an environment can contribute to full-mode readiness.
 
+Update: restored full environment evidence now also validates the referenced renv lock content. A matching SHA-256 is not sufficient if `BioMedPilotPolicy.status` is still `scaffold_only_not_restored` or if `Packages` is empty/missing. Full environment handoff must prove an actual restored package lock, not only a placeholder file.
+
 Update: Analysis Center state now exposes `analysis_environment_gate_rows` and developer diagnostics for `validate_analysis_environment_registry()`. The current UI gate table can show registry structural status and full R environment readiness blockers without reading Dockerfiles, renv locks, or module-private R outputs directly.
 
 Update: `build_analysis_architecture_status()` now provides a read-only, machine-consumable snapshot of the 20 R analysis architecture requirements. It reports current status as `partial_with_p1_gaps`: no P0 failure is present, but full environment locks, full resource locks, and universal isolated-worker migration remain incomplete.
