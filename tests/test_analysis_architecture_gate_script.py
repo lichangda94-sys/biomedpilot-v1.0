@@ -64,10 +64,18 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "r-chem-full",
         "r-chem-gpu",
     }
+    environment_templates = {item["environment_id"]: item for item in payload["environment_readiness"]["environment_lock_evidence_templates"]}
+    assert environment_templates["r-bio-full"]["schema_version"] == "biomedpilot.analysis.environment_lock_evidence.v1"
+    assert environment_templates["r-bio-full"]["runtime_package_install"] == "forbidden"
+    assert environment_templates["r-bio-full"]["runtime_resource_download"] == "forbidden"
     assert payload["resource_readiness"]["status"] == "passed"
     assert payload["resource_readiness"]["full_mode_ready"] is False
     assert "reactome_full" in payload["resource_readiness"]["blocked_resource_ids"]
     assert "gromacs_tool" in payload["resource_readiness"]["blocked_resource_ids"]
+    resource_templates = {item["resource_id"]: item for item in payload["resource_readiness"]["resource_lock_evidence_templates"]}
+    assert resource_templates["reactome_full"]["schema_version"] == "biomedpilot.analysis.resource_lock_evidence.v1"
+    assert resource_templates["reactome_full"]["runtime_download_allowed"] is False
+    assert resource_templates["reactome_full"]["hash"]["algorithm"] == "sha256"
     assert payload["standard_worker_migration_matrix"]["status"] == "partial"
     assert payload["standard_worker_migration_matrix"]["evidence_registry_status"] == "passed"
     assert payload["standard_worker_migration_matrix"]["evidence_entry_count"] == 0

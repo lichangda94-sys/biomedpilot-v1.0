@@ -413,6 +413,19 @@ def test_analysis_environment_registry_validator_separates_structure_from_full_r
         "r-chem-full",
         "r-chem-gpu",
     }
+    templates = {item["environment_id"]: item for item in validation["environment_lock_evidence_templates"]}
+    assert set(templates) == {
+        "r-bio-full",
+        "r-spatial-full",
+        "r-chem-full",
+        "r-chem-gpu",
+    }
+    assert templates["r-bio-full"]["schema_version"] == "biomedpilot.analysis.environment_lock_evidence.v1"
+    assert templates["r-bio-full"]["runtime_package_install"] == "forbidden"
+    assert templates["r-bio-full"]["runtime_resource_download"] == "forbidden"
+    assert templates["r-bio-full"]["dockerfile"] == "docker/Dockerfile.r-bio-full"
+    assert templates["r-bio-full"]["renv_lock"] == "renv/renv.bio-full.lock"
+    assert "scaffold_only_lockfile" in templates["r-bio-full"]["forbidden_evidence_sources"]
     assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in validation["readiness_blockers"]
     assert validation["blockers"] == []
 
@@ -1382,6 +1395,15 @@ def test_analysis_resource_manifest_declares_full_mode_resource_locks_without_do
         "md_forcefield_template_bundle",
     }
     assert required_resource_ids <= set(resources)
+    templates = {item["resource_id"]: item for item in validation["resource_lock_evidence_templates"]}
+    assert required_resource_ids <= set(templates)
+    assert "mock_fixture_builtin_v1" not in templates
+    assert templates["reactome_full"]["schema_version"] == "biomedpilot.analysis.resource_lock_evidence.v1"
+    assert templates["reactome_full"]["status"] == "locked"
+    assert templates["reactome_full"]["runtime_download_allowed"] is False
+    assert templates["reactome_full"]["hash"]["algorithm"] == "sha256"
+    assert templates["reactome_full"]["registry_entry"]["resource_id"] == "reactome_full"
+    assert "runtime_download" in templates["reactome_full"]["forbidden_evidence_sources"]
     for resource_id in required_resource_ids:
         resource = resources[resource_id]
         assert resource["runtime_download_allowed"] is False

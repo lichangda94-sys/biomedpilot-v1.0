@@ -168,6 +168,7 @@ def validate_analysis_resource_manifest(
         "resource_count": len(resources),
         "locked_resource_ids": locked_resource_ids,
         "blocked_resource_ids": blocked_resource_ids,
+        "resource_lock_evidence_templates": _resource_lock_evidence_templates(resources),
         "evidence_registry_status": evidence_registry_validation.get("status"),
         "evidence_registry_entry_count": evidence_registry_validation.get("entry_count"),
         "blockers": blockers,
@@ -642,6 +643,7 @@ def validate_analysis_environment_registry(
         "environment_count": len(environments),
         "environment_ids": environment_ids,
         "blocked_environment_ids": _blocked_environment_ids_from_readiness(readiness_blockers),
+        "environment_lock_evidence_templates": _environment_lock_evidence_templates(environments),
         "evidence_registry_status": evidence_registry_validation.get("status"),
         "evidence_registry_entry_count": evidence_registry_validation.get("entry_count"),
         "blockers": list(dict.fromkeys(blockers)),
@@ -659,6 +661,91 @@ def _is_placeholder_resource_value(value: Any) -> bool:
 
 def _blocked_resource_has_partial_final_lock(item: dict[str, Any]) -> bool:
     return any(not _is_placeholder_resource_value(item.get(field)) for field in FINAL_LOCK_REQUIRED_FIELDS)
+
+
+def _resource_lock_evidence_templates(resources: list[Any]) -> list[dict[str, Any]]:
+    templates: list[dict[str, Any]] = []
+    for item in resources:
+        if not isinstance(item, dict):
+            continue
+        resource_id = str(item.get("resource_id") or "")
+        if not resource_id or str(item.get("status") or "") == "locked":
+            continue
+        templates.append(
+            {
+                "schema_version": "biomedpilot.analysis.resource_lock_evidence.v1",
+                "resource_id": resource_id,
+                "status": "locked",
+                "version": str(item.get("version") or "<version>"),
+                "source": str(item.get("source") or "<source>"),
+                "hash": {
+                    "algorithm": "sha256",
+                    "value": str(item.get("hash") or "<sha256>"),
+                },
+                "license": str(item.get("license") or "<license>"),
+                "cache_path": str(item.get("cache_path") or "external_analysis_resources/cache/<resource_id>"),
+                "runtime_download_allowed": False,
+                "approved_for_modules": [str(value) for value in item.get("required_for_modules", []) if value is not None],
+                "evidence_files": [
+                    "external_analysis_resources/evidence/<resource_id>.json",
+                    "external_analysis_resources/logs/<resource_id>.log",
+                ],
+                "registry_entry": {
+                    "resource_id": resource_id,
+                    "evidence_path": "analysis/resources/locks/<resource_id>.lock.json",
+                },
+                "forbidden_evidence_sources": [
+                    "runtime_download",
+                    "user_request_download",
+                    "placeholder_hash",
+                    "unlicensed_cache",
+                ],
+            }
+        )
+    return templates
+
+
+def _environment_lock_evidence_templates(environments: list[Any]) -> list[dict[str, Any]]:
+    templates: list[dict[str, Any]] = []
+    for item in environments:
+        if not isinstance(item, dict):
+            continue
+        environment_id = str(item.get("environment_id") or "")
+        if environment_id in {"", "app-dev", "r-bio-core"}:
+            continue
+        templates.append(
+            {
+                "schema_version": "biomedpilot.analysis.environment_lock_evidence.v1",
+                "environment_id": environment_id,
+                "status": "restored",
+                "r_version": str(item.get("r_runtime") or "<R version>"),
+                "bioconductor_version": "<Bioconductor version>",
+                "package_lock_hash": {
+                    "algorithm": "sha256",
+                    "value": "<renv lock sha256>",
+                },
+                "dockerfile": str(item.get("dockerfile") or "docker/Dockerfile.<environment>"),
+                "renv_lock": str(item.get("renv_lock") or "renv/renv.<environment>.lock"),
+                "runtime_package_install": "forbidden",
+                "runtime_resource_download": "forbidden",
+                "allowed_module_ids": [str(value) for value in item.get("allowed_module_ids", []) if value is not None],
+                "evidence_files": [
+                    "external_analysis_environments/evidence/<environment_id>.json",
+                    "external_analysis_environments/logs/<environment_id>.log",
+                ],
+                "registry_entry": {
+                    "environment_id": environment_id,
+                    "evidence_path": "external_analysis_environments/evidence/<environment_id>.json",
+                },
+                "forbidden_evidence_sources": [
+                    "default_app_dev_environment",
+                    "runtime_package_install",
+                    "runtime_resource_download",
+                    "scaffold_only_lockfile",
+                ],
+            }
+        )
+    return templates
 
 
 def _resource_lock_evidence_schema_blockers(evidence: dict[str, Any]) -> list[str]:
