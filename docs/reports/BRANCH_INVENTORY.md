@@ -6,9 +6,9 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `c4bf747881c0cf4828eb19bdd54a0885ccc3d98a`
+Current HEAD: `00503b1df6d05645be4efd447626f81e6999e254`
 
-Current subject: `add full analysis activation gate schema`
+Current subject: `add analysis resource lock evidence registry`
 
 ## Audit Scope
 
@@ -32,17 +32,12 @@ Observed before report edits:
 ```text
 ## dev/bioinformatics
  M app/analysis_runtime/architecture_status.py
- M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
- M docs/R_ANALYSIS_ARCHITECTURE.md
- M docs/R_ANALYSIS_REMEDIATION_PLAN.md
- M tests/bioinformatics/test_analysis_ui_state.py
- M tests/test_r_analysis_architecture_contract.py
-?? analysis/schemas/output/remediation_queue.schema.json
+?? analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
 
-Those pre-existing architecture/runtime changes and untracked paths were preserved and excluded from this Phase 2.5 audit. Only `docs/reports/**` files are Phase 2.5 outputs.
+Those pre-existing architecture/runtime changes and untracked paths were preserved and excluded from this Phase 2.5 audit. The untracked `standard_worker_migration_evidence_registry.schema.json` was not counted as a current HEAD capability. Only `docs/reports/**` files are Phase 2.5 outputs.
 
 ## Commands Used
 
@@ -52,8 +47,8 @@ Those pre-existing architecture/runtime changes and untracked paths were preserv
 | `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Read real-loop restrictions. |
 | `git status --short --branch` | Captured current branch and untracked paths. |
 | `git branch --all --no-color` | Enumerated available branches without checkout. |
-| `git rev-parse HEAD` | Confirmed current HEAD `c4bf747881c0cf4828eb19bdd54a0885ccc3d98a`. |
-| `git show -s --format='%h\|%H\|%ci\|%s' HEAD` | Confirmed subject `add full analysis activation gate schema`. |
+| `git rev-parse HEAD` | Confirmed current HEAD `00503b1df6d05645be4efd447626f81e6999e254`. |
+| `git show -s --format='%h\|%H\|%ci\|%s' HEAD` | Confirmed subject `add analysis resource lock evidence registry`. |
 | `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads` | Captured local branch heads and subjects. |
 | `git log --oneline --decorate --max-count=30 --all` | Sampled recent cross-branch history. |
 | `find app analysis archive docs tests scripts -type d ...` | Located legacy directories without executing them. |
@@ -68,7 +63,7 @@ No functional tests were required for this audit-only inventory. Functional test
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `c4bf7478` | 2026-06-05 | add full analysis activation gate schema | Current source of truth; includes Bio/Meta current UI, standard package governance, external analysis environment gates, R architecture status gates, remediation queue rows, migration matrix surfacing, lock/evidence validation gates, and full analysis activation gate schema/surfacing | source of truth |
+| `dev/bioinformatics` | `00503b1d` | 2026-06-05 | add analysis resource lock evidence registry | Current source of truth; includes Bio/Meta current UI, standard package governance, external analysis environment gates, R architecture status gates, remediation queue rows, migration matrix surfacing, environment/resource lock evidence validation gates, standard worker migration evidence validation, and full analysis activation gate schema/surfacing | source of truth |
 | `dev/release-internal-test` | `6658c3a3` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | Rich Bio DEG/enrichment/survival/risk/report history | candidate library only |
 | `codex/releasebuild-formal-deg-carryover` | `a8adc29a` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | Formal DEG and ReleaseBuild gate material | candidate library only |
 | `codex/mainline-survival-clinical-carryover` | `74775fe4` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Survival/clinical and enrichment convergence material | candidate library only |
@@ -102,13 +97,13 @@ Selected branch deltas are large. Whole-branch carry-over is unsafe because thes
 
 | Branch | Shortstat in audited paths | Practical implication |
 | --- | --- | --- |
-| `dev/release-internal-test` | 2645 files changed, 209722 insertions, 102076 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
-| `codex/releasebuild-formal-deg-carryover` | 1574 files changed, 147623 insertions, 94498 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
-| `codex/mainline-survival-clinical-carryover` | 963 files changed, 31535 insertions, 76691 deletions | Survival/clinical history, but older than current standard package and architecture gate work. |
+| `dev/release-internal-test` | 2650 files changed, 209722 insertions, 102796 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
+| `codex/releasebuild-formal-deg-carryover` | 1579 files changed, 147623 insertions, 95218 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
+| `codex/mainline-survival-clinical-carryover` | 968 files changed, 31535 insertions, 77411 deletions | Survival/clinical history, but older than current standard package and architecture gate work. |
 | `stable/mainline` | 1018 files changed, 29979 insertions, 87042 deletions | Historical formal DEG baseline only. |
-| `feature/meta-l3-ui-loop` | 177 files changed, 342 insertions, 16040 deletions | Focused Meta proof; already represented by current history/reports. |
-| `dev/meta-analysis` | 685 files changed, 25387 insertions, 87260 deletions | OCR/fulltext/package material; not current-proven. |
-| `dev/ui-shell` | 2226 files changed, 84914 insertions, 179871 deletions | UI design/shell material only; direct migration unsafe. |
+| `feature/meta-l3-ui-loop` | 182 files changed, 342 insertions, 16760 deletions | Focused Meta proof; already represented by current history/reports. |
+| `dev/meta-analysis` | 690 files changed, 25387 insertions, 87980 deletions | OCR/fulltext/package material; not current-proven. |
+| `dev/ui-shell` | 2231 files changed, 84914 insertions, 180591 deletions | UI design/shell material only; direct migration unsafe. |
 | `integration/release-ui-shell-scoped-migration` | 1039 files changed, 37624 insertions, 87591 deletions | UI shell reference, not a Bio/Meta analysis source. |
 | `codex/bio-geo-real-download-test` | 652 files changed, 4728 insertions, 110886 deletions | Old GEO/DEG path diverges sharply from current contracts. |
 | `codex/stage-3.6-deg-preflight` | 1143 files changed, 13294 insertions, 178985 deletions | Superseded preflight material. |
@@ -119,7 +114,7 @@ Selected branch deltas are large. Whole-branch carry-over is unsafe because thes
 
 The repository contains substantial historical UI, Bioinformatics, Meta Analysis, plot, report, export, test, and helper material. No old branch is safe to merge wholesale.
 
-Current HEAD has advanced beyond earlier Phase 2.5 reports. It now exposes analysis architecture status gates, remediation queue rows, standard worker migration matrix rows, lock evidence validation, standard worker migration evidence validation, and a full analysis activation gate schema in addition to standard package/result/input manifest governance. Those are current-gate facts, not permission to migrate old branch logic.
+Current HEAD has advanced beyond earlier Phase 2.5 reports. It now exposes analysis architecture status gates, remediation queue rows, standard worker migration matrix rows, environment/resource lock evidence validation, standard worker migration evidence validation, and a full analysis activation gate schema in addition to standard package/result/input manifest governance. Those are current-gate facts, not permission to migrate old branch logic.
 
 Future migration must select exactly one current UI entry and one candidate capability, then map it to the current contract, adapt or rewrite it, and prove it with current tests and real output evidence.
 
