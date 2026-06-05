@@ -109,6 +109,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert remediation_queue["status"] == "open"
     assert remediation_queue["execution_policy"] == "read_only_no_runtime_mutation"
     assert remediation_queue["item_count"] == 3
+    assert remediation_queue["schema_validation_status"] == "passed"
+    assert remediation_queue["schema_blockers"] == []
     assert state["developer_diagnostics"]["analysis_architecture_gate_rows"] == state["analysis_architecture_gate_rows"]
     migration_matrix = state["developer_diagnostics"]["standard_worker_migration_matrix"]
     assert migration_matrix["formal_pending_count"] == migration_matrix["module_count"]

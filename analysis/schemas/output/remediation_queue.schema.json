@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biomedpilot.analysis.remediation_queue.v1",
+  "title": "BioMedPilot analysis architecture remediation queue",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "source_status",
+    "item_count",
+    "items",
+    "automation_policy",
+    "execution_policy",
+    "install_policy",
+    "full_mode_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "biomedpilot.analysis.remediation_queue.v1"},
+    "status": {"type": "string", "minLength": 1},
+    "source_status": {"type": "string"},
+    "item_count": {"type": "integer"},
+    "items": {"type": "array"},
+    "automation_policy": {"const": "manual_scoped_changes_only"},
+    "execution_policy": {"const": "read_only_no_runtime_mutation"},
+    "install_policy": {"const": "no_runtime_package_install_or_resource_download"},
+    "full_mode_policy": {"const": "full_mode_remains_blocked_until_environment_and_resource_evidence_passes"},
+    "schema_validation_status": {"type": "string"},
+    "schema_blockers": {"type": "array"}
+  },
+  "additionalProperties": true
+}

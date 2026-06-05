@@ -522,6 +522,8 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert queue["execution_policy"] == "read_only_no_runtime_mutation"
     assert queue["install_policy"] == "no_runtime_package_install_or_resource_download"
     assert queue["full_mode_policy"] == "full_mode_remains_blocked_until_environment_and_resource_evidence_passes"
+    assert queue["schema_validation_status"] == "passed"
+    assert queue["schema_blockers"] == []
     assert set(items) == {
         "restore_full_analysis_environment_locks",
         "lock_full_analysis_resources",
@@ -729,6 +731,7 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     provenance_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "provenance.schema.json")
     invocation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "worker_invocation.schema.json")
     full_activation_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json")
+    remediation_queue_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "remediation_queue.schema.json")
     resource_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "resource_lock_evidence.schema.json")
     environment_lock_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "environment_lock_evidence.schema.json")
     result = read_json(ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / "result.json")
@@ -748,6 +751,9 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert full_activation_schema["$id"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
     assert "checks" in full_activation_schema["required"]
     assert "execution_policy" in full_activation_schema["required"]
+    assert remediation_queue_schema["$id"] == "biomedpilot.analysis.remediation_queue.v1"
+    assert "items" in remediation_queue_schema["required"]
+    assert "install_policy" in remediation_queue_schema["required"]
     assert resource_lock_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence.v1"
     assert "runtime_download_allowed" in resource_lock_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"

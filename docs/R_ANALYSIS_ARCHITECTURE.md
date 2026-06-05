@@ -42,6 +42,7 @@ analysis/
   schemas/output/resource_lock_evidence.schema.json
   schemas/output/environment_lock_evidence.schema.json
   schemas/output/full_analysis_activation_gate.schema.json
+  schemas/output/remediation_queue.schema.json
   modules/<module_id>/module.json
   runners/run_module.R
   fixtures/inputs/<module_id>/module_input.json
@@ -221,7 +222,7 @@ Passed `full` or `formal_computed_result` packages are validated with a stricter
 | Standard worker migration matrix | Present; `build_standard_worker_migration_matrix()` records module-level mock, lite, full, and formal standard-worker migration status for each registered module without executing workers. Lite fixture readiness remains separate from full/formal migration. |
 | Standard worker migration evidence validator | Present; `analysis/registry/standard_worker_migration_evidence.json`, `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, `validate_standard_worker_migration_evidence_registry()`, and `validate_standard_worker_migration_evidence()` block migration completion claims unless a selected module has a registry-owned schema-valid full-mode evidence payload, full-mode standard package, standard R worker boundary, task-center invocation, result-index registration, formal semantics preservation, and UI standard-package consumption evidence. Mock, lite, and legacy sidecar packages do not pass. |
 | Environment lock evidence gate | Present; `analysis/schemas/output/environment_lock_evidence.schema.json` and `validate_analysis_environment_lock_evidence()` block restored full environment locks unless package-lock hash, Dockerfile, renv lock, allowed modules, evidence files, R/Bioconductor versions, and no-install/no-download policy are schema-valid and registry-aligned. |
-| Architecture remediation queue | Present; `build_analysis_remediation_queue()` converts current P1 gaps into deterministic manual remediation items for full environment locks, full resource locks, and isolated standard-worker migration. Analysis Center exposes this as blocked remediation rows; it performs no worker execution, package installation, resource download, or project mutation. |
+| Architecture remediation queue | Present; `build_analysis_remediation_queue()` converts current P1 gaps into deterministic manual remediation items for full environment locks, full resource locks, and isolated standard-worker migration. The payload self-checks against `analysis/schemas/output/remediation_queue.schema.json`. Analysis Center exposes this as blocked remediation rows; it performs no worker execution, package installation, resource download, or project mutation. |
 | Environment registry | Present; module manifests are tested against `analysis/registry/analysis_environments.json`, Dockerfile paths, renv lock paths, heavy-dependency policy, and allowed-module lists. A runtime validator reports structural status separately from full readiness, Analysis Center exposes those gate rows, and full mode stays blocked while full locks remain scaffold-only or lack schema-valid lock evidence. |
 | Per-module mock result packages | Present for all registered modules. |
 | DEG module contract | Present as a registered standard module with mock input/output package and base R lite fixture; full standard worker execution remains blocked. |

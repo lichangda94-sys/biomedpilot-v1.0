@@ -12,6 +12,7 @@ from .standard_package import validate_standard_result_package
 STANDARD_WORKER_MIGRATION_EVIDENCE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json"
 STANDARD_WORKER_MIGRATION_EVIDENCE_REGISTRY_PATH = REPO_ROOT / "analysis" / "registry" / "standard_worker_migration_evidence.json"
 FULL_ANALYSIS_ACTIVATION_GATE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "full_analysis_activation_gate.schema.json"
+REMEDIATION_QUEUE_SCHEMA_PATH = REPO_ROOT / "analysis" / "schemas" / "output" / "remediation_queue.schema.json"
 TARGET_MODULE_IDS = (
     "deg",
     "survival",
@@ -475,7 +476,7 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
         },
     }
     items = [issue_items[issue] for issue in p1_issues if issue in issue_items]
-    return {
+    payload = {
         "schema_version": "biomedpilot.analysis.remediation_queue.v1",
         "status": "open" if items else "empty",
         "source_status": str(snapshot.get("status") or ""),
@@ -486,6 +487,12 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
         "install_policy": "no_runtime_package_install_or_resource_download",
         "full_mode_policy": "full_mode_remains_blocked_until_environment_and_resource_evidence_passes",
     }
+    schema_blockers = _remediation_queue_schema_blockers(payload)
+    payload["schema_validation_status"] = "blocked" if schema_blockers else "passed"
+    payload["schema_blockers"] = schema_blockers
+    if schema_blockers:
+        payload["status"] = "blocked"
+    return payload
 
 
 def validate_standard_worker_migration_evidence(
@@ -610,6 +617,30 @@ def _full_activation_gate_schema_blockers(payload: dict[str, Any]) -> list[str]:
     return blockers
 
 
+def _remediation_queue_schema_blockers(payload: dict[str, Any]) -> list[str]:
+    schema = _read_json(REMEDIATION_QUEUE_SCHEMA_PATH)
+    blockers: list[str] = []
+    required = schema.get("required") if isinstance(schema.get("required"), list) else []
+    properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    for field in required:
+        if isinstance(field, str) and field not in payload:
+            blockers.append(f"analysis_remediation_queue_required_field_missing:{field}")
+    for field, field_schema in properties.items():
+        if not isinstance(field, str) or field not in payload or not isinstance(field_schema, dict):
+            continue
+        value = payload[field]
+        if "const" in field_schema and value != field_schema["const"]:
+            blockers.append(f"analysis_remediation_queue_const_mismatch:{field}")
+        expected_type = field_schema.get("type")
+        if isinstance(expected_type, str) and not _schema_type_matches(value, expected_type):
+            blockers.append(f"analysis_remediation_queue_type_invalid:{field}")
+            continue
+        min_length = field_schema.get("minLength")
+        if isinstance(min_length, int) and isinstance(value, str) and len(value) < min_length:
+            blockers.append(f"analysis_remediation_queue_min_length_invalid:{field}")
+    return blockers
+
+
 def _schema_type_matches(value: Any, expected_type: str) -> bool:
     if expected_type == "string":
         return isinstance(value, str)
@@ -714,6 +745,7 @@ def _required_schemas_exist() -> bool:
         "analysis/schemas/output/worker_invocation.schema.json",
         "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
         "analysis/schemas/output/full_analysis_activation_gate.schema.json",
+        "analysis/schemas/output/remediation_queue.schema.json",
         "analysis/schemas/output/resource_lock_evidence.schema.json",
         "analysis/schemas/output/environment_lock_evidence.schema.json",
     )

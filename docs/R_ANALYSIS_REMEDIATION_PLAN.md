@@ -29,6 +29,7 @@ Completed in this audit:
 - `analysis/schemas/output/resource_lock_evidence.schema.json`
 - `analysis/schemas/output/environment_lock_evidence.schema.json`
 - `analysis/schemas/output/full_analysis_activation_gate.schema.json`
+- `analysis/schemas/output/remediation_queue.schema.json`
 - `analysis/runners/run_module.R`
 - `analysis/fixtures/inputs/mock_analysis_input.json`
 - `analysis/fixtures/outputs/mock_result_package/**`
@@ -147,6 +148,8 @@ Update: formal standard-worker migration evidence is now centralized in `analysi
 Update: `build_full_analysis_activation_gate()` now combines full environment readiness, full resource readiness, and standard-worker migration evidence into one read-only full-mode activation decision. It is currently blocked by unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration; it does not execute workers, install packages, download resources, or change full-mode availability. The gate payload is covered by `analysis/schemas/output/full_analysis_activation_gate.schema.json` and reports schema validation status.
 
 Update: Analysis Center now renders the full-mode decision as a dedicated `Full analysis activation gate` row inside `analysis_architecture_gate_rows`, so UI users can see the exact disabled reasons without reading developer diagnostics.
+
+Update: `build_analysis_remediation_queue()` now validates its payload against `analysis/schemas/output/remediation_queue.schema.json` and exposes `schema_validation_status` plus `schema_blockers`. This keeps manual P1 remediation queues stable for UI, reports, and handoff consumers.
 
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 
