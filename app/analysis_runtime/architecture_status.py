@@ -580,6 +580,9 @@ def validate_standard_worker_migration_evidence(
         if validation.get("status") != "passed":
             blockers.extend(f"standard_worker_migration_package_validation:{item}" for item in validation.get("blockers", []) or [])
         warnings.extend(f"standard_worker_migration_package_warning:{item}" for item in validation.get("warnings", []) or [])
+        result = _read_json(package_dir / "result.json")
+        provenance = _read_json(package_dir / "provenance.json")
+        blockers.extend(_standard_worker_migration_result_blockers(result, provenance))
         invocation = _read_json(package_dir / "logs" / "worker_invocation.json")
         boundary = invocation.get("worker_boundary") if isinstance(invocation.get("worker_boundary"), dict) else {}
         if boundary.get("boundary_type") != "standard_r_worker":
@@ -612,6 +615,43 @@ def validate_standard_worker_migration_evidence(
         "required_invocation": "task_center_registered",
         "required_migration_status": "standard_worker_contract",
     }
+
+
+def _standard_worker_migration_result_blockers(result: dict[str, Any], provenance: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if result.get("status") != "passed":
+        blockers.append("standard_worker_migration_requires_passed_result")
+    if result.get("result_semantics") != "formal_computed_result":
+        blockers.append("standard_worker_migration_requires_formal_computed_result")
+    result_blockers = result.get("blockers")
+    if not isinstance(result_blockers, list):
+        blockers.append("standard_worker_migration_result_blockers_invalid")
+    elif result_blockers:
+        blockers.append("standard_worker_migration_result_blockers_present")
+
+    engine = provenance.get("engine") if isinstance(provenance.get("engine"), dict) else {}
+    if engine.get("name") != "biomedpilot_standard_r_worker":
+        blockers.append("standard_worker_migration_requires_standard_worker_engine")
+
+    environment = provenance.get("analysis_environment")
+    if not isinstance(environment, dict):
+        blockers.append("standard_worker_migration_analysis_environment_missing")
+        return blockers
+    if environment.get("mode") != "full":
+        blockers.append("standard_worker_migration_analysis_environment_mode_not_full")
+    if environment.get("status") != "passed":
+        blockers.append("standard_worker_migration_analysis_environment_not_ready")
+    environment_lock_status = environment.get("environment_lock_status")
+    if not isinstance(environment_lock_status, dict) or environment_lock_status.get("ready") is not True:
+        blockers.append("standard_worker_migration_environment_lock_not_ready")
+    elif environment_lock_status.get("blockers"):
+        blockers.append("standard_worker_migration_environment_lock_blockers_present")
+    resource_lock_status = environment.get("resource_lock_status")
+    if not isinstance(resource_lock_status, dict) or resource_lock_status.get("full_mode_ready") is not True:
+        blockers.append("standard_worker_migration_resource_lock_not_ready")
+    elif resource_lock_status.get("blockers"):
+        blockers.append("standard_worker_migration_resource_lock_blockers_present")
+    return blockers
 
 
 def _migration_evidence_schema_blockers(evidence: dict[str, Any]) -> list[str]:
@@ -813,6 +853,10 @@ def _standard_worker_migration_evidence_template(*, module_id: str, current_adap
         "frontend_consumes_standard_package": False,
         "result_index_registered": False,
         "formal_result_semantics_preserved": False,
+        "required_result_status": "passed",
+        "required_result_semantics": "formal_computed_result",
+        "required_engine_name": "biomedpilot_standard_r_worker",
+        "required_analysis_environment_status": "passed",
         "required_worker_boundary": "standard_r_worker",
         "required_task_system_invocation": "task_center_registered",
         "required_worker_migration_status": "standard_worker_contract",

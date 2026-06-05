@@ -22,6 +22,10 @@
     "frontend_consumes_standard_package": {"type": "boolean"},
     "result_index_registered": {"type": "boolean"},
     "formal_result_semantics_preserved": {"type": "boolean"},
+    "required_result_status": {"const": "passed"},
+    "required_result_semantics": {"const": "formal_computed_result"},
+    "required_engine_name": {"const": "biomedpilot_standard_r_worker"},
+    "required_analysis_environment_status": {"const": "passed"},
     "created_at": {"type": "string"},
     "notes": {"type": "string"}
   },

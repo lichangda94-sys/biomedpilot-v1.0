@@ -54,6 +54,144 @@ def read_json(path: Path) -> dict[str, object]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _write_candidate_standard_worker_package(
+    tmp_path: Path,
+    *,
+    result_status: str,
+    result_semantics: str,
+    environment_status: str,
+    environment_ready: bool,
+    resource_ready: bool,
+    result_blockers: list[str] | None = None,
+) -> Path:
+    package_dir = tmp_path / "candidate-standard-worker-package"
+    for dirname in ("tables", "plots", "reports", "logs"):
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+    result_blockers = list(result_blockers or [])
+    task_id = "deg-full-standard-worker-task"
+    now = "2026-06-05T00:00:00+00:00"
+    environment_blockers = [] if environment_ready else ["analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored"]
+    resource_blockers = [] if resource_ready else ["analysis_resource_not_locked:reactome_full"]
+    _write_json(
+        package_dir / "result.json",
+        {
+            "schema_version": "biomedpilot.analysis.result.v1",
+            "module_id": "deg",
+            "mode": "full",
+            "task_id": task_id,
+            "status": result_status,
+            "result_semantics": result_semantics,
+            "summary": {"message": "candidate full standard worker package"},
+            "tables": [],
+            "plots": [],
+            "reports": [],
+            "blockers": result_blockers,
+            "warnings": [],
+            "created_at": now,
+        },
+    )
+    _write_json(
+        package_dir / "provenance.json",
+        {
+            "schema_version": "biomedpilot.analysis.provenance.v1",
+            "module_id": "deg",
+            "mode": "full",
+            "task_id": task_id,
+            "created_at": now,
+            "input_hash": "input-hash",
+            "parameter_hash": "parameter-hash",
+            "random_seed": 7,
+            "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},
+            "runtime": {
+                "r_version": "R 4.4.2",
+                "bioconductor_version": "3.20",
+                "package_versions": {"limma": "3.62.2"},
+                "external_tool_versions": {},
+            },
+            "command": "task-center -> analysis/runners/run_module.R",
+            "analysis_environment": {
+                "schema_version": "biomedpilot.analysis_environment_snapshot.v1",
+                "status": environment_status,
+                "mode": "full",
+                "module_id": "deg",
+                "environment_id": "r-bio-full",
+                "dockerfile": "docker/Dockerfile.r-bio-full",
+                "renv_lock": "renv/renv.bio-full.lock",
+                "allows_heavy_analysis_dependencies": True,
+                "resource_lock_required": True,
+                "external_tool_lock_required": False,
+                "full_mode_requires_isolated_environment": True,
+                "environment_registry_is_authoritative": True,
+                "runtime_package_install": "forbidden",
+                "runtime_resource_download": "forbidden",
+                "module_manifest": "analysis/modules/deg/module.json",
+                "environment_lock_status": {
+                    "ready": environment_ready,
+                    "blockers": environment_blockers,
+                },
+                "resource_lock_status": {
+                    "full_mode_ready": resource_ready,
+                    "required_resource_ids": [],
+                    "blocked_resource_ids": [],
+                    "blockers": resource_blockers,
+                    "warnings": [],
+                },
+            },
+            "worker_boundary": {
+                "boundary_type": "standard_r_worker",
+                "task_system_invocation": "task_center_registered",
+                "migration_status": "standard_worker_contract",
+            },
+        },
+    )
+    _write_json(
+        package_dir / "module_input.json",
+        {
+            "schema_version": "biomedpilot.analysis.module_input.v1",
+            "module_id": "deg",
+            "mode": "full",
+            "task_id": task_id,
+            "project_id": "migration-evidence-test",
+            "inputs": {"input_package_id": "input-1", "source_dataset_id": "dataset-1"},
+            "parameters": {"comparison": "case_vs_control"},
+            "runtime": {"random_seed": 7, "requested_environment": "r-bio-full"},
+        },
+    )
+    _write_json(
+        package_dir / "logs" / "worker_invocation.json",
+        {
+            "schema_version": "biomedpilot.analysis.worker_invocation.v1",
+            "created_at": now,
+            "module_id": "deg",
+            "mode": "full",
+            "task_id": task_id,
+            "worker_backend": "rscript",
+            "invocation_status": "completed",
+            "standard_worker_entrypoint": "analysis/runners/run_module.R",
+            "input_manifest": "module_input.json",
+            "output_contract": "standard_result_package",
+            "runtime_install_policy": "forbidden",
+            "resource_download_policy": "forbidden",
+            "returncode": 0,
+            "command": ["Rscript", "analysis/runners/run_module.R"],
+            "stdout": "",
+            "stderr": "",
+            "blockers": [],
+            "worker_boundary": {
+                "boundary_type": "standard_r_worker",
+                "task_system_invocation": "task_center_registered",
+                "migration_status": "standard_worker_contract",
+            },
+        },
+    )
+    (package_dir / "logs" / "worker.log").write_text(f"{now} status={result_status}\n", encoding="utf-8")
+    return package_dir
+
+
 def rscript_path() -> str:
     path = shutil.which("Rscript")
     if path is None:
@@ -1011,6 +1149,71 @@ def test_standard_worker_migration_evidence_does_not_accept_mock_or_lite_fixture
     assert "standard_worker_migration_requires_standard_worker_contract_status" in validation["blockers"]
 
 
+def test_standard_worker_migration_evidence_requires_passed_formal_ready_package(tmp_path: Path) -> None:
+    package_dir = _write_candidate_standard_worker_package(
+        tmp_path,
+        result_status="passed",
+        result_semantics="testing_level",
+        environment_status="blocked_full_mode_environment_lock",
+        environment_ready=False,
+        resource_ready=False,
+    )
+
+    validation = validate_standard_worker_migration_evidence(
+        "deg",
+        {
+            "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+            "module_id": "deg",
+            "mode": "full",
+            "task_id": "deg-full-standard-worker-task",
+            "result_package_dir": str(package_dir),
+            "frontend_consumes_standard_package": True,
+            "result_index_registered": True,
+            "formal_result_semantics_preserved": True,
+        },
+    )
+
+    assert validation["status"] == "blocked"
+    assert "standard_worker_migration_requires_formal_computed_result" in validation["blockers"]
+    assert "standard_worker_migration_analysis_environment_not_ready" in validation["blockers"]
+    assert "standard_worker_migration_environment_lock_not_ready" in validation["blockers"]
+    assert "standard_worker_migration_resource_lock_not_ready" in validation["blockers"]
+    assert "standard_worker_migration_requires_standard_r_worker_boundary" not in validation["blockers"]
+    assert "standard_worker_migration_requires_task_center_registered_invocation" not in validation["blockers"]
+    assert "standard_worker_migration_requires_standard_worker_contract_status" not in validation["blockers"]
+
+
+def test_standard_worker_migration_evidence_requires_passed_result_without_blockers(tmp_path: Path) -> None:
+    package_dir = _write_candidate_standard_worker_package(
+        tmp_path,
+        result_status="blocked",
+        result_semantics="formal_computed_result",
+        result_blockers=["blocked_full_mode_worker_not_enabled"],
+        environment_status="passed",
+        environment_ready=True,
+        resource_ready=True,
+    )
+
+    validation = validate_standard_worker_migration_evidence(
+        "deg",
+        {
+            "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+            "module_id": "deg",
+            "mode": "full",
+            "task_id": "deg-full-standard-worker-task",
+            "result_package_dir": str(package_dir),
+            "frontend_consumes_standard_package": True,
+            "result_index_registered": True,
+            "formal_result_semantics_preserved": True,
+        },
+    )
+
+    assert validation["status"] == "blocked"
+    assert "standard_worker_migration_requires_passed_result" in validation["blockers"]
+    assert "standard_worker_migration_result_blockers_present" in validation["blockers"]
+    assert "standard_worker_migration_analysis_environment_not_ready" not in validation["blockers"]
+
+
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:
     spatial = read_json(ROOT / "analysis" / "modules" / "spatial_transcriptomics" / "module.json")
     docking = read_json(ROOT / "analysis" / "modules" / "docking" / "module.json")
@@ -1062,6 +1265,11 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert invocation_schema["$id"] == "biomedpilot.analysis.worker_invocation.v1"
     assert migration_registry_schema["$id"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry.v1"
     assert "evidence_entries" in migration_registry_schema["required"]
+    migration_evidence_schema = read_json(ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json")
+    assert migration_evidence_schema["properties"]["required_result_status"]["const"] == "passed"
+    assert migration_evidence_schema["properties"]["required_result_semantics"]["const"] == "formal_computed_result"
+    assert migration_evidence_schema["properties"]["required_engine_name"]["const"] == "biomedpilot_standard_r_worker"
+    assert migration_evidence_schema["properties"]["required_analysis_environment_status"]["const"] == "passed"
     assert full_activation_schema["$id"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
     assert "checks" in full_activation_schema["required"]
     assert "execution_policy" in full_activation_schema["required"]
