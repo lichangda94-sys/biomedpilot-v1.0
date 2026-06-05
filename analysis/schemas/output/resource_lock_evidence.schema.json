@@ -22,7 +22,14 @@
     "status": {"const": "locked"},
     "version": {"type": "string", "minLength": 1},
     "source": {"type": "string", "minLength": 1},
-    "hash": {"type": "object"},
+    "hash": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "minLength": 1}
+      }
+    },
     "license": {"type": "string", "minLength": 1},
     "cache_path": {"type": "string", "minLength": 1},
     "runtime_download_allowed": {"const": false},

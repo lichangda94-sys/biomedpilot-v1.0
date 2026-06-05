@@ -90,6 +90,8 @@ Update: resource validation now rejects any resource marked `locked` while versi
 
 Update: locked resources now require schema-valid lock evidence. `analysis/schemas/output/resource_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_resource_lock_evidence()` blocks missing evidence, placeholder fields, missing cache paths, missing evidence files, manifest/evidence mismatch, approved-module mismatch, or any runtime-download allowance. The repository-local mock fixture resource has evidence under `analysis/resources/locks/`; full Reactome/MSigDB/spatial/chem resources remain blocked until real external lock evidence exists.
 
+Update: full resource lock evidence now requires SHA-256 hash evidence with a 64-character hex value. The `repository_fixture` hash marker remains allowed only for the built-in mock fixture and cannot be used to lock Reactome, MSigDB, spatial, chemistry, or external tool resources.
+
 Update: the Bioinformatics gene-set resource manager now blocks Reactome/GO/KEGG runtime downloads by default. Common resources remain visible as guidance, but user/UI flows must import GMT files or use externally prepared prelocked resources; parser/download code requires an explicit developer/test override and is not a normal runtime acquisition path.
 
 Update: the standard package catalog now reads result-index `standard_result_package` artifacts and is exposed in Analysis Center state as `standard_analysis_packages`. This is a read-only UI bridge; detailed module result views still need migration.
@@ -155,6 +157,8 @@ Update: environment boundaries are now centralized in `analysis/registry/analysi
 Update: `validate_analysis_environment_registry()` now turns the environment registry into a runtime-consumable contract. It checks required fields, unique environment ids, app-dev isolation, allowed-module references, Dockerfile labels, lockfile policy, and full-environment readiness separately. The current registry is structurally valid but still reports `full_mode_ready=false` because full environment locks are scaffold-only.
 
 Update: restored full environment locks now require schema-valid evidence. `analysis/schemas/output/environment_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_environment_lock_evidence()` blocks missing evidence, non-restored status, placeholder R/Bioconductor/package-lock data, missing Dockerfile/renv/evidence files, registry mismatch, allowed-module mismatch, or runtime install/download allowance. Current full locks remain `scaffold_only_not_restored`, so this does not activate full mode.
+
+Update: restored full environment evidence now requires `package_lock_hash.algorithm=sha256` and a 64-character hex package-lock hash value. Arbitrary non-empty hash algorithm labels are blocked before an environment can contribute to full-mode readiness.
 
 Update: Analysis Center state now exposes `analysis_environment_gate_rows` and developer diagnostics for `validate_analysis_environment_registry()`. The current UI gate table can show registry structural status and full R environment readiness blockers without reading Dockerfiles, renv locks, or module-private R outputs directly.
 

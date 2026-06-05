@@ -23,7 +23,14 @@
     "status": {"type": "string", "minLength": 1},
     "r_version": {"type": "string", "minLength": 1},
     "bioconductor_version": {"type": "string", "minLength": 1},
-    "package_lock_hash": {"type": "object"},
+    "package_lock_hash": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "minLength": 1}
+      }
+    },
     "dockerfile": {"type": "string", "minLength": 1},
     "renv_lock": {"type": "string", "minLength": 1},
     "runtime_package_install": {"const": "forbidden"},

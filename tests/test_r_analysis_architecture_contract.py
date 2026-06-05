@@ -379,6 +379,73 @@ def test_locked_analysis_resource_requires_schema_valid_lock_evidence() -> None:
     assert "mock_fixture_builtin_v1" in manifest_validation["locked_resource_ids"]
 
 
+def test_full_resource_lock_evidence_requires_sha256_hash_algorithm() -> None:
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resource = manifest["resources"][1]  # type: ignore[index]
+    resource.update(
+        {
+            "version": "2026.05",
+            "hash": "abc123",
+            "license": "approved_test_license",
+            "status": "locked",
+        }
+    )
+    validation = validate_analysis_resource_lock_evidence(
+        "reactome_full",
+        {
+            "schema_version": "biomedpilot.analysis.resource_lock_evidence.v1",
+            "resource_id": "reactome_full",
+            "status": "locked",
+            "version": "2026.05",
+            "source": "Reactome / Bioconductor package metadata",
+            "hash": {"algorithm": "repository_fixture", "value": "abc123"},
+            "license": "approved_test_license",
+            "cache_path": "external_analysis_resources/reactome",
+            "runtime_download_allowed": False,
+            "approved_for_modules": ["enrichment"],
+            "evidence_files": ["analysis/resources/manifest.json"],
+        },
+        manifest=manifest,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_hash_algorithm_not_allowed" in validation["blockers"]
+    assert "analysis_resource_lock_evidence_repository_fixture_hash_for_full_resource" in validation["blockers"]
+
+
+def test_full_resource_lock_evidence_requires_sha256_hex_value() -> None:
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resource = manifest["resources"][1]  # type: ignore[index]
+    resource.update(
+        {
+            "version": "2026.05",
+            "hash": "not-a-sha256",
+            "license": "approved_test_license",
+            "status": "locked",
+        }
+    )
+    validation = validate_analysis_resource_lock_evidence(
+        "reactome_full",
+        {
+            "schema_version": "biomedpilot.analysis.resource_lock_evidence.v1",
+            "resource_id": "reactome_full",
+            "status": "locked",
+            "version": "2026.05",
+            "source": "Reactome / Bioconductor package metadata",
+            "hash": {"algorithm": "sha256", "value": "not-a-sha256"},
+            "license": "approved_test_license",
+            "cache_path": "external_analysis_resources/reactome",
+            "runtime_download_allowed": False,
+            "approved_for_modules": ["enrichment"],
+            "evidence_files": ["analysis/resources/manifest.json"],
+        },
+        manifest=manifest,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_hash_value_not_sha256" in validation["blockers"]
+
+
 def test_analysis_resource_lock_evidence_registry_is_authoritative_and_empty_by_default() -> None:
     registry = load_analysis_resource_lock_evidence_registry()
     validation = validate_analysis_resource_lock_evidence_registry(registry)
@@ -641,7 +708,7 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
                 "status": "restored",
                 "r_version": "R 4.4.2",
                 "bioconductor_version": "3.20",
-                "package_lock_hash": {"algorithm": "sha256", "value": "controlled-lock-hash"},
+                "package_lock_hash": {"algorithm": "sha256", "value": "a" * 64},
                 "dockerfile": "docker/Dockerfile.r-bio-full",
                 "renv_lock": str(restored_lock),
                 "runtime_package_install": "forbidden",
@@ -700,7 +767,7 @@ def test_environment_lock_evidence_blocks_placeholder_or_mismatched_payloads() -
             "status": "scaffold_only_not_restored",
             "r_version": "pending",
             "bioconductor_version": "",
-            "package_lock_hash": {"algorithm": "", "value": "required_before_full_mode"},
+            "package_lock_hash": {"algorithm": "md5", "value": "required_before_full_mode"},
             "dockerfile": "missing/Dockerfile",
             "renv_lock": "missing/renv.lock",
             "runtime_package_install": "allowed",
@@ -717,7 +784,7 @@ def test_environment_lock_evidence_blocks_placeholder_or_mismatched_payloads() -
     assert "analysis_environment_lock_evidence_status_not_restored" in validation["blockers"]
     assert "analysis_environment_lock_evidence_runtime_install_not_forbidden" in validation["blockers"]
     assert "analysis_environment_lock_evidence_runtime_download_not_forbidden" in validation["blockers"]
-    assert "analysis_environment_lock_evidence_package_lock_hash_algorithm_missing" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_package_lock_hash_algorithm_not_sha256" in validation["blockers"]
     assert "analysis_environment_lock_evidence_package_lock_hash_value_missing" in validation["blockers"]
     assert "analysis_environment_lock_evidence_placeholder_field:r_version" in validation["blockers"]
     assert "analysis_environment_lock_evidence_placeholder_field:bioconductor_version" in validation["blockers"]
@@ -727,6 +794,31 @@ def test_environment_lock_evidence_blocks_placeholder_or_mismatched_payloads() -
     assert "analysis_environment_lock_evidence_allowed_modules_mismatch" in validation["blockers"]
     assert "analysis_environment_lock_evidence_registry_field_mismatch:dockerfile" in validation["blockers"]
     assert "analysis_environment_lock_evidence_registry_field_mismatch:renv_lock" in validation["blockers"]
+
+
+def test_environment_lock_evidence_requires_sha256_hex_package_lock_hash() -> None:
+    environment_registry = read_json(ROOT / "analysis" / "registry" / "analysis_environments.json")
+    validation = validate_analysis_environment_lock_evidence(
+        "r-bio-full",
+        {
+            "schema_version": "biomedpilot.analysis.environment_lock_evidence.v1",
+            "environment_id": "r-bio-full",
+            "status": "restored",
+            "r_version": "R 4.4.2",
+            "bioconductor_version": "3.20",
+            "package_lock_hash": {"algorithm": "sha256", "value": "not-a-sha256"},
+            "dockerfile": "docker/Dockerfile.r-bio-full",
+            "renv_lock": "renv/renv.bio-full.lock",
+            "runtime_package_install": "forbidden",
+            "runtime_resource_download": "forbidden",
+            "allowed_module_ids": ["deg", "survival", "univariate", "multivariate", "enrichment", "immune_infiltration", "correlation"],
+            "evidence_files": ["analysis/registry/analysis_environments.json"],
+        },
+        environment_registry=environment_registry,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_environment_lock_evidence_package_lock_hash_value_not_sha256" in validation["blockers"]
 
 
 def test_full_mode_environment_blockers_allow_chem_gpu_shared_lock_policy() -> None:
@@ -1278,9 +1370,11 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "install_policy" in remediation_queue_schema["required"]
     assert resource_lock_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence.v1"
     assert "runtime_download_allowed" in resource_lock_schema["required"]
+    assert resource_lock_schema["properties"]["hash"]["required"] == ["algorithm", "value"]
     assert resource_lock_registry_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence_registry.v1"
     assert "evidence_entries" in resource_lock_registry_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"
+    assert environment_lock_schema["properties"]["package_lock_hash"]["required"] == ["algorithm", "value"]
     assert evidence_template_package_schema["$id"] == "biomedpilot.analysis.evidence_template_package.v1"
     assert "environment_lock_evidence_templates" in evidence_template_package_schema["required"]
     assert "resource_lock_evidence_templates" in evidence_template_package_schema["required"]

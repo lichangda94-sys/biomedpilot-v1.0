@@ -48,6 +48,7 @@ PLACEHOLDER_RESOURCE_VALUES = {
     "",
 }
 FINAL_LOCK_REQUIRED_FIELDS = ("version", "source", "hash", "license", "cache_path")
+MOCK_FIXTURE_RESOURCE_ID = "mock_fixture_builtin_v1"
 BLOCKED_RESOURCE_STATUSES = {
     "blocked_until_resource_lock",
     "blocked_until_tool_lock",
@@ -214,8 +215,14 @@ def validate_analysis_resource_lock_evidence(
         value = str(hash_payload.get("value") or "")
         if not algorithm:
             blockers.append("analysis_resource_lock_evidence_hash_algorithm_missing")
+        elif not _resource_hash_algorithm_allowed(resource_key, algorithm):
+            blockers.append("analysis_resource_lock_evidence_hash_algorithm_not_allowed")
         if _is_placeholder_resource_value(value):
             blockers.append("analysis_resource_lock_evidence_hash_value_missing")
+        elif algorithm == "sha256" and not _is_sha256_hex(value):
+            blockers.append("analysis_resource_lock_evidence_hash_value_not_sha256")
+        elif algorithm == "repository_fixture" and resource_key != MOCK_FIXTURE_RESOURCE_ID:
+            blockers.append("analysis_resource_lock_evidence_repository_fixture_hash_for_full_resource")
 
     for field in FINAL_LOCK_REQUIRED_FIELDS:
         value: Any
@@ -384,8 +391,12 @@ def validate_analysis_environment_lock_evidence(
         value = str(package_hash.get("value") or "")
         if not algorithm:
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_algorithm_missing")
+        elif algorithm != "sha256":
+            blockers.append("analysis_environment_lock_evidence_package_lock_hash_algorithm_not_sha256")
         if _is_placeholder_resource_value(value):
             blockers.append("analysis_environment_lock_evidence_package_lock_hash_value_missing")
+        elif algorithm == "sha256" and not _is_sha256_hex(value):
+            blockers.append("analysis_environment_lock_evidence_package_lock_hash_value_not_sha256")
 
     for field in ("r_version", "bioconductor_version", "dockerfile", "renv_lock"):
         if _is_placeholder_resource_value(evidence.get(field)):
@@ -657,6 +668,17 @@ def _is_placeholder_resource_value(value: Any) -> bool:
         return True
     text = str(value).strip()
     return text.lower() in PLACEHOLDER_RESOURCE_VALUES
+
+
+def _resource_hash_algorithm_allowed(resource_id: str, algorithm: str) -> bool:
+    if resource_id == MOCK_FIXTURE_RESOURCE_ID:
+        return algorithm in {"repository_fixture", "sha256"}
+    return algorithm == "sha256"
+
+
+def _is_sha256_hex(value: str) -> bool:
+    text = str(value or "")
+    return len(text) == 64 and all(char in "0123456789abcdefABCDEF" for char in text)
 
 
 def _blocked_resource_has_partial_final_lock(item: dict[str, Any]) -> bool:

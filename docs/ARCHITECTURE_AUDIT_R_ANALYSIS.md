@@ -93,9 +93,9 @@ Resource governance now has a programmatic gate:
 
 - `analysis/resources/manifest.json` records mock fixture resources and full-mode locks for Reactome, MSigDB, GO, KEGG, organism annotation databases, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
 - `app/analysis_runtime/resources.py` validates required fields, forbids runtime downloads, and reports module-specific full-mode blockers.
-- `locked` resources must now reference a schema-valid evidence payload under `analysis/resources/locks/`. That payload records resource id, version, source, hash, license, cache path, approved modules, evidence files, and `runtime_download_allowed=false`; missing or mismatched evidence blocks the resource lock.
+- `locked` resources must now reference a schema-valid evidence payload under `analysis/resources/locks/`. That payload records resource id, version, source, hash, license, cache path, approved modules, evidence files, and `runtime_download_allowed=false`; missing or mismatched evidence blocks the resource lock. Full resources require a SHA-256 hash algorithm and 64-character hex value; the repository fixture hash marker is allowed only for `mock_fixture_builtin_v1`.
 - `app/analysis_runtime/resources.py` now also reports module-specific full-environment blockers. Full mode is blocked unless the module's registered full environment has an existing Dockerfile and a restored environment lock; current full locks are still `scaffold_only_not_restored`, so they remain blockers even if resource locks are later filled in.
-- Restored full-environment locks must now provide schema-valid evidence. `validate_analysis_environment_lock_evidence()` requires restored status, R/Bioconductor versions, package-lock hash, Dockerfile, renv lock, allowed modules, evidence files, and explicit no runtime-install/resource-download policies.
+- Restored full-environment locks must now provide schema-valid evidence. `validate_analysis_environment_lock_evidence()` requires restored status, R/Bioconductor versions, a SHA-256 package-lock hash, Dockerfile, renv lock, allowed modules, evidence files, and explicit no runtime-install/resource-download policies.
 - `app/analysis_runtime/resources.py` now validates the environment registry itself. `validate_analysis_environment_registry()` reports structural blockers separately from readiness blockers, so the current scaffold can be structurally valid while still returning `full_mode_ready=false` for unrestored full locks.
 - `validate_analysis_environment_registry()` now emits `environment_lock_evidence_templates` for blocked full environments. These templates describe the future external evidence payloads without marking the environments restored.
 - `locked` resources are rejected if version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`; this prevents a resource from being falsely marked full-mode ready.
@@ -486,6 +486,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added module-level remediation scope to the Markdown manual-decision table.
 - Added remediation scope to the external evidence template package handoff.
 - Hardened standard-worker migration evidence so only passed formal full packages with ready environment/resource lock snapshots can count as isolated worker migration proof.
+- Hardened environment/resource lock evidence so full-mode locks require SHA-256 hash evidence instead of arbitrary non-empty hash algorithm labels.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed
