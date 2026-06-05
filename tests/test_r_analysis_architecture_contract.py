@@ -1369,6 +1369,8 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert "full_analysis_resource_locks_not_complete" in status["p1_issues"]
     assert rows["RARCH-01"]["status"] == "pass"
     assert rows["RARCH-10"]["status"] == "pass"
+    assert rows["RARCH-10"]["label"] == "No active runtime R package install or resource download commands"
+    assert rows["RARCH-10"]["blockers"] == []
     assert rows["RARCH-11"]["status"] == "pass"
     assert rows["RARCH-12"]["status"] == "warn"
     assert rows["RARCH-18"]["status"] == "warn"
@@ -1972,12 +1974,19 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
         assert (ROOT / "analysis" / "fixtures" / "outputs" / "mock_result_package" / dirname).exists()
 
 
-def test_default_source_tree_does_not_install_r_packages_in_request_flow() -> None:
+def test_default_source_tree_does_not_install_r_packages_or_download_resources_in_request_flow() -> None:
     forbidden = (
         "install.packages",
         "BiocManager::install",
         "pak::pkg_install",
         "remotes::install_github",
+        "download.file",
+        "curl::curl_download",
+        "BiocFileCache(",
+        "AnnotationHub(",
+        "ExperimentHub(",
+        "wget ",
+        "curl -",
     )
     searched_roots = [ROOT / "app", ROOT / "scripts", ROOT / "analysis", ROOT / "docker"]
     offenders: list[str] = []

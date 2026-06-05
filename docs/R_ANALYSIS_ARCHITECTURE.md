@@ -149,7 +149,7 @@ Restored environment locks must also provide schema-valid evidence using `analys
 
 `build_analysis_center_state()` exposes this validator as `analysis_environment_gate_rows` plus developer diagnostics. The existing Analysis Center gate table can therefore show "Analysis environment registry" and "Full R environment readiness" without coupling the UI to Dockerfile, renv, or R package internals.
 
-`app/analysis_runtime/architecture_status.py` exposes `build_analysis_architecture_status()`, a read-only machine snapshot for the 20 architecture requirements. The snapshot reports no P0 failures in the current source tree and keeps the overall state at `partial_with_p1_gaps` while full environment locks, resource locks, and universal isolated-worker migration remain incomplete.
+`app/analysis_runtime/architecture_status.py` exposes `build_analysis_architecture_status()`, a read-only machine snapshot for the 20 architecture requirements. The snapshot reports no P0 failures in the current source tree and keeps the overall state at `partial_with_p1_gaps` while full environment locks, resource locks, and universal isolated-worker migration remain incomplete. Its P0 runtime-acquisition guard checks active non-legacy app/analysis/scripts/config surfaces for both R package install commands and explicit runtime resource download commands; violations surface as RARCH-10 blockers instead of being treated as documentation-only policy.
 
 `build_analysis_center_state()` exposes that snapshot as `analysis_architecture_status` and `analysis_architecture_gate_rows`. The UI gate table shows the architecture summary and P0 guard directly from the machine snapshot, so current P1 gaps stay visible without being confused with a full-mode pass.
 

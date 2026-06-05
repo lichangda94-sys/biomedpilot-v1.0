@@ -32,6 +32,15 @@ BANNED_RUNTIME_INSTALL_PATTERNS = (
     "pak" + "::pkg_install",
     "remotes" + "::install_github",
 )
+BANNED_RUNTIME_RESOURCE_DOWNLOAD_PATTERNS = (
+    "download" + ".file",
+    "curl" + "::curl_download",
+    "BiocFile" + "Cache(",
+    "Annotation" + "Hub(",
+    "Experiment" + "Hub(",
+    "w" + "get ",
+    "curl" + " -",
+)
 HEAVY_DEFAULT_DEPENDENCY_NAMES = (
     "ReactomePA",
     "reactome.db",
@@ -64,6 +73,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
     active_install_hits = _active_runtime_install_hits()
+    active_download_hits = _active_runtime_resource_download_hits()
     heavy_default_hits = _default_dependency_hits()
     rows = [
         _row(
@@ -126,10 +136,11 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         ),
         _row(
             "RARCH-10",
-            "No active runtime R package install commands",
-            "pass" if not active_install_hits else "fail",
+            "No active runtime R package install or resource download commands",
+            "pass" if not active_install_hits and not active_download_hits else "fail",
             "active non-legacy app/analysis/scripts/config scan",
-            blockers=[f"runtime_install_command_found:{item}" for item in active_install_hits],
+            blockers=[f"runtime_install_command_found:{item}" for item in active_install_hits]
+            + [f"runtime_resource_download_command_found:{item}" for item in active_download_hits],
         ),
         _row(
             "RARCH-11",
@@ -1030,6 +1041,14 @@ def _chem_modules_use_external_tool_policy() -> bool:
 
 
 def _active_runtime_install_hits() -> list[str]:
+    return _active_runtime_command_hits(BANNED_RUNTIME_INSTALL_PATTERNS)
+
+
+def _active_runtime_resource_download_hits() -> list[str]:
+    return _active_runtime_command_hits(BANNED_RUNTIME_RESOURCE_DOWNLOAD_PATTERNS)
+
+
+def _active_runtime_command_hits(patterns: tuple[str, ...]) -> list[str]:
     roots = [REPO_ROOT / "app", REPO_ROOT / "analysis", REPO_ROOT / "scripts", REPO_ROOT / "config"]
     hits: list[str] = []
     for root in roots:
@@ -1042,7 +1061,7 @@ def _active_runtime_install_hits() -> list[str]:
                 text = path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
                 continue
-            for pattern in BANNED_RUNTIME_INSTALL_PATTERNS:
+            for pattern in patterns:
                 if pattern in text:
                     hits.append(f"{path.relative_to(REPO_ROOT)}:{pattern}")
     return sorted(set(hits))

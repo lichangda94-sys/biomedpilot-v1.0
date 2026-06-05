@@ -272,6 +272,8 @@ Update: `config/bioinformatics/package_requirements.yaml` now records R/Biocondu
 
 Update: Bioinformatics analysis default configs that mention heavy R packages now carry the same no-install boundary. `analysis_defaults.yaml`, `enrichment_defaults.yaml`, and `survival_defaults.yaml` are parameter/capability defaults only; they explicitly forbid runtime install/download and default app dependency use, and an architecture test guards those files.
 
+Update: RARCH-10 now treats runtime acquisition as a single machine guard. The architecture status scan blocks both active non-legacy R package install commands and explicit runtime resource download commands, so the no-install/no-download boundary no longer relies only on prose and gene-set UI behavior.
+
 ## Phase R1: Task-System Bridge
 
 Scope:
