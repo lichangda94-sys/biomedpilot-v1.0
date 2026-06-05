@@ -6,9 +6,9 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `52bcf4ebb832cfd2e0cb198f38f57825d8fa9ec7`
+Current HEAD: `a6ccd8c2ed8d30a769dd7eb849b0daad29e0e43f`
 
-Current subject: `validate standard worker migration evidence`
+Current subject: `align analysis remediation queue with lock evidence gates`
 
 ## Audit Scope
 
@@ -31,17 +31,18 @@ Observed before report edits:
 
 ```text
 ## dev/bioinformatics
-A  analysis/schemas/output/standard_worker_migration_evidence.schema.json
+ M app/analysis_runtime/__init__.py
 M  app/analysis_runtime/architecture_status.py
 M  docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
 M  docs/R_ANALYSIS_ARCHITECTURE.md
 M  docs/R_ANALYSIS_REMEDIATION_PLAN.md
 M  tests/test_r_analysis_architecture_contract.py
+?? analysis/registry/standard_worker_migration_evidence.json
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
 
-Those pre-existing staged architecture/schema changes and untracked paths were preserved and excluded from this Phase 2.5 audit. Only `docs/reports/**` files are Phase 2.5 outputs.
+Those pre-existing architecture/runtime changes and untracked paths were preserved and excluded from this Phase 2.5 audit. Only `docs/reports/**` files are Phase 2.5 outputs.
 
 ## Commands Used
 
@@ -51,7 +52,7 @@ Those pre-existing staged architecture/schema changes and untracked paths were p
 | `sed -n '1,260p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Read real-loop restrictions. |
 | `git status --short --branch` | Captured current branch and untracked paths. |
 | `git branch --all --no-color` | Enumerated available branches without checkout. |
-| `git rev-parse HEAD` | Confirmed current HEAD `52bcf4ebb832cfd2e0cb198f38f57825d8fa9ec7`. |
+| `git rev-parse HEAD` | Confirmed current HEAD `a6ccd8c2ed8d30a769dd7eb849b0daad29e0e43f`. |
 | `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads` | Captured local branch heads and subjects. |
 | `git log --oneline --decorate --max-count=30 --all` | Sampled recent cross-branch history. |
 | `find app analysis archive docs tests scripts -type d ...` | Located legacy directories without executing them. |
@@ -66,7 +67,7 @@ No functional tests were required for this audit-only inventory. Functional test
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `52bcf4eb` | 2026-06-05 | validate standard worker migration evidence | Current source of truth; includes Bio/Meta current UI, standard package governance, external analysis environment gates, R architecture status gates, migration matrix surfacing, and standard worker migration evidence validation | source of truth |
+| `dev/bioinformatics` | `a6ccd8c2` | 2026-06-05 | align analysis remediation queue with lock evidence gates | Current source of truth; includes Bio/Meta current UI, standard package governance, external analysis environment gates, R architecture status gates, remediation queue rows, migration matrix surfacing, and lock/evidence validation gates | source of truth |
 | `dev/release-internal-test` | `6658c3a3` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | Rich Bio DEG/enrichment/survival/risk/report history | candidate library only |
 | `codex/releasebuild-formal-deg-carryover` | `a8adc29a` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | Formal DEG and ReleaseBuild gate material | candidate library only |
 | `codex/mainline-survival-clinical-carryover` | `74775fe4` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Survival/clinical and enrichment convergence material | candidate library only |
@@ -100,24 +101,24 @@ Selected branch deltas are large. Whole-branch carry-over is unsafe because thes
 
 | Branch | Shortstat in audited paths | Practical implication |
 | --- | --- | --- |
-| `dev/release-internal-test` | 2292 files changed, 175296 insertions, 87927 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
-| `codex/releasebuild-formal-deg-carryover` | 1254 files changed, 118147 insertions, 80352 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
-| `codex/mainline-survival-clinical-carryover` | 776 files changed, 18289 insertions, 71633 deletions | Survival/clinical history, but older than current standard package and architecture gate work. |
-| `stable/mainline` | 833 files changed, 16733 insertions, 82512 deletions | Historical formal DEG baseline only. |
-| `feature/meta-l3-ui-loop` | 166 files changed, 342 insertions, 11021 deletions | Focused Meta proof; already represented by current history/reports. |
-| `dev/meta-analysis` | 624 files changed, 21210 insertions, 80202 deletions | OCR/fulltext/package material; not current-proven. |
-| `dev/ui-shell` | 2156 files changed, 79986 insertions, 172810 deletions | UI design/shell material only; direct migration unsafe. |
-| `integration/release-ui-shell-scoped-migration` | 846 files changed, 23023 insertions, 83061 deletions | UI shell reference, not a Bio/Meta analysis source. |
-| `codex/bio-geo-real-download-test` | 601 files changed, 4662 insertions, 102423 deletions | Old GEO/DEG path diverges sharply from current contracts. |
-| `codex/stage-3.6-deg-preflight` | 1096 files changed, 11399 insertions, 172432 deletions | Superseded preflight material. |
-| `codex/meta-workflow-ui` | 528 files changed, 6229 insertions, 80958 deletions | Old Meta UI reference. |
-| `codex/meta-search-ui-main` | 626 files changed, 2897 insertions, 111875 deletions | Old PubMed execution reference. |
+| `dev/release-internal-test` | 2643 files changed, 209722 insertions, 101548 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
+| `codex/releasebuild-formal-deg-carryover` | 1572 files changed, 147623 insertions, 93970 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
+| `codex/mainline-survival-clinical-carryover` | 961 files changed, 31535 insertions, 76163 deletions | Survival/clinical history, but older than current standard package and architecture gate work. |
+| `stable/mainline` | 1018 files changed, 29979 insertions, 87042 deletions | Historical formal DEG baseline only. |
+| `feature/meta-l3-ui-loop` | 175 files changed, 342 insertions, 15512 deletions | Focused Meta proof; already represented by current history/reports. |
+| `dev/meta-analysis` | 683 files changed, 25387 insertions, 86732 deletions | OCR/fulltext/package material; not current-proven. |
+| `dev/ui-shell` | 2224 files changed, 84914 insertions, 179343 deletions | UI design/shell material only; direct migration unsafe. |
+| `integration/release-ui-shell-scoped-migration` | 1039 files changed, 37624 insertions, 87591 deletions | UI shell reference, not a Bio/Meta analysis source. |
+| `codex/bio-geo-real-download-test` | 652 files changed, 4728 insertions, 110886 deletions | Old GEO/DEG path diverges sharply from current contracts. |
+| `codex/stage-3.6-deg-preflight` | 1143 files changed, 13294 insertions, 178985 deletions | Superseded preflight material. |
+| `codex/meta-workflow-ui` | 552 files changed, 6429 insertions, 87004 deletions | Old Meta UI reference. |
+| `codex/meta-search-ui-main` | 688 files changed, 2998 insertions, 121587 deletions | Old PubMed execution reference. |
 
 ## Inventory Conclusion
 
 The repository contains substantial historical UI, Bioinformatics, Meta Analysis, plot, report, export, test, and helper material. No old branch is safe to merge wholesale.
 
-Current HEAD has advanced beyond earlier Phase 2.5 reports. It now exposes analysis architecture status gates, remediation queue rows, standard worker migration matrix rows, and standard worker migration evidence validation in addition to standard package/result/input manifest governance. Those are current-gate facts, not permission to migrate old branch logic.
+Current HEAD has advanced beyond earlier Phase 2.5 reports. It now exposes analysis architecture status gates, remediation queue rows, standard worker migration matrix rows, lock evidence validation, and standard worker migration evidence validation in addition to standard package/result/input manifest governance. Those are current-gate facts, not permission to migrate old branch logic.
 
 Future migration must select exactly one current UI entry and one candidate capability, then map it to the current contract, adapt or rewrite it, and prove it with current tests and real output evidence.
 

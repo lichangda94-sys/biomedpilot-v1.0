@@ -1379,6 +1379,102 @@ No migration candidate is approved for direct carry-over. Future work must selec
 
 Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
 
+## Current Latest Phase 2.5 Snapshot
+
+Date: 2026-06-05
+
+The latest current-state Phase 2.5 refresh in this worklog is `Phase 2.5 Refresh: Full Branch Inventory at a6ccd8c2`. It supersedes older Phase 2.5 entries for current-state reporting while preserving those older entries as historical audit records.
+
+## Phase 2.5 Refresh: Full Branch Inventory at `a6ccd8c2`
+
+Date: 2026-06-05
+
+### Scope
+
+This refresh updated the Phase 2.5 full-branch, legacy-directory, migration-candidate, deprecated-register, and current-UI coverage reports against the current `dev/bioinformatics` HEAD:
+
+```text
+a6ccd8c2ed8d30a769dd7eb849b0daad29e0e43f
+align analysis remediation queue with lock evidence gates
+```
+
+The task remained audit-only. No old branch was checked out, merged, cherry-picked, or used to modify the current UI or analysis algorithms. Legacy directories, archive sources, and old branches remain material libraries only.
+
+### Reports Updated
+
+```text
+docs/reports/BRANCH_INVENTORY.md
+docs/reports/LEGACY_FEATURE_CATALOG.md
+docs/reports/MIGRATION_CANDIDATE_LEDGER.md
+docs/reports/DEPRECATED_LEGACY_REGISTER.md
+docs/reports/BRANCH_TO_CURRENT_UI_COVERAGE_MATRIX.md
+docs/reports/L3_CLOSURE_WORKLOG.md
+```
+
+### Worktree Boundaries
+
+The refresh intentionally modified only Phase 2.5 report files. These unrelated dirty or untracked paths were observed and preserved:
+
+```text
+ M app/analysis_runtime/__init__.py
+ M app/analysis_runtime/architecture_status.py
+ M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M docs/R_ANALYSIS_REMEDIATION_PLAN.md
+ M tests/test_r_analysis_architecture_contract.py
+?? analysis/registry/standard_worker_migration_evidence.json
+?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
+?? project_storage/bioinformatics/
+```
+
+They were not treated as Phase 2.5 migration outputs and were not used as evidence for old-branch runtime availability.
+
+### Commands Run
+
+| Command | Result |
+| --- | --- |
+| `sed -n '1,260p' /Users/changdali/Developer/biomedpilot v1.0/CODEX_UI_BRANCH_MIGRATION_GUIDE.md` | Passed |
+| `sed -n '1,260p' /Users/changdali/Developer/biomedpilot v1.0/CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Passed |
+| `git status --short --branch` | Passed |
+| `git branch --all --verbose --no-abbrev` | Passed |
+| `git rev-parse HEAD` | Passed, `a6ccd8c2ed8d30a769dd7eb849b0daad29e0e43f` |
+| `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads` | Passed |
+| `git diff --shortstat HEAD..<branch> -- app analysis tests scripts docs` | Passed for selected high-relevance branches |
+| `git ls-tree -r --name-only <branch> -- app/bioinformatics app/meta_analysis tests/bioinformatics tests/meta_analysis tests/ui docs scripts analysis` | Passed for selected high-relevance branches |
+| `find app/bioinformatics/legacy app/meta_analysis/legacy archive/legacy_sources -type f` | Passed, 920 files in scope |
+| `rg -n "QPushButton\|setText\|run\|export\|plot\|report\|DEG\|GSEA\|ORA\|survival\|Cox\|forest\|funnel\|Meta" app/bioinformatics app/meta_analysis tests/ui -g '*.py'` | Passed |
+| `rg --files app/bioinformatics app/meta_analysis analysis tests/bioinformatics tests/meta_analysis tests/ui docs scripts \| rg 'legacy\|deg\|enrichment\|ora\|gsea\|survival\|cox\|risk\|nomogram\|meta\|forest\|funnel\|report\|export\|plot\|standard_package\|analysis_runtime'` | Passed |
+
+No functional tests were run because this phase was documentation-only and audit-only. Functional tests would validate the current checkout, not prove old-branch runtime availability.
+
+### Findings
+
+Current `dev/bioinformatics` has advanced beyond earlier Phase 2.5 snapshots and now includes remediation queue alignment with lock/evidence gates on top of the existing standard package, result/input manifest, architecture status, migration matrix, and evidence validation surfaces. These are current contract and audit surfaces, not approval to migrate any old branch or to treat old implementations as current available features.
+
+Selected high-relevance branch deltas remain large:
+
+- `dev/release-internal-test`: 2643 files changed.
+- `codex/releasebuild-formal-deg-carryover`: 1572 files changed.
+- `codex/mainline-survival-clinical-carryover`: 961 files changed.
+- `dev/meta-analysis`: 683 files changed.
+- `dev/ui-shell`: 2224 files changed.
+
+Legacy directories remain quarantined:
+
+```text
+app/bioinformatics/legacy/**
+app/meta_analysis/legacy/**
+archive/legacy_sources/**
+```
+
+### Decision
+
+No migration candidate is approved for direct carry-over. Future work must select one current UI entry and one candidate, then adapt or rewrite it against current contracts with current tests and real output evidence. Mock, placeholder, dry-run, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+### Stop Point
+
+Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
+
 ## Phase 2.5 Refresh: Full Branch Inventory at `175193dc`
 
 Date: 2026-06-05
@@ -1899,3 +1995,9 @@ No migration candidate is approved for direct carry-over. Future work must selec
 ### Stop Point
 
 Stop after this Phase 2.5 audit refresh. Do not proceed into development, branch merge, cherry-pick, UI replacement, analysis algorithm modification, or legacy code migration without the next explicit instruction.
+
+## Current Latest Phase 2.5 Snapshot
+
+Date: 2026-06-05
+
+The latest current-state Phase 2.5 refresh in this worklog is `Phase 2.5 Refresh: Full Branch Inventory at a6ccd8c2`. It supersedes older Phase 2.5 entries for current-state reporting while preserving those older entries as historical audit records.

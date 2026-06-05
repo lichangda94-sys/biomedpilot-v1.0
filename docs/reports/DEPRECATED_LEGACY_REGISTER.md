@@ -2,11 +2,13 @@
 
 Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `52bcf4ebb832cfd2e0cb198f38f57825d8fa9ec7`
+Baseline: `dev/bioinformatics` at `a6ccd8c2ed8d30a769dd7eb849b0daad29e0e43f`
 
 ## Rule
 
 Deprecated means the item must not be migrated by direct import, direct UI call, wholesale path checkout, or branch merge. Some items may still be used as requirements or reference material after a scoped design review.
+
+This register was refreshed against current `dev/bioinformatics` HEAD `a6ccd8c2`. No deprecated item below was executed, imported, or promoted.
 
 ## Deprecated / Quarantined Items
 
