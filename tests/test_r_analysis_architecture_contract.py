@@ -522,6 +522,55 @@ def test_full_resource_lock_evidence_blocks_cache_hash_mismatch(tmp_path: Path) 
     assert "analysis_resource_lock_evidence_hash_mismatch" in validation["blockers"]
 
 
+def test_full_resource_lock_evidence_blocks_cache_file_count_mismatch(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "reactome-cache"
+    cache_dir.mkdir()
+    first = cache_dir / "reactome_terms.gmt"
+    second = cache_dir / "reactome_metadata.json"
+    first.write_text("TERM1\tDescription\tGENE1\tGENE2\n", encoding="utf-8")
+    second.write_text('{"version":"2026.05"}\n', encoding="utf-8")
+    digest = hashlib.sha256()
+    for child in sorted(item for item in cache_dir.rglob("*") if item.is_file()):
+        relative = child.relative_to(cache_dir).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(child.read_bytes())
+        digest.update(b"\0")
+    cache_hash = digest.hexdigest()
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resource = manifest["resources"][1]  # type: ignore[index]
+    resource.update(
+        {
+            "version": "2026.05",
+            "hash": cache_hash,
+            "license": "approved_test_license",
+            "cache_path": str(cache_dir),
+            "status": "locked",
+        }
+    )
+    validation = validate_analysis_resource_lock_evidence(
+        "reactome_full",
+        {
+            "schema_version": "biomedpilot.analysis.resource_lock_evidence.v1",
+            "resource_id": "reactome_full",
+            "status": "locked",
+            "version": "2026.05",
+            "source": "Reactome / Bioconductor package metadata",
+            "hash": {"algorithm": "sha256", "value": cache_hash},
+            "cache_content": {"non_empty": True, "content_source": "prelocked_cache_path", "file_count": 1},
+            "license": "approved_test_license",
+            "cache_path": str(cache_dir),
+            "runtime_download_allowed": False,
+            "approved_for_modules": ["enrichment"],
+            "evidence_files": ["analysis/resources/manifest.json"],
+        },
+        manifest=manifest,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_cache_content_file_count_mismatch" in validation["blockers"]
+
+
 def test_full_resource_lock_evidence_blocks_empty_cache_directory(tmp_path: Path) -> None:
     cache_dir = tmp_path / "reactome-empty-cache"
     cache_dir.mkdir()

@@ -241,6 +241,12 @@ def validate_analysis_resource_lock_evidence(
         blockers.append("analysis_resource_lock_evidence_cache_content_invalid")
     elif cache_content.get("non_empty") is not True:
         blockers.append("analysis_resource_lock_evidence_cache_content_non_empty_not_confirmed")
+    elif "file_count" in cache_content and (
+        not isinstance(cache_content.get("file_count"), int)
+        or isinstance(cache_content.get("file_count"), bool)
+        or cache_content.get("file_count") < 1
+    ):
+        blockers.append("analysis_resource_lock_evidence_cache_content_file_count_invalid")
 
     cache_path = str(evidence.get("cache_path") or "")
     cache_path_obj = REPO_ROOT / cache_path if cache_path else None
@@ -251,6 +257,9 @@ def validate_analysis_resource_lock_evidence(
             blockers.append("analysis_resource_lock_evidence_cache_path_empty")
         elif _sha256_path(cache_path_obj) != hash_value.lower():
             blockers.append("analysis_resource_lock_evidence_hash_mismatch")
+        elif isinstance(cache_content, dict) and isinstance(cache_content.get("file_count"), int):
+            if cache_content["file_count"] != _path_file_count(cache_path_obj):
+                blockers.append("analysis_resource_lock_evidence_cache_content_file_count_mismatch")
 
     evidence_files = evidence.get("evidence_files")
     if not isinstance(evidence_files, list) or not evidence_files:
@@ -741,6 +750,12 @@ def _path_has_files(path: Path) -> bool:
     if path.is_file():
         return True
     return any(item.is_file() for item in path.rglob("*"))
+
+
+def _path_file_count(path: Path) -> int:
+    if path.is_file():
+        return 1
+    return sum(1 for item in path.rglob("*") if item.is_file())
 
 
 def _blocked_resource_has_partial_final_lock(item: dict[str, Any]) -> bool:
