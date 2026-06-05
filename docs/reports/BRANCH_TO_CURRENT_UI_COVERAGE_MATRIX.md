@@ -2,7 +2,7 @@
 
 Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `175193dc56f8fd649ad7fa50e42ce4b2ec3ad07c`
+Baseline: `dev/bioinformatics` at `52bcf4ebb832cfd2e0cb198f38f57825d8fa9ec7`
 
 ## Rule
 
@@ -25,7 +25,7 @@ The current UI is the only mainline. A branch feature is not available merely be
 | Risk score / nomogram / calibration / DCA | mixed current/branch evidence | Not production-current; clinical interpretation restricted | ReleaseBuild/internal-test branches | Not fully covered | Rewrite only after selected scope |
 | Immune infiltration | `immune_infiltration/**`, `analysis/modules/immune_infiltration/**` | Current scoring, testing-level standard package sidecar, and lite worker scaffold exist; proof not rerun here | ReleaseBuild/current branches | Partly covered | Reuse with focused proof |
 | Expression correlation | `services/correlation_runner.py`, `correlation_service.py`, `correlation_standard_package.py` | Current local correlation service and testing-level standard package sidecar exist; proof not rerun here | current line | Partly covered | Reuse with focused proof |
-| Standard analysis worker/package catalog | `app/analysis_runtime/**`, `analysis/**` | Current mock/lite scaffolds, external R command boundary, package catalog, artifact validation, Analysis Center gate surfacing, standard package/input manifest surfacing, full-mode blocker snapshots, resource/environment-lock blocker policy, and architecture status gates exist | Current line | Scaffold covered | Keep labeled testing/lite/full-blocked until selected proof |
+| Standard analysis worker/package catalog | `app/analysis_runtime/**`, `analysis/**` | Current mock/lite scaffolds, external R command boundary, package catalog, artifact validation, Analysis Center gate surfacing, standard package/input manifest surfacing, full-mode blocker snapshots, resource/environment-lock blocker policy, architecture status gates, remediation queue, migration matrix, and migration evidence validation exist | Current line | Scaffold covered | Keep labeled testing/lite/full-blocked until selected proof |
 | Legacy GEO check/settings | `workflow_pages.py`, legacy adapters | UI can expose environment/status style checks, but legacy execution cannot become formal analysis | `app/bioinformatics/legacy/**` | Quarantined | Deprecated/adapter only |
 
 ## Meta Analysis UI Coverage
@@ -49,7 +49,7 @@ The current UI is the only mainline. A branch feature is not available merely be
 
 | Branch/source | UI features that map to current pages | Output evidence classification | Coverage decision |
 | --- | --- | --- | --- |
-| `dev/bioinformatics` | Bio project flow, Analysis Center, Results Browser, report/export gates, Meta pages, standard analysis package catalog, standard package/input manifest surfacing, full-mode environment blocker snapshots, architecture status gates | Current implementation evidence; not all rerun in this audit | Mainline |
+| `dev/bioinformatics` | Bio project flow, Analysis Center, Results Browser, report/export gates, Meta pages, standard analysis package catalog, standard package/input manifest surfacing, full-mode environment blocker snapshots, architecture status gates, remediation queue, migration matrix, and migration evidence validation | Current implementation evidence; not all rerun in this audit | Mainline |
 | `dev/release-internal-test` | DEG/enrichment/survival/risk/report candidates map conceptually to current Bio pages | Branch-only evidence; current layout diverges and would delete current scaffold paths | Candidate library |
 | `codex/releasebuild-formal-deg-carryover` | DEG/runtime/report gates map to Analysis Center/Results Browser | Branch-only; older contracts | Candidate library |
 | `codex/mainline-survival-clinical-carryover` | Survival/Cox rows map to current survival clinical UI | Branch-only | Candidate library |

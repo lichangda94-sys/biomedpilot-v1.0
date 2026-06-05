@@ -2,7 +2,7 @@
 
 Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `175193dc56f8fd649ad7fa50e42ce4b2ec3ad07c`
+Baseline: `dev/bioinformatics` at `52bcf4ebb832cfd2e0cb198f38f57825d8fa9ec7`
 
 ## Scope
 
