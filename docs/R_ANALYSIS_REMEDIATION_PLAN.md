@@ -166,6 +166,8 @@ Update: formal standard-worker migration evidence is now centralized in `analysi
 
 Update: the formal standard-worker migration evidence registry is now schema-managed by `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`. The authoritative empty registry is structurally valid, but it still contains no migration evidence entries and does not activate any formal module.
 
+Update: standard-worker migration rows now include a module-specific `migration_evidence_template` and `migration_blockers`. The template spells out the future registry entry shape required for a real migration claim and names forbidden evidence sources such as mock fixture packages, lite testing-level packages, legacy service-adapter sidecars, and module-private output paths. This gives the next scoped migration a concrete checklist while keeping current formal modules pending.
+
 Update: `build_full_analysis_activation_gate()` now combines full environment readiness, full resource readiness, and standard-worker migration evidence into one read-only full-mode activation decision. It is currently blocked by unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration; it does not execute workers, install packages, download resources, or change full-mode availability. The gate payload is covered by `analysis/schemas/output/full_analysis_activation_gate.schema.json` and reports schema validation status.
 
 Update: Analysis Center now renders the full-mode decision as a dedicated `Full analysis activation gate` row inside `analysis_architecture_gate_rows`, so UI users can see the exact disabled reasons without reading developer diagnostics.

@@ -94,6 +94,11 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "molecular_dynamics",
     }
     assert migration_rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert migration_rows["deg"]["migration_readiness_status"] == "blocked"
+    assert migration_rows["deg"]["migration_evidence_template"]["mode"] == "full"
+    assert migration_rows["deg"]["migration_evidence_template"]["required_worker_boundary"] == "standard_r_worker"
+    assert "legacy_service_adapter_sidecar" in migration_rows["deg"]["migration_evidence_template"]["forbidden_evidence_sources"]
+    assert "registry_evidence_entry_missing_or_blocked" in migration_rows["deg"]["migration_blockers"]
     assert migration_rows["spatial_transcriptomics"]["analysis_environment"] == "r-bio-core"
     assert migration_rows["spatial_transcriptomics"]["full_environment"] == "r-spatial-full"
     assert migration_rows["docking"]["full_environment"] == "r-chem-full"

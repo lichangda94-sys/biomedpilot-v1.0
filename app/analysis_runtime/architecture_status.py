@@ -716,6 +716,12 @@ def _standard_worker_migration_row(
     )
     if current_adapter_status.startswith("contract_required"):
         formal_worker_status = "contract_only_pending_standard_worker_migration"
+    migration_blockers = _standard_worker_migration_blockers(
+        full_supported=full_supported,
+        lite_uses_standard_worker=lite_uses_standard_worker,
+        evidence_status=evidence_status,
+        current_adapter_status=current_adapter_status,
+    )
     return {
         "module_id": module_id,
         "title": str(module.get("title") or module_id),
@@ -730,7 +736,57 @@ def _standard_worker_migration_row(
         "full_environment": str(module.get("full_environment") or ""),
         "full_blocker": str(full.get("blocker") or ""),
         "result_index_task_types": [str(item) for item in module.get("result_index_task_types", []) if item],
+        "migration_readiness_status": "blocked" if migration_blockers else "candidate_evidence_ready",
+        "migration_blockers": migration_blockers,
+        "migration_evidence_template": _standard_worker_migration_evidence_template(
+            module_id=module_id,
+            current_adapter_status=current_adapter_status,
+        ),
         "risk": "P1" if formal_worker_status != "migrated_to_isolated_standard_worker" else "none",
+    }
+
+
+def _standard_worker_migration_blockers(
+    *,
+    full_supported: bool,
+    lite_uses_standard_worker: bool,
+    evidence_status: str,
+    current_adapter_status: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if not full_supported:
+        blockers.append("full_mode_not_supported_in_registry")
+    if not lite_uses_standard_worker:
+        blockers.append("lite_standard_worker_path_missing")
+    if evidence_status != "passed":
+        blockers.append("registry_evidence_entry_missing_or_blocked")
+    if current_adapter_status.startswith("contract_required"):
+        blockers.append("formal_runtime_contract_not_implemented")
+    if "sidecar" in current_adapter_status:
+        blockers.append("legacy_sidecar_output_is_not_migration_evidence")
+    return blockers
+
+
+def _standard_worker_migration_evidence_template(*, module_id: str, current_adapter_status: str) -> dict[str, Any]:
+    return {
+        "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+        "module_id": module_id,
+        "mode": "full",
+        "task_id": "<task_center_task_id>",
+        "result_package_dir": "analysis/standard_packages/<result_id>",
+        "frontend_consumes_standard_package": False,
+        "result_index_registered": False,
+        "formal_result_semantics_preserved": False,
+        "required_worker_boundary": "standard_r_worker",
+        "required_task_system_invocation": "task_center_registered",
+        "required_worker_migration_status": "standard_worker_contract",
+        "forbidden_evidence_sources": [
+            "mock_fixture_package",
+            "lite_testing_level_package",
+            "legacy_service_adapter_sidecar",
+            "module_private_output_path",
+        ],
+        "current_adapter_status": current_adapter_status,
     }
 
 

@@ -786,8 +786,18 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["deg"]["full_status"] == "blocked"
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
     assert rows["deg"]["migration_evidence_status"] == "missing"
+    assert rows["deg"]["migration_readiness_status"] == "blocked"
+    assert rows["deg"]["migration_evidence_template"]["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence.v1"
+    assert rows["deg"]["migration_evidence_template"]["module_id"] == "deg"
+    assert rows["deg"]["migration_evidence_template"]["mode"] == "full"
+    assert rows["deg"]["migration_evidence_template"]["required_worker_boundary"] == "standard_r_worker"
+    assert rows["deg"]["migration_evidence_template"]["required_task_system_invocation"] == "task_center_registered"
+    assert "legacy_service_adapter_sidecar" in rows["deg"]["migration_evidence_template"]["forbidden_evidence_sources"]
+    assert "full_mode_not_supported_in_registry" in rows["deg"]["migration_blockers"]
+    assert "registry_evidence_entry_missing_or_blocked" in rows["deg"]["migration_blockers"]
     assert rows["correlation"]["lite_status"] == "standard_worker_lite_ready"
     assert rows["correlation"]["standard_entrypoint"] == "analysis/runners/run_module.R"
+    assert "legacy_sidecar_output_is_not_migration_evidence" in rows["correlation"]["migration_blockers"]
     assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
@@ -837,6 +847,8 @@ def test_standard_worker_migration_matrix_does_not_accept_full_supported_module_
     assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"
     assert rows["deg"]["migration_evidence_status"] == "missing"
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert "full_mode_not_supported_in_registry" not in rows["deg"]["migration_blockers"]
+    assert rows["deg"]["migration_blockers"] == ["registry_evidence_entry_missing_or_blocked"]
     assert matrix["formal_pending_count"] == matrix["module_count"]
 
 
