@@ -335,6 +335,7 @@ def _remediation_summary(remediation_items: list[dict[str, Any]]) -> dict[str, A
                 "title": title,
                 "decision_required": str(item.get("boundary") or ""),
                 "required_evidence": [str(value) for value in item.get("required_evidence", []) if value],
+                "scope": _remediation_scope_summary(item),
             }
         )
     return {
@@ -499,7 +500,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     decisions = [item for item in remediation_summary.get("manual_decision_points", []) if isinstance(item, dict)]
-    lines.extend(_markdown_table(["Item", "Decision Required", "Required Evidence"], decisions, ["item_id", "decision_required", "required_evidence"]))
+    lines.extend(_markdown_table(["Item", "Decision Required", "Required Evidence", "Scope"], decisions, ["item_id", "decision_required", "required_evidence", "scope"]))
     lines.append("")
     return "\n".join(lines)
 
@@ -636,6 +637,21 @@ def _completed_change_lines(payload: dict[str, Any]) -> list[str]:
     if full_gate.get("status") == "blocked":
         lines.append("- Full analysis activation remains explicitly blocked rather than silently enabled.")
     return lines
+
+
+def _remediation_scope_summary(item: dict[str, Any]) -> str:
+    module_scope = item.get("module_scope") if isinstance(item.get("module_scope"), dict) else {}
+    if not module_scope:
+        return ""
+    missing_modules = module_scope.get("missing_module_ids") if isinstance(module_scope.get("missing_module_ids"), list) else []
+    passed_modules = module_scope.get("passed_module_ids") if isinstance(module_scope.get("passed_module_ids"), list) else []
+    blocked_modules = module_scope.get("blocked_module_ids") if isinstance(module_scope.get("blocked_module_ids"), list) else []
+    return (
+        f"missing={len(missing_modules)}; "
+        f"passed={len(passed_modules)}; "
+        f"blocked={len(blocked_modules)}; "
+        f"modules={', '.join(str(item) for item in missing_modules)}"
+    )
 
 
 def _migration_evidence_coverage_table(matrix: dict[str, Any]) -> list[str]:

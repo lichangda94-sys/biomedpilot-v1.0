@@ -91,6 +91,9 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "lock_full_analysis_resources",
         "migrate_formal_algorithms_to_isolated_standard_worker",
     ]
+    decisions = {item["item_id"]: item for item in payload["remediation_summary"]["manual_decision_points"]}
+    assert decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=10; passed=0; blocked=0")
+    assert "modules=deg, survival, univariate, multivariate, enrichment" in decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
     assert "analysis/registry/analysis_environments.json" in payload["remediation_summary"]["involved_files"]
     assert "analysis/resources/manifest.json" in payload["remediation_summary"]["involved_files"]
     assert "analysis/registry/standard_worker_migration_evidence.json" in payload["remediation_summary"]["involved_files"]
@@ -189,6 +192,7 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Standard Worker Migration Evidence Coverage" in text
     assert "Missing evidence modules" in text
     assert "deg, survival, univariate, multivariate, enrichment, immune_infiltration, correlation, spatial_transcriptomics, docking, molecular_dynamics" in text
+    assert "missing=10; passed=0; blocked=0; modules=deg, survival, univariate, multivariate, enrichment" in text
     assert "restore_full_analysis_environment_locks" in text
     assert "analysis/registry/analysis_environments.json" in text
     assert "Architecture gate report schema validation is currently `passed`" in text

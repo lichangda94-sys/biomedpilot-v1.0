@@ -194,6 +194,8 @@ Update: the architecture gate Markdown report now includes standard-worker migra
 
 Update: the isolated standard-worker remediation item now includes module-level scope. The queue records expected, passed, blocked, and missing migration evidence module IDs, so remediation can proceed one formal analysis line at a time while full activation remains blocked.
 
+Update: the architecture gate Markdown report now carries that remediation scope into the manual-decision table. Reviewers can see which modules are missing isolated-worker migration evidence without opening the JSON payload.
+
 Update: direct `analysis/runners/run_module.R` outputs now copy the submitted input payload into package-local `module_input.json` and write `logs/worker_invocation.json` with `input_manifest=module_input.json` and `worker_boundary.task_system_invocation=standard_worker_direct_cli`. Focused tests validate direct mock and blocked full runner packages through the same Python standard package validator. The blocked full direct-runner package records target environment/resource-lock snapshots and remains non-executing.
 
 Update: transitional service-adapter sidecar packages now write `logs/worker_invocation.json` with `worker_backend=legacy_service_adapter`, `invocation_status=sidecar_recorded`, and `task_system_invocation=legacy_service_adapter_direct_call`. This covers current formal DEG, multifactor DEG, controlled enrichment, controlled survival/KM/Cox, immune scoring, and correlation sidecar packages while preserving the explicit `sidecar_only_not_isolated_standard_worker` migration status.
