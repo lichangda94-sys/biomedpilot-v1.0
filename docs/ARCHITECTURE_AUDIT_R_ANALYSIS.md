@@ -63,7 +63,8 @@ The R-side standard entrypoint has also been hardened:
 The main-backend bridge now has two mock-safe paths:
 
 - `worker_backend="python_fixture"` copies fixed standard packages without requiring R.
-- `worker_backend="rscript"` writes `module_input.json`, invokes the standard R runner, validates the package, and registers result-index entries from worker provenance.
+- Every bridge outcome now writes `module_input.json` before validation or worker execution, so mock, blocked, and Rscript packages keep the submitted input payload for audit.
+- `worker_backend="rscript"` invokes the standard R runner with that `module_input.json`, validates the package, and registers result-index entries from worker provenance.
 - Missing `Rscript` produces a blocked standard result package, not a traceback or installer path.
 - All standard task-bridge outcomes now write `logs/worker_invocation.json`, recording backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, and no runtime-install/resource-download policies. The result index keeps `worker.log` first for compatibility and appends the invocation manifest as a second log artifact.
 - `logs/worker_invocation.json` now has an explicit schema in `analysis/schemas/output/worker_invocation.schema.json`; `validate_standard_result_package()` requires and validates it for task-bridge, standard-worker, and legacy service-adapter sidecar packages. Missing manifests, schema-version drift, non-forbidden runtime install/resource download policy, invalid backend/status values, invalid command/blocker shapes, or missing task-system worker-boundary metadata block standard package validation.
@@ -382,6 +383,7 @@ New architecture boundary files:
 - Added static contract tests that do not require R.
 - Added a mock-mode task bridge that copies module fixture packages, records task status, validates the package, and registers a result-index entry without requiring R.
 - Added an explicit Rscript worker backend for the task bridge that invokes `analysis/runners/run_module.R`, validates the package, and records worker provenance in the result index.
+- Materialized `module_input.json` for all standard task-bridge outcomes, including Python fixture copy and validation/mode-blocked packages, so `logs/worker_invocation.json` can always point to an auditable input manifest.
 - Added `logs/worker_invocation.json` for all standard task-bridge outcomes, and registered it in result-index log artifacts after `worker.log`.
 - Added `analysis/schemas/output/worker_invocation.schema.json` and validation blockers for missing or invalid task-bridge/standard-worker invocation manifests.
 - Added result-package-level schema validation against `analysis/schemas/output/result_package.schema.json`; validation payloads now expose the synthesized package manifest and block package-level directory contract drift.

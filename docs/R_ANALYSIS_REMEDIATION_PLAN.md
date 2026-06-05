@@ -63,7 +63,7 @@ Update: the R-side standard runner now accepts `<input_json> <output_dir> <mode>
 
 Update: standard R worker provenance now computes `input_hash` from the full input manifest and `parameter_hash` from the `parameters` object separately, without adding an R package dependency.
 
-Update: the main-backend task bridge now has an explicit `worker_backend="rscript"` path. It materializes `module_input.json`, invokes the standard R runner, validates the standard package, and registers worker provenance in the result index. Missing `Rscript` is a graceful blocked package.
+Update: the main-backend task bridge now materializes `module_input.json` for every standard bridge outcome before validation or worker execution. This covers Python fixture mock packages, validation-blocked packages, mode-blocked packages, and the explicit `worker_backend="rscript"` path. Missing `Rscript` is still a graceful blocked package.
 
 Update: transitional controlled adapters now route external R commands through `app/analysis_runtime/r_worker.py::run_external_r_command()`. This centralizes subprocess behavior and worker-boundary metadata for enrichment and multi-factor DEG adapters, but still leaves full isolated standard-worker migration pending.
 
@@ -148,6 +148,8 @@ Update: standard package validation now also enforces basic schema shape from th
 Update: standard package validation now enforces the package-level schema too. `validate_standard_result_package()` synthesizes a package manifest from the package filesystem and `result.json`, validates it against `analysis/schemas/output/result_package.schema.json`, exposes `result_package_schema` plus `package_manifest` in the validation payload, and blocks directory contract drift such as a missing `logs/` directory.
 
 Update: task submission now enforces the module input payload schema before worker execution. `run_analysis_module_task()` reads `analysis/schemas/input/module_input.schema.json`, blocks missing required fields, enum/type/minLength drift, and nested `runtime` field shape drift, then returns a diagnostic standard package and `logs/worker_invocation.json` instead of invoking mock fixtures or R workers with malformed input.
+
+Update: `logs/worker_invocation.json` now points to `module_input.json` for current task-bridge packages instead of `not_materialized`. Malformed input submissions preserve the raw submitted payload in the package for audit while still blocking before worker execution.
 
 Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
 

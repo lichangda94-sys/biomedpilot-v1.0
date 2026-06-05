@@ -201,9 +201,10 @@ def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index
     assert registry["results"][0]["output_artifacts"][0]["artifact_type"] == "standard_result_package"
     assert registry["results"][0]["log_artifacts"][0]["artifact_type"] == "analysis_worker_log"
     assert registry["results"][0]["log_artifacts"][1]["artifact_type"] == "analysis_worker_invocation_manifest"
+    assert read_json(package_dir / "module_input.json") == module_input(tmp_path)
     assert invocation["worker_backend"] == "python_fixture"
     assert invocation["invocation_status"] == "fixture_copy_completed"
-    assert invocation["input_manifest"] == "not_materialized"
+    assert invocation["input_manifest"] == "module_input.json"
     assert invocation["runtime_install_policy"] == "forbidden"
     assert invocation["resource_download_policy"] == "forbidden"
     assert invocation["worker_boundary"]["boundary_type"] == "analysis_task_bridge_fixture"  # type: ignore[index]
@@ -1374,6 +1375,8 @@ def test_invalid_module_input_is_blocked_but_still_has_standard_package(tmp_path
     assert "module_input_schema_required_field_missing:parameters" in read_json(package_dir / "result.json")["blockers"]
     assert invocation["worker_backend"] == "python_fixture"
     assert invocation["invocation_status"] == "blocked_validation_gate"
+    assert invocation["input_manifest"] == "module_input.json"
+    assert read_json(package_dir / "module_input.json") == payload
     assert invocation["worker_boundary"]["boundary_type"] == "analysis_task_bridge_gate"  # type: ignore[index]
     assert "module_input_parameters_missing_or_invalid" in invocation["blockers"]
     assert "module_input_schema_required_field_missing:parameters" in invocation["blockers"]
@@ -1400,5 +1403,7 @@ def test_module_input_schema_shape_drift_is_blocked_before_worker_execution(tmp_
     assert "module_input_schema_field_type_invalid:runtime.requested_environment" in result["blockers"]
     assert "module_input_mode_invalid" in result_json["blockers"]
     assert "module_input_inputs_missing_or_invalid" in result_json["blockers"]
+    assert read_json(package_dir / "module_input.json") == payload
     assert invocation["invocation_status"] == "blocked_validation_gate"
+    assert invocation["input_manifest"] == "module_input.json"
     assert invocation["worker_boundary"]["migration_status"] == "blocked_before_worker_execution"  # type: ignore[index]

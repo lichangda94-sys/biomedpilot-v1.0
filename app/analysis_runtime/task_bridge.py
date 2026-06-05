@@ -44,6 +44,7 @@ def run_analysis_module_task(
     package_dir = Path(output_dir).expanduser().resolve() if output_dir else project / "analysis_results" / task_id
     center = task_center or TaskCenter(project / "tasks" / "tasks.json")
     task = _start_task(center, project_id=str(module_input.get("project_id") or project.name), task_id=task_id, module_id=module_id, mode=mode)
+    worker_input = _write_worker_input_manifest(package_dir, module_input)
     blockers = _validate_input_payload(module_input, module=module)
     if blockers:
         _write_standard_package(package_dir, module_input, module=module, status="blocked", blockers=blockers, command="analysis_task_bridge_validation")
@@ -87,7 +88,6 @@ def run_analysis_module_task(
         return _bridge_result(package_dir, module_input, validation, result_entry, status="blocked", blockers=mode_blockers)
 
     if worker_backend == "rscript":
-        worker_input = _write_worker_input_manifest(package_dir, module_input)
         worker_result = run_standard_r_worker(worker_input, package_dir, mode)
         fixture_blockers = list(worker_result.get("blockers", []))
         if worker_result["status"] == "blocked" and not (package_dir / "result.json").is_file():
