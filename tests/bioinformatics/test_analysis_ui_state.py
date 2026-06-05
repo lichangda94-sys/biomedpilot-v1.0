@@ -33,6 +33,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["gate_rows"]
     assert state["enrichment_gate_rows"]
     assert state["analysis_architecture_gate_rows"]
+    assert state["module_interface_rows"]
     assert state["full_activation_module_rows"]
     assert state["standard_worker_migration_rows"]
     assert state["analysis_architecture_remediation_rows"]
@@ -94,6 +95,17 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Default dependency scan" in architecture_gate_text
     assert "heavy_full_analysis_dependencies_excluded_from_default_app_dev_surface" in architecture_gate_text
     assert "files=requirements.txt；pyproject.toml；docker/Dockerfile.app-dev；renv/renv.app.lock" in architecture_gate_text
+    module_interface_text = "\n".join(str(row) for row in state["module_interface_rows"])
+    assert "Analysis module interface matrix" in module_interface_text
+    assert "passed=10" in module_interface_text
+    assert "blocked=0" in module_interface_text
+    assert "Module interface: deg" in module_interface_text
+    assert "mock=True" in module_interface_text
+    assert "lite=True" in module_interface_text
+    assert "full=False" in module_interface_text
+    assert "fixture=passed" in module_interface_text
+    assert "analysis/modules/deg/module.json" in module_interface_text
+    assert "r-bio-core->r-chem-gpu" in module_interface_text
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text
@@ -155,6 +167,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert remediation_queue["schema_validation_status"] == "passed"
     assert remediation_queue["schema_blockers"] == []
     assert state["developer_diagnostics"]["analysis_architecture_gate_rows"] == state["analysis_architecture_gate_rows"]
+    assert state["developer_diagnostics"]["module_interface_matrix"]["status"] == "passed"
+    assert state["developer_diagnostics"]["module_interface_matrix"]["passed_module_count"] == 10
+    assert state["developer_diagnostics"]["module_interface_rows"] == state["module_interface_rows"]
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["status"] == "blocked"
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["blocked_module_count"] == 10
     assert state["developer_diagnostics"]["full_activation_module_rows"] == state["full_activation_module_rows"]

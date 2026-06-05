@@ -5800,6 +5800,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                     *(analysis_state.get("multifactor_deg_gate_rows", []) or []),
                     *(analysis_state.get("enrichment_gate_rows", []) or []),
                     *(analysis_state.get("analysis_architecture_gate_rows", []) or []),
+                    *(analysis_state.get("module_interface_rows", []) or []),
                     *(analysis_state.get("full_activation_module_rows", []) or []),
                     *(analysis_state.get("standard_worker_migration_rows", []) or []),
                     *(analysis_state.get("analysis_architecture_remediation_rows", []) or []),

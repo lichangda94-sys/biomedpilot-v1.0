@@ -69,6 +69,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     result_entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
     analysis_architecture_status = build_analysis_architecture_status()
     analysis_architecture_gate_rows = build_analysis_architecture_gate_rows(analysis_architecture_status)
+    module_interface_matrix = analysis_architecture_status.get("module_interface_matrix") if isinstance(analysis_architecture_status.get("module_interface_matrix"), dict) else {}
+    module_interface_rows = build_module_interface_rows(module_interface_matrix)
     full_activation_module_matrix = analysis_architecture_status.get("full_activation_module_matrix") if isinstance(analysis_architecture_status.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = build_full_activation_module_rows(full_activation_module_matrix)
     standard_worker_migration_matrix = analysis_architecture_status.get("standard_worker_migration_matrix") if isinstance(analysis_architecture_status.get("standard_worker_migration_matrix"), dict) else {}
@@ -142,6 +144,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "standard_analysis_packages": standard_package_catalog,
         "analysis_architecture_status": analysis_architecture_status,
         "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
+        "module_interface_matrix": module_interface_matrix,
+        "module_interface_rows": module_interface_rows,
         "full_activation_module_matrix": full_activation_module_matrix,
         "full_activation_module_rows": full_activation_module_rows,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
@@ -161,6 +165,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "result_index": result_index,
             "analysis_architecture_status": analysis_architecture_status,
             "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
+            "module_interface_matrix": module_interface_matrix,
+            "module_interface_rows": module_interface_rows,
             "full_activation_module_matrix": full_activation_module_matrix,
             "full_activation_module_rows": full_activation_module_rows,
             "standard_worker_migration_matrix": standard_worker_migration_matrix,
@@ -1221,6 +1227,42 @@ def build_analysis_architecture_remediation_rows(queue: dict[str, Any]) -> list[
                     *action_warnings,
                 ],
                 basis=f"{item.get('priority', 'P1')}; files={compact_list(_list(item.get('recommended_files'))[:3])}{scope_basis}",
+            )
+        )
+    return rows
+
+
+def build_module_interface_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    module_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    blocker_counts = matrix.get("blocker_counts") if isinstance(matrix.get("blocker_counts"), dict) else {}
+    rows = [
+        _formal_deg_gate_row(
+            "Analysis module interface matrix",
+            matrix.get("status") or "blocked",
+            [f"{key}={value}" for key, value in sorted(blocker_counts.items())],
+            [
+                f"passed={matrix.get('passed_module_count', 0)}",
+                f"blocked={matrix.get('blocked_module_count', 0)}",
+            ],
+            basis=f"modules={matrix.get('module_count', 0)}; {matrix.get('boundary', 'read_only_standard_module_interface_diagnostics')}",
+        )
+    ]
+    for row in module_rows:
+        rows.append(
+            _formal_deg_gate_row(
+                f"Module interface: {row.get('module_id')}",
+                row.get("status") or "blocked",
+                _list(row.get("blockers")),
+                [
+                    f"mock={row.get('mock_supported')}",
+                    f"lite={row.get('lite_supported')}",
+                    f"full={row.get('full_supported')}",
+                    f"fixture={row.get('mock_fixture_validation_status')}",
+                ],
+                basis=(
+                    f"{row.get('module_manifest')}; "
+                    f"{row.get('analysis_environment')}->{row.get('full_environment')}"
+                ),
             )
         )
     return rows

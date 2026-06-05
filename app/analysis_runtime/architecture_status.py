@@ -64,6 +64,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
     registry = load_analysis_module_registry()
     modules = [item for item in registry.get("modules", []) if isinstance(item, dict)]
     module_ids = [str(item.get("module_id") or "") for item in modules if item.get("module_id")]
+    module_interface_matrix = build_module_interface_matrix(registry)
     standard_worker_migration_matrix = build_standard_worker_migration_matrix(registry)
     environment_validation = validate_analysis_environment_registry(module_registry=registry)
     resource_validation = validate_analysis_resource_manifest()
@@ -240,6 +241,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "requirement_rows": rows,
         "p0_issues": p0,
         "p1_issues": p1,
+        "module_interface_matrix": module_interface_matrix,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "full_activation_module_matrix": full_activation_module_matrix,
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -304,6 +306,94 @@ def build_default_dependency_scan_summary() -> dict[str, Any]:
         "heavy_dependency_hits": sorted(set(hits)),
         "hit_count": len(set(hits)),
         "policy": "heavy_full_analysis_dependencies_excluded_from_default_app_dev_surface",
+    }
+
+
+def build_module_interface_matrix(registry: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return per-module evidence for the standard analysis module interface."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
+    ]
+    standard_entrypoint = str(payload.get("standard_entrypoint") or "analysis/runners/run_module.R")
+    rows = [_module_interface_row(module, standard_entrypoint=standard_entrypoint) for module in modules]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    return {
+        "schema_version": "biomedpilot.analysis.module_interface_matrix.v1",
+        "status": "passed" if rows and not blocker_counts else "blocked",
+        "module_count": len(rows),
+        "passed_module_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "blocked_module_count": sum(1 for row in rows if row.get("status") != "passed"),
+        "blocker_counts": blocker_counts,
+        "rows": rows,
+        "boundary": "read_only_standard_module_interface_diagnostics",
+    }
+
+
+def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    module_manifest = str(module.get("module_manifest") or f"analysis/modules/{module_id}/module.json")
+    manifest_payload = _read_json(REPO_ROOT / module_manifest) if (REPO_ROOT / module_manifest).is_file() else {}
+    source = manifest_payload if isinstance(manifest_payload, dict) and manifest_payload else module
+    modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
+    mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
+    lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+    full = modes.get("full") if isinstance(modes.get("full"), dict) else {}
+    mock_package = str(mock.get("fixture_output_package") or "")
+    blockers: list[str] = []
+    if not module_id:
+        blockers.append("module_interface_module_id_missing")
+    if not (REPO_ROOT / module_manifest).is_file():
+        blockers.append(f"module_interface_manifest_missing:{module_id}:{module_manifest}")
+    if source.get("schema_version") != "biomedpilot.analysis_module_manifest.v1":
+        blockers.append(f"module_interface_manifest_schema_version_invalid:{module_id}")
+    if str(source.get("module_id") or "") != module_id:
+        blockers.append(f"module_interface_manifest_module_id_mismatch:{module_id}")
+    if str(source.get("standard_entrypoint") or "") != standard_entrypoint:
+        blockers.append(f"module_interface_standard_entrypoint_mismatch:{module_id}")
+    for field in ("input_schema", "output_schema"):
+        path = str(source.get(field) or "")
+        if not path:
+            blockers.append(f"module_interface_{field}_missing:{module_id}")
+        elif not (REPO_ROOT / path).is_file():
+            blockers.append(f"module_interface_{field}_not_found:{module_id}:{path}")
+    for mode_name, mode_payload in (("mock", mock), ("lite", lite), ("full", full)):
+        if not mode_payload:
+            blockers.append(f"module_interface_mode_missing:{module_id}:{mode_name}")
+        elif "supported" not in mode_payload:
+            blockers.append(f"module_interface_mode_supported_flag_missing:{module_id}:{mode_name}")
+    fixture_validation: dict[str, Any] = {}
+    if not mock_package:
+        blockers.append(f"module_interface_mock_fixture_package_missing:{module_id}")
+    elif not (REPO_ROOT / mock_package).is_dir():
+        blockers.append(f"module_interface_mock_fixture_package_not_found:{module_id}:{mock_package}")
+    else:
+        fixture_validation = validate_standard_result_package(REPO_ROOT / mock_package)
+        if fixture_validation.get("status") != "passed":
+            blockers.extend(
+                f"module_interface_mock_fixture_package:{module_id}:{blocker}"
+                for blocker in fixture_validation.get("blockers", [])
+            )
+    return {
+        "module_id": module_id,
+        "title": str(source.get("title") or module.get("title") or module_id),
+        "status": "blocked" if blockers else "passed",
+        "module_manifest": module_manifest,
+        "standard_entrypoint": str(source.get("standard_entrypoint") or ""),
+        "input_schema": str(source.get("input_schema") or ""),
+        "output_schema": str(source.get("output_schema") or ""),
+        "mock_supported": bool(mock.get("supported")),
+        "lite_supported": bool(lite.get("supported")),
+        "full_supported": bool(full.get("supported")),
+        "mock_fixture_output_package": mock_package,
+        "mock_fixture_validation_status": str(fixture_validation.get("status") or ("missing" if not mock_package else "blocked")),
+        "analysis_environment": str(source.get("analysis_environment") or module.get("analysis_environment") or ""),
+        "full_environment": str(source.get("full_environment") or module.get("full_environment") or ""),
+        "result_package_required": [str(item) for item in source.get("result_package_required", []) if item],
+        "blockers": list(dict.fromkeys(blockers)),
     }
 
 

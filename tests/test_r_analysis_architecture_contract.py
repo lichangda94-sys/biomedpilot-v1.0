@@ -13,6 +13,7 @@ from app.analysis_runtime.architecture_status import (
     build_analysis_architecture_status,
     build_full_analysis_activation_gate,
     build_full_activation_module_matrix,
+    build_module_interface_matrix,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
     load_standard_worker_migration_evidence_registry,
@@ -1397,6 +1398,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert dependency_scan["hit_count"] == 0
     assert "requirements.txt" in dependency_scan["scanned_files"]
     assert "ReactomePA" in dependency_scan["heavy_dependency_names"]
+    assert status["module_interface_matrix"]["status"] == "passed"
+    assert status["module_interface_matrix"]["passed_module_count"] == 10
+    assert status["module_interface_matrix"]["blocked_module_count"] == 0
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
     assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
@@ -1702,6 +1706,30 @@ def test_full_activation_module_matrix_is_module_level_and_read_only() -> None:
     assert rows["docking"]["required_resource_ids"] == ["autodock_vina_tool", "docking_template_bundle"]
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert rows["molecular_dynamics"]["required_resource_ids"] == ["gromacs_tool", "md_forcefield_template_bundle"]
+
+
+def test_module_interface_matrix_tracks_standard_module_contracts() -> None:
+    matrix = build_module_interface_matrix()
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.module_interface_matrix.v1"
+    assert matrix["status"] == "passed"
+    assert matrix["boundary"] == "read_only_standard_module_interface_diagnostics"
+    assert matrix["module_count"] == 10
+    assert matrix["passed_module_count"] == 10
+    assert matrix["blocked_module_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert rows["deg"]["module_manifest"] == "analysis/modules/deg/module.json"
+    assert rows["deg"]["standard_entrypoint"] == "analysis/runners/run_module.R"
+    assert rows["deg"]["input_schema"] == "analysis/schemas/input/module_input.schema.json"
+    assert rows["deg"]["output_schema"] == "analysis/schemas/output/result_package.schema.json"
+    assert rows["deg"]["mock_supported"] is True
+    assert rows["deg"]["lite_supported"] is True
+    assert rows["deg"]["full_supported"] is False
+    assert rows["deg"]["mock_fixture_validation_status"] == "passed"
+    assert rows["deg"]["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
+    assert rows["docking"]["full_environment"] == "r-chem-full"
+    assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
 
 
 def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_by_default() -> None:

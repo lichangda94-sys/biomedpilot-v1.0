@@ -66,6 +66,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     )
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
+    module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
     full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
     runtime_acquisition_scan = architecture_status.get("runtime_acquisition_scan") if isinstance(architecture_status.get("runtime_acquisition_scan"), dict) else {}
     default_dependency_scan = architecture_status.get("default_dependency_scan") if isinstance(architecture_status.get("default_dependency_scan"), dict) else {}
@@ -96,6 +97,20 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "p0_issues": [str(item) for item in architecture_status.get("p0_issues", []) if item],
         "p1_issues": p1_issues,
         "full_analysis_activation_gate": full_gate,
+        "module_interface_matrix": {
+            "schema_version": module_interface_matrix.get("schema_version"),
+            "status": module_interface_matrix.get("status"),
+            "module_count": module_interface_matrix.get("module_count"),
+            "passed_module_count": module_interface_matrix.get("passed_module_count"),
+            "blocked_module_count": module_interface_matrix.get("blocked_module_count"),
+            "blocker_counts": module_interface_matrix.get("blocker_counts", {}),
+            "boundary": module_interface_matrix.get("boundary"),
+        },
+        "module_interface_rows": [
+            dict(row)
+            for row in module_interface_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
         "runtime_acquisition_scan": runtime_acquisition_scan,
         "default_dependency_scan": default_dependency_scan,
         "environment_readiness": {
@@ -425,6 +440,8 @@ def _matches_json_type(value: Any, expected_type: str) -> bool:
 def render_markdown_report(payload: dict[str, Any]) -> str:
     requirement_summary = payload.get("requirement_summary") if isinstance(payload.get("requirement_summary"), dict) else {}
     full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
+    module_interface_matrix = payload.get("module_interface_matrix") if isinstance(payload.get("module_interface_matrix"), dict) else {}
+    module_interface_rows = [row for row in payload.get("module_interface_rows", []) if isinstance(row, dict)]
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
@@ -469,6 +486,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         "",
     ]
     lines.extend(_runtime_boundary_scan_table(runtime_acquisition_scan, default_dependency_scan))
+    lines.extend(
+        [
+            "",
+            "### Module Interface Matrix",
+            "",
+        ]
+    )
+    lines.extend(_module_interface_summary_table(module_interface_matrix, module_interface_rows))
     lines.extend(
         [
             "",
@@ -890,6 +915,37 @@ def _runtime_boundary_scan_table(runtime_scan: dict[str, Any], dependency_scan: 
         },
     ]
     return _markdown_table(["Scan", "Status", "Scope", "Hit Count", "Policy"], rows, ["scan", "status", "scope", "hit_count", "policy"])
+
+
+def _module_interface_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed modules",
+            "count": matrix.get("passed_module_count", 0),
+            "detail": "",
+        },
+        {
+            "metric": "Blocked modules",
+            "count": matrix.get("blocked_module_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    module_rows = [
+        {
+            "module_id": row.get("module_id"),
+            "status": row.get("status"),
+            "modes": f"mock={row.get('mock_supported')}; lite={row.get('lite_supported')}; full={row.get('full_supported')}",
+            "fixture": row.get("mock_fixture_validation_status"),
+            "environment": f"{row.get('analysis_environment')}->{row.get('full_environment')}",
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Module", "Status", "Modes", "Mock Fixture", "Environment"], module_rows, ["module_id", "status", "modes", "fixture", "environment"]),
+    ]
 
 
 def _priority_file_lines(remediation_items: list[dict[str, Any]]) -> list[str]:
