@@ -107,6 +107,19 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert task_boundary_rows["deg"]["result_index_task_types"] == ["deg", "recomputed_deg", "differential_expression"]
     assert task_boundary_rows["correlation"]["direct_cli_is_not_ui_task_result"] is True
     assert "legacy_sidecar_boundary_transitional:correlation" in task_boundary_rows["correlation"]["warnings"]
+    assert payload["legacy_sidecar_transition_matrix"]["schema_version"] == "biomedpilot.analysis.legacy_sidecar_transition_matrix.v1"
+    assert payload["legacy_sidecar_transition_matrix"]["status"] == "partial"
+    assert payload["legacy_sidecar_transition_matrix"]["passed_row_count"] == 4
+    assert payload["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
+    assert payload["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
+    assert payload["legacy_sidecar_transition_matrix"]["blocker_counts"] == {}
+    assert "correlation" in payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
+    legacy_sidecar_rows = {row["row_id"]: row for row in payload["legacy_sidecar_transition_rows"]}
+    assert legacy_sidecar_rows["legacy_sidecar_writer_contract"]["status"] == "passed"
+    assert legacy_sidecar_rows["catalog_task_center_guard"]["status"] == "passed"
+    assert legacy_sidecar_rows["migration_evidence_forbids_sidecar"]["status"] == "passed"
+    assert legacy_sidecar_rows["registry_adapter_transition_scope"]["status"] == "partial"
+    assert legacy_sidecar_rows["sidecar_boundary_test_coverage"]["status"] == "passed"
     assert payload["frontend_consumption_matrix"]["schema_version"] == "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1"
     assert payload["frontend_consumption_matrix"]["status"] == "partial"
     assert payload["frontend_consumption_matrix"]["passed_consumer_count"] == 4
@@ -323,6 +336,7 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Module Interface Matrix" in text
     assert "External Tool Adapter Isolation Matrix" in text
     assert "Task System Boundary Matrix" in text
+    assert "Legacy Sidecar Transition Matrix" in text
     assert "Frontend Standard Package Consumption Matrix" in text
     assert "Reproducibility Provenance Matrix" in text
     assert "mock=True; lite=True; full=False" in text
@@ -331,6 +345,8 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in text
     assert "task_center_registered" in text
     assert "pending_standard_worker_migration" in text
+    assert "legacy_sidecar_writer_contract" in text
+    assert "registry_current_adapter_status_transitional:correlation" in text
     assert "detailed_result_views_still_need_standard_package_only_migration" in text
     assert "standard_r_worker_provenance_writer" in text
     assert "package_versions" in text
@@ -517,6 +533,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "external_tool_adapter_rows" in schema["required"]
     assert "task_system_boundary_matrix" in schema["required"]
     assert "task_system_boundary_rows" in schema["required"]
+    assert "legacy_sidecar_transition_matrix" in schema["required"]
+    assert "legacy_sidecar_transition_rows" in schema["required"]
     assert "frontend_consumption_matrix" in schema["required"]
     assert "frontend_consumption_rows" in schema["required"]
     assert "reproducibility_provenance_matrix" in schema["required"]
@@ -539,6 +557,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["external_tool_adapter_rows"]["type"] == "array"
     assert schema["properties"]["task_system_boundary_matrix"]["type"] == "object"
     assert schema["properties"]["task_system_boundary_rows"]["type"] == "array"
+    assert schema["properties"]["legacy_sidecar_transition_matrix"]["type"] == "object"
+    assert schema["properties"]["legacy_sidecar_transition_rows"]["type"] == "array"
     assert schema["properties"]["frontend_consumption_matrix"]["type"] == "object"
     assert schema["properties"]["frontend_consumption_rows"]["type"] == "array"
     assert schema["properties"]["reproducibility_provenance_matrix"]["type"] == "object"

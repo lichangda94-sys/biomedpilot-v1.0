@@ -75,6 +75,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     external_tool_adapter_rows = build_external_tool_adapter_rows(external_tool_adapter_matrix)
     task_system_boundary_matrix = analysis_architecture_status.get("task_system_boundary_matrix") if isinstance(analysis_architecture_status.get("task_system_boundary_matrix"), dict) else {}
     task_system_boundary_rows = build_task_system_boundary_rows(task_system_boundary_matrix)
+    legacy_sidecar_transition_matrix = analysis_architecture_status.get("legacy_sidecar_transition_matrix") if isinstance(analysis_architecture_status.get("legacy_sidecar_transition_matrix"), dict) else {}
+    legacy_sidecar_transition_rows = build_legacy_sidecar_transition_rows(legacy_sidecar_transition_matrix)
     frontend_consumption_matrix = analysis_architecture_status.get("frontend_consumption_matrix") if isinstance(analysis_architecture_status.get("frontend_consumption_matrix"), dict) else {}
     frontend_consumption_rows = build_frontend_consumption_rows(frontend_consumption_matrix)
     reproducibility_provenance_matrix = analysis_architecture_status.get("reproducibility_provenance_matrix") if isinstance(analysis_architecture_status.get("reproducibility_provenance_matrix"), dict) else {}
@@ -158,6 +160,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "external_tool_adapter_rows": external_tool_adapter_rows,
         "task_system_boundary_matrix": task_system_boundary_matrix,
         "task_system_boundary_rows": task_system_boundary_rows,
+        "legacy_sidecar_transition_matrix": legacy_sidecar_transition_matrix,
+        "legacy_sidecar_transition_rows": legacy_sidecar_transition_rows,
         "frontend_consumption_matrix": frontend_consumption_matrix,
         "frontend_consumption_rows": frontend_consumption_rows,
         "reproducibility_provenance_matrix": reproducibility_provenance_matrix,
@@ -187,6 +191,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "external_tool_adapter_rows": external_tool_adapter_rows,
             "task_system_boundary_matrix": task_system_boundary_matrix,
             "task_system_boundary_rows": task_system_boundary_rows,
+            "legacy_sidecar_transition_matrix": legacy_sidecar_transition_matrix,
+            "legacy_sidecar_transition_rows": legacy_sidecar_transition_rows,
             "frontend_consumption_matrix": frontend_consumption_matrix,
             "frontend_consumption_rows": frontend_consumption_rows,
             "reproducibility_provenance_matrix": reproducibility_provenance_matrix,
@@ -1364,6 +1370,46 @@ def build_task_system_boundary_rows(matrix: dict[str, Any]) -> list[dict[str, An
                     f"{row.get('task_bridge_entrypoint')}; "
                     f"task_types={compact_list(_list(row.get('result_index_task_types')))}; "
                     f"formal_worker={row.get('formal_worker_status')}"
+                ),
+            )
+        )
+    return rows
+
+
+def build_legacy_sidecar_transition_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    sidecar_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    blocker_counts = matrix.get("blocker_counts") if isinstance(matrix.get("blocker_counts"), dict) else {}
+    warning_counts = matrix.get("warning_counts") if isinstance(matrix.get("warning_counts"), dict) else {}
+    adapter_status_counts = matrix.get("adapter_status_counts") if isinstance(matrix.get("adapter_status_counts"), dict) else {}
+    rows = [
+        _formal_deg_gate_row(
+            "Legacy sidecar transition matrix",
+            matrix.get("status") or "blocked",
+            [f"{key}={value}" for key, value in sorted(blocker_counts.items())],
+            [
+                f"passed={matrix.get('passed_row_count', 0)}",
+                f"partial={matrix.get('partial_row_count', 0)}",
+                f"blocked={matrix.get('blocked_row_count', 0)}",
+                f"transitional_modules={len(_list(matrix.get('transitional_module_ids')))}",
+                *[f"adapter:{key}={value}" for key, value in sorted(adapter_status_counts.items())],
+                *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
+            ],
+            basis=f"rows={matrix.get('row_count', 0)}; {matrix.get('boundary', 'read_only_legacy_sidecar_transition_diagnostics')}",
+        )
+    ]
+    for row in sidecar_rows:
+        rows.append(
+            _formal_deg_gate_row(
+                f"Legacy sidecar contract: {row.get('row_id')}",
+                row.get("status") or "blocked",
+                _list(row.get("blockers")),
+                [
+                    *[f"module:{module_id}" for module_id in _list(row.get("transitional_module_ids"))[:8]],
+                    *_list(row.get("warnings"))[:8],
+                ],
+                basis=(
+                    f"{row.get('evidence_path')}; "
+                    f"{row.get('boundary', 'transition_only_not_standard_worker_evidence')}"
                 ),
             )
         )

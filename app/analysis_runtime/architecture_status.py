@@ -89,6 +89,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         registry=registry,
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
+    legacy_sidecar_transition_matrix = build_legacy_sidecar_transition_matrix(registry=registry)
     frontend_consumption_matrix = build_frontend_standard_package_consumption_matrix()
     reproducibility_provenance_matrix = build_reproducibility_provenance_matrix()
     runtime_acquisition_scan = build_runtime_acquisition_scan_summary()
@@ -151,9 +152,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-09",
             "Main backend task-system invocation boundary",
-            "warn",
+            "warn" if legacy_sidecar_transition_matrix.get("status") == "partial" else ("pass" if legacy_sidecar_transition_matrix.get("status") == "passed" else "fail"),
             "app/analysis_runtime/task_bridge.py",
-            warnings=["legacy_service_adapter_sidecars_remain_transitional"],
+            blockers=list(legacy_sidecar_transition_matrix.get("blocker_counts", {}).keys()),
+            warnings=list(legacy_sidecar_transition_matrix.get("warning_counts", {}).keys()),
         ),
         _row(
             "RARCH-10",
@@ -257,6 +259,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "module_interface_matrix": module_interface_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
+        "legacy_sidecar_transition_matrix": legacy_sidecar_transition_matrix,
         "frontend_consumption_matrix": frontend_consumption_matrix,
         "reproducibility_provenance_matrix": reproducibility_provenance_matrix,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
@@ -980,6 +983,118 @@ def _task_system_boundary_row(module: dict[str, Any], *, migration_row: dict[str
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
+
+
+def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return read-only diagnostics for transitional legacy service sidecars."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
+    ]
+    adapter_statuses = {
+        str(module.get("module_id") or ""): str(module.get("current_adapter_status") or "")
+        for module in modules
+    }
+    transitional_modules = [
+        module_id
+        for module_id, status in adapter_statuses.items()
+        if any(token in status for token in ("legacy", "sidecar", "existing_", "pending", "planned"))
+    ]
+    rows = [
+        _source_token_contract_row(
+            row_id="legacy_sidecar_writer_contract",
+            title="Legacy sidecar writer marks direct-call transition boundary",
+            file_path="app/analysis_runtime/standard_package.py",
+            required_tokens=[
+                "write_legacy_service_adapter_invocation_manifest",
+                "\"worker_backend\": \"legacy_service_adapter\"",
+                "\"invocation_status\": \"sidecar_recorded\"",
+                "\"standard_worker_entrypoint\": \"not_used\"",
+                "\"task_system_invocation\": \"legacy_service_adapter_direct_call\"",
+                "\"migration_status\": \"sidecar_only_not_isolated_standard_worker\"",
+            ],
+            evidence_path="app/analysis_runtime/standard_package.py::write_legacy_service_adapter_invocation_manifest",
+        ),
+        _source_token_contract_row(
+            row_id="catalog_task_center_guard",
+            title="Catalog blocks direct standard-worker packages from UI task readiness",
+            file_path="app/analysis_runtime/package_catalog.py",
+            required_tokens=[
+                "_catalog_task_system_boundary_blockers",
+                "boundary.get(\"boundary_type\") != \"standard_r_worker\"",
+                "task_system_invocation == \"task_center_registered\"",
+                "standard_r_worker_package_not_task_center_registered",
+            ],
+            evidence_path="app/analysis_runtime/package_catalog.py::_catalog_task_system_boundary_blockers",
+        ),
+        _source_token_contract_row(
+            row_id="migration_evidence_forbids_sidecar",
+            title="Standard-worker migration evidence forbids legacy sidecar sources",
+            file_path="app/analysis_runtime/architecture_status.py",
+            required_tokens=[
+                "\"legacy_service_adapter_sidecar\"",
+                "\"module_private_output_path\"",
+                "required_task_system_invocation",
+                "task_center_registered",
+                "required_worker_boundary",
+                "standard_r_worker",
+            ],
+            evidence_path="app/analysis_runtime/architecture_status.py::_standard_worker_migration_evidence_template",
+        ),
+        {
+            "row_id": "registry_adapter_transition_scope",
+            "title": "Registry adapter statuses remain transition scoped",
+            "status": "partial" if transitional_modules else "passed",
+            "evidence_path": "analysis/registry/analysis_modules.json::modules[*].current_adapter_status",
+            "module_count": len(adapter_statuses),
+            "transitional_module_count": len(transitional_modules),
+            "adapter_status_counts": _count_adapter_statuses(adapter_statuses),
+            "transitional_module_ids": transitional_modules,
+            "blockers": [],
+            "warnings": [f"registry_current_adapter_status_transitional:{module_id}" for module_id in transitional_modules],
+            "boundary": "adapter_status_is_inventory_only_not_worker_migration_evidence",
+        },
+        _source_token_contract_row(
+            row_id="sidecar_boundary_test_coverage",
+            title="Tests cover sidecar direct-call and not-migration boundaries",
+            file_path="tests/bioinformatics/test_immune_infiltration.py",
+            required_tokens=[
+                "legacy_service_adapter_direct_call",
+                "legacy_service_adapter_sidecar",
+                "testing_level",
+            ],
+            evidence_path="tests/bioinformatics/test_immune_infiltration.py and tests/test_analysis_runtime_task_bridge.py",
+        ),
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.legacy_sidecar_transition_matrix.v1",
+        "status": "blocked" if blocker_counts else ("partial" if warning_counts else "passed"),
+        "row_count": len(rows),
+        "passed_row_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "partial_row_count": sum(1 for row in rows if row.get("status") == "partial"),
+        "blocked_row_count": sum(1 for row in rows if row.get("status") == "blocked"),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "adapter_status_counts": _count_adapter_statuses(adapter_statuses),
+        "transitional_module_ids": transitional_modules,
+        "rows": rows,
+        "boundary": "read_only_legacy_sidecar_transition_diagnostics",
+    }
+
+
+def _count_adapter_statuses(adapter_statuses: dict[str, str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for status in adapter_statuses.values():
+        key = status or "unknown"
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def build_full_activation_module_matrix(

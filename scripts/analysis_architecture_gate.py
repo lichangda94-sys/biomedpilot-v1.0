@@ -69,6 +69,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
+    legacy_sidecar_transition_matrix = architecture_status.get("legacy_sidecar_transition_matrix") if isinstance(architecture_status.get("legacy_sidecar_transition_matrix"), dict) else {}
     frontend_consumption_matrix = architecture_status.get("frontend_consumption_matrix") if isinstance(architecture_status.get("frontend_consumption_matrix"), dict) else {}
     reproducibility_provenance_matrix = architecture_status.get("reproducibility_provenance_matrix") if isinstance(architecture_status.get("reproducibility_provenance_matrix"), dict) else {}
     full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
@@ -143,6 +144,25 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "task_system_boundary_rows": [
             dict(row)
             for row in task_system_boundary_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "legacy_sidecar_transition_matrix": {
+            "schema_version": legacy_sidecar_transition_matrix.get("schema_version"),
+            "status": legacy_sidecar_transition_matrix.get("status"),
+            "row_count": legacy_sidecar_transition_matrix.get("row_count"),
+            "passed_row_count": legacy_sidecar_transition_matrix.get("passed_row_count"),
+            "partial_row_count": legacy_sidecar_transition_matrix.get("partial_row_count"),
+            "blocked_row_count": legacy_sidecar_transition_matrix.get("blocked_row_count"),
+            "status_counts": legacy_sidecar_transition_matrix.get("status_counts", {}),
+            "blocker_counts": legacy_sidecar_transition_matrix.get("blocker_counts", {}),
+            "warning_counts": legacy_sidecar_transition_matrix.get("warning_counts", {}),
+            "adapter_status_counts": legacy_sidecar_transition_matrix.get("adapter_status_counts", {}),
+            "transitional_module_ids": legacy_sidecar_transition_matrix.get("transitional_module_ids", []),
+            "boundary": legacy_sidecar_transition_matrix.get("boundary"),
+        },
+        "legacy_sidecar_transition_rows": [
+            dict(row)
+            for row in legacy_sidecar_transition_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "frontend_consumption_matrix": {
@@ -517,6 +537,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     external_tool_adapter_rows = [row for row in payload.get("external_tool_adapter_rows", []) if isinstance(row, dict)]
     task_system_boundary_matrix = payload.get("task_system_boundary_matrix") if isinstance(payload.get("task_system_boundary_matrix"), dict) else {}
     task_system_boundary_rows = [row for row in payload.get("task_system_boundary_rows", []) if isinstance(row, dict)]
+    legacy_sidecar_transition_matrix = payload.get("legacy_sidecar_transition_matrix") if isinstance(payload.get("legacy_sidecar_transition_matrix"), dict) else {}
+    legacy_sidecar_transition_rows = [row for row in payload.get("legacy_sidecar_transition_rows", []) if isinstance(row, dict)]
     frontend_consumption_matrix = payload.get("frontend_consumption_matrix") if isinstance(payload.get("frontend_consumption_matrix"), dict) else {}
     frontend_consumption_rows = [row for row in payload.get("frontend_consumption_rows", []) if isinstance(row, dict)]
     reproducibility_provenance_matrix = payload.get("reproducibility_provenance_matrix") if isinstance(payload.get("reproducibility_provenance_matrix"), dict) else {}
@@ -589,6 +611,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_task_system_boundary_summary_table(task_system_boundary_matrix, task_system_boundary_rows))
+    lines.extend(
+        [
+            "",
+            "### Legacy Sidecar Transition Matrix",
+            "",
+        ]
+    )
+    lines.extend(_legacy_sidecar_transition_summary_table(legacy_sidecar_transition_matrix, legacy_sidecar_transition_rows))
     lines.extend(
         [
             "",
@@ -1120,6 +1150,42 @@ def _task_system_boundary_summary_table(matrix: dict[str, Any], rows: list[dict[
         *table,
         "",
         *_markdown_table(["Module", "Status", "Result Task Types", "Task Invocation", "Worker Manifest", "Formal Worker"], module_rows, ["module_id", "status", "task_types", "task_invocation", "worker_manifest", "formal_worker"]),
+    ]
+
+
+def _legacy_sidecar_transition_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed sidecar boundary contracts",
+            "count": matrix.get("passed_row_count", 0),
+            "detail": matrix.get("adapter_status_counts", {}),
+        },
+        {
+            "metric": "Partial sidecar transition contracts",
+            "count": matrix.get("partial_row_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked sidecar boundary contracts",
+            "count": matrix.get("blocked_row_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    transition_rows = [
+        {
+            "row_id": row.get("row_id"),
+            "status": row.get("status"),
+            "evidence": row.get("evidence_path"),
+            "transitional_modules": row.get("transitional_module_ids", []),
+            "warnings": row.get("warnings", []),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Contract", "Status", "Evidence", "Transitional Modules", "Warnings"], transition_rows, ["row_id", "status", "evidence", "transitional_modules", "warnings"]),
     ]
 
 

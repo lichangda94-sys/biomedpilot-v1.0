@@ -133,6 +133,18 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "run_analysis_module_task" in task_boundary_text
     assert "task_types=deg；recomputed_deg；differential_expression" in task_boundary_text
     assert "formal_worker=pending_standard_worker_migration" in task_boundary_text
+    sidecar_text = "\n".join(str(row) for row in state["legacy_sidecar_transition_rows"])
+    assert "Legacy sidecar transition matrix" in sidecar_text
+    assert "passed=4" in sidecar_text
+    assert "partial=1" in sidecar_text
+    assert "blocked=0" in sidecar_text
+    assert "transitional_modules=10" in sidecar_text
+    assert "Legacy sidecar contract: legacy_sidecar_writer_contract" in sidecar_text
+    assert "Legacy sidecar contract: catalog_task_center_guard" in sidecar_text
+    assert "Legacy sidecar contract: migration_evidence_forbids_sidecar" in sidecar_text
+    assert "Legacy sidecar contract: registry_adapter_transition_scope" in sidecar_text
+    assert "registry_current_adapter_status_transitional:deg" in sidecar_text
+    assert "adapter_status_is_inventory_only_not_worker_migration_evidence" in sidecar_text
     frontend_consumption_text = "\n".join(str(row) for row in state["frontend_consumption_rows"])
     assert "Frontend standard package consumption matrix" in frontend_consumption_text
     assert "passed=4" in frontend_consumption_text
@@ -226,6 +238,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["task_system_boundary_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["task_system_boundary_matrix"]["passed_module_count"] == 10
     assert state["developer_diagnostics"]["task_system_boundary_rows"] == state["task_system_boundary_rows"]
+    assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["status"] == "partial"
+    assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
+    assert state["developer_diagnostics"]["legacy_sidecar_transition_rows"] == state["legacy_sidecar_transition_rows"]
     assert state["developer_diagnostics"]["frontend_consumption_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["frontend_consumption_matrix"]["partial_consumer_count"] == 1
     assert state["developer_diagnostics"]["frontend_consumption_rows"] == state["frontend_consumption_rows"]
