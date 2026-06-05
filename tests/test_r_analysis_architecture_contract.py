@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from app.analysis_runtime.architecture_status import build_analysis_architecture_status
 from app.analysis_runtime.standard_package import validate_standard_result_package
 from app.analysis_runtime.resources import (
     full_mode_environment_blockers,
@@ -281,6 +282,25 @@ def test_analysis_environment_registry_validator_blocks_invalid_app_dev_and_unkn
     assert "analysis_environment_app_dev_allows_analysis_modules" in validation["blockers"]
     assert "analysis_environment_allowed_module_unregistered:r-bio-core:unknown_module" in validation["blockers"]
     assert validation["full_mode_ready"] is False
+
+
+def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p0_failures() -> None:
+    status = build_analysis_architecture_status()
+    rows = {row["requirement_id"]: row for row in status["requirement_rows"]}
+
+    assert status["schema_version"] == "biomedpilot.analysis.architecture_status.v1"
+    assert status["requirement_count"] == 20
+    assert status["status"] == "partial_with_p1_gaps"
+    assert status["p0_issues"] == []
+    assert "full_analysis_environment_locks_not_restored" in status["p1_issues"]
+    assert "full_analysis_resource_locks_not_complete" in status["p1_issues"]
+    assert rows["RARCH-01"]["status"] == "pass"
+    assert rows["RARCH-10"]["status"] == "pass"
+    assert rows["RARCH-11"]["status"] == "pass"
+    assert rows["RARCH-12"]["status"] == "warn"
+    assert rows["RARCH-20"]["status"] == "pass"
+    assert status["environment_validation"]["full_mode_ready"] is False
+    assert status["resource_validation"]["full_mode_ready"] is False
 
 
 def test_spatial_and_chem_modules_are_isolated_from_app_dev_and_bio_core() -> None:

@@ -129,6 +129,8 @@ Update: `validate_analysis_environment_registry()` now turns the environment reg
 
 Update: Analysis Center state now exposes `analysis_environment_gate_rows` and developer diagnostics for `validate_analysis_environment_registry()`. The current UI gate table can show registry structural status and full R environment readiness blockers without reading Dockerfiles, renv locks, or module-private R outputs directly.
 
+Update: `build_analysis_architecture_status()` now provides a read-only, machine-consumable snapshot of the 20 R analysis architecture requirements. It reports current status as `partial_with_p1_gaps`: no P0 failure is present, but full environment locks, full resource locks, and universal isolated-worker migration remain incomplete.
+
 Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
 
 Update: direct `analysis/runners/run_module.R` outputs now copy the submitted input payload into package-local `module_input.json` and write `logs/worker_invocation.json` with `input_manifest=module_input.json` and `worker_boundary.task_system_invocation=standard_worker_direct_cli`. Focused tests validate direct mock and blocked full runner packages through the same Python standard package validator. The blocked full direct-runner package records target environment/resource-lock snapshots and remains non-executing.

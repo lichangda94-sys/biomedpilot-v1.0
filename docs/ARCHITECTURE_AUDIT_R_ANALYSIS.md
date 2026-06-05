@@ -90,6 +90,7 @@ Resource governance now has a programmatic gate:
 
 Standard package discovery is now available to the UI state layer:
 
+- `build_analysis_architecture_status()` creates a read-only machine snapshot for the 20 R analysis architecture requirements, including P0/P1 issue lists plus resource and environment validator payloads.
 - `app/analysis_runtime/package_catalog.py` reads only result-index `standard_result_package` artifacts.
 - Result-index `task_type` to standard module mapping is now owned by `analysis/registry/analysis_modules.json` through `result_index_task_types`; the catalog no longer carries its own hard-coded Bioinformatics task-type map, and `analysis:<module_id>` entries are blocked when the module is not registered.
 - `build_analysis_center_state()` exposes `standard_analysis_packages` and developer diagnostics from that catalog.
@@ -235,6 +236,7 @@ The main-backend task bridge now also treats the module input schema as an execu
 | --- | --- | --- |
 | Unified analysis module directory | WARN | Added `analysis/` and `analysis/modules/<module_id>/module.json`; existing algorithms still live under `app/bioinformatics/**`. |
 | Module registry | PASS | Added `analysis/registry/analysis_modules.json`. |
+| Machine-readable architecture status | PASS/WARN | `build_analysis_architecture_status()` returns 20 requirement rows and currently reports `partial_with_p1_gaps`, with no P0 failures but unresolved full environment/resource locks and incomplete universal isolated-worker migration. |
 | Unified entrypoint | WARN | Added and tested `analysis/runners/run_module.R` for mock, every registry-declared lite standard package, docking/MD lite command-manifest packages, and validator-passing blocked unsupported/full standard packages; every registry-declared full mode is bridge-blocked with a standard package; existing formal real modules do not call it yet. |
 | Mock/lite/full design | WARN | Registry declares all three modes; every module has fixed mock input/output fixtures; every module that declares lite support is covered by a registry-driven bridge test; every module that declares full mode is covered by a registry-driven blocked-package bridge test; full activation remains blocked pending migration. |
 | Unified input/output schema | PASS | Added input, result payload, provenance payload, worker invocation, and result package schemas. |
