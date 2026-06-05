@@ -190,6 +190,8 @@ Update: standard-worker migration registry validation now reports expected, pass
 
 Update: Analysis Center now displays a standard-worker migration evidence coverage row. Missing module-level evidence is visible in UI state as disabled reasons, and lite worker readiness is not presented as full/formal migration completion.
 
+Update: the architecture gate Markdown report now includes standard-worker migration evidence coverage, so human-readable audit artifacts show the same expected/passed/blocked/missing module evidence counts as the JSON gate and Analysis Center.
+
 Update: direct `analysis/runners/run_module.R` outputs now copy the submitted input payload into package-local `module_input.json` and write `logs/worker_invocation.json` with `input_manifest=module_input.json` and `worker_boundary.task_system_invocation=standard_worker_direct_cli`. Focused tests validate direct mock and blocked full runner packages through the same Python standard package validator. The blocked full direct-runner package records target environment/resource-lock snapshots and remains non-executing.
 
 Update: transitional service-adapter sidecar packages now write `logs/worker_invocation.json` with `worker_backend=legacy_service_adapter`, `invocation_status=sidecar_recorded`, and `task_system_invocation=legacy_service_adapter_direct_call`. This covers current formal DEG, multifactor DEG, controlled enrichment, controlled survival/KM/Cox, immune scoring, and correlation sidecar packages while preserving the explicit `sidecar_only_not_isolated_standard_worker` migration status.

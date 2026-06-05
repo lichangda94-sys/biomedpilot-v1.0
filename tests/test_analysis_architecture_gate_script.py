@@ -186,6 +186,9 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "`partial_with_p1_gaps`" in text
     assert "`blocked`" in text
     assert "full_analysis_environment_locks_not_restored" in text
+    assert "Standard Worker Migration Evidence Coverage" in text
+    assert "Missing evidence modules" in text
+    assert "deg, survival, univariate, multivariate, enrichment, immune_infiltration, correlation, spatial_transcriptomics, docking, molecular_dynamics" in text
     assert "restore_full_analysis_environment_locks" in text
     assert "analysis/registry/analysis_environments.json" in text
     assert "Architecture gate report schema validation is currently `passed`" in text

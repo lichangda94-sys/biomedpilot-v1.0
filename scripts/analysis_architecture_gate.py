@@ -392,6 +392,7 @@ def _matches_json_type(value: Any, expected_type: str) -> bool:
 def render_markdown_report(payload: dict[str, Any]) -> str:
     requirement_summary = payload.get("requirement_summary") if isinstance(payload.get("requirement_summary"), dict) else {}
     full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
+    migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     remediation_summary = payload.get("remediation_summary") if isinstance(payload.get("remediation_summary"), dict) else {}
     remediation_queue = payload.get("remediation_queue") if isinstance(payload.get("remediation_queue"), dict) else {}
     remediation_items = [item for item in remediation_queue.get("items", []) if isinstance(item, dict)]
@@ -432,6 +433,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     ]
     risks = [risk for risk in payload.get("top_architecture_risks", []) if isinstance(risk, dict)]
     lines.extend(_markdown_table(["Priority", "Risk ID", "Source", "Summary"], risks, ["priority", "risk_id", "source", "summary"]))
+    lines.extend(
+        [
+            "",
+            "### Standard Worker Migration Evidence Coverage",
+            "",
+        ]
+    )
+    lines.extend(_migration_evidence_coverage_table(migration_matrix))
     lines.extend(
         [
             "",
@@ -627,6 +636,32 @@ def _completed_change_lines(payload: dict[str, Any]) -> list[str]:
     if full_gate.get("status") == "blocked":
         lines.append("- Full analysis activation remains explicitly blocked rather than silently enabled.")
     return lines
+
+
+def _migration_evidence_coverage_table(matrix: dict[str, Any]) -> list[str]:
+    rows = [
+        {
+            "metric": "Expected evidence modules",
+            "count": len(matrix.get("expected_evidence_module_ids", []) if isinstance(matrix.get("expected_evidence_module_ids"), list) else []),
+            "modules": matrix.get("expected_evidence_module_ids", []),
+        },
+        {
+            "metric": "Passed evidence modules",
+            "count": len(matrix.get("passed_evidence_module_ids", []) if isinstance(matrix.get("passed_evidence_module_ids"), list) else []),
+            "modules": matrix.get("passed_evidence_module_ids", []),
+        },
+        {
+            "metric": "Blocked evidence modules",
+            "count": len(matrix.get("blocked_evidence_module_ids", []) if isinstance(matrix.get("blocked_evidence_module_ids"), list) else []),
+            "modules": matrix.get("blocked_evidence_module_ids", []),
+        },
+        {
+            "metric": "Missing evidence modules",
+            "count": len(matrix.get("missing_evidence_module_ids", []) if isinstance(matrix.get("missing_evidence_module_ids"), list) else []),
+            "modules": matrix.get("missing_evidence_module_ids", []),
+        },
+    ]
+    return _markdown_table(["Metric", "Count", "Modules"], rows, ["metric", "count", "modules"])
 
 
 def _markdown_table(headers: list[str], rows: list[dict[str, Any]], fields: list[str]) -> list[str]:
