@@ -8,6 +8,10 @@
     "algorithm": "repository_fixture",
     "value": "not_applicable_repository_fixture"
   },
+  "cache_content": {
+    "non_empty": true,
+    "content_source": "repository_fixture"
+  },
   "license": "internal_test_fixture",
   "cache_path": "analysis/fixtures",
   "runtime_download_allowed": false,

@@ -471,6 +471,7 @@ def test_full_resource_lock_evidence_hash_must_match_cache_path(tmp_path: Path) 
             "version": "2026.05",
             "source": "Reactome / Bioconductor package metadata",
             "hash": {"algorithm": "sha256", "value": cache_hash},
+            "cache_content": {"non_empty": True, "content_source": "prelocked_cache_path", "file_count": 1},
             "license": "approved_test_license",
             "cache_path": str(cache_file),
             "runtime_download_allowed": False,
@@ -742,6 +743,8 @@ def test_analysis_environment_registry_validator_separates_structure_from_full_r
     assert templates["r-bio-full"]["runtime_resource_download"] == "forbidden"
     assert templates["r-bio-full"]["dockerfile"] == "docker/Dockerfile.r-bio-full"
     assert templates["r-bio-full"]["renv_lock"] == "renv/renv.bio-full.lock"
+    assert templates["r-bio-full"]["renv_lock_content"]["packages_non_empty"] is True
+    assert templates["r-bio-full"]["renv_lock_content"]["policy_status"] == "restored"
     assert "scaffold_only_lockfile" in templates["r-bio-full"]["forbidden_evidence_sources"]
     assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in validation["readiness_blockers"]
     assert validation["blockers"] == []
@@ -826,6 +829,7 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
                 "r_version": "R 4.4.2",
                 "bioconductor_version": "3.20",
                 "package_lock_hash": {"algorithm": "sha256", "value": restored_lock_hash},
+                "renv_lock_content": {"policy_status": "restored", "packages_non_empty": True, "package_count": 1},
                 "dockerfile": "docker/Dockerfile.r-bio-full",
                 "renv_lock": str(restored_lock),
                 "runtime_package_install": "forbidden",
@@ -1606,11 +1610,15 @@ def test_standard_schemas_and_mock_result_package_exist_without_r_dependency() -
     assert "install_policy" in remediation_queue_schema["required"]
     assert resource_lock_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence.v1"
     assert "runtime_download_allowed" in resource_lock_schema["required"]
+    assert "cache_content" in resource_lock_schema["required"]
     assert resource_lock_schema["properties"]["hash"]["required"] == ["algorithm", "value"]
+    assert resource_lock_schema["properties"]["cache_content"]["required"] == ["non_empty"]
     assert resource_lock_registry_schema["$id"] == "biomedpilot.analysis.resource_lock_evidence_registry.v1"
     assert "evidence_entries" in resource_lock_registry_schema["required"]
     assert environment_lock_schema["$id"] == "biomedpilot.analysis.environment_lock_evidence.v1"
+    assert "renv_lock_content" in environment_lock_schema["required"]
     assert environment_lock_schema["properties"]["package_lock_hash"]["required"] == ["algorithm", "value"]
+    assert environment_lock_schema["properties"]["renv_lock_content"]["required"] == ["policy_status", "packages_non_empty"]
     assert evidence_template_package_schema["$id"] == "biomedpilot.analysis.evidence_template_package.v1"
     assert "environment_lock_evidence_templates" in evidence_template_package_schema["required"]
     assert "resource_lock_evidence_templates" in evidence_template_package_schema["required"]
@@ -1994,6 +2002,8 @@ def test_analysis_resource_manifest_declares_full_mode_resource_locks_without_do
     assert templates["reactome_full"]["status"] == "locked"
     assert templates["reactome_full"]["runtime_download_allowed"] is False
     assert templates["reactome_full"]["hash"]["algorithm"] == "sha256"
+    assert templates["reactome_full"]["cache_content"]["non_empty"] is True
+    assert templates["reactome_full"]["cache_content"]["content_source"] == "prelocked_cache_path"
     assert templates["reactome_full"]["registry_entry"]["resource_id"] == "reactome_full"
     assert "runtime_download" in templates["reactome_full"]["forbidden_evidence_sources"]
     for resource_id in required_resource_ids:

@@ -10,6 +10,7 @@
     "version",
     "source",
     "hash",
+    "cache_content",
     "license",
     "cache_path",
     "runtime_download_allowed",
@@ -28,6 +29,15 @@
       "properties": {
         "algorithm": {"type": "string", "minLength": 1},
         "value": {"type": "string", "minLength": 1}
+      }
+    },
+    "cache_content": {
+      "type": "object",
+      "required": ["non_empty"],
+      "properties": {
+        "non_empty": {"const": true},
+        "content_source": {"type": "string"},
+        "file_count": {"type": "integer"}
       }
     },
     "license": {"type": "string", "minLength": 1},

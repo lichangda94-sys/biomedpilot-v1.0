@@ -236,6 +236,12 @@ def validate_analysis_resource_lock_evidence(
         if _is_placeholder_resource_value(value):
             blockers.append(f"analysis_resource_lock_evidence_placeholder_field:{field}")
 
+    cache_content = evidence.get("cache_content")
+    if not isinstance(cache_content, dict):
+        blockers.append("analysis_resource_lock_evidence_cache_content_invalid")
+    elif cache_content.get("non_empty") is not True:
+        blockers.append("analysis_resource_lock_evidence_cache_content_non_empty_not_confirmed")
+
     cache_path = str(evidence.get("cache_path") or "")
     cache_path_obj = REPO_ROOT / cache_path if cache_path else None
     if cache_path_obj and not cache_path_obj.exists():
@@ -412,6 +418,16 @@ def validate_analysis_environment_lock_evidence(
     for field in ("r_version", "bioconductor_version", "dockerfile", "renv_lock"):
         if _is_placeholder_resource_value(evidence.get(field)):
             blockers.append(f"analysis_environment_lock_evidence_placeholder_field:{field}")
+
+    renv_lock_content = evidence.get("renv_lock_content")
+    if not isinstance(renv_lock_content, dict):
+        blockers.append("analysis_environment_lock_evidence_renv_lock_content_invalid")
+    else:
+        policy_status = str(renv_lock_content.get("policy_status") or "")
+        if policy_status not in RESTORED_LOCK_STATUSES:
+            blockers.append("analysis_environment_lock_evidence_renv_lock_content_status_not_restored")
+        if renv_lock_content.get("packages_non_empty") is not True:
+            blockers.append("analysis_environment_lock_evidence_renv_lock_content_packages_not_confirmed")
 
     dockerfile = str(evidence.get("dockerfile") or "")
     renv_lock = str(evidence.get("renv_lock") or "")
@@ -750,6 +766,10 @@ def _resource_lock_evidence_templates(resources: list[Any]) -> list[dict[str, An
                     "algorithm": "sha256",
                     "value": str(item.get("hash") or "<sha256>"),
                 },
+                "cache_content": {
+                    "non_empty": True,
+                    "content_source": "prelocked_cache_path",
+                },
                 "license": str(item.get("license") or "<license>"),
                 "cache_path": str(item.get("cache_path") or "external_analysis_resources/cache/<resource_id>"),
                 "runtime_download_allowed": False,
@@ -791,6 +811,10 @@ def _environment_lock_evidence_templates(environments: list[Any]) -> list[dict[s
                 "package_lock_hash": {
                     "algorithm": "sha256",
                     "value": "<renv lock sha256>",
+                },
+                "renv_lock_content": {
+                    "policy_status": "restored",
+                    "packages_non_empty": True,
                 },
                 "dockerfile": str(item.get("dockerfile") or "docker/Dockerfile.<environment>"),
                 "renv_lock": str(item.get("renv_lock") or "renv/renv.<environment>.lock"),
