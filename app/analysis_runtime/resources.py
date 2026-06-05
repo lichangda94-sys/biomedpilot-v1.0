@@ -209,20 +209,22 @@ def validate_analysis_resource_lock_evidence(
         blockers.append("analysis_resource_lock_evidence_runtime_download_not_forbidden")
 
     hash_payload = evidence.get("hash")
+    hash_algorithm = ""
+    hash_value = ""
     if not isinstance(hash_payload, dict):
         blockers.append("analysis_resource_lock_evidence_hash_invalid")
     else:
-        algorithm = str(hash_payload.get("algorithm") or "")
-        value = str(hash_payload.get("value") or "")
-        if not algorithm:
+        hash_algorithm = str(hash_payload.get("algorithm") or "")
+        hash_value = str(hash_payload.get("value") or "")
+        if not hash_algorithm:
             blockers.append("analysis_resource_lock_evidence_hash_algorithm_missing")
-        elif not _resource_hash_algorithm_allowed(resource_key, algorithm):
+        elif not _resource_hash_algorithm_allowed(resource_key, hash_algorithm):
             blockers.append("analysis_resource_lock_evidence_hash_algorithm_not_allowed")
-        if _is_placeholder_resource_value(value):
+        if _is_placeholder_resource_value(hash_value):
             blockers.append("analysis_resource_lock_evidence_hash_value_missing")
-        elif algorithm == "sha256" and not _is_sha256_hex(value):
+        elif hash_algorithm == "sha256" and not _is_sha256_hex(hash_value):
             blockers.append("analysis_resource_lock_evidence_hash_value_not_sha256")
-        elif algorithm == "repository_fixture" and resource_key != MOCK_FIXTURE_RESOURCE_ID:
+        elif hash_algorithm == "repository_fixture" and resource_key != MOCK_FIXTURE_RESOURCE_ID:
             blockers.append("analysis_resource_lock_evidence_repository_fixture_hash_for_full_resource")
 
     for field in FINAL_LOCK_REQUIRED_FIELDS:
@@ -237,6 +239,10 @@ def validate_analysis_resource_lock_evidence(
     cache_path = str(evidence.get("cache_path") or "")
     if cache_path and not (REPO_ROOT / cache_path).exists():
         blockers.append(f"analysis_resource_lock_evidence_cache_path_not_found:{cache_path}")
+    elif cache_path and hash_algorithm == "sha256" and _is_sha256_hex(hash_value):
+        actual_hash = _sha256_path(REPO_ROOT / cache_path)
+        if actual_hash != hash_value.lower():
+            blockers.append("analysis_resource_lock_evidence_hash_mismatch")
 
     evidence_files = evidence.get("evidence_files")
     if not isinstance(evidence_files, list) or not evidence_files:
@@ -693,6 +699,21 @@ def _sha256_file(path: Path) -> str:
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _sha256_path(path: Path) -> str:
+    if path.is_file():
+        return _sha256_file(path)
+    digest = hashlib.sha256()
+    for child in sorted(item for item in path.rglob("*") if item.is_file()):
+        relative = child.relative_to(path).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        with child.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        digest.update(b"\0")
     return digest.hexdigest()
 
 

@@ -447,6 +447,80 @@ def test_full_resource_lock_evidence_requires_sha256_hex_value() -> None:
     assert "analysis_resource_lock_evidence_hash_value_not_sha256" in validation["blockers"]
 
 
+def test_full_resource_lock_evidence_hash_must_match_cache_path(tmp_path: Path) -> None:
+    cache_file = tmp_path / "reactome_resource_bundle.gmt"
+    cache_file.write_text("TERM1\tDescription\tGENE1\tGENE2\n", encoding="utf-8")
+    cache_hash = hashlib.sha256(cache_file.read_bytes()).hexdigest()
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resource = manifest["resources"][1]  # type: ignore[index]
+    resource.update(
+        {
+            "version": "2026.05",
+            "hash": cache_hash,
+            "license": "approved_test_license",
+            "cache_path": str(cache_file),
+            "status": "locked",
+        }
+    )
+    validation = validate_analysis_resource_lock_evidence(
+        "reactome_full",
+        {
+            "schema_version": "biomedpilot.analysis.resource_lock_evidence.v1",
+            "resource_id": "reactome_full",
+            "status": "locked",
+            "version": "2026.05",
+            "source": "Reactome / Bioconductor package metadata",
+            "hash": {"algorithm": "sha256", "value": cache_hash},
+            "license": "approved_test_license",
+            "cache_path": str(cache_file),
+            "runtime_download_allowed": False,
+            "approved_for_modules": ["enrichment"],
+            "evidence_files": ["analysis/resources/manifest.json"],
+        },
+        manifest=manifest,
+    )
+
+    assert validation["status"] == "passed"
+    assert validation["blockers"] == []
+
+
+def test_full_resource_lock_evidence_blocks_cache_hash_mismatch(tmp_path: Path) -> None:
+    cache_file = tmp_path / "reactome_resource_bundle.gmt"
+    cache_file.write_text("TERM1\tDescription\tGENE1\tGENE2\n", encoding="utf-8")
+    wrong_hash = "c" * 64
+    manifest = deepcopy(read_json(ROOT / "analysis" / "resources" / "manifest.json"))
+    resource = manifest["resources"][1]  # type: ignore[index]
+    resource.update(
+        {
+            "version": "2026.05",
+            "hash": wrong_hash,
+            "license": "approved_test_license",
+            "cache_path": str(cache_file),
+            "status": "locked",
+        }
+    )
+    validation = validate_analysis_resource_lock_evidence(
+        "reactome_full",
+        {
+            "schema_version": "biomedpilot.analysis.resource_lock_evidence.v1",
+            "resource_id": "reactome_full",
+            "status": "locked",
+            "version": "2026.05",
+            "source": "Reactome / Bioconductor package metadata",
+            "hash": {"algorithm": "sha256", "value": wrong_hash},
+            "license": "approved_test_license",
+            "cache_path": str(cache_file),
+            "runtime_download_allowed": False,
+            "approved_for_modules": ["enrichment"],
+            "evidence_files": ["analysis/resources/manifest.json"],
+        },
+        manifest=manifest,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "analysis_resource_lock_evidence_hash_mismatch" in validation["blockers"]
+
+
 def test_analysis_resource_lock_evidence_registry_is_authoritative_and_empty_by_default() -> None:
     registry = load_analysis_resource_lock_evidence_registry()
     validation = validate_analysis_resource_lock_evidence_registry(registry)

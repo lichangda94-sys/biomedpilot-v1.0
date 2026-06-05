@@ -90,7 +90,7 @@ Update: resource validation now rejects any resource marked `locked` while versi
 
 Update: locked resources now require schema-valid lock evidence. `analysis/schemas/output/resource_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_resource_lock_evidence()` blocks missing evidence, placeholder fields, missing cache paths, missing evidence files, manifest/evidence mismatch, approved-module mismatch, or any runtime-download allowance. The repository-local mock fixture resource has evidence under `analysis/resources/locks/`; full Reactome/MSigDB/spatial/chem resources remain blocked until real external lock evidence exists.
 
-Update: full resource lock evidence now requires SHA-256 hash evidence with a 64-character hex value. The `repository_fixture` hash marker remains allowed only for the built-in mock fixture and cannot be used to lock Reactome, MSigDB, spatial, chemistry, or external tool resources.
+Update: full resource lock evidence now requires SHA-256 hash evidence with a 64-character hex value that matches the referenced `cache_path` content. File cache paths are hashed directly, and directory cache paths use a deterministic hash over sorted relative file paths and contents. The `repository_fixture` hash marker remains allowed only for the built-in mock fixture and cannot be used to lock Reactome, MSigDB, spatial, chemistry, or external tool resources.
 
 Update: the Bioinformatics gene-set resource manager now blocks Reactome/GO/KEGG runtime downloads by default. Common resources remain visible as guidance, but user/UI flows must import GMT files or use externally prepared prelocked resources; parser/download code requires an explicit developer/test override and is not a normal runtime acquisition path.
 
