@@ -4175,6 +4175,17 @@ def test_results_browser_displays_standard_package_contract_status(qt_app, proje
     assert "parameters=" in provenance_text
     assert "seed=7" in provenance_text
 
+    package_manifest_table = widget.findChild(QTableWidget, "resultsStandardPackageManifestTable")
+    assert package_manifest_table is not None
+    package_manifest_headers = [package_manifest_table.horizontalHeaderItem(index).text() for index in range(package_manifest_table.columnCount())]
+    assert package_manifest_headers == ["Result", "Validation", "Schema", "Module", "Mode", "Task", "Status", "Directories", "Payload files"]
+    package_manifest_text = _table_text(package_manifest_table)
+    assert "analysis-package-enrichment-mock-task" in package_manifest_text
+    assert "analysis/schemas/output/result_package.schema.json" in package_manifest_text
+    assert "biomedpilot.analysis.result_package.v1" not in package_manifest_text
+    assert "tables, plots, reports, logs" in package_manifest_text
+    assert "result.json; provenance.json" in package_manifest_text
+
     input_manifest_table = widget.findChild(QTableWidget, "resultsStandardPackageInputManifestTable")
     assert input_manifest_table is not None
     input_manifest_headers = [input_manifest_table.horizontalHeaderItem(index).text() for index in range(input_manifest_table.columnCount())]

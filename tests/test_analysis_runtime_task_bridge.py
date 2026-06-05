@@ -225,6 +225,14 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["mode"] == "mock"
     assert row["status"] == "passed"
     assert row["validation_status"] == "passed"
+    assert row["result_package_schema"] == "analysis/schemas/output/result_package.schema.json"
+    assert row["package_manifest_validation_status"] == "passed"
+    assert row["package_manifest"]["source_policy"] == "synthesized_from_standard_package_filesystem_and_result_json"
+    assert row["package_manifest"]["schema"] == "analysis/schemas/output/result_package.schema.json"
+    assert row["package_manifest"]["package_schema_version"] == "biomedpilot.analysis.result_package.v1"
+    assert row["package_manifest"]["directories"] == ["tables", "plots", "reports", "logs"]
+    assert row["package_manifest"]["result_json"] == "result.json"
+    assert row["package_manifest"]["provenance_json"] == "provenance.json"
     assert row["payload_schemas"] == {
         "result.json": "analysis/schemas/output/result.schema.json",
         "provenance.json": "analysis/schemas/output/provenance.schema.json",
@@ -313,6 +321,11 @@ def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(
 
     assert detail["schema_version"] == "biomedpilot.analysis.standard_package_detail.v1"
     assert detail["validation_status"] == "passed"
+    assert detail["result_package_schema"] == "analysis/schemas/output/result_package.schema.json"
+    assert detail["package_manifest"]["validation_status"] == "passed"
+    assert detail["package_manifest"]["directories"] == ["tables", "plots", "reports", "logs"]
+    assert detail["package_manifest"]["result_json"] == "result.json"
+    assert detail["package_manifest"]["provenance_json"] == "provenance.json"
     assert detail["payload_schemas"] == {
         "result.json": "analysis/schemas/output/result.schema.json",
         "provenance.json": "analysis/schemas/output/provenance.schema.json",

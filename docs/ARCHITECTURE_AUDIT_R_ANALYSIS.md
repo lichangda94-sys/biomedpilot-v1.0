@@ -94,8 +94,10 @@ Standard package discovery is now available to the UI state layer:
 - `build_analysis_center_state()` now also exposes `standard_package_gate_rows`, giving the UI direct gate rows for catalog source policy, package validation status, artifact-manifest validity, and input-manifest validity without inspecting module-private output folders.
 - `build_result_gate_rows()` now joins result-index rows with the standard package catalog by `result_id`, so Analysis Center result rows can show standard package registration status, validation status, package path, and artifact counts without reading module-specific R outputs.
 - `BioinformaticsResultsBrowserWidget` now carries those standard package fields into the current results table, so ordinary result browsing surfaces whether each result has a registered standard package, its validation state, relative package path, and artifact counts.
+- The standard package catalog and detail payloads now expose the synthesized `package_manifest` and `result_package_schema`, so UI/report consumers can inspect the package-level contract without rerunning validation internals.
 - The standard package catalog rows now expose provenance digests (`input_hash`, `parameter_hash`, `random_seed`) alongside runtime, command, engine, worker backend, and worker boundary metadata.
 - The current Results Browser renders that standard package provenance/worker summary as a user-visible table, keeping R/runtime evidence out of developer-only JSON.
+- The current Results Browser renders a standard package manifest table showing the `result_package.schema.json` path, module/mode/task/status, required directories, and payload files.
 - The current Results Browser now renders a standard package input manifest table from catalog `input_manifest` metadata, including package path, schema, module/mode/task, input keys, and parameter keys.
 - The current Results Browser also renders a standard package artifact manifest table for declared `tables`, `plots`, `reports`, and `logs`, constrained to package-relative paths from the catalog.
 - The catalog now exposes `worker_boundary_type` and `worker_migration_status`, so standard R worker packages can be distinguished from legacy service-adapter sidecars.
@@ -392,6 +394,7 @@ New architecture boundary files:
 - Added `logs/worker_invocation.json` for all standard task-bridge outcomes, and registered it in result-index log artifacts after `worker.log`.
 - Added `analysis/schemas/output/worker_invocation.schema.json` and validation blockers for missing or invalid task-bridge/standard-worker invocation manifests.
 - Added result-package-level schema validation against `analysis/schemas/output/result_package.schema.json`; validation payloads now expose the synthesized package manifest and block package-level directory contract drift.
+- Exposed synthesized package manifest metadata in `build_standard_analysis_package_catalog()` and `build_standard_analysis_package_detail()`, and rendered it in Results Browser.
 - Added schema-driven module input validation in the task bridge so required-field, enum, type, minLength, and nested runtime field drift from `analysis/schemas/input/module_input.schema.json` is blocked before worker execution.
 - Added standard package validation for materialized task-center input manifests: `worker_invocation.input_manifest` must point to package-local `module_input.json`, and that manifest must pass schema and expected module/task/mode checks.
 - Exposed materialized input manifest metadata in `build_standard_analysis_package_catalog()` and `build_standard_analysis_package_detail()` so UI/report consumers can discover package-local `module_input.json` without reading worker-private output conventions.

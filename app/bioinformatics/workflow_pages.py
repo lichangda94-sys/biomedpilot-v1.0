@@ -6576,6 +6576,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         package_layout.addWidget(self._standard_package_provenance)
         _set_table_widths(self._standard_package_provenance, [180, 110, 80, 190, 160, 180, 220, 240, 220])
         self._standard_package_provenance.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
+        self._standard_package_manifest = _table(["Result", "Validation", "Schema", "Module", "Mode", "Task", "Status", "Directories", "Payload files"])
+        self._standard_package_manifest.setObjectName("resultsStandardPackageManifestTable")
+        package_layout.addWidget(self._standard_package_manifest)
+        _set_table_widths(self._standard_package_manifest, [190, 110, 250, 110, 80, 180, 100, 240, 220])
+        self._standard_package_manifest.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self._standard_package_input_manifest = _table(["Result", "Validation", "Package path", "Schema", "Module", "Mode", "Task", "Input keys", "Parameter keys"])
         self._standard_package_input_manifest.setObjectName("resultsStandardPackageInputManifestTable")
         package_layout.addWidget(self._standard_package_input_manifest)
@@ -6694,6 +6699,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             _results_user_rows(self._project_root, entries, records),
         )
         _fill_table(self._standard_package_provenance, _standard_package_provenance_rows(analysis_state))
+        _fill_table(self._standard_package_manifest, _standard_package_manifest_rows(analysis_state))
         _fill_table(self._standard_package_input_manifest, _standard_package_input_manifest_rows(analysis_state))
         _fill_table(self._standard_package_artifacts, _standard_package_artifact_rows(analysis_state))
         review = build_formal_deg_result_review(
@@ -11120,6 +11126,28 @@ def _standard_package_provenance_rows(analysis_state: dict[str, object]) -> list
                 _standard_package_boundary_label(package_row),
                 str(package_row.get("command") or ""),
                 _standard_package_hash_label(package_row),
+            ]
+        )
+    return rows
+
+
+def _standard_package_manifest_rows(analysis_state: dict[str, object]) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for package_row in _standard_package_catalog_rows(analysis_state):
+        manifest = package_row.get("package_manifest")
+        if not isinstance(manifest, dict):
+            continue
+        rows.append(
+            [
+                str(package_row.get("result_id") or ""),
+                str(manifest.get("validation_status") or package_row.get("package_manifest_validation_status") or ""),
+                str(manifest.get("schema") or package_row.get("result_package_schema") or ""),
+                str(manifest.get("module_id") or ""),
+                str(manifest.get("mode") or ""),
+                str(manifest.get("task_id") or ""),
+                str(manifest.get("status") or ""),
+                _join_manifest_keys(manifest.get("directories")),
+                "; ".join(item for item in (str(manifest.get("result_json") or ""), str(manifest.get("provenance_json") or "")) if item),
             ]
         )
     return rows

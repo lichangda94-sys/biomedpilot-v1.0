@@ -48,6 +48,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             provenance_boundary = provenance_payload.get("worker_boundary") if isinstance(provenance_payload.get("worker_boundary"), dict) else {}
             invocation_boundary = invocation_payload.get("worker_boundary") if isinstance(invocation_payload.get("worker_boundary"), dict) else {}
             worker_boundary = invocation_boundary or provenance_boundary
+            package_manifest = detail["package_manifest"]
             input_manifest = detail["input_manifest"]
             rows.append(
                 {
@@ -62,6 +63,9 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "mode": str(result_payload.get("mode") or (entry.get("dependency_snapshot") or {}).get("mode") or ""),
                     "status": str(result_payload.get("status") or validation.get("result_status") or ""),
                     "validation_status": str(validation.get("status") or "blocked"),
+                    "result_package_schema": str(validation.get("result_package_schema") or ""),
+                    "package_manifest": package_manifest,
+                    "package_manifest_validation_status": str(package_manifest.get("validation_status") or ""),
                     "payload_schemas": payload_schemas,
                     "result_payload_schema": payload_schemas.get("result.json", ""),
                     "provenance_payload_schema": payload_schemas.get("provenance.json", ""),
@@ -146,12 +150,15 @@ def build_standard_analysis_package_detail(
         "reports": _declared_artifacts(package, root, result, "reports"),
         "logs": _log_artifacts(package, root),
     }
+    package_manifest = _package_manifest_detail(package_validation)
     input_manifest = _input_manifest_detail(package, root, invocation, package_validation)
     return {
         "schema_version": "biomedpilot.analysis.standard_package_detail.v1",
         "package_path": str(package),
         "package_path_relative": _relative_or_absolute(root, package),
         "validation_status": str(package_validation.get("status") or "blocked"),
+        "result_package_schema": str(package_validation.get("result_package_schema") or ""),
+        "package_manifest": package_manifest,
         "payload_schemas": payload_schemas,
         "result_payload_schema": payload_schemas.get("result.json", ""),
         "provenance_payload_schema": payload_schemas.get("provenance.json", ""),
@@ -292,6 +299,31 @@ def _log_artifacts(package: Path, root: Path) -> list[dict[str, Any]]:
             )
         )
     return rows
+
+
+def _package_manifest_detail(validation: dict[str, Any]) -> dict[str, Any]:
+    manifest = validation.get("package_manifest")
+    manifest_payload = manifest if isinstance(manifest, dict) else {}
+    blockers = [
+        str(item)
+        for item in validation.get("blockers", [])
+        if str(item).startswith("result_package_schema_") or str(item).startswith("missing_required_")
+    ]
+    return {
+        "schema_version": "biomedpilot.analysis.standard_package_manifest_detail.v1",
+        "source_policy": "synthesized_from_standard_package_filesystem_and_result_json",
+        "schema": str(validation.get("result_package_schema") or ""),
+        "validation_status": "blocked" if blockers else str(validation.get("status") or "blocked"),
+        "package_schema_version": str(manifest_payload.get("schema_version") or ""),
+        "module_id": str(manifest_payload.get("module_id") or ""),
+        "mode": str(manifest_payload.get("mode") or ""),
+        "task_id": str(manifest_payload.get("task_id") or ""),
+        "status": str(manifest_payload.get("status") or ""),
+        "result_json": str(manifest_payload.get("result_json") or ""),
+        "provenance_json": str(manifest_payload.get("provenance_json") or ""),
+        "directories": [str(item) for item in manifest_payload.get("directories", [])] if isinstance(manifest_payload.get("directories"), list | tuple) else [],
+        "blockers": blockers,
+    }
 
 
 def _input_manifest_detail(package: Path, root: Path, invocation: dict[str, Any], validation: dict[str, Any]) -> dict[str, Any]:
