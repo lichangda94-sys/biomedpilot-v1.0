@@ -2,7 +2,7 @@
 
 Date: 2026-06-05
 
-Baseline: `dev/bioinformatics` at `e3157fb2fb91b03174975c5774234c03970dd4aa`
+Baseline: `dev/bioinformatics` at `8eb18b01a7d3cfc29d3d788feb82e48aec6f2cfb`
 
 ## Deprecation Rule
 
@@ -31,6 +31,7 @@ Deprecated does not mean the idea is useless. It means the code must not be copi
 | Archive mirror code | `archive/legacy_sources/**` | Duplicates old Bio/Meta source snapshots with stale paths | Use only as provenance/reference | High | reference only |
 | Mock result packages as real analysis proof | `analysis/fixtures/outputs/*/mock_result_package/**` | Explicit mock packages | Use only for contract tests | Medium | testing-only |
 | Lite standard worker fixtures as production proof | `analysis/modules/**`, `analysis/fixtures/inputs/**`, `analysis/runners/run_module.R` | Lite worker scaffolds are useful but not full current production proof | Prove each selected module through current UI and result package | Medium | scaffold only |
+| Full-mode package/environment blocker snapshots as production proof | `app/analysis_runtime/**`, `analysis/resources/manifest.json`, `analysis/registry/analysis_environments.json`, `analysis/runners/run_module.R` | Blocker snapshots prove governance and graceful blocking, not that full scientific analysis ran | Restore and lock external environments/resources, then prove one selected module through current UI and standard package | Medium | gate evidence only |
 | Runtime gene-set downloads as resource readiness proof | old Bio branches, historical enrichment resource code, and any direct Reactome/GO/KEGG download shortcut | Current policy blocks runtime gene-set downloads by default; resource readiness must come from explicit import or prelocked packages | Use current resource-lock/import contracts and visible blockers | High | quarantined |
 | Branch-only UI shell/screenshots | `dev/ui-shell`, `integration/*ui*`, branch `docs/ui/**` material | Design material cannot replace current UI without selected UI migration task | Use as design reference | Medium | adapter/design review |
 | Branch-only risk/nomogram clinical material | ReleaseBuild/internal-test branches | High risk of clinical overclaim and old state coupling | Rewrite under strict non-clinical gates if selected | High | rewrite |
@@ -43,7 +44,7 @@ Deprecated does not mean the idea is useless. It means the code must not be copi
 | Current formal DEG loop | Current implementation exists, but availability still depends on gates and prior proofs; not generalized to every DEG scenario. |
 | Current Meta v2 result contract bridge | Current implementation exists and remains testing-level; not production-grade Meta. |
 | Current ORA/GSEA/survival/Cox/risk/report/immune/correlation modules | Current or branch material exists. Each module remains governed by its current gate and proof status. |
-| Current standard analysis runtime | Useful scaffold; mock/lite/full modes must stay labeled and gated. Full-mode environment snapshots are blocker evidence, not proof that full production analyses ran. |
+| Current standard analysis runtime | Useful scaffold; mock/lite/full modes must stay labeled and gated. Full-mode resource and environment-lock snapshots are blocker evidence, not proof that full production analyses ran. |
 | Current external R command boundary | Useful isolation boundary; does not by itself prove any module's full scientific output. |
 | Current docking lite command-manifest contract | Current testing-level contract only; no AutoDock Vina execution or scientific docking result. |
 

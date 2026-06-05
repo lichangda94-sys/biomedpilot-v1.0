@@ -6,9 +6,9 @@ Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
 
 Current branch: `dev/bioinformatics`
 
-Current HEAD: `e3157fb2fb91b03174975c5774234c03970dd4aa`
+Current HEAD: `8eb18b01a7d3cfc29d3d788feb82e48aec6f2cfb`
 
-Current subject: `show standard input manifests in results browser`
+Current subject: `block full analysis without restored environment locks`
 
 ## Audit Scope
 
@@ -27,15 +27,14 @@ Branch-only, legacy-only, mock, placeholder, dry-run, and testing-level outputs 
 
 ## Current Worktree State
 
-The worktree was already dirty before this Phase 2.5 refresh. These non-report changes were preserved and excluded from audit claims:
+The worktree was already dirty before this Phase 2.5 refresh. These non-report changes were preserved and excluded from Phase 2.5 migration claims:
 
 ```text
- M app/analysis_runtime/package_catalog.py
- M app/bioinformatics/workflow_pages.py
+ M app/analysis_runtime/__init__.py
+ M app/analysis_runtime/resources.py
  M docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md
- M docs/R_ANALYSIS_REMEDIATION_PLAN.md
- M tests/test_analysis_runtime_task_bridge.py
- M tests/ui/test_bioinformatics_workflow_pages.py
+ M docs/R_ANALYSIS_ARCHITECTURE.md
+ M tests/test_r_analysis_architecture_contract.py
 ?? docs/bioinformatics/Bioinformatics_handoff_report_20260513.md
 ?? project_storage/bioinformatics/
 ```
@@ -50,7 +49,7 @@ Only `docs/reports/**` files are Phase 2.5 outputs.
 | `sed -n '1,220p' ../CODEX_MINIMAL_REAL_LOOP_SELF_CHECK.md` | Read real-loop rules. |
 | `git status --short --branch` | Captured branch and dirty worktree. |
 | `git branch --show-current` | Confirmed `dev/bioinformatics`. |
-| `git rev-parse HEAD` | Confirmed `e3157fb2fb91b03174975c5774234c03970dd4aa`. |
+| `git rev-parse HEAD` | Confirmed `8eb18b01a7d3cfc29d3d788feb82e48aec6f2cfb`. |
 | `git for-each-ref --format='%(refname:short)\|%(objectname:short)\|%(committerdate:short)\|%(subject)' refs/heads refs/remotes` | Enumerated local branch heads. |
 | `git log --all --decorate --oneline --max-count=120` | Reviewed recent multi-branch history. |
 | `find . ... -name '*legacy*'` | Located legacy directories without executing them. |
@@ -65,7 +64,7 @@ No functional tests were required for this documentation-only inventory. Tests w
 
 | Branch | HEAD | Date | Subject | Bio/Meta/UI relevance | Disposition |
 | --- | --- | --- | --- | --- | --- |
-| `dev/bioinformatics` | `e3157fb` | 2026-06-05 | show standard input manifests in results browser | Current source of truth for this worktree | source of truth |
+| `dev/bioinformatics` | `8eb18b` | 2026-06-05 | block full analysis without restored environment locks | Current source of truth for this worktree; includes standard package/input manifest surfacing and full-mode environment blocker snapshots at HEAD | source of truth |
 | `dev/release-internal-test` | `6658c3a` | 2026-05-29 | fix(bio): close ReleaseBuild enrichment production gate | Rich Bio DEG/enrichment/survival/risk/report history | candidate library only |
 | `codex/releasebuild-formal-deg-carryover` | `a8adc29` | 2026-05-27 | refresh ReleaseBuild analysis internal test gate | Formal DEG and ReleaseBuild gate material | candidate library only |
 | `codex/mainline-survival-clinical-carryover` | `74775fe` | 2026-05-28 | docs(bio): document MainLine enrichment convergence | Survival/clinical and enrichment convergence material | candidate library only |
@@ -99,12 +98,12 @@ Selected branch deltas are large. Whole-branch carry-over is unsafe because thes
 
 | Branch | Shortstat in audited paths | Practical implication |
 | --- | --- | --- |
-| `dev/release-internal-test` | 1134 files changed, 94509 insertions, 86013 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
-| `codex/releasebuild-formal-deg-carryover` | 1072 files changed, 76449 insertions, 78974 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
-| `codex/mainline-survival-clinical-carryover` | 735 files changed, 13723 insertions, 70266 deletions | Survival/clinical history, but older than current standard package work. |
-| `stable/mainline` | 801 files changed, 14358 insertions, 80408 deletions | Historical formal DEG baseline only. |
+| `dev/release-internal-test` | 2130 files changed, 135505 insertions, 86177 deletions | Rich Bio material, but whole-branch merge would reshape current contracts and scaffolds. |
+| `codex/releasebuild-formal-deg-carryover` | 1104 files changed, 91914 insertions, 79141 deletions | Useful formal DEG/ReleaseBuild material, but older and layout-divergent. |
+| `codex/mainline-survival-clinical-carryover` | 744 files changed, 15914 insertions, 70433 deletions | Survival/clinical history, but older than current standard package work. |
+| `stable/mainline` | 801 files changed, 14358 insertions, 81312 deletions | Historical formal DEG baseline only. |
 | `feature/meta-l3-ui-loop` | 165 files changed, 334 insertions, 8997 deletions | Focused Meta proof; already represented by current history. |
-| `dev/meta-analysis` | 617 files changed, 20785 insertions, 78792 deletions | OCR/fulltext/package material; not current-proven. |
+| `dev/meta-analysis` | 617 files changed, 20794 insertions, 78968 deletions | OCR/fulltext/package material; not current-proven. |
 | `dev/ui-shell` | 1142 files changed, 27679 insertions, 170821 deletions | UI design/shell material only; direct migration unsafe. |
 
 ## Inventory Conclusion
@@ -112,6 +111,8 @@ Selected branch deltas are large. Whole-branch carry-over is unsafe because thes
 The repository contains substantial historical UI, Bioinformatics, Meta Analysis, plot, report, export, test, and helper material. No old branch is safe to merge wholesale. Candidate functionality must be selected one at a time, mapped to a current UI entry, adapted or rewritten against current contracts, and then proven with current tests and real output evidence.
 
 Mock, placeholder, dry-run, testing-level, branch-only, and legacy-only outputs remain excluded from completed-feature claims.
+
+Current HEAD has continued to add standard package governance after earlier reports: result rows and browser surfaces now include standard package status, artifacts, provenance, input manifests, and package manifests; full analysis mode is blocked when isolated environment locks are not restored. These are current contract/gate facts, not permission to migrate old branch logic.
 
 ## Stop Point
 
