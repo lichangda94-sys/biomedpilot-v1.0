@@ -48,6 +48,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             provenance_boundary = provenance_payload.get("worker_boundary") if isinstance(provenance_payload.get("worker_boundary"), dict) else {}
             invocation_boundary = invocation_payload.get("worker_boundary") if isinstance(invocation_payload.get("worker_boundary"), dict) else {}
             worker_boundary = invocation_boundary or provenance_boundary
+            input_manifest = detail["input_manifest"]
             rows.append(
                 {
                     "schema_version": "biomedpilot.analysis.standard_package_catalog_row.v1",
@@ -69,6 +70,9 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "runtime": provenance_payload.get("runtime") if isinstance(provenance_payload.get("runtime"), dict) else {},
                     "analysis_environment": provenance_payload.get("analysis_environment") if isinstance(provenance_payload.get("analysis_environment"), dict) else {},
                     "worker_invocation": invocation_payload,
+                    "input_manifest": input_manifest,
+                    "input_manifest_path_relative": str(input_manifest.get("path_relative") or ""),
+                    "input_manifest_validation_status": str(input_manifest.get("validation_status") or ""),
                     "worker_backend": str(invocation_payload.get("worker_backend") or ""),
                     "worker_invocation_status": str(invocation_payload.get("invocation_status") or ""),
                     "worker_boundary": worker_boundary,
@@ -142,6 +146,7 @@ def build_standard_analysis_package_detail(
         "reports": _declared_artifacts(package, root, result, "reports"),
         "logs": _log_artifacts(package, root),
     }
+    input_manifest = _input_manifest_detail(package, root, invocation, package_validation)
     return {
         "schema_version": "biomedpilot.analysis.standard_package_detail.v1",
         "package_path": str(package),
@@ -171,6 +176,7 @@ def build_standard_analysis_package_detail(
             "command": str(provenance.get("command") or ""),
         },
         "worker_invocation": invocation,
+        "input_manifest": input_manifest,
         "artifact_manifest": artifact_manifest,
         "blockers": list(package_validation.get("blockers", [])),
         "warnings": list(package_validation.get("warnings", [])),
@@ -286,6 +292,51 @@ def _log_artifacts(package: Path, root: Path) -> list[dict[str, Any]]:
             )
         )
     return rows
+
+
+def _input_manifest_detail(package: Path, root: Path, invocation: dict[str, Any], validation: dict[str, Any]) -> dict[str, Any]:
+    declared_path = str(invocation.get("input_manifest") or "")
+    path = (package / declared_path).resolve() if declared_path else package / ""
+    inside_package = bool(declared_path) and _is_relative_to(path, package)
+    payload = _read_json(path) if inside_package else {}
+    blocker_prefixes = (
+        "worker_invocation_input_manifest_",
+        "module_input_manifest_",
+    )
+    blockers = [
+        str(item)
+        for item in validation.get("blockers", [])
+        if any(str(item).startswith(prefix) for prefix in blocker_prefixes)
+    ]
+    if not declared_path:
+        validation_status = "blocked"
+    elif blockers:
+        validation_status = "blocked"
+    elif declared_path == "module_input.json" and path.is_file():
+        validation_status = "passed"
+    elif declared_path == "service_adapter_payload":
+        validation_status = "external_service_adapter_reference"
+    else:
+        validation_status = "external_or_unvalidated_reference"
+    return {
+        "schema_version": "biomedpilot.analysis.standard_package_input_manifest.v1",
+        "declared_path": declared_path,
+        "path": str(path) if declared_path else "",
+        "path_relative": _relative_or_absolute(root, path) if declared_path and inside_package else declared_path,
+        "package_relative_path": _relative_or_absolute(package, path) if declared_path and inside_package else declared_path,
+        "exists": path.is_file() if declared_path and inside_package else False,
+        "within_standard_package": inside_package,
+        "schema": "analysis/schemas/input/module_input.schema.json" if declared_path == "module_input.json" else "",
+        "validation_status": validation_status,
+        "source_policy": "package_local_module_input_manifest" if declared_path == "module_input.json" else "worker_invocation_declared_reference",
+        "module_id": str(payload.get("module_id") or ""),
+        "mode": str(payload.get("mode") or ""),
+        "task_id": str(payload.get("task_id") or ""),
+        "project_id": str(payload.get("project_id") or ""),
+        "input_keys": sorted(str(key) for key in payload.get("inputs", {}).keys()) if isinstance(payload.get("inputs"), dict) else [],
+        "parameter_keys": sorted(str(key) for key in payload.get("parameters", {}).keys()) if isinstance(payload.get("parameters"), dict) else [],
+        "blockers": blockers,
+    }
 
 
 def _artifact_row(package: Path, root: Path, artifact: dict[str, Any], *, group: str) -> dict[str, Any]:

@@ -237,6 +237,17 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["worker_invocation_status"] == "fixture_copy_completed"
     assert row["worker_boundary_type"] == "analysis_task_bridge_fixture"
     assert row["worker_migration_status"] == "mock_fixture_contract"
+    assert row["input_manifest_path_relative"] == "analysis_results/enrichment-mock-task/module_input.json"
+    assert row["input_manifest_validation_status"] == "passed"
+    assert row["input_manifest"]["schema"] == "analysis/schemas/input/module_input.schema.json"
+    assert row["input_manifest"]["package_relative_path"] == "module_input.json"
+    assert row["input_manifest"]["exists"] is True
+    assert row["input_manifest"]["within_standard_package"] is True
+    assert row["input_manifest"]["module_id"] == "enrichment"
+    assert row["input_manifest"]["mode"] == "mock"
+    assert row["input_manifest"]["task_id"] == "enrichment-mock-task"
+    assert row["input_manifest"]["input_keys"] == ["fixture_matrix", "input_package_id", "source_dataset_id"]
+    assert row["input_manifest"]["parameter_keys"] == ["comparison"]
     assert row["input_hash"] != "fixture"
     assert row["parameter_hash"] != "fixture"
     assert row["random_seed"] == "7"
@@ -312,6 +323,11 @@ def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(
     assert detail["result"]["result_semantics"] == "testing_level"
     assert detail["provenance"]["engine"]["name"] == "biomedpilot_analysis_task_bridge"  # type: ignore[index]
     assert detail["worker_invocation"]["worker_backend"] == "python_fixture"
+    assert detail["input_manifest"]["declared_path"] == "module_input.json"
+    assert detail["input_manifest"]["path_relative"] == "analysis_results/enrichment-mock-task/module_input.json"
+    assert detail["input_manifest"]["validation_status"] == "passed"
+    assert detail["input_manifest"]["source_policy"] == "package_local_module_input_manifest"
+    assert detail["input_manifest"]["input_keys"] == ["fixture_matrix", "input_package_id", "source_dataset_id"]
     assert detail["artifact_manifest"]["tables"][0]["path_relative"] == "analysis_results/enrichment-mock-task/tables/mock_summary.tsv"
     assert detail["artifact_manifest"]["tables"][0]["size_bytes"] > 0
     assert detail["artifact_manifest"]["plots"] == []
