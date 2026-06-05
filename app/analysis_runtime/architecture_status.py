@@ -479,6 +479,8 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
         "missing_count": len(migration_matrix.get("missing_evidence_module_ids", [])),
         "scope_policy": "module_by_module_standard_worker_migration_required",
     }
+    migration_module_actions = _standard_worker_migration_remediation_actions(migration_matrix)
+    migration_action_summary = _standard_worker_migration_action_summary(migration_module_actions)
     issue_items = {
         "full_analysis_environment_locks_not_restored": {
             "item_id": "restore_full_analysis_environment_locks",
@@ -556,6 +558,8 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
             ],
             "boundary": "one module at a time; sidecar-only legacy adapter output is not full migration",
             "module_scope": migration_module_scope,
+            "module_next_actions": migration_module_actions,
+            "module_action_summary": migration_action_summary,
         },
     }
     items = [issue_items[issue] for issue in p1_issues if issue in issue_items]
@@ -576,6 +580,72 @@ def build_analysis_remediation_queue(status: dict[str, Any] | None = None) -> di
     if schema_blockers:
         payload["status"] = "blocked"
     return payload
+
+
+def _standard_worker_migration_remediation_actions(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = [row for row in matrix.get("rows", []) if isinstance(row, dict)]
+    actions: list[dict[str, Any]] = []
+    for row in rows:
+        prerequisites = row.get("migration_prerequisite_status") if isinstance(row.get("migration_prerequisite_status"), dict) else {}
+        actions.append(
+            {
+                "module_id": str(row.get("module_id") or ""),
+                "title": str(row.get("title") or row.get("module_id") or ""),
+                "priority": str(row.get("risk") or "P1"),
+                "migration_readiness_status": str(row.get("migration_readiness_status") or "blocked"),
+                "formal_worker_status": str(row.get("formal_worker_status") or ""),
+                "migration_next_action": str(row.get("migration_next_action") or "inspect_migration_blockers"),
+                "migration_blockers": [str(item) for item in row.get("migration_blockers", []) if item],
+                "prerequisite_status": {
+                    "overall": str(prerequisites.get("overall") or "blocked"),
+                    "lite_standard_worker_path": str(prerequisites.get("lite_standard_worker_path") or ""),
+                    "full_mode_registry": str(prerequisites.get("full_mode_registry") or ""),
+                    "registry_evidence": str(prerequisites.get("registry_evidence") or ""),
+                    "formal_runtime_contract": str(prerequisites.get("formal_runtime_contract") or ""),
+                    "legacy_sidecar_boundary": str(prerequisites.get("legacy_sidecar_boundary") or ""),
+                    "required_full_environment": str(prerequisites.get("required_full_environment") or ""),
+                    "required_environment_lock": str(prerequisites.get("required_environment_lock") or ""),
+                    "required_resource_lock": str(prerequisites.get("required_resource_lock") or ""),
+                    "required_task_boundary": str(prerequisites.get("required_task_boundary") or ""),
+                },
+                "recommended_files": _standard_worker_migration_recommended_files(row),
+            }
+        )
+    return actions
+
+
+def _standard_worker_migration_action_summary(actions: list[dict[str, Any]]) -> dict[str, Any]:
+    counts: dict[str, int] = {}
+    for action in actions:
+        next_action = str(action.get("migration_next_action") or "inspect_migration_blockers")
+        counts[next_action] = counts.get(next_action, 0) + 1
+    return {
+        "schema_version": "biomedpilot.analysis.standard_worker_migration_action_summary.v1",
+        "module_count": len(actions),
+        "next_action_counts": counts,
+        "blocked_module_count": sum(1 for action in actions if action.get("migration_readiness_status") == "blocked"),
+    }
+
+
+def _standard_worker_migration_recommended_files(row: dict[str, Any]) -> list[str]:
+    files = [
+        "analysis/registry/standard_worker_migration_evidence.json",
+        "analysis/schemas/output/standard_worker_migration_evidence.schema.json",
+        "analysis/schemas/output/result_package.schema.json",
+    ]
+    module_id = str(row.get("module_id") or "")
+    next_action = str(row.get("migration_next_action") or "")
+    if module_id:
+        files.append(f"analysis/modules/{module_id}/module.json")
+    if next_action == "implement_formal_runtime_contract_before_standard_worker_migration":
+        files.extend(["analysis/runners/run_module.R", "app/bioinformatics/"])
+    elif next_action == "declare_scoped_full_mode_only_after_environment_and_resource_locks":
+        files.extend(["analysis/registry/analysis_environments.json", "analysis/resources/manifest.json"])
+    elif next_action == "replace_legacy_sidecar_with_task_center_registered_standard_worker_execution":
+        files.extend(["app/analysis_runtime/task_bridge.py", "analysis/runners/run_module.R"])
+    elif next_action == "register_schema_valid_standard_worker_migration_evidence":
+        files.extend(["analysis/registry/standard_worker_migration_evidence.json", "analysis/standard_packages/"])
+    return list(dict.fromkeys(files))
 
 
 def validate_standard_worker_migration_evidence(

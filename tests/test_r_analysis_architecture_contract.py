@@ -1488,6 +1488,11 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
         in items["migrate_formal_algorithms_to_isolated_standard_worker"]["required_evidence"]
     )
     migration_scope = items["migrate_formal_algorithms_to_isolated_standard_worker"]["module_scope"]
+    migration_actions = {
+        item["module_id"]: item
+        for item in items["migrate_formal_algorithms_to_isolated_standard_worker"]["module_next_actions"]
+    }
+    action_summary = items["migrate_formal_algorithms_to_isolated_standard_worker"]["module_action_summary"]
     assert migration_scope["scope_policy"] == "module_by_module_standard_worker_migration_required"
     assert migration_scope["passed_module_ids"] == []
     assert migration_scope["blocked_module_ids"] == []
@@ -1495,6 +1500,16 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert migration_scope["missing_count"] == len(migration_scope["expected_module_ids"])
     assert "deg" in migration_scope["missing_module_ids"]
     assert "molecular_dynamics" in migration_scope["missing_module_ids"]
+    assert action_summary["module_count"] == len(migration_actions)
+    assert action_summary["blocked_module_count"] == len(migration_actions)
+    assert action_summary["next_action_counts"]["declare_scoped_full_mode_only_after_environment_and_resource_locks"] >= 1
+    assert migration_actions["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+    assert migration_actions["deg"]["prerequisite_status"]["required_environment_lock"] == "required_before_migration_evidence"
+    assert "analysis/modules/deg/module.json" in migration_actions["deg"]["recommended_files"]
+    assert "analysis/registry/analysis_environments.json" in migration_actions["deg"]["recommended_files"]
+    assert migration_actions["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
+    assert "analysis/runners/run_module.R" in migration_actions["univariate"]["recommended_files"]
+    assert migration_actions["correlation"]["prerequisite_status"]["legacy_sidecar_boundary"] == "not_migration_evidence"
     assert all(item["status"] == "blocked" for item in items.values())
 
 

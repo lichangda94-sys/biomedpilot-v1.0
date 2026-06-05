@@ -96,6 +96,12 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert len(payload["remediation_queue"]["items"]) == 3
     assert payload["remediation_queue"]["automation_policy"] == "manual_scoped_changes_only"
     assert payload["remediation_queue"]["install_policy"] == "no_runtime_package_install_or_resource_download"
+    remediation_items = {item["item_id"]: item for item in payload["remediation_queue"]["items"]}
+    migration_remediation = remediation_items["migrate_formal_algorithms_to_isolated_standard_worker"]
+    migration_actions = {item["module_id"]: item for item in migration_remediation["module_next_actions"]}
+    assert migration_remediation["module_action_summary"]["blocked_module_count"] == len(migration_actions)
+    assert migration_actions["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+    assert migration_actions["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
     assert payload["remediation_summary"]["minimal_remediation_path"] == [
         "restore_full_analysis_environment_locks",
         "lock_full_analysis_resources",
@@ -104,6 +110,12 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     decisions = {item["item_id"]: item for item in payload["remediation_summary"]["manual_decision_points"]}
     assert decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=10; passed=0; blocked=0")
     assert "modules=deg, survival, univariate, multivariate, enrichment" in decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
+    assert (
+        decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["module_action_summary"]["next_action_counts"][
+            "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+        ]
+        >= 1
+    )
     assert "analysis/registry/analysis_environments.json" in payload["remediation_summary"]["involved_files"]
     assert "analysis/resources/manifest.json" in payload["remediation_summary"]["involved_files"]
     assert "analysis/registry/standard_worker_migration_evidence.json" in payload["remediation_summary"]["involved_files"]
