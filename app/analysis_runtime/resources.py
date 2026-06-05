@@ -237,11 +237,13 @@ def validate_analysis_resource_lock_evidence(
             blockers.append(f"analysis_resource_lock_evidence_placeholder_field:{field}")
 
     cache_path = str(evidence.get("cache_path") or "")
-    if cache_path and not (REPO_ROOT / cache_path).exists():
+    cache_path_obj = REPO_ROOT / cache_path if cache_path else None
+    if cache_path_obj and not cache_path_obj.exists():
         blockers.append(f"analysis_resource_lock_evidence_cache_path_not_found:{cache_path}")
-    elif cache_path and hash_algorithm == "sha256" and _is_sha256_hex(hash_value):
-        actual_hash = _sha256_path(REPO_ROOT / cache_path)
-        if actual_hash != hash_value.lower():
+    elif cache_path_obj and hash_algorithm == "sha256" and _is_sha256_hex(hash_value):
+        if not _path_has_files(cache_path_obj):
+            blockers.append("analysis_resource_lock_evidence_cache_path_empty")
+        elif _sha256_path(cache_path_obj) != hash_value.lower():
             blockers.append("analysis_resource_lock_evidence_hash_mismatch")
 
     evidence_files = evidence.get("evidence_files")
@@ -715,6 +717,12 @@ def _sha256_path(path: Path) -> str:
                 digest.update(chunk)
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def _path_has_files(path: Path) -> bool:
+    if path.is_file():
+        return True
+    return any(item.is_file() for item in path.rglob("*"))
 
 
 def _blocked_resource_has_partial_final_lock(item: dict[str, Any]) -> bool:
