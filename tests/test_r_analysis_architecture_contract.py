@@ -1507,8 +1507,9 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert migration_actions["deg"]["prerequisite_status"]["required_environment_lock"] == "required_before_migration_evidence"
     assert "analysis/modules/deg/module.json" in migration_actions["deg"]["recommended_files"]
     assert "analysis/registry/analysis_environments.json" in migration_actions["deg"]["recommended_files"]
-    assert migration_actions["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
-    assert "analysis/runners/run_module.R" in migration_actions["univariate"]["recommended_files"]
+    assert migration_actions["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+    assert migration_actions["univariate"]["prerequisite_status"]["formal_runtime_contract"] == "available_or_not_required"
+    assert "analysis/registry/analysis_environments.json" in migration_actions["univariate"]["recommended_files"]
     assert migration_actions["correlation"]["prerequisite_status"]["legacy_sidecar_boundary"] == "not_migration_evidence"
     assert all(item["status"] == "blocked" for item in items.values())
 
@@ -1597,8 +1598,9 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert rows["correlation"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert "legacy_sidecar_output_is_not_migration_evidence" in rows["correlation"]["migration_blockers"]
     assert rows["correlation"]["migration_prerequisite_status"]["legacy_sidecar_boundary"] == "not_migration_evidence"
-    assert rows["univariate"]["formal_worker_status"] == "contract_only_pending_standard_worker_migration"
-    assert rows["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
+    assert rows["univariate"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert "formal_runtime_contract_not_implemented" not in rows["univariate"]["migration_blockers"]
+    assert rows["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert rows["enrichment"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"

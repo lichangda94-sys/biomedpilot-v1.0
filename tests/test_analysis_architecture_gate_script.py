@@ -101,7 +101,8 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     migration_actions = {item["module_id"]: item for item in migration_remediation["module_next_actions"]}
     assert migration_remediation["module_action_summary"]["blocked_module_count"] == len(migration_actions)
     assert migration_actions["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
-    assert migration_actions["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
+    assert migration_actions["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+    assert migration_actions["univariate"]["prerequisite_status"]["formal_runtime_contract"] == "available_or_not_required"
     assert payload["remediation_summary"]["minimal_remediation_path"] == [
         "restore_full_analysis_environment_locks",
         "lock_full_analysis_resources",
@@ -142,7 +143,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert migration_rows["spatial_transcriptomics"]["full_environment"] == "r-spatial-full"
     assert migration_rows["docking"]["full_environment"] == "r-chem-full"
     assert migration_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
-    assert migration_rows["univariate"]["migration_next_action"] == "implement_formal_runtime_contract_before_standard_worker_migration"
+    assert migration_rows["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert "analysis_architecture_has_p1_gaps" in payload["warnings"]
     assert "full_analysis_activation_gate_blocked_but_allowed_by_default_gate" in payload["warnings"]
     assert payload["execution_policy"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"

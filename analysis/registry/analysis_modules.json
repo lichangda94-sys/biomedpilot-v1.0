@@ -113,7 +113,7 @@
         {
             "module_id": "univariate",
             "title": "Univariate clinical association",
-            "current_adapter_status": "contract_required_before_formal_r_worker",
+            "current_adapter_status": "r_native_lite_contract_exists_pending_full_environment_and_standard_worker_migration",
             "modes": {
                 "mock": {
                     "supported": true,
@@ -152,7 +152,7 @@
         {
             "module_id": "multivariate",
             "title": "Multivariate clinical association",
-            "current_adapter_status": "contract_required_before_formal_r_worker",
+            "current_adapter_status": "r_native_lite_contract_exists_pending_full_environment_and_standard_worker_migration",
             "modes": {
                 "mock": {
                     "supported": true,
