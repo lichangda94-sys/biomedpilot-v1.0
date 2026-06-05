@@ -260,6 +260,12 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     ]
     for heading in expected_headings:
         assert heading in text
+    assert "Runtime Boundary Scan Evidence" in text
+    assert "Runtime package install" in text
+    assert "Runtime resource download" in text
+    assert "Default app-dev heavy dependency" in text
+    assert "runtime_package_install_and_resource_download_forbidden_in_active_app_analysis_scripts_config" in text
+    assert "heavy_full_analysis_dependencies_excluded_from_default_app_dev_surface" in text
     assert payload["architecture_status"] == "partial_with_p1_gaps"
     assert "`partial_with_p1_gaps`" in text
     assert "`blocked`" in text

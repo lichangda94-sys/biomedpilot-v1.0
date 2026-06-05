@@ -428,6 +428,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
+    runtime_acquisition_scan = payload.get("runtime_acquisition_scan") if isinstance(payload.get("runtime_acquisition_scan"), dict) else {}
+    default_dependency_scan = payload.get("default_dependency_scan") if isinstance(payload.get("default_dependency_scan"), dict) else {}
     remediation_summary = payload.get("remediation_summary") if isinstance(payload.get("remediation_summary"), dict) else {}
     remediation_queue = payload.get("remediation_queue") if isinstance(payload.get("remediation_queue"), dict) else {}
     remediation_items = [item for item in remediation_queue.get("items", []) if isinstance(item, dict)]
@@ -463,9 +465,17 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
             f"{_markdown_text(requirement_summary.get('other_count'))} |"
         ),
         "",
-        "## 3. 最大的 5 个架构风险",
+        "### Runtime Boundary Scan Evidence",
         "",
     ]
+    lines.extend(_runtime_boundary_scan_table(runtime_acquisition_scan, default_dependency_scan))
+    lines.extend(
+        [
+            "",
+            "## 3. 最大的 5 个架构风险",
+            "",
+        ]
+    )
     risks = [risk for risk in payload.get("top_architecture_risks", []) if isinstance(risk, dict)]
     lines.extend(_markdown_table(["Priority", "Risk ID", "Source", "Summary"], risks, ["priority", "risk_id", "source", "summary"]))
     lines.extend(
@@ -851,6 +861,35 @@ def _remediation_actions_package_blockers(value: Any) -> list[str]:
         if not isinstance(value.get(field), dict) or not value.get(field):
             blockers.append(f"analysis_evidence_template_package_remediation_action_summary_missing:{field}")
     return blockers
+
+
+def _runtime_boundary_scan_table(runtime_scan: dict[str, Any], dependency_scan: dict[str, Any]) -> list[str]:
+    install_scan = runtime_scan.get("install_scan") if isinstance(runtime_scan.get("install_scan"), dict) else {}
+    download_scan = runtime_scan.get("resource_download_scan") if isinstance(runtime_scan.get("resource_download_scan"), dict) else {}
+    rows = [
+        {
+            "scan": "Runtime package install",
+            "status": install_scan.get("status") or runtime_scan.get("status") or "unknown",
+            "scope": runtime_scan.get("scanned_roots", []),
+            "hit_count": install_scan.get("hit_count", 0),
+            "policy": runtime_scan.get("policy", ""),
+        },
+        {
+            "scan": "Runtime resource download",
+            "status": download_scan.get("status") or runtime_scan.get("status") or "unknown",
+            "scope": runtime_scan.get("scanned_roots", []),
+            "hit_count": download_scan.get("hit_count", 0),
+            "policy": runtime_scan.get("policy", ""),
+        },
+        {
+            "scan": "Default app-dev heavy dependency",
+            "status": dependency_scan.get("status") or "unknown",
+            "scope": dependency_scan.get("scanned_files", []),
+            "hit_count": dependency_scan.get("hit_count", 0),
+            "policy": dependency_scan.get("policy", ""),
+        },
+    ]
+    return _markdown_table(["Scan", "Status", "Scope", "Hit Count", "Policy"], rows, ["scan", "status", "scope", "hit_count", "policy"])
 
 
 def _priority_file_lines(remediation_items: list[dict[str, Any]]) -> list[str]:
