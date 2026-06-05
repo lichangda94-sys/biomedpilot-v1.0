@@ -508,6 +508,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
 def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> dict[str, Any]:
     environment_readiness = payload.get("environment_readiness") if isinstance(payload.get("environment_readiness"), dict) else {}
     resource_readiness = payload.get("resource_readiness") if isinstance(payload.get("resource_readiness"), dict) else {}
+    remediation_summary = payload.get("remediation_summary") if isinstance(payload.get("remediation_summary"), dict) else {}
     migration_rows = [row for row in payload.get("standard_worker_migration_rows", []) if isinstance(row, dict)]
     migration_templates = [
         row.get("migration_evidence_template")
@@ -565,6 +566,18 @@ def build_evidence_template_package(payload: dict[str, Any], *, root: Path) -> d
                 if isinstance(payload.get("full_analysis_activation_gate"), dict)
                 else []
             ),
+        },
+        "remediation_scope": {
+            "manual_decision_points": [
+                {
+                    "item_id": item.get("item_id"),
+                    "scope": item.get("scope", ""),
+                    "decision_required": item.get("decision_required", ""),
+                }
+                for item in remediation_summary.get("manual_decision_points", [])
+                if isinstance(item, dict)
+            ],
+            "minimal_remediation_path": remediation_summary.get("minimal_remediation_path", []),
         },
         "template_counts": {
             "environment_lock_evidence_templates": len(environment_templates),

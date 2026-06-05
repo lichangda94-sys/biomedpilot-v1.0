@@ -117,6 +117,7 @@ Standard package discovery is now available to the UI state layer:
 - The same script can write a human-readable nine-section Markdown report with `--markdown-output <path>`. The Markdown is rendered from the same gate payload, covering current fit, PASS/WARN/FAIL counts, top five risks, standard-worker migration evidence coverage, P0/P1/P2/P3 issues, involved files, minimal remediation path, priority files, completed changes, and manual decisions. It is a report rendering path only; it does not execute workers, install R packages, download resources, or mark full analysis ready.
 - The Markdown manual-decision table includes remediation scope for module-level standard-worker migration, so the human report shows missing/passed/blocked module counts alongside the required evidence.
 - The same script can export an external handoff package with `--evidence-template-output <path>`. The package contains environment lock templates, resource/tool lock templates, standard-worker migration templates, registry paths, blockers, and counts, and self-checks against `analysis/schemas/output/evidence_template_package.schema.json`. It is a template package only and is not accepted as full-readiness evidence by itself.
+- The evidence template package also carries `remediation_scope`, including manual decision scope and the minimal remediation path, so external preparation work can follow the same scoped module migration plan as the audit report.
 - Analysis Center exposes that activation gate as a visible row with disabled reasons, so full-mode blockers are not hidden in developer-only diagnostics.
 - Analysis Center also exposes a `R worker migration evidence coverage` row derived from the standard-worker migration matrix. It lists missing migration evidence per module, so users and internal testers can see that lite readiness is not full/formal isolated-worker migration.
 - `build_analysis_remediation_queue()` now self-checks against `analysis/schemas/output/remediation_queue.schema.json`, keeping P1 remediation queue consumers on a stable contract.
@@ -482,6 +483,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added standard-worker migration evidence coverage to the architecture gate Markdown report.
 - Added module-level migration scope to the isolated standard-worker remediation item.
 - Added module-level remediation scope to the Markdown manual-decision table.
+- Added remediation scope to the external evidence template package handoff.
 - Added architecture and remediation docs.
 
 ## 9. Human Decisions Needed

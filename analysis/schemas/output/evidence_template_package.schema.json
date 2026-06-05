@@ -33,6 +33,7 @@
     "resource_lock_evidence_templates": {"type": "array"},
     "standard_worker_migration_evidence_templates": {"type": "array"},
     "blockers": {"type": "object"},
+    "remediation_scope": {"type": "object"},
     "template_counts": {"type": "object"},
     "schema_validation_status": {"type": "string"},
     "schema_blockers": {"type": "array"}

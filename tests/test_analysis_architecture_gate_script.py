@@ -238,6 +238,13 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     assert template_package["template_counts"]["environment_lock_evidence_templates"] == 4
     assert template_package["template_counts"]["resource_lock_evidence_templates"] == 11
     assert template_package["template_counts"]["standard_worker_migration_evidence_templates"] == len(payload["standard_worker_migration_rows"])
+    remediation_scope = {
+        item["item_id"]: item
+        for item in template_package["remediation_scope"]["manual_decision_points"]
+    }
+    assert remediation_scope["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=10; passed=0; blocked=0")
+    assert "modules=deg, survival, univariate, multivariate, enrichment" in remediation_scope["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
+    assert template_package["remediation_scope"]["minimal_remediation_path"] == payload["remediation_summary"]["minimal_remediation_path"]
     environment_templates = {item["environment_id"]: item for item in template_package["environment_lock_evidence_templates"]}
     resource_templates = {item["resource_id"]: item for item in template_package["resource_lock_evidence_templates"]}
     migration_templates = {item["module_id"]: item for item in template_package["standard_worker_migration_evidence_templates"]}
@@ -318,6 +325,7 @@ def test_analysis_evidence_template_package_schema_is_present_and_matches_payloa
     assert "template_policy" in schema["required"]
     assert "registry_paths" in schema["required"]
     assert "template_counts" in schema["required"]
+    assert schema["properties"]["remediation_scope"]["type"] == "object"
     assert schema["properties"]["schema_version"]["const"] == "biomedpilot.analysis.evidence_template_package.v1"
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
     assert schema["properties"]["install_policy"]["const"] == "no_runtime_package_install_or_resource_download"
