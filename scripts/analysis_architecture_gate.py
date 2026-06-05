@@ -68,6 +68,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
     module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
+    task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
     full_activation_module_matrix = architecture_status.get("full_activation_module_matrix") if isinstance(architecture_status.get("full_activation_module_matrix"), dict) else {}
     runtime_acquisition_scan = architecture_status.get("runtime_acquisition_scan") if isinstance(architecture_status.get("runtime_acquisition_scan"), dict) else {}
     default_dependency_scan = architecture_status.get("default_dependency_scan") if isinstance(architecture_status.get("default_dependency_scan"), dict) else {}
@@ -125,6 +126,21 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "external_tool_adapter_rows": [
             dict(row)
             for row in external_tool_adapter_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "task_system_boundary_matrix": {
+            "schema_version": task_system_boundary_matrix.get("schema_version"),
+            "status": task_system_boundary_matrix.get("status"),
+            "module_count": task_system_boundary_matrix.get("module_count"),
+            "passed_module_count": task_system_boundary_matrix.get("passed_module_count"),
+            "blocked_module_count": task_system_boundary_matrix.get("blocked_module_count"),
+            "blocker_counts": task_system_boundary_matrix.get("blocker_counts", {}),
+            "warning_counts": task_system_boundary_matrix.get("warning_counts", {}),
+            "boundary": task_system_boundary_matrix.get("boundary"),
+        },
+        "task_system_boundary_rows": [
+            dict(row)
+            for row in task_system_boundary_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -460,6 +476,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     module_interface_rows = [row for row in payload.get("module_interface_rows", []) if isinstance(row, dict)]
     external_tool_adapter_matrix = payload.get("external_tool_adapter_matrix") if isinstance(payload.get("external_tool_adapter_matrix"), dict) else {}
     external_tool_adapter_rows = [row for row in payload.get("external_tool_adapter_rows", []) if isinstance(row, dict)]
+    task_system_boundary_matrix = payload.get("task_system_boundary_matrix") if isinstance(payload.get("task_system_boundary_matrix"), dict) else {}
+    task_system_boundary_rows = [row for row in payload.get("task_system_boundary_rows", []) if isinstance(row, dict)]
     migration_matrix = payload.get("standard_worker_migration_matrix") if isinstance(payload.get("standard_worker_migration_matrix"), dict) else {}
     full_activation_module_matrix = payload.get("full_activation_module_matrix") if isinstance(payload.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
@@ -520,6 +538,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_external_tool_adapter_summary_table(external_tool_adapter_matrix, external_tool_adapter_rows))
+    lines.extend(
+        [
+            "",
+            "### Task System Boundary Matrix",
+            "",
+        ]
+    )
+    lines.extend(_task_system_boundary_summary_table(task_system_boundary_matrix, task_system_boundary_rows))
     lines.extend(
         [
             "",
@@ -1003,6 +1029,38 @@ def _external_tool_adapter_summary_table(matrix: dict[str, Any], rows: list[dict
         *table,
         "",
         *_markdown_table(["Module", "Status", "Lite", "Full", "Resources", "Policy"], adapter_rows, ["module_id", "status", "lite", "full", "resources", "policy"]),
+    ]
+
+
+def _task_system_boundary_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed task-boundary modules",
+            "count": matrix.get("passed_module_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked task-boundary modules",
+            "count": matrix.get("blocked_module_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    module_rows = [
+        {
+            "module_id": row.get("module_id"),
+            "status": row.get("status"),
+            "task_types": row.get("result_index_task_types", []),
+            "task_invocation": row.get("required_task_system_invocation", ""),
+            "worker_manifest": row.get("worker_invocation_manifest_required", ""),
+            "formal_worker": row.get("formal_worker_status", ""),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Module", "Status", "Result Task Types", "Task Invocation", "Worker Manifest", "Formal Worker"], module_rows, ["module_id", "status", "task_types", "task_invocation", "worker_manifest", "formal_worker"]),
     ]
 
 

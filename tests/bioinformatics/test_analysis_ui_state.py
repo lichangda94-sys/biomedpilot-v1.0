@@ -120,6 +120,19 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in external_tool_text
     assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in external_tool_text
     assert "default_app_dependency=False" in external_tool_text
+    task_boundary_text = "\n".join(str(row) for row in state["task_system_boundary_rows"])
+    assert "Task system boundary matrix" in task_boundary_text
+    assert "passed=10" in task_boundary_text
+    assert "blocked=0" in task_boundary_text
+    assert "Task boundary: deg" in task_boundary_text
+    assert "Task boundary: correlation" in task_boundary_text
+    assert "task_invocation=task_center_registered" in task_boundary_text
+    assert "worker_manifest=True" in task_boundary_text
+    assert "mock=True" in task_boundary_text
+    assert "lite=True" in task_boundary_text
+    assert "run_analysis_module_task" in task_boundary_text
+    assert "task_types=deg；recomputed_deg；differential_expression" in task_boundary_text
+    assert "formal_worker=pending_standard_worker_migration" in task_boundary_text
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text
@@ -187,6 +200,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["passed_module_count"] == 2
     assert state["developer_diagnostics"]["external_tool_adapter_rows"] == state["external_tool_adapter_rows"]
+    assert state["developer_diagnostics"]["task_system_boundary_matrix"]["status"] == "passed"
+    assert state["developer_diagnostics"]["task_system_boundary_matrix"]["passed_module_count"] == 10
+    assert state["developer_diagnostics"]["task_system_boundary_rows"] == state["task_system_boundary_rows"]
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["status"] == "blocked"
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["blocked_module_count"] == 10
     assert state["developer_diagnostics"]["full_activation_module_rows"] == state["full_activation_module_rows"]

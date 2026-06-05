@@ -73,6 +73,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     module_interface_rows = build_module_interface_rows(module_interface_matrix)
     external_tool_adapter_matrix = analysis_architecture_status.get("external_tool_adapter_matrix") if isinstance(analysis_architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     external_tool_adapter_rows = build_external_tool_adapter_rows(external_tool_adapter_matrix)
+    task_system_boundary_matrix = analysis_architecture_status.get("task_system_boundary_matrix") if isinstance(analysis_architecture_status.get("task_system_boundary_matrix"), dict) else {}
+    task_system_boundary_rows = build_task_system_boundary_rows(task_system_boundary_matrix)
     full_activation_module_matrix = analysis_architecture_status.get("full_activation_module_matrix") if isinstance(analysis_architecture_status.get("full_activation_module_matrix"), dict) else {}
     full_activation_module_rows = build_full_activation_module_rows(full_activation_module_matrix)
     standard_worker_migration_matrix = analysis_architecture_status.get("standard_worker_migration_matrix") if isinstance(analysis_architecture_status.get("standard_worker_migration_matrix"), dict) else {}
@@ -150,6 +152,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "module_interface_rows": module_interface_rows,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "external_tool_adapter_rows": external_tool_adapter_rows,
+        "task_system_boundary_matrix": task_system_boundary_matrix,
+        "task_system_boundary_rows": task_system_boundary_rows,
         "full_activation_module_matrix": full_activation_module_matrix,
         "full_activation_module_rows": full_activation_module_rows,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
@@ -173,6 +177,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "module_interface_rows": module_interface_rows,
             "external_tool_adapter_matrix": external_tool_adapter_matrix,
             "external_tool_adapter_rows": external_tool_adapter_rows,
+            "task_system_boundary_matrix": task_system_boundary_matrix,
+            "task_system_boundary_rows": task_system_boundary_rows,
             "full_activation_module_matrix": full_activation_module_matrix,
             "full_activation_module_rows": full_activation_module_rows,
             "standard_worker_migration_matrix": standard_worker_migration_matrix,
@@ -1307,6 +1313,45 @@ def build_external_tool_adapter_rows(matrix: dict[str, Any]) -> list[dict[str, A
                     f"{row.get('module_manifest')}; "
                     f"{row.get('external_tool_policy')}; "
                     f"default_app_dependency={row.get('default_app_dependency')}"
+                ),
+            )
+        )
+    return rows
+
+
+def build_task_system_boundary_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    module_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    blocker_counts = matrix.get("blocker_counts") if isinstance(matrix.get("blocker_counts"), dict) else {}
+    warning_counts = matrix.get("warning_counts") if isinstance(matrix.get("warning_counts"), dict) else {}
+    rows = [
+        _formal_deg_gate_row(
+            "Task system boundary matrix",
+            matrix.get("status") or "blocked",
+            [f"{key}={value}" for key, value in sorted(blocker_counts.items())],
+            [
+                f"passed={matrix.get('passed_module_count', 0)}",
+                f"blocked={matrix.get('blocked_module_count', 0)}",
+                *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
+            ],
+            basis=f"modules={matrix.get('module_count', 0)}; {matrix.get('boundary', 'read_only_main_backend_task_system_boundary_diagnostics')}",
+        )
+    ]
+    for row in module_rows:
+        rows.append(
+            _formal_deg_gate_row(
+                f"Task boundary: {row.get('module_id')}",
+                row.get("status") or "blocked",
+                _list(row.get("blockers")),
+                [
+                    f"task_invocation={row.get('required_task_system_invocation')}",
+                    f"worker_manifest={row.get('worker_invocation_manifest_required')}",
+                    f"mock={row.get('mock_task_bridge_supported')}",
+                    f"lite={row.get('lite_task_bridge_supported')}",
+                ],
+                basis=(
+                    f"{row.get('task_bridge_entrypoint')}; "
+                    f"task_types={compact_list(_list(row.get('result_index_task_types')))}; "
+                    f"formal_worker={row.get('formal_worker_status')}"
                 ),
             )
         )

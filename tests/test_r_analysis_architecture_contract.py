@@ -15,6 +15,7 @@ from app.analysis_runtime.architecture_status import (
     build_full_analysis_activation_gate,
     build_full_activation_module_matrix,
     build_module_interface_matrix,
+    build_task_system_boundary_matrix,
     build_analysis_remediation_queue,
     build_standard_worker_migration_matrix,
     load_standard_worker_migration_evidence_registry,
@@ -1405,6 +1406,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["external_tool_adapter_matrix"]["status"] == "passed"
     assert status["external_tool_adapter_matrix"]["passed_module_count"] == 2
     assert status["external_tool_adapter_matrix"]["blocked_module_count"] == 0
+    assert status["task_system_boundary_matrix"]["status"] == "passed"
+    assert status["task_system_boundary_matrix"]["passed_module_count"] == 10
+    assert status["task_system_boundary_matrix"]["blocked_module_count"] == 0
     assert status["environment_validation"]["full_mode_ready"] is False
     assert status["resource_validation"]["full_mode_ready"] is False
     assert full_gate["schema_version"] == "biomedpilot.analysis.full_analysis_activation_gate.v1"
@@ -1749,6 +1753,44 @@ def test_external_tool_adapter_matrix_tracks_chem_tool_isolation_without_executi
     assert rows["molecular_dynamics"]["blocked_required_resource_ids"] == ["gromacs_tool", "md_forcefield_template_bundle"]
     assert rows["molecular_dynamics"]["blockers"] == []
     assert not any("AutoDock" in str(item) or "GROMACS" in str(item) for item in matrix["blocker_counts"])
+
+
+def test_task_system_boundary_matrix_tracks_main_backend_task_contracts() -> None:
+    matrix = build_task_system_boundary_matrix()
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.task_system_boundary_matrix.v1"
+    assert matrix["status"] == "passed"
+    assert matrix["boundary"] == "read_only_main_backend_task_system_boundary_diagnostics"
+    assert matrix["module_count"] == 10
+    assert matrix["passed_module_count"] == 10
+    assert matrix["blocked_module_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert matrix["warning_counts"]["formal_worker_migration_pending:deg"] == 1
+    assert matrix["warning_counts"]["formal_worker_migration_pending:molecular_dynamics"] == 1
+    assert rows["deg"]["task_bridge_entrypoint"] == "app/analysis_runtime/task_bridge.py::run_analysis_module_task"
+    assert rows["deg"]["task_center_service"] == "app/shared/task_center/service.py::TaskCenter"
+    assert rows["deg"]["worker_invocation_schema"] == "analysis/schemas/output/worker_invocation.schema.json"
+    assert rows["deg"]["input_schema"] == "analysis/schemas/input/module_input.schema.json"
+    assert rows["deg"]["result_package_schema"] == "analysis/schemas/output/result_package.schema.json"
+    assert rows["deg"]["result_index_task_types"] == ["deg", "recomputed_deg", "differential_expression"]
+    assert rows["deg"]["mock_task_bridge_supported"] is True
+    assert rows["deg"]["lite_task_bridge_supported"] is True
+    assert rows["deg"]["lite_worker_backend"] == "rscript"
+    assert rows["deg"]["full_task_bridge_policy"] == "blocked_before_worker_until_full_ready"
+    assert rows["deg"]["required_task_system_invocation"] == "task_center_registered"
+    assert rows["deg"]["worker_invocation_manifest_required"] is True
+    assert rows["deg"]["direct_cli_is_not_ui_task_result"] is True
+    assert rows["deg"]["legacy_sidecar_is_transitional_only"] is True
+    assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert rows["deg"]["blockers"] == []
+    assert "formal_worker_migration_pending:deg" in rows["deg"]["warnings"]
+    assert rows["correlation"]["result_index_task_types"] == ["correlation"]
+    assert "legacy_sidecar_boundary_transitional:correlation" in rows["correlation"]["warnings"]
+    assert rows["docking"]["result_index_task_types"] == ["docking"]
+    assert rows["docking"]["required_task_system_invocation"] == "task_center_registered"
+    assert rows["molecular_dynamics"]["result_index_task_types"] == ["molecular_dynamics"]
+    assert rows["molecular_dynamics"]["direct_cli_is_not_ui_task_result"] is True
 
 
 def test_module_interface_matrix_tracks_standard_module_contracts() -> None:

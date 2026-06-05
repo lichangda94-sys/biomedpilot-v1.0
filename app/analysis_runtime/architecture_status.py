@@ -83,6 +83,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         registry=registry,
         resource_validation=resource_validation,
     )
+    task_system_boundary_matrix = build_task_system_boundary_matrix(
+        registry=registry,
+        standard_worker_migration_matrix=standard_worker_migration_matrix,
+    )
     runtime_acquisition_scan = build_runtime_acquisition_scan_summary()
     default_dependency_scan = build_default_dependency_scan_summary()
     active_install_hits = list(runtime_acquisition_scan.get("install_hits", []))
@@ -247,6 +251,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "p1_issues": p1,
         "module_interface_matrix": module_interface_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
+        "task_system_boundary_matrix": task_system_boundary_matrix,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "full_activation_module_matrix": full_activation_module_matrix,
         "runtime_acquisition_scan": runtime_acquisition_scan,
@@ -529,6 +534,112 @@ def _external_tool_adapter_row(
         "default_app_dependency": dependency_policy.get("default_app_dependency"),
         "required_resource_ids": required_resource_ids,
         "blocked_required_resource_ids": blocked_required_resources,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def build_task_system_boundary_matrix(
+    *,
+    registry: dict[str, Any] | None = None,
+    standard_worker_migration_matrix: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return per-module diagnostics for the main-backend task boundary."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    migration_matrix = (
+        standard_worker_migration_matrix
+        if isinstance(standard_worker_migration_matrix, dict)
+        else build_standard_worker_migration_matrix(payload)
+    )
+    migration_by_module = {
+        str(row.get("module_id") or ""): row
+        for row in migration_matrix.get("rows", [])
+        if isinstance(row, dict) and row.get("module_id")
+    }
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
+    ]
+    rows = [
+        _task_system_boundary_row(
+            module,
+            migration_row=migration_by_module.get(str(module.get("module_id") or ""), {}),
+        )
+        for module in modules
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    return {
+        "schema_version": "biomedpilot.analysis.task_system_boundary_matrix.v1",
+        "status": "passed" if rows and not blocker_counts else "blocked",
+        "module_count": len(rows),
+        "passed_module_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "blocked_module_count": sum(1 for row in rows if row.get("status") != "passed"),
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "rows": rows,
+        "boundary": "read_only_main_backend_task_system_boundary_diagnostics",
+    }
+
+
+def _task_system_boundary_row(module: dict[str, Any], *, migration_row: dict[str, Any]) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    modes = module.get("modes") if isinstance(module.get("modes"), dict) else {}
+    mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
+    lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+    full = modes.get("full") if isinstance(modes.get("full"), dict) else {}
+    result_index_task_types = [str(item) for item in module.get("result_index_task_types", []) if item]
+    blockers: list[str] = []
+    warnings: list[str] = []
+    required_paths = {
+        "task_bridge": "app/analysis_runtime/task_bridge.py",
+        "task_center_service": "app/shared/task_center/service.py",
+        "worker_invocation_schema": "analysis/schemas/output/worker_invocation.schema.json",
+        "input_schema": str(module.get("input_schema") or "analysis/schemas/input/module_input.schema.json"),
+        "result_package_schema": str(module.get("result_package_contract") or "analysis/schemas/output/result_package.schema.json"),
+        "result_registry": "app/bioinformatics/results/registry.py",
+    }
+    for key, path in required_paths.items():
+        if not path or not (REPO_ROOT / path).is_file():
+            blockers.append(f"task_system_boundary_required_path_missing:{module_id}:{key}:{path}")
+    if not result_index_task_types:
+        blockers.append(f"task_system_boundary_result_index_task_types_missing:{module_id}")
+    if mock.get("supported") is not True:
+        blockers.append(f"task_system_boundary_mock_mode_missing:{module_id}")
+    if "supported" not in lite:
+        blockers.append(f"task_system_boundary_lite_mode_declaration_missing:{module_id}")
+    if "supported" not in full:
+        blockers.append(f"task_system_boundary_full_mode_declaration_missing:{module_id}")
+    current_adapter_status = str(module.get("current_adapter_status") or "")
+    formal_worker_status = str(migration_row.get("formal_worker_status") or "pending_standard_worker_migration")
+    if formal_worker_status != "migrated_to_isolated_standard_worker":
+        warnings.append(f"formal_worker_migration_pending:{module_id}")
+    if "legacy" in current_adapter_status or "sidecar" in current_adapter_status:
+        warnings.append(f"legacy_sidecar_boundary_transitional:{module_id}")
+    elif "pending" in current_adapter_status or "existing" in current_adapter_status or "planned" in current_adapter_status:
+        warnings.append(f"current_adapter_pending_standard_worker_migration:{module_id}")
+    return {
+        "module_id": module_id,
+        "title": str(module.get("title") or module_id),
+        "status": "blocked" if blockers else "passed",
+        "current_adapter_status": current_adapter_status,
+        "formal_worker_status": formal_worker_status,
+        "task_bridge_entrypoint": "app/analysis_runtime/task_bridge.py::run_analysis_module_task",
+        "task_center_service": "app/shared/task_center/service.py::TaskCenter",
+        "worker_invocation_schema": "analysis/schemas/output/worker_invocation.schema.json",
+        "input_schema": required_paths["input_schema"],
+        "result_package_schema": required_paths["result_package_schema"],
+        "result_index_task_types": result_index_task_types,
+        "mock_task_bridge_supported": bool(mock.get("supported")),
+        "lite_task_bridge_supported": bool(lite.get("supported")),
+        "lite_worker_backend": str(lite.get("worker_backend") or ""),
+        "full_task_bridge_policy": "blocked_before_worker_until_full_ready",
+        "required_task_system_invocation": "task_center_registered",
+        "worker_invocation_manifest_required": True,
+        "direct_cli_is_not_ui_task_result": True,
+        "legacy_sidecar_is_transitional_only": True,
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
