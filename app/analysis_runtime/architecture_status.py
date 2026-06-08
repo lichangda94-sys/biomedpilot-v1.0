@@ -1385,6 +1385,12 @@ def build_frontend_standard_package_consumption_matrix() -> dict[str, Any]:
             for row in rows
             for item in (row.get("pending_detail_view_ids", []) if isinstance(row.get("pending_detail_view_ids"), list) else [])
         ],
+        "migrated_detail_view_count": sum(int(row.get("migrated_detail_view_count") or 0) for row in rows),
+        "migrated_detail_view_ids": [
+            str(item)
+            for row in rows
+            for item in (row.get("migrated_detail_view_ids", []) if isinstance(row.get("migrated_detail_view_ids"), list) else [])
+        ],
         "rows": rows,
         "boundary": "read_only_frontend_standard_package_consumption_diagnostics",
     }
@@ -1420,64 +1426,93 @@ def _frontend_consumption_row(
 
 
 def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
-    file_path = "app/bioinformatics/workflow_pages.py"
-    path = REPO_ROOT / file_path
-    text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
     targets = [
         {
             "view_id": "formal_deg_review_panel",
             "consumer_surface": "BioinformaticsResultsBrowserWidget.formal_deg_review",
-            "current_private_tokens": [
-                "build_formal_deg_result_review",
-                "export_formal_deg_review_table",
-                "formalDegReviewTable",
+            "file_path": "app/bioinformatics/deg_engine/result_review.py",
+            "required_tokens": [
+                "build_standard_analysis_package_catalog",
+                "formal_deg_standard_result_package_missing",
+                "standard_package_source_policy",
+                "result_index_registered_standard_result_package_artifacts_only",
             ],
-            "migration_next_action": "read DEG review rows from standard package artifact manifest and package-local tables",
+            "evidence_policy": "standard_package_only",
+            "migration_next_action": "keep DEG review rows sourced from standard package artifact manifest and package-local tables",
         },
         {
             "view_id": "formal_deg_plot_report_controls",
             "consumer_surface": "BioinformaticsResultsBrowserWidget.formal_deg_plot_report_export",
-            "current_private_tokens": [
+            "file_path": "app/bioinformatics/workflow_pages.py",
+            "required_tokens": [
                 "build_formal_deg_plot_gate",
                 "create_formal_deg_plot_artifact",
                 "create_formal_deg_report_ready_package",
             ],
+            "evidence_policy": "transitional_inventory_only",
             "migration_next_action": "drive plot/report/export controls from standard package artifacts and report package manifests",
         },
         {
             "view_id": "immune_tme_scoring_page",
             "consumer_surface": "BioinformaticsImmuneScoringWidget",
-            "current_private_tokens": [
+            "file_path": "app/bioinformatics/workflow_pages.py",
+            "required_tokens": [
                 "build_immune_infiltration_readiness",
                 "run_immune_scoring",
                 "generate_immune_tme_report",
             ],
+            "evidence_policy": "transitional_inventory_only",
             "migration_next_action": "replace module-private score/report previews with standard package catalog/detail artifacts",
         },
     ]
     blockers: list[str] = []
-    if not path.is_file():
-        blockers.append(f"frontend_consumption_file_missing:{file_path}")
-    pending: list[dict[str, Any]] = []
+    detail_views: list[dict[str, Any]] = []
     for target in targets:
-        missing_tokens = [token for token in target["current_private_tokens"] if token not in text]
+        file_path = str(target["file_path"])
+        path = REPO_ROOT / file_path
+        text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+        missing_tokens = [token for token in target["required_tokens"] if token not in text]
+        evidence_policy = str(target.get("evidence_policy") or "transitional_inventory_only")
+        if not path.is_file():
+            status = "blocked"
+        elif missing_tokens:
+            status = "blocked"
+        else:
+            status = "passed" if evidence_policy == "standard_package_only" else "partial"
+        detail_view = {
+            "view_id": target["view_id"],
+            "consumer_surface": target["consumer_surface"],
+            "file_path": file_path,
+            "status": status,
+            "required_tokens": list(target["required_tokens"]),
+            "missing_tokens": missing_tokens,
+            "source_policy": evidence_policy if status == "passed" else "transitional_legacy_detail_view",
+            "migration_next_action": target["migration_next_action"],
+        }
+        detail_views.append(detail_view)
         if missing_tokens:
             blockers.append(f"detailed_result_view_inventory_token_missing:{target['view_id']}:{','.join(missing_tokens)}")
-            continue
-        pending.append(dict(target))
+    pending = [item for item in detail_views if item["status"] != "passed"]
+    migrated = [item for item in detail_views if item["status"] == "passed"]
     pending_ids = [str(item["view_id"]) for item in pending]
-    warnings = ["detailed_result_views_still_need_standard_package_only_migration"]
+    migrated_ids = [str(item["view_id"]) for item in migrated]
+    warnings = []
+    if pending_ids:
+        warnings.append("detailed_result_views_still_need_standard_package_only_migration")
     warnings.extend(f"detailed_result_view_pending_standard_package_migration:{view_id}" for view_id in pending_ids)
     return {
         "row_id": "detailed_result_views_migration",
         "title": "Detailed result views still need standard-package-only migration",
-        "status": "blocked" if blockers else "partial",
-        "file_path": file_path,
+        "status": "blocked" if blockers else ("partial" if pending_ids else "passed"),
+        "file_path": "app/bioinformatics/workflow_pages.py and module-specific detail builders",
         "consumer_surface": "module_specific_detailed_result_views",
         "source_policy": "transitional_legacy_detail_views_must_not_be_formal_readiness_evidence",
         "pending_detail_view_count": len(pending),
         "pending_detail_view_ids": pending_ids,
         "pending_detail_views": pending,
+        "migrated_detail_view_count": len(migrated),
+        "migrated_detail_view_ids": migrated_ids,
+        "detail_views": detail_views,
         "migration_next_action": "migrate listed detailed result views to consume build_standard_analysis_package_detail() and standard package artifact manifests before closing RARCH-08",
         "blockers": blockers,
         "warnings": warnings,

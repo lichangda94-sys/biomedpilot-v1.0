@@ -18,6 +18,7 @@ try:
 
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
+    from app.bioinformatics.deg_engine.standard_package import write_formal_deg_standard_result_package
     from app.bioinformatics.acquisition_adapters import adapt_geo_detection_manifest, write_legacy_acquisition_manifest
     from app.bioinformatics.plots import create_formal_deg_plot_artifact
     from app.bioinformatics.project_workspace import create_bioinformatics_project
@@ -4246,6 +4247,36 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
         "g2\tEGFR\t10\t3\t9\t-1.4\t-2.9\t0.002\t0.004\tdown\t\n",
         encoding="utf-8",
     )
+    log_path = project_summary.project_root / "analysis" / "formal_deg" / "formal-ui_run_log.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text('{"status":"passed"}\n', encoding="utf-8")
+    parameter_manifest = {
+        "method": "welch_t_test",
+        "log2fc_threshold": 1.0,
+        "p_value_threshold": 0.05,
+        "fdr_threshold": 0.05,
+        "case_samples": ["case1", "case2"],
+        "control_samples": ["ctrl1", "ctrl2"],
+    }
+    dependency_snapshot = {
+        "packages": {
+            "numpy": {"version": "2.4.6"},
+            "pandas": {"version": "3.0.3"},
+            "scipy": {"version": "1.17.1"},
+            "statsmodels": {"version": "0.14.6"},
+        }
+    }
+    standard_package = write_formal_deg_standard_result_package(
+        project_summary.project_root,
+        result_id="formal-ui",
+        task_run_id="task-formal-ui",
+        result_table_path=table_path,
+        log_path=log_path,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency_snapshot,
+        engine_name="python_scipy_statsmodels_deg_mvp",
+        engine_version="0.1",
+    )
     register_result(
         project_summary.project_root,
         ResultIndexEntry(
@@ -4256,29 +4287,21 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
             input_package_id="pkg-ui",
             source_dataset_id="dataset-ui",
             source_repository_manifest="standardized_data/repositories/repository_manifest.json",
-            parameters_manifest={
-                "method": "welch_t_test",
-                "log2fc_threshold": 1.0,
-                "p_value_threshold": 0.05,
-                "fdr_threshold": 0.05,
-                "case_samples": ["case1", "case2"],
-                "control_samples": ["ctrl1", "ctrl2"],
-            },
+            parameters_manifest=parameter_manifest,
             engine_name="python_scipy_statsmodels_deg_mvp",
             engine_version="0.1",
-            dependency_snapshot={
-                "packages": {
-                    "numpy": {"version": "2.4.6"},
-                    "pandas": {"version": "3.0.3"},
-                    "scipy": {"version": "1.17.1"},
-                    "statsmodels": {"version": "0.14.6"},
-                }
-            },
-            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            dependency_snapshot=dependency_snapshot,
+            output_artifacts=(
+                {"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},
+                {"artifact_type": "standard_result_package", "path": str(standard_package.relative_to(project_summary.project_root)), "schema": "biomedpilot.analysis.result_package.v1"},
+            ),
             plot_artifacts=(),
             report_artifacts=(),
             validation_status="passed",
-            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-ui_run_log.json"},),
+            log_artifacts=(
+                {"artifact_type": "formal_deg_run_log", "path": str(log_path.relative_to(project_summary.project_root))},
+                {"artifact_type": "analysis_worker_invocation_manifest", "path": str((standard_package / "logs" / "worker_invocation.json").relative_to(project_summary.project_root)), "schema": "biomedpilot.analysis.worker_invocation.v1"},
+            ),
             report_ready_eligible=False,
         ),
     )
@@ -4306,6 +4329,8 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
     provenance_text = _table_text(provenance)
     assert "pkg-ui" in provenance_text
     assert "manifests/formal_deg_parameter_confirmation.json" in provenance_text
+    assert "result_index_registered_standard_result_package_artifacts_only" in provenance_text
+    assert "tables/formal_deg.tsv" in provenance_text
     assert "results/summaries/result_index.json" in provenance_text
     assert "False" in provenance_text
     downstream = widget.findChild(QLabel, "formalDegReviewDownstream")

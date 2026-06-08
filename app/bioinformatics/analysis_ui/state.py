@@ -1700,6 +1700,8 @@ def build_frontend_consumption_rows(matrix: dict[str, Any]) -> list[dict[str, An
                 f"blocked={matrix.get('blocked_consumer_count', 0)}",
                 f"pending_detail_views={matrix.get('pending_detail_view_count', 0)}",
                 f"pending_detail_view_ids={compact_list(_list(matrix.get('pending_detail_view_ids')))}",
+                f"migrated_detail_views={matrix.get('migrated_detail_view_count', 0)}",
+                f"migrated_detail_view_ids={compact_list(_list(matrix.get('migrated_detail_view_ids')))}",
                 *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
             ],
             basis=f"consumers={matrix.get('consumer_count', 0)}; {matrix.get('boundary', 'read_only_frontend_standard_package_consumption_diagnostics')}",

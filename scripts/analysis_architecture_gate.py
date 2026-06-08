@@ -279,6 +279,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "warning_counts": frontend_consumption_matrix.get("warning_counts", {}),
             "pending_detail_view_count": frontend_consumption_matrix.get("pending_detail_view_count", 0),
             "pending_detail_view_ids": frontend_consumption_matrix.get("pending_detail_view_ids", []),
+            "migrated_detail_view_count": frontend_consumption_matrix.get("migrated_detail_view_count", 0),
+            "migrated_detail_view_ids": frontend_consumption_matrix.get("migrated_detail_view_ids", []),
             "boundary": frontend_consumption_matrix.get("boundary"),
         },
         "frontend_consumption_rows": [
@@ -1539,6 +1541,16 @@ def _frontend_consumption_summary_table(matrix: dict[str, Any], rows: list[dict[
             "metric": "Blocked consumers",
             "count": matrix.get("blocked_consumer_count", 0),
             "detail": matrix.get("blocker_counts", {}),
+        },
+        {
+            "metric": "Migrated detail views",
+            "count": matrix.get("migrated_detail_view_count", 0),
+            "detail": matrix.get("migrated_detail_view_ids", []),
+        },
+        {
+            "metric": "Pending detail views",
+            "count": matrix.get("pending_detail_view_count", 0),
+            "detail": matrix.get("pending_detail_view_ids", []),
         },
     ]
     table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
