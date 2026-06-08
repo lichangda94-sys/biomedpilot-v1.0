@@ -176,16 +176,25 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert "report_ready_eligible false" in lite_coverage_rows["deg"]["required_contracts"]
     assert payload["legacy_sidecar_transition_matrix"]["schema_version"] == "biomedpilot.analysis.legacy_sidecar_transition_matrix.v1"
     assert payload["legacy_sidecar_transition_matrix"]["status"] == "partial"
-    assert payload["legacy_sidecar_transition_matrix"]["passed_row_count"] == 4
+    assert payload["legacy_sidecar_transition_matrix"]["passed_row_count"] == 5
     assert payload["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert payload["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
     assert payload["legacy_sidecar_transition_matrix"]["blocker_counts"] == {}
+    assert payload["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 6
+    assert set(payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]) == {
+        "correlation",
+        "deg",
+        "enrichment",
+        "immune_infiltration",
+        "survival",
+    }
     assert "correlation" in payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
     legacy_sidecar_rows = {row["row_id"]: row for row in payload["legacy_sidecar_transition_rows"]}
     assert legacy_sidecar_rows["legacy_sidecar_writer_contract"]["status"] == "passed"
     assert legacy_sidecar_rows["catalog_task_center_guard"]["status"] == "passed"
     assert legacy_sidecar_rows["migration_evidence_forbids_sidecar"]["status"] == "passed"
-    assert legacy_sidecar_rows["registry_adapter_transition_scope"]["status"] == "partial"
+    assert legacy_sidecar_rows["registry_adapter_transition_scope"]["status"] == "passed"
+    assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["status"] == "partial"
     assert legacy_sidecar_rows["sidecar_boundary_test_coverage"]["status"] == "passed"
     assert payload["frontend_consumption_matrix"]["schema_version"] == "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1"
     assert payload["frontend_consumption_matrix"]["status"] == "passed"
@@ -426,7 +435,7 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "report_ready_eligible false" in text
     assert "pending_standard_worker_migration" in text
     assert "legacy_sidecar_writer_contract" in text
-    assert "registry_current_adapter_status_transitional:correlation" in text
+    assert "legacy_sidecar_producer_transitional:correlation" in text
     assert "Frontend Standard Package Consumption Matrix" in text
     assert "Migrated detail views | 3 | formal_deg_review_panel, formal_deg_plot_report_controls, immune_tme_scoring_page" in text
     assert "standard_r_worker_provenance_writer" in text

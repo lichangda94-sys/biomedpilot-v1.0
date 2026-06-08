@@ -1460,9 +1460,17 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["lite_task_bridge_coverage_matrix"]["covered_module_count"] == 10
     assert status["lite_task_bridge_coverage_matrix"]["blocked_module_count"] == 0
     assert status["legacy_sidecar_transition_matrix"]["status"] == "partial"
-    assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 4
+    assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 5
     assert status["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert status["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
+    assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 6
+    assert set(status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]) == {
+        "correlation",
+        "deg",
+        "enrichment",
+        "immune_infiltration",
+        "survival",
+    }
     assert "deg" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
     assert "correlation" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
     assert status["frontend_consumption_matrix"]["status"] == "passed"
@@ -1889,22 +1897,40 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert matrix["schema_version"] == "biomedpilot.analysis.legacy_sidecar_transition_matrix.v1"
     assert matrix["status"] == "partial"
     assert matrix["boundary"] == "read_only_legacy_sidecar_transition_diagnostics"
-    assert matrix["row_count"] == 5
-    assert matrix["passed_row_count"] == 4
+    assert matrix["row_count"] == 6
+    assert matrix["passed_row_count"] == 5
     assert matrix["partial_row_count"] == 1
     assert matrix["blocked_row_count"] == 0
     assert matrix["blocker_counts"] == {}
-    assert set(matrix["transitional_module_ids"]) == REQUIRED_MODULES
+    assert set(matrix["transitional_module_ids"]) == {
+        "correlation",
+        "deg",
+        "enrichment",
+        "immune_infiltration",
+        "survival",
+    }
+    assert matrix["sidecar_producer_count"] == 6
+    assert len(matrix["sidecar_producers"]) == 6
     assert matrix["adapter_status_counts"]["existing_python_testing_level_sidecar_pending_standard_worker_migration"] == 1
-    assert matrix["warning_counts"]["registry_current_adapter_status_transitional:correlation"] == 1
+    assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:correlation"] == 1
+    assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:deg"] == 1
     assert rows["legacy_sidecar_writer_contract"]["status"] == "passed"
     assert rows["catalog_task_center_guard"]["status"] == "passed"
     assert rows["migration_evidence_forbids_sidecar"]["status"] == "passed"
     assert rows["sidecar_boundary_test_coverage"]["status"] == "passed"
-    assert rows["registry_adapter_transition_scope"]["status"] == "partial"
+    assert rows["registry_adapter_transition_scope"]["status"] == "passed"
     assert "correlation" in rows["registry_adapter_transition_scope"]["transitional_module_ids"]
-    assert "registry_current_adapter_status_transitional:deg" in rows["registry_adapter_transition_scope"]["warnings"]
-    assert rows["registry_adapter_transition_scope"]["boundary"] == "adapter_status_is_inventory_only_not_worker_migration_evidence"
+    assert rows["registry_adapter_transition_scope"]["warnings"] == []
+    assert rows["registry_adapter_transition_scope"]["boundary"] == "adapter_status_is_inventory_only_actual_sidecar_evidence_comes_from_source_inventory"
+    assert rows["source_sidecar_producer_inventory"]["status"] == "partial"
+    assert rows["source_sidecar_producer_inventory"]["sidecar_module_ids"] == [
+        "correlation",
+        "deg",
+        "enrichment",
+        "immune_infiltration",
+        "survival",
+    ]
+    assert rows["source_sidecar_producer_inventory"]["boundary"] == "actual_sidecar_source_inventory_not_formal_worker_migration_evidence"
 
 
 def test_frontend_standard_package_consumption_matrix_tracks_partial_ui_boundary() -> None:

@@ -1520,7 +1520,7 @@ def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
     warnings.extend(f"detailed_result_view_pending_standard_package_migration:{view_id}" for view_id in pending_ids)
     return {
         "row_id": "detailed_result_views_migration",
-        "title": "Detailed result views still need standard-package-only migration",
+        "title": "Detailed result views standard-package-only migration",
         "status": "blocked" if blockers else ("partial" if pending_ids else "passed"),
         "file_path": "app/bioinformatics/workflow_pages.py and module-specific detail builders",
         "consumer_surface": "module_specific_detailed_result_views",
@@ -1834,10 +1834,11 @@ def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = Non
         str(module.get("module_id") or ""): str(module.get("current_adapter_status") or "")
         for module in modules
     }
+    source_inventory_row = _legacy_sidecar_source_inventory_row()
     transitional_modules = [
-        module_id
-        for module_id, status in adapter_statuses.items()
-        if any(token in status for token in ("legacy", "sidecar", "existing_", "pending", "planned"))
+        str(item)
+        for item in source_inventory_row.get("sidecar_module_ids", [])
+        if item
     ]
     rows = [
         _source_token_contract_row(
@@ -1882,17 +1883,18 @@ def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = Non
         ),
         {
             "row_id": "registry_adapter_transition_scope",
-            "title": "Registry adapter statuses remain transition scoped",
-            "status": "partial" if transitional_modules else "passed",
+            "title": "Registry adapter statuses remain inventory scoped",
+            "status": "passed",
             "evidence_path": "analysis/registry/analysis_modules.json::modules[*].current_adapter_status",
             "module_count": len(adapter_statuses),
             "transitional_module_count": len(transitional_modules),
             "adapter_status_counts": _count_adapter_statuses(adapter_statuses),
             "transitional_module_ids": transitional_modules,
             "blockers": [],
-            "warnings": [f"registry_current_adapter_status_transitional:{module_id}" for module_id in transitional_modules],
-            "boundary": "adapter_status_is_inventory_only_not_worker_migration_evidence",
+            "warnings": [],
+            "boundary": "adapter_status_is_inventory_only_actual_sidecar_evidence_comes_from_source_inventory",
         },
+        source_inventory_row,
         _source_token_contract_row(
             row_id="sidecar_boundary_test_coverage",
             title="Tests cover sidecar direct-call and not-migration boundaries",
@@ -1920,8 +1922,97 @@ def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = Non
         "warning_counts": warning_counts,
         "adapter_status_counts": _count_adapter_statuses(adapter_statuses),
         "transitional_module_ids": transitional_modules,
+        "sidecar_producer_count": int(source_inventory_row.get("sidecar_producer_count") or 0),
+        "sidecar_producers": list(source_inventory_row.get("sidecar_producers", []) or []),
         "rows": rows,
         "boundary": "read_only_legacy_sidecar_transition_diagnostics",
+    }
+
+
+def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
+    """Inventory actual source files that still write legacy sidecar packages.
+
+    This intentionally separates real sidecar producers from registry phrases
+    such as "pending" or "planned". Full/formal worker migration remains covered
+    by the standard-worker migration matrix.
+    """
+
+    targets = [
+        {
+            "module_id": "deg",
+            "source_surface": "controlled_two_group_deg_standard_package_sidecar",
+            "file_path": "app/bioinformatics/deg_engine/standard_package.py",
+        },
+        {
+            "module_id": "deg",
+            "source_surface": "controlled_multifactor_deg_standard_package_sidecar",
+            "file_path": "app/bioinformatics/deg_engine/multifactor_r_runner.py",
+        },
+        {
+            "module_id": "enrichment",
+            "source_surface": "controlled_enrichment_standard_package_sidecar",
+            "file_path": "app/bioinformatics/enrichment_r_adapter.py",
+        },
+        {
+            "module_id": "survival",
+            "source_surface": "controlled_survival_clinical_standard_package_sidecar",
+            "file_path": "app/bioinformatics/survival_clinical/standard_package.py",
+        },
+        {
+            "module_id": "immune_infiltration",
+            "source_surface": "immune_scoring_standard_package_sidecar",
+            "file_path": "app/bioinformatics/immune_infiltration/standard_package.py",
+        },
+        {
+            "module_id": "correlation",
+            "source_surface": "correlation_standard_package_sidecar",
+            "file_path": "app/bioinformatics/services/correlation_standard_package.py",
+        },
+    ]
+    required_tokens = [
+        "write_legacy_service_adapter_invocation_manifest(",
+        "\"boundary_type\": \"legacy_service_adapter_sidecar\"",
+        "\"migration_status\": \"sidecar_only_not_isolated_standard_worker\"",
+    ]
+    producers: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for target in targets:
+        file_path = str(target["file_path"])
+        path = REPO_ROOT / file_path
+        text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+        missing_tokens = [token for token in required_tokens if token not in text]
+        if not path.is_file():
+            blockers.append(f"legacy_sidecar_source_file_missing:{file_path}")
+        if missing_tokens:
+            blockers.append(
+                f"legacy_sidecar_source_token_missing:{target['module_id']}:{','.join(missing_tokens)}"
+            )
+        producers.append(
+            {
+                "module_id": str(target["module_id"]),
+                "source_surface": str(target["source_surface"]),
+                "file_path": file_path,
+                "status": "blocked" if (not path.is_file() or missing_tokens) else "partial",
+                "missing_tokens": missing_tokens,
+                "migration_status": "sidecar_only_not_isolated_standard_worker",
+                "worker_boundary": "legacy_service_adapter_sidecar",
+                "migration_next_action": "replace_with_task_center_registered_standard_worker_execution_after_full_environment_and_resource_locks",
+            }
+        )
+    sidecar_module_ids = sorted({str(item["module_id"]) for item in producers if item.get("status") != "blocked"})
+    warnings = [f"legacy_sidecar_producer_transitional:{module_id}" for module_id in sidecar_module_ids]
+    return {
+        "row_id": "source_sidecar_producer_inventory",
+        "title": "Source files still producing legacy service-adapter sidecars",
+        "status": "blocked" if blockers else ("partial" if producers else "passed"),
+        "evidence_path": "app/bioinformatics/* standard package sidecar writers",
+        "sidecar_producer_count": len(producers),
+        "sidecar_module_count": len(sidecar_module_ids),
+        "sidecar_module_ids": sidecar_module_ids,
+        "sidecar_producers": producers,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": warnings,
+        "boundary": "actual_sidecar_source_inventory_not_formal_worker_migration_evidence",
     }
 
 

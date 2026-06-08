@@ -260,6 +260,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "warning_counts": legacy_sidecar_transition_matrix.get("warning_counts", {}),
             "adapter_status_counts": legacy_sidecar_transition_matrix.get("adapter_status_counts", {}),
             "transitional_module_ids": legacy_sidecar_transition_matrix.get("transitional_module_ids", []),
+            "sidecar_producer_count": legacy_sidecar_transition_matrix.get("sidecar_producer_count", 0),
+            "sidecar_producers": legacy_sidecar_transition_matrix.get("sidecar_producers", []),
             "boundary": legacy_sidecar_transition_matrix.get("boundary"),
         },
         "legacy_sidecar_transition_rows": [

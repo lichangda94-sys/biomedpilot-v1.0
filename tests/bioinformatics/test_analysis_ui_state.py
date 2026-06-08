@@ -211,16 +211,18 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "result_index registered testing_level result" in lite_coverage_text
     sidecar_text = "\n".join(str(row) for row in state["legacy_sidecar_transition_rows"])
     assert "Legacy sidecar transition matrix" in sidecar_text
-    assert "passed=4" in sidecar_text
+    assert "passed=5" in sidecar_text
     assert "partial=1" in sidecar_text
     assert "blocked=0" in sidecar_text
-    assert "transitional_modules=10" in sidecar_text
+    assert "transitional_modules=5" in sidecar_text
     assert "Legacy sidecar contract: legacy_sidecar_writer_contract" in sidecar_text
     assert "Legacy sidecar contract: catalog_task_center_guard" in sidecar_text
     assert "Legacy sidecar contract: migration_evidence_forbids_sidecar" in sidecar_text
     assert "Legacy sidecar contract: registry_adapter_transition_scope" in sidecar_text
-    assert "registry_current_adapter_status_transitional:deg" in sidecar_text
-    assert "adapter_status_is_inventory_only_not_worker_migration_evidence" in sidecar_text
+    assert "Legacy sidecar contract: source_sidecar_producer_inventory" in sidecar_text
+    assert "legacy_sidecar_producer_transitional:deg" in sidecar_text
+    assert "actual_sidecar_source_inventory_not_formal_worker_migration_evidence" in sidecar_text
+    assert "adapter_status_is_inventory_only_actual_sidecar_evidence_comes_from_source_inventory" in sidecar_text
     frontend_consumption_text = "\n".join(str(row) for row in state["frontend_consumption_rows"])
     assert "Frontend standard package consumption matrix" in frontend_consumption_text
     assert "passed=5" in frontend_consumption_text
