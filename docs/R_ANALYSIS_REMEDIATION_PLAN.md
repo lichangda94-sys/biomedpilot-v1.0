@@ -102,6 +102,8 @@ Update: the standard package catalog now exposes worker-boundary metadata. Packa
 
 Update: module interface, entrypoint, and migration matrices now require every lite-supported module manifest to explicitly declare `runner=analysis/runners/run_module.R` and `worker_backend=rscript`. The correlation module manifest is now aligned with the registry, and registry-only mode drift can no longer prove lite/full worker readiness without the module manifest carrying the same contract.
 
+Update: RARCH-17 is now driven by target-module presence plus `module_interface_matrix` evidence instead of reusing formal standard-worker migration state. The current target modules pass the shared module interface contract; formal/full worker migration remains tracked separately by the standard-worker entrypoint, task boundary, provenance boundary, and P1 migration matrices.
+
 Update: standard package validation now applies a stricter gate to passed full/formal packages. Such packages must include input/parameter hashes, command, random seed field, engine name/version, runtime version containers, package/external-tool version containers, and worker-boundary metadata when not produced by the standard R worker.
 
 Update: DEG now has a `lite` standard worker path. `run_module.R` can execute base R two-group Welch t-tests on fixed local count/metadata fixtures and write a testing-level standard result package. It does not use limma, DESeq2, edgeR, scipy, statsmodels, report-ready output, or clinical interpretation.

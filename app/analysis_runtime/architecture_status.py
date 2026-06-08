@@ -242,10 +242,15 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-17",
             "Target analysis modules share the standard interface",
-            "warn" if set(TARGET_MODULE_IDS) <= set(module_ids) else "fail",
-            "analysis/registry/analysis_modules.json and analysis/modules/*/module.json",
-            blockers=[] if set(TARGET_MODULE_IDS) <= set(module_ids) else [f"target_module_missing:{item}" for item in sorted(set(TARGET_MODULE_IDS) - set(module_ids))],
-            warnings=[f"formal_standard_worker_pending_modules={standard_worker_migration_matrix.get('formal_pending_count', 0)}"],
+            "pass"
+            if set(TARGET_MODULE_IDS) <= set(module_ids) and module_interface_matrix.get("status") == "passed"
+            else "fail",
+            "analysis/registry/analysis_modules.json, analysis/modules/*/module.json, and module_interface_matrix",
+            blockers=[
+                *([] if set(TARGET_MODULE_IDS) <= set(module_ids) else [f"target_module_missing:{item}" for item in sorted(set(TARGET_MODULE_IDS) - set(module_ids))]),
+                *list(module_interface_matrix.get("blocker_counts", {}).keys()),
+            ],
+            warnings=[],
         ),
         _row(
             "RARCH-18",

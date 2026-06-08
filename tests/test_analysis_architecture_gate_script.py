@@ -49,6 +49,8 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert requirement_rows["RARCH-03"]["status"] == "warn"
     assert requirement_rows["RARCH-10"]["status"] == "pass"
     assert requirement_rows["RARCH-11"]["status"] == "pass"
+    assert requirement_rows["RARCH-17"]["status"] == "pass"
+    assert requirement_rows["RARCH-17"]["warnings"] == []
     assert payload["priority_issue_lists"]["P0"] == []
     assert {item["issue_id"] for item in payload["priority_issue_lists"]["P1"]} == {
         "full_analysis_environment_locks_not_restored",
@@ -56,6 +58,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
     }
     assert not any(item["issue_id"] == "RARCH-08" for item in payload["priority_issue_lists"]["P2"])
+    assert not any(item["issue_id"] == "RARCH-17" for item in payload["priority_issue_lists"]["P2"])
     assert any(item["issue_id"] == "RARCH-12" for item in payload["priority_issue_lists"]["P3"])
     assert len(payload["top_architecture_risks"]) == 5
     assert payload["top_architecture_risks"][0]["risk_id"] == "full_analysis_environment_locks_not_restored"

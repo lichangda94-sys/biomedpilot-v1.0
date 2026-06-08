@@ -1386,6 +1386,7 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert "full_analysis_resource_locks_not_complete" in status["p1_issues"]
     assert "RARCH-03" in status["p2_issues"]
     assert "RARCH-08" not in status["p2_issues"]
+    assert "RARCH-17" not in status["p2_issues"]
     assert "RARCH-12" in status["p3_issues"]
     assert status["priority_issue_lists"]["P0"] == []
     assert {item["issue_id"] for item in status["priority_issue_lists"]["P1"]} == {
@@ -1403,6 +1404,10 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert rows["RARCH-10"]["blockers"] == []
     assert rows["RARCH-11"]["status"] == "pass"
     assert rows["RARCH-12"]["status"] == "warn"
+    assert rows["RARCH-17"]["status"] == "pass"
+    assert rows["RARCH-17"]["blockers"] == []
+    assert rows["RARCH-17"]["warnings"] == []
+    assert rows["RARCH-17"]["evidence"] == "analysis/registry/analysis_modules.json, analysis/modules/*/module.json, and module_interface_matrix"
     assert rows["RARCH-18"]["status"] == "warn"
     assert rows["RARCH-18"]["blockers"] == []
     assert "lite_mode_writes_command_manifest_only_no_AutoDock_or_GROMACS_execution" in rows["RARCH-18"]["warnings"]
