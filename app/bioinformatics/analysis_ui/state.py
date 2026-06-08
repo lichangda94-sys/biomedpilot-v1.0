@@ -73,6 +73,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     module_interface_rows = build_module_interface_rows(module_interface_matrix)
     module_mode_readiness_matrix = analysis_architecture_status.get("module_mode_readiness_matrix") if isinstance(analysis_architecture_status.get("module_mode_readiness_matrix"), dict) else {}
     module_mode_readiness_rows = build_module_mode_readiness_rows(module_mode_readiness_matrix)
+    environment_artifact_matrix = analysis_architecture_status.get("environment_artifact_matrix") if isinstance(analysis_architecture_status.get("environment_artifact_matrix"), dict) else {}
+    environment_artifact_rows = build_environment_artifact_rows(environment_artifact_matrix)
     standard_worker_entrypoint_matrix = analysis_architecture_status.get("standard_worker_entrypoint_matrix") if isinstance(analysis_architecture_status.get("standard_worker_entrypoint_matrix"), dict) else {}
     standard_worker_entrypoint_rows = build_standard_worker_entrypoint_rows(standard_worker_entrypoint_matrix)
     external_tool_adapter_matrix = analysis_architecture_status.get("external_tool_adapter_matrix") if isinstance(analysis_architecture_status.get("external_tool_adapter_matrix"), dict) else {}
@@ -164,6 +166,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "module_interface_rows": module_interface_rows,
         "module_mode_readiness_matrix": module_mode_readiness_matrix,
         "module_mode_readiness_rows": module_mode_readiness_rows,
+        "environment_artifact_matrix": environment_artifact_matrix,
+        "environment_artifact_rows": environment_artifact_rows,
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "standard_worker_entrypoint_rows": standard_worker_entrypoint_rows,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
@@ -200,6 +204,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "module_interface_rows": module_interface_rows,
             "module_mode_readiness_matrix": module_mode_readiness_matrix,
             "module_mode_readiness_rows": module_mode_readiness_rows,
+            "environment_artifact_matrix": environment_artifact_matrix,
+            "environment_artifact_rows": environment_artifact_rows,
             "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
             "standard_worker_entrypoint_rows": standard_worker_entrypoint_rows,
             "external_tool_adapter_matrix": external_tool_adapter_matrix,
@@ -1426,6 +1432,48 @@ def build_module_mode_readiness_rows(matrix: dict[str, Any]) -> list[dict[str, A
                     *_list(row.get("warnings"))[:5],
                 ],
                 basis=f"{row.get('module_manifest')}; runner={row.get('lite_runner')}; backend={row.get('lite_worker_backend')}",
+            )
+        )
+    return rows
+
+
+def build_environment_artifact_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    environment_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    blocker_counts = matrix.get("blocker_counts") if isinstance(matrix.get("blocker_counts"), dict) else {}
+    warning_counts = matrix.get("warning_counts") if isinstance(matrix.get("warning_counts"), dict) else {}
+    rows = [
+        _formal_deg_gate_row(
+            "Analysis environment artifact matrix",
+            matrix.get("status") or "blocked",
+            [f"{key}={value}" for key, value in sorted(blocker_counts.items())],
+            [
+                f"passed={matrix.get('passed_environment_count', 0)}",
+                f"partial={matrix.get('partial_environment_count', 0)}",
+                f"blocked={matrix.get('blocked_environment_count', 0)}",
+                f"full_envs={compact_list(_list(matrix.get('full_environment_ids')))}",
+                f"restored_full_envs={compact_list(_list(matrix.get('restored_full_environment_ids')))}",
+                *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
+            ],
+            basis=f"environments={matrix.get('environment_count', 0)}; {matrix.get('boundary', 'read_only_environment_artifact_split_diagnostics')}",
+        )
+    ]
+    for row in environment_rows:
+        rows.append(
+            _formal_deg_gate_row(
+                f"Environment artifact: {row.get('environment_id')}",
+                row.get("status") or "blocked",
+                _list(row.get("blockers")),
+                [
+                    f"class={row.get('environment_class')}",
+                    f"docker={row.get('dockerfile_status')}:{row.get('dockerfile')}",
+                    f"renv={row.get('renv_lock_status')}:{row.get('renv_lock')}",
+                    f"renv_status={row.get('renv_policy_status')}",
+                    f"packages={row.get('renv_package_count')}",
+                    f"heavy={row.get('allows_heavy_analysis_dependencies')}",
+                    f"modules={compact_list(_list(row.get('allowed_module_ids')))}",
+                    *_list(row.get("warnings"))[:5],
+                ],
+                basis=f"{row.get('purpose')}; runtime_install={row.get('runtime_package_install')}",
             )
         )
     return rows

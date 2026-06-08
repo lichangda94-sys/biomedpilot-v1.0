@@ -35,6 +35,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["analysis_architecture_gate_rows"]
     assert state["module_interface_rows"]
     assert state["module_mode_readiness_rows"]
+    assert state["environment_artifact_rows"]
     assert state["full_activation_module_rows"]
     assert state["standard_worker_migration_rows"]
     assert state["analysis_architecture_remediation_rows"]
@@ -133,6 +134,18 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "lite_env=r-bio-core" in mode_readiness_text
     assert "full_env=r-chem-gpu" in mode_readiness_text
     assert "module_full_mode_blocked:deg" in mode_readiness_text
+    environment_artifact_text = "\n".join(str(row) for row in state["environment_artifact_rows"])
+    assert "Analysis environment artifact matrix" in environment_artifact_text
+    assert "passed=2" in environment_artifact_text
+    assert "partial=4" in environment_artifact_text
+    assert "blocked=0" in environment_artifact_text
+    assert "full_envs=r-bio-full；r-spatial-full；r-chem-full；r-chem-gpu" in environment_artifact_text
+    assert "Environment artifact: app-dev" in environment_artifact_text
+    assert "Environment artifact: r-bio-full" in environment_artifact_text
+    assert "docker=present:docker/Dockerfile.r-bio-full" in environment_artifact_text
+    assert "renv=present:renv/renv.bio-full.lock" in environment_artifact_text
+    assert "renv_status=scaffold_only_not_restored" in environment_artifact_text
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in environment_artifact_text
     entrypoint_text = "\n".join(str(row) for row in state["standard_worker_entrypoint_rows"])
     assert "Standard R worker entrypoint matrix" in entrypoint_text
     assert "passed=5" in entrypoint_text
@@ -273,6 +286,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["module_mode_readiness_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["module_mode_readiness_matrix"]["partial_module_count"] == 10
     assert state["developer_diagnostics"]["module_mode_readiness_rows"] == state["module_mode_readiness_rows"]
+    assert state["developer_diagnostics"]["environment_artifact_matrix"]["status"] == "partial"
+    assert state["developer_diagnostics"]["environment_artifact_matrix"]["partial_environment_count"] == 4
+    assert state["developer_diagnostics"]["environment_artifact_rows"] == state["environment_artifact_rows"]
     assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
     assert state["developer_diagnostics"]["standard_worker_entrypoint_rows"] == state["standard_worker_entrypoint_rows"]

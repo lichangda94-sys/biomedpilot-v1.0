@@ -68,6 +68,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
     module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
     module_mode_readiness_matrix = architecture_status.get("module_mode_readiness_matrix") if isinstance(architecture_status.get("module_mode_readiness_matrix"), dict) else {}
+    environment_artifact_matrix = architecture_status.get("environment_artifact_matrix") if isinstance(architecture_status.get("environment_artifact_matrix"), dict) else {}
     standard_worker_entrypoint_matrix = architecture_status.get("standard_worker_entrypoint_matrix") if isinstance(architecture_status.get("standard_worker_entrypoint_matrix"), dict) else {}
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
@@ -136,6 +137,25 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "module_mode_readiness_rows": [
             dict(row)
             for row in module_mode_readiness_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "environment_artifact_matrix": {
+            "schema_version": environment_artifact_matrix.get("schema_version"),
+            "status": environment_artifact_matrix.get("status"),
+            "environment_count": environment_artifact_matrix.get("environment_count"),
+            "passed_environment_count": environment_artifact_matrix.get("passed_environment_count"),
+            "partial_environment_count": environment_artifact_matrix.get("partial_environment_count"),
+            "blocked_environment_count": environment_artifact_matrix.get("blocked_environment_count"),
+            "status_counts": environment_artifact_matrix.get("status_counts", {}),
+            "blocker_counts": environment_artifact_matrix.get("blocker_counts", {}),
+            "warning_counts": environment_artifact_matrix.get("warning_counts", {}),
+            "full_environment_ids": environment_artifact_matrix.get("full_environment_ids", []),
+            "restored_full_environment_ids": environment_artifact_matrix.get("restored_full_environment_ids", []),
+            "boundary": environment_artifact_matrix.get("boundary"),
+        },
+        "environment_artifact_rows": [
+            dict(row)
+            for row in environment_artifact_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "standard_worker_entrypoint_matrix": {
@@ -579,6 +599,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     module_interface_rows = [row for row in payload.get("module_interface_rows", []) if isinstance(row, dict)]
     module_mode_readiness_matrix = payload.get("module_mode_readiness_matrix") if isinstance(payload.get("module_mode_readiness_matrix"), dict) else {}
     module_mode_readiness_rows = [row for row in payload.get("module_mode_readiness_rows", []) if isinstance(row, dict)]
+    environment_artifact_matrix = payload.get("environment_artifact_matrix") if isinstance(payload.get("environment_artifact_matrix"), dict) else {}
+    environment_artifact_rows = [row for row in payload.get("environment_artifact_rows", []) if isinstance(row, dict)]
     standard_worker_entrypoint_matrix = payload.get("standard_worker_entrypoint_matrix") if isinstance(payload.get("standard_worker_entrypoint_matrix"), dict) else {}
     standard_worker_entrypoint_rows = [row for row in payload.get("standard_worker_entrypoint_rows", []) if isinstance(row, dict)]
     external_tool_adapter_matrix = payload.get("external_tool_adapter_matrix") if isinstance(payload.get("external_tool_adapter_matrix"), dict) else {}
@@ -651,6 +673,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_module_mode_readiness_summary_table(module_mode_readiness_matrix, module_mode_readiness_rows))
+    lines.extend(
+        [
+            "",
+            "### Environment Artifact Matrix",
+            "",
+        ]
+    )
+    lines.extend(_environment_artifact_summary_table(environment_artifact_matrix, environment_artifact_rows))
     lines.extend(
         [
             "",
@@ -1187,6 +1217,43 @@ def _module_mode_readiness_summary_table(matrix: dict[str, Any], rows: list[dict
         *table,
         "",
         *_markdown_table(["Module", "Status", "Mock", "Lite", "Full", "Next"], module_rows, ["module_id", "status", "mock", "lite", "full", "next"]),
+    ]
+
+
+def _environment_artifact_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed environments",
+            "count": matrix.get("passed_environment_count", 0),
+            "detail": "",
+        },
+        {
+            "metric": "Partial environments",
+            "count": matrix.get("partial_environment_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked environments",
+            "count": matrix.get("blocked_environment_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    environment_rows = [
+        {
+            "environment_id": row.get("environment_id"),
+            "status": row.get("status"),
+            "class": row.get("environment_class"),
+            "dockerfile": f"{row.get('dockerfile_status')}; {row.get('dockerfile')}",
+            "renv": f"{row.get('renv_lock_status')}; {row.get('renv_policy_status')}; packages={row.get('renv_package_count')}",
+            "allowed_modules": row.get("allowed_module_ids", []),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Environment", "Status", "Class", "Dockerfile", "renv", "Allowed Modules"], environment_rows, ["environment_id", "status", "class", "dockerfile", "renv", "allowed_modules"]),
     ]
 
 

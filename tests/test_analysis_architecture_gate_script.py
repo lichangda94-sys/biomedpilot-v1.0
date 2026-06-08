@@ -93,6 +93,20 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert module_mode_rows["deg"]["lite_status"] == "passed"
     assert module_mode_rows["deg"]["full_status"] == "blocked"
     assert module_mode_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert payload["environment_artifact_matrix"]["schema_version"] == "biomedpilot.analysis.environment_artifact_matrix.v1"
+    assert payload["environment_artifact_matrix"]["status"] == "partial"
+    assert payload["environment_artifact_matrix"]["passed_environment_count"] == 2
+    assert payload["environment_artifact_matrix"]["partial_environment_count"] == 4
+    assert payload["environment_artifact_matrix"]["blocked_environment_count"] == 0
+    assert payload["environment_artifact_matrix"]["restored_full_environment_ids"] == []
+    assert "r-bio-full" in payload["environment_artifact_matrix"]["full_environment_ids"]
+    environment_artifact_rows = {row["environment_id"]: row for row in payload["environment_artifact_rows"]}
+    assert environment_artifact_rows["app-dev"]["status"] == "passed"
+    assert environment_artifact_rows["app-dev"]["allowed_module_ids"] == []
+    assert environment_artifact_rows["r-bio-core"]["status"] == "passed"
+    assert environment_artifact_rows["r-bio-full"]["status"] == "partial"
+    assert environment_artifact_rows["r-bio-full"]["renv_policy_status"] == "scaffold_only_not_restored"
+    assert environment_artifact_rows["r-chem-gpu"]["renv_policy_environment"] == "r-chem-full"
     assert payload["standard_worker_entrypoint_matrix"]["schema_version"] == "biomedpilot.analysis.standard_worker_entrypoint_matrix.v1"
     assert payload["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert payload["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
@@ -567,6 +581,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "module_interface_rows" in schema["required"]
     assert "module_mode_readiness_matrix" in schema["required"]
     assert "module_mode_readiness_rows" in schema["required"]
+    assert "environment_artifact_matrix" in schema["required"]
+    assert "environment_artifact_rows" in schema["required"]
     assert "standard_worker_entrypoint_matrix" in schema["required"]
     assert "standard_worker_entrypoint_rows" in schema["required"]
     assert "external_tool_adapter_matrix" in schema["required"]
@@ -595,6 +611,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["module_interface_rows"]["type"] == "array"
     assert schema["properties"]["module_mode_readiness_matrix"]["type"] == "object"
     assert schema["properties"]["module_mode_readiness_rows"]["type"] == "array"
+    assert schema["properties"]["environment_artifact_matrix"]["type"] == "object"
+    assert schema["properties"]["environment_artifact_rows"]["type"] == "array"
     assert schema["properties"]["standard_worker_entrypoint_matrix"]["type"] == "object"
     assert schema["properties"]["standard_worker_entrypoint_rows"]["type"] == "array"
     assert schema["properties"]["external_tool_adapter_matrix"]["type"] == "object"

@@ -73,6 +73,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
     environment_validation = validate_analysis_environment_registry(module_registry=registry)
+    environment_artifact_matrix = build_environment_artifact_matrix(
+        registry=registry,
+        environment_validation=environment_validation,
+    )
     resource_validation = validate_analysis_resource_manifest()
     full_analysis_activation_gate = build_full_analysis_activation_gate(
         environment_validation=environment_validation,
@@ -183,26 +187,26 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-12",
             "Dedicated environment split",
-            "warn" if environment_validation.get("status") == "passed" else "fail",
+            "warn" if environment_artifact_matrix.get("status") == "partial" else ("pass" if environment_artifact_matrix.get("status") == "passed" else "fail"),
             "analysis/registry/analysis_environments.json",
-            blockers=list(environment_validation.get("blockers", [])),
-            warnings=list(environment_validation.get("readiness_blockers", [])),
+            blockers=list(environment_artifact_matrix.get("blocker_counts", {}).keys()),
+            warnings=list(environment_artifact_matrix.get("warning_counts", {}).keys()),
         ),
         _row(
             "RARCH-13",
             "renv lock equivalent exists",
-            "warn" if _renv_locks_exist() else "fail",
+            "warn" if environment_artifact_matrix.get("status") == "partial" else ("pass" if environment_artifact_matrix.get("status") == "passed" else "fail"),
             "renv/renv.*.lock",
-            warnings=["full_environment_locks_are_scaffold_only_not_restored"] if _renv_locks_exist() else [],
-            blockers=[] if _renv_locks_exist() else ["renv_locks_missing"],
+            warnings=[key for key in environment_artifact_matrix.get("warning_counts", {}) if key.startswith("environment_renv_lock_") or key == "full_environment_locks_are_scaffold_only_not_restored"],
+            blockers=[key for key in environment_artifact_matrix.get("blocker_counts", {}) if "renv_lock" in key],
         ),
         _row(
             "RARCH-14",
             "Full analysis Docker image boundary",
-            "warn" if _dockerfiles_exist() else "fail",
+            "warn" if environment_artifact_matrix.get("status") == "partial" else ("pass" if environment_artifact_matrix.get("status") == "passed" else "fail"),
             "docker/Dockerfile.r-*",
-            warnings=["dockerfiles_exist_but_full_image_builds_not_proven"] if _dockerfiles_exist() else [],
-            blockers=[] if _dockerfiles_exist() else ["analysis_dockerfiles_missing"],
+            warnings=[key for key in environment_artifact_matrix.get("warning_counts", {}) if key.startswith("environment_docker_image_") or key == "dockerfiles_exist_but_full_image_builds_not_proven"],
+            blockers=[key for key in environment_artifact_matrix.get("blocker_counts", {}) if "dockerfile" in key],
         ),
         _row(
             "RARCH-15",
@@ -281,6 +285,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "top_architecture_risks": top_architecture_risks,
         "module_interface_matrix": module_interface_matrix,
         "module_mode_readiness_matrix": module_mode_readiness_matrix,
+        "environment_artifact_matrix": environment_artifact_matrix,
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
@@ -351,6 +356,145 @@ def build_default_dependency_scan_summary() -> dict[str, Any]:
         "heavy_dependency_hits": sorted(set(hits)),
         "hit_count": len(set(hits)),
         "policy": "heavy_full_analysis_dependencies_excluded_from_default_app_dev_surface",
+    }
+
+
+def build_environment_artifact_matrix(
+    *,
+    registry: dict[str, Any] | None = None,
+    environment_validation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return per-environment Dockerfile and renv lock artifact diagnostics.
+
+    This matrix is read-only. It verifies the declared split and artifact
+    surfaces for RARCH-12/13/14 without building images, restoring renv locks,
+    installing packages, or marking full mode ready.
+    """
+
+    environment_registry = _read_json(REPO_ROOT / "analysis" / "registry" / "analysis_environments.json")
+    validation = (
+        environment_validation
+        if isinstance(environment_validation, dict)
+        else validate_analysis_environment_registry(module_registry=registry if isinstance(registry, dict) else None)
+    )
+    environments = [
+        item
+        for item in environment_registry.get("environments", [])
+        if isinstance(item, dict)
+    ]
+    readiness_by_environment = {
+        blocker.split(":")[1]: blocker
+        for blocker in validation.get("readiness_blockers", [])
+        if isinstance(blocker, str) and len(blocker.split(":")) >= 2
+    }
+    rows = [
+        _environment_artifact_row(environment, readiness_blocker=readiness_by_environment.get(str(environment.get("environment_id") or ""), ""))
+        for environment in environments
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.environment_artifact_matrix.v1",
+        "status": "blocked" if blocker_counts else ("partial" if warning_counts else "passed"),
+        "environment_count": len(rows),
+        "passed_environment_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "partial_environment_count": sum(1 for row in rows if row.get("status") == "partial"),
+        "blocked_environment_count": sum(1 for row in rows if row.get("status") == "blocked"),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "full_environment_ids": [
+            str(row.get("environment_id") or "")
+            for row in rows
+            if row.get("environment_class") == "full"
+        ],
+        "restored_full_environment_ids": [
+            str(row.get("environment_id") or "")
+            for row in rows
+            if row.get("environment_class") == "full" and row.get("renv_policy_status") in {"restored", "locked", "active"}
+        ],
+        "rows": rows,
+        "boundary": "read_only_environment_artifact_split_diagnostics",
+    }
+
+
+def _environment_artifact_row(environment: dict[str, Any], *, readiness_blocker: str) -> dict[str, Any]:
+    environment_id = str(environment.get("environment_id") or "")
+    dockerfile = str(environment.get("dockerfile") or "")
+    renv_lock = str(environment.get("renv_lock") or "")
+    dockerfile_path = REPO_ROOT / dockerfile if dockerfile else REPO_ROOT / "__missing_dockerfile__"
+    renv_path = REPO_ROOT / renv_lock if renv_lock else REPO_ROOT / "__missing_renv_lock__"
+    blockers: list[str] = []
+    warnings: list[str] = []
+    docker_text = dockerfile_path.read_text(encoding="utf-8", errors="ignore") if dockerfile_path.is_file() else ""
+    renv_payload = _read_json(renv_path) if renv_path.is_file() else {}
+    policy = renv_payload.get("BioMedPilotPolicy") if isinstance(renv_payload.get("BioMedPilotPolicy"), dict) else {}
+    packages = renv_payload.get("Packages") if isinstance(renv_payload.get("Packages"), dict) else {}
+    is_default = environment_id == "app-dev"
+    is_lite = environment_id == "r-bio-core"
+    is_full = not is_default and not is_lite
+    if not dockerfile:
+        blockers.append(f"environment_dockerfile_missing:{environment_id}")
+    elif not dockerfile_path.is_file():
+        blockers.append(f"environment_dockerfile_not_found:{environment_id}:{dockerfile}")
+    else:
+        if f'org.biomedpilot.environment="{environment_id}"' not in docker_text:
+            blockers.append(f"environment_dockerfile_label_missing:{environment_id}")
+        if 'org.biomedpilot.runtime-package-install="forbidden"' not in docker_text:
+            blockers.append(f"environment_dockerfile_runtime_install_policy_missing:{environment_id}")
+    if not renv_lock:
+        blockers.append(f"environment_renv_lock_missing:{environment_id}")
+    elif not renv_path.is_file():
+        blockers.append(f"environment_renv_lock_not_found:{environment_id}:{renv_lock}")
+    else:
+        policy_environment = str(policy.get("environment") or "")
+        if policy_environment and not (policy_environment == environment_id or (environment_id == "r-chem-gpu" and policy_environment == "r-chem-full")):
+            blockers.append(f"environment_renv_lock_environment_mismatch:{environment_id}")
+        if policy.get("runtime_package_install") != "forbidden":
+            blockers.append(f"environment_renv_lock_runtime_install_policy_invalid:{environment_id}")
+    if is_default:
+        if environment.get("r_runtime") != "not_required":
+            blockers.append("environment_app_dev_r_runtime_required")
+        if environment.get("allowed_module_ids"):
+            blockers.append("environment_app_dev_allows_modules")
+        if environment.get("allows_heavy_analysis_dependencies") is not False:
+            blockers.append("environment_app_dev_heavy_dependency_policy_invalid")
+    if is_lite and environment.get("allows_heavy_analysis_dependencies") is not False:
+        blockers.append("environment_lite_heavy_dependency_policy_invalid:r-bio-core")
+    if is_full:
+        if environment.get("allows_heavy_analysis_dependencies") is not True:
+            blockers.append(f"environment_full_heavy_dependency_policy_invalid:{environment_id}")
+        if str(policy.get("status") or "") not in {"restored", "locked", "active"}:
+            warnings.append(f"environment_renv_lock_scaffold_only_not_restored:{environment_id}")
+        warnings.append(f"environment_docker_image_build_not_proven:{environment_id}")
+        if readiness_blocker:
+            warnings.append(readiness_blocker)
+    if is_full and not blockers:
+        warnings.append("full_environment_locks_are_scaffold_only_not_restored")
+        warnings.append("dockerfiles_exist_but_full_image_builds_not_proven")
+    return {
+        "environment_id": environment_id,
+        "title": str(environment.get("title") or environment_id),
+        "status": "blocked" if blockers else ("partial" if warnings else "passed"),
+        "environment_class": "app-dev" if is_default else ("lite" if is_lite else "full"),
+        "purpose": str(environment.get("purpose") or ""),
+        "dockerfile": dockerfile,
+        "dockerfile_status": "present" if dockerfile_path.is_file() else "missing",
+        "renv_lock": renv_lock,
+        "renv_lock_status": "present" if renv_path.is_file() else "missing",
+        "renv_policy_status": str(policy.get("status") or ""),
+        "renv_policy_environment": str(policy.get("environment") or ""),
+        "renv_package_count": len(packages),
+        "r_runtime": str(environment.get("r_runtime") or ""),
+        "allows_heavy_analysis_dependencies": environment.get("allows_heavy_analysis_dependencies"),
+        "runtime_package_install": str(policy.get("runtime_package_install") or ""),
+        "resource_lock_required": bool(environment.get("resource_lock_required")),
+        "external_tool_lock_required": bool(environment.get("external_tool_lock_required")),
+        "allowed_module_ids": [str(item) for item in environment.get("allowed_module_ids", []) if item],
+        "readiness_blocker": readiness_blocker,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
     }
 
 

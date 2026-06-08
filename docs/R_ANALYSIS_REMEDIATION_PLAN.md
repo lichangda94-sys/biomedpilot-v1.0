@@ -156,6 +156,8 @@ Update: environment boundaries are now centralized in `analysis/registry/analysi
 
 Update: `validate_analysis_environment_registry()` now turns the environment registry into a runtime-consumable contract. It checks required fields, unique environment ids, app-dev isolation, allowed-module references, Dockerfile labels, lockfile policy, and full-environment readiness separately. The current registry is structurally valid but still reports `full_mode_ready=false` because full environment locks are scaffold-only.
 
+Update: environment artifact diagnostics now emit `environment_artifact_matrix`, covering per-environment Dockerfile presence, renv lock presence, renv policy status, package count, heavy-dependency policy, allowed modules, and readiness blockers. The matrix keeps `app-dev` and `r-bio-core` passed while showing full environments as partial until Docker build evidence and restored lock evidence exist.
+
 Update: restored full environment locks now require schema-valid evidence. `analysis/schemas/output/environment_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_environment_lock_evidence()` blocks missing evidence, non-restored status, placeholder R/Bioconductor/package-lock data, missing Docker image build proof, missing Dockerfile/renv/evidence files, registry mismatch, allowed-module mismatch, or runtime install/download allowance. Current full locks remain `scaffold_only_not_restored`, so this does not activate full mode.
 
 Update: restored full environment evidence now requires `package_lock_hash.algorithm=sha256` and a 64-character hex package-lock hash value. The hash must match the referenced `renv_lock` file content. Arbitrary non-empty hash algorithm labels or mismatched lock hashes are blocked before an environment can contribute to full-mode readiness.
@@ -621,6 +623,7 @@ Completed:
 - Added `build_standard_worker_migration_matrix()` with one row per registered module.
 - The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
 - Added `module_mode_readiness_matrix` to expose RARCH-04 mock/lite/full mode status per module while keeping full mode blocked.
+- Added `environment_artifact_matrix` to expose RARCH-12/RARCH-13/RARCH-14 Dockerfile and renv lock artifact status per environment while keeping full mode blocked.
 - Added `standard_worker_entrypoint_matrix` to audit `analysis/runners/run_module.R`, standard package output, lite dispatch coverage, main-backend standard-worker invocation, and runtime install/download absence separately from formal migration evidence.
 - Added Analysis Center `analysis_resource_gate_rows` so full resource lock blockers are visible independently from environment readiness and remediation queue rows.
 - Added `requirement_summary`, `priority_issue_lists`, `p2_issues`, `p3_issues`, and `top_architecture_risks` directly to `build_analysis_architecture_status()` and made the gate script reuse them.

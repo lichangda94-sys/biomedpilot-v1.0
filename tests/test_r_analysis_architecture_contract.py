@@ -11,6 +11,7 @@ import pytest
 
 from app.analysis_runtime.architecture_status import (
     build_analysis_architecture_status,
+    build_environment_artifact_matrix,
     build_external_tool_adapter_matrix,
     build_frontend_standard_package_consumption_matrix,
     build_full_analysis_activation_gate,
@@ -1431,6 +1432,11 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["module_mode_readiness_matrix"]["blocked_module_count"] == 0
     assert set(status["module_mode_readiness_matrix"]["full_blocked_module_ids"]) == REQUIRED_MODULES
     assert status["module_mode_readiness_matrix"]["warning_counts"]["module_full_mode_blocked:deg"] == 1
+    assert status["environment_artifact_matrix"]["status"] == "partial"
+    assert status["environment_artifact_matrix"]["passed_environment_count"] == 2
+    assert status["environment_artifact_matrix"]["partial_environment_count"] == 4
+    assert status["environment_artifact_matrix"]["blocked_environment_count"] == 0
+    assert status["environment_artifact_matrix"]["warning_counts"]["environment_renv_lock_scaffold_only_not_restored:r-bio-full"] == 1
     assert status["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert status["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
     assert status["standard_worker_entrypoint_matrix"]["partial_row_count"] == 1
@@ -1997,6 +2003,43 @@ def test_module_mode_readiness_matrix_tracks_mock_lite_full_layering_without_ena
     assert rows["docking"]["lite_result_semantics"] == "testing_level"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert rows["molecular_dynamics"]["full_status"] == "blocked"
+
+
+def test_environment_artifact_matrix_tracks_docker_renv_split_without_restoring_full() -> None:
+    matrix = build_environment_artifact_matrix()
+    rows = {row["environment_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.environment_artifact_matrix.v1"
+    assert matrix["status"] == "partial"
+    assert matrix["environment_count"] == 6
+    assert matrix["passed_environment_count"] == 2
+    assert matrix["partial_environment_count"] == 4
+    assert matrix["blocked_environment_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert matrix["full_environment_ids"] == ["r-bio-full", "r-spatial-full", "r-chem-full", "r-chem-gpu"]
+    assert matrix["restored_full_environment_ids"] == []
+    assert matrix["warning_counts"]["environment_renv_lock_scaffold_only_not_restored:r-bio-full"] == 1
+    assert matrix["warning_counts"]["environment_docker_image_build_not_proven:r-chem-gpu"] == 1
+    assert matrix["boundary"] == "read_only_environment_artifact_split_diagnostics"
+    assert rows["app-dev"]["status"] == "passed"
+    assert rows["app-dev"]["environment_class"] == "app-dev"
+    assert rows["app-dev"]["dockerfile_status"] == "present"
+    assert rows["app-dev"]["renv_lock_status"] == "present"
+    assert rows["app-dev"]["allows_heavy_analysis_dependencies"] is False
+    assert rows["app-dev"]["allowed_module_ids"] == []
+    assert rows["r-bio-core"]["status"] == "passed"
+    assert rows["r-bio-core"]["environment_class"] == "lite"
+    assert rows["r-bio-core"]["allows_heavy_analysis_dependencies"] is False
+    assert "deg" in rows["r-bio-core"]["allowed_module_ids"]
+    assert rows["r-bio-full"]["status"] == "partial"
+    assert rows["r-bio-full"]["environment_class"] == "full"
+    assert rows["r-bio-full"]["renv_policy_status"] == "scaffold_only_not_restored"
+    assert rows["r-bio-full"]["renv_package_count"] == 0
+    assert rows["r-bio-full"]["resource_lock_required"] is True
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in rows["r-bio-full"]["warnings"]
+    assert rows["r-chem-gpu"]["renv_policy_environment"] == "r-chem-full"
+    assert rows["r-chem-gpu"]["external_tool_lock_required"] is True
+    assert rows["r-chem-gpu"]["status"] == "partial"
 
 
 def test_standard_worker_entrypoint_matrix_tracks_runner_contract_and_partial_migration() -> None:
