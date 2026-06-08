@@ -4,9 +4,14 @@ import csv
 from pathlib import Path
 from typing import Any
 
-from app.analysis_runtime.package_catalog import build_standard_analysis_package_catalog
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
+
+from .standard_package_source import (
+    FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+    formal_deg_blocked_standard_package_provenance,
+    formal_deg_standard_package_source,
+)
 
 
 REVIEW_SCHEMA_VERSION = "biomedpilot.formal_deg_result_review.v1"
@@ -42,7 +47,7 @@ def build_formal_deg_result_review(
             "blockers": ["formal_deg_result_not_found"],
             "warnings": [],
         }
-    standard_package = _standard_package_for_result(root, selected)
+    standard_package = formal_deg_standard_package_source(root, selected)
     if standard_package.get("status") != "passed":
         blocker = str(standard_package.get("blocker") or "formal_deg_standard_result_package_missing")
         return {
@@ -52,7 +57,7 @@ def build_formal_deg_result_review(
             "selected_result_id": str(selected.get("result_id") or result_id or ""),
             "summary": _empty_summary(),
             "rows": [],
-            "provenance": _blocked_provenance(selected, standard_package),
+            "provenance": formal_deg_blocked_standard_package_provenance(selected, standard_package),
             "guard_copy": _guard_copy(),
             "disabled_downstream": _disabled_downstream(),
             "excluded_results": excluded,
@@ -150,52 +155,6 @@ def _result_options(entries: list[dict[str, Any]]) -> list[dict[str, str]]:
     ]
 
 
-def _standard_package_for_result(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
-    result_id = str(entry.get("result_id") or "")
-    catalog = build_standard_analysis_package_catalog(root)
-    package = next(
-        (
-            row
-            for row in catalog.get("rows", []) or []
-            if isinstance(row, dict) and str(row.get("result_id") or "") == result_id
-        ),
-        {},
-    )
-    if not package:
-        return {"status": "blocked", "blocker": "formal_deg_standard_result_package_missing"}
-    if str(package.get("validation_status") or "") != "passed":
-        return {"status": "blocked", "blocker": "formal_deg_standard_result_package_invalid", "package": package}
-    if str(package.get("module_id") or "") != "deg":
-        return {"status": "blocked", "blocker": "formal_deg_standard_result_package_module_mismatch", "package": package}
-    if normalize_result_semantics(package.get("result_semantics"), default="") != "formal_computed_result":
-        return {"status": "blocked", "blocker": "formal_deg_standard_result_package_semantics_invalid", "package": package}
-    artifact_manifest = package.get("artifact_manifest") if isinstance(package.get("artifact_manifest"), dict) else {}
-    table = next(
-        (
-            item
-            for item in artifact_manifest.get("tables", []) or []
-            if isinstance(item, dict) and item.get("artifact_type") == "deg_result_table"
-        ),
-        {},
-    )
-    if not table:
-        return {"status": "blocked", "blocker": "formal_deg_standard_package_deg_table_missing", "package": package}
-    if not bool(table.get("exists")):
-        return {"status": "blocked", "blocker": "formal_deg_standard_package_deg_table_file_missing", "package": package}
-    if table.get("within_standard_package") is not True:
-        return {"status": "blocked", "blocker": "formal_deg_standard_package_deg_table_outside_package", "package": package}
-    return {
-        "status": "passed",
-        "table_path": str(table.get("path") or ""),
-        "package_path": str(package.get("package_path") or ""),
-        "package_path_relative": str(package.get("package_path_relative") or ""),
-        "table_package_relative_path": str(table.get("package_relative_path") or ""),
-        "package_validation_status": str(package.get("validation_status") or ""),
-        "worker_boundary_type": str(package.get("worker_boundary_type") or ""),
-        "worker_migration_status": str(package.get("worker_migration_status") or ""),
-    }
-
-
 def _read_deg_rows(path: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
@@ -271,24 +230,13 @@ def _provenance(entry: dict[str, Any], table_path: Path, *, standard_package: di
         "standard_result_package": str(standard_package.get("package_path_relative") or standard_package.get("package_path") or ""),
         "standard_package_validation_status": str(standard_package.get("package_validation_status") or ""),
         "standard_package_table_path": str(standard_package.get("table_package_relative_path") or ""),
-        "standard_package_source_policy": "result_index_registered_standard_result_package_artifacts_only",
+        "standard_package_source_policy": FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
         "worker_boundary_type": str(standard_package.get("worker_boundary_type") or ""),
         "worker_migration_status": str(standard_package.get("worker_migration_status") or ""),
         "result_index_path": "results/summaries/result_index.json",
         "plot_artifacts": entry.get("plot_artifacts", []),
         "report_artifacts": entry.get("report_artifacts", []),
         "report_ready_eligible": bool(entry.get("report_ready_eligible")),
-    }
-
-
-def _blocked_provenance(entry: dict[str, Any], standard_package: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "result_id": str(entry.get("result_id") or ""),
-        "task_run_id": str(entry.get("task_run_id") or ""),
-        "standard_result_package": str(standard_package.get("package_path_relative") or ""),
-        "standard_package_validation_status": str(standard_package.get("package_validation_status") or "missing"),
-        "standard_package_source_policy": "result_index_registered_standard_result_package_artifacts_only",
-        "result_index_path": "results/summaries/result_index.json",
     }
 
 

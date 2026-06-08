@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.bioinformatics.deg_engine.standard_package import write_formal_deg_standard_result_package
 from app.bioinformatics.plots import create_formal_deg_plot_artifact, evaluate_plot_export_quality_gate
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
@@ -44,6 +45,22 @@ def test_plot_export_quality_blocks_missing_image_and_semantics_mismatch(tmp_pat
 
 
 def _register_formal(root: Path, table: Path) -> None:
+    log_path = root / "analysis" / "formal_deg" / "formal-qc_run_log.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text('{"schema_version":"biomedpilot.formal_deg_run_log.v1","result_id":"formal-qc"}\n', encoding="utf-8")
+    parameters = {"method": "welch_t_test"}
+    dependency = {"status": "passed", "packages": {"scipy": {"version": "1.17.1"}}}
+    standard_package = write_formal_deg_standard_result_package(
+        root,
+        result_id="formal-qc",
+        task_run_id="task-formal-qc",
+        result_table_path=table,
+        log_path=log_path,
+        parameter_manifest=parameters,
+        dependency_snapshot=dependency,
+        engine_name="python_scipy_statsmodels_deg_mvp",
+        engine_version="0.1",
+    )
     register_result(
         root,
         ResultIndexEntry(
@@ -54,13 +71,23 @@ def _register_formal(root: Path, table: Path) -> None:
             input_package_id="pkg-1",
             source_dataset_id="dataset-1",
             source_repository_manifest="standardized_data/repositories/repository_manifest.json",
-            parameters_manifest={"method": "welch_t_test"},
+            parameters_manifest=parameters,
             engine_name="python_scipy_statsmodels_deg_mvp",
             engine_version="0.1",
-            dependency_snapshot={"status": "passed", "packages": {"scipy": {"version": "1.17.1"}}},
-            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            dependency_snapshot=dependency,
+            output_artifacts=(
+                {"artifact_type": "deg_result_table", "path": str(table.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},
+                {"artifact_type": "standard_result_package", "path": str(standard_package.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+            ),
             validation_status="passed",
-            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-qc_run_log.json"},),
+            log_artifacts=(
+                {"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-qc_run_log.json"},
+                {
+                    "artifact_type": "analysis_worker_invocation_manifest",
+                    "path": str((standard_package / "logs" / "worker_invocation.json").relative_to(root)),
+                    "schema": "biomedpilot.analysis.worker_invocation.v1",
+                },
+            ),
             report_ready_eligible=False,
         ),
     )

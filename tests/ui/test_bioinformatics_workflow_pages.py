@@ -4385,6 +4385,20 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
             "statsmodels": {"version": "0.14.6"},
         },
     }
+    log_path = project_summary.project_root / "analysis" / "formal_deg" / "formal-ui-report_run_log.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(json.dumps({"schema_version": "biomedpilot.formal_deg_run_log.v1", "result_id": "formal-ui-report"}, indent=2), encoding="utf-8")
+    standard_package = write_formal_deg_standard_result_package(
+        project_summary.project_root,
+        result_id="formal-ui-report",
+        task_run_id="task-formal-ui-report",
+        result_table_path=table_path,
+        log_path=log_path,
+        parameter_manifest=parameters,
+        dependency_snapshot=dependency,
+        engine_name="python_scipy_statsmodels_deg_mvp",
+        engine_version="0.1.0",
+    )
     register_result(
         project_summary.project_root,
         ResultIndexEntry(
@@ -4399,11 +4413,21 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
             engine_name="python_scipy_statsmodels_deg_mvp",
             engine_version="0.1.0",
             dependency_snapshot=dependency,
-            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            output_artifacts=(
+                {"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},
+                {"artifact_type": "standard_result_package", "path": str(standard_package.relative_to(project_summary.project_root)), "schema": "biomedpilot.analysis.result_package.v1"},
+            ),
             plot_artifacts=(),
             report_artifacts=(),
             validation_status="passed",
-            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-ui-report_run_log.json"},),
+            log_artifacts=(
+                {"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-ui-report_run_log.json"},
+                {
+                    "artifact_type": "analysis_worker_invocation_manifest",
+                    "path": str((standard_package / "logs" / "worker_invocation.json").relative_to(project_summary.project_root)),
+                    "schema": "biomedpilot.analysis.worker_invocation.v1",
+                },
+            ),
             report_ready_eligible=False,
         ),
     )

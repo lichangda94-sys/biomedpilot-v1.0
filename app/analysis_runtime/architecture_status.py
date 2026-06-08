@@ -1430,12 +1430,14 @@ def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
         {
             "view_id": "formal_deg_review_panel",
             "consumer_surface": "BioinformaticsResultsBrowserWidget.formal_deg_review",
-            "file_path": "app/bioinformatics/deg_engine/result_review.py",
+            "file_paths": [
+                "app/bioinformatics/deg_engine/result_review.py",
+                "app/bioinformatics/deg_engine/standard_package_source.py",
+            ],
             "required_tokens": [
-                "build_standard_analysis_package_catalog",
+                "formal_deg_standard_package_source",
                 "formal_deg_standard_result_package_missing",
-                "standard_package_source_policy",
-                "result_index_registered_standard_result_package_artifacts_only",
+                "FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY",
             ],
             "evidence_policy": "standard_package_only",
             "migration_next_action": "keep DEG review rows sourced from standard package artifact manifest and package-local tables",
@@ -1443,14 +1445,19 @@ def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
         {
             "view_id": "formal_deg_plot_report_controls",
             "consumer_surface": "BioinformaticsResultsBrowserWidget.formal_deg_plot_report_export",
-            "file_path": "app/bioinformatics/workflow_pages.py",
-            "required_tokens": [
-                "build_formal_deg_plot_gate",
-                "create_formal_deg_plot_artifact",
-                "create_formal_deg_report_ready_package",
+            "file_paths": [
+                "app/bioinformatics/plots/formal_deg.py",
+                "app/bioinformatics/reports/formal_deg.py",
             ],
-            "evidence_policy": "transitional_inventory_only",
-            "migration_next_action": "drive plot/report/export controls from standard package artifacts and report package manifests",
+            "required_tokens": [
+                "FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY",
+                "formal_deg_standard_package_source",
+                "standard_package_table_artifact",
+                "standard_result_package_present",
+                "standard_package_source.json",
+            ],
+            "evidence_policy": "standard_package_only",
+            "migration_next_action": "keep DEG plot/report controls sourced from standard package artifacts and report package manifests",
         },
         {
             "view_id": "immune_tme_scoring_page",
@@ -1468,12 +1475,12 @@ def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
     blockers: list[str] = []
     detail_views: list[dict[str, Any]] = []
     for target in targets:
-        file_path = str(target["file_path"])
-        path = REPO_ROOT / file_path
-        text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+        file_paths = [str(item) for item in target.get("file_paths", [])] if isinstance(target.get("file_paths"), list | tuple) else [str(target["file_path"])]
+        path_status = {file_path: (REPO_ROOT / file_path).is_file() for file_path in file_paths}
+        text = "\n".join((REPO_ROOT / file_path).read_text(encoding="utf-8", errors="ignore") for file_path in file_paths if (REPO_ROOT / file_path).is_file())
         missing_tokens = [token for token in target["required_tokens"] if token not in text]
         evidence_policy = str(target.get("evidence_policy") or "transitional_inventory_only")
-        if not path.is_file():
+        if not all(path_status.values()):
             status = "blocked"
         elif missing_tokens:
             status = "blocked"
@@ -1482,7 +1489,8 @@ def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
         detail_view = {
             "view_id": target["view_id"],
             "consumer_surface": target["consumer_surface"],
-            "file_path": file_path,
+            "file_path": " and ".join(file_paths),
+            "file_paths": file_paths,
             "status": status,
             "required_tokens": list(target["required_tokens"]),
             "missing_tokens": missing_tokens,
@@ -1490,6 +1498,9 @@ def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
             "migration_next_action": target["migration_next_action"],
         }
         detail_views.append(detail_view)
+        for file_path, exists in path_status.items():
+            if not exists:
+                blockers.append(f"detailed_result_view_file_missing:{target['view_id']}:{file_path}")
         if missing_tokens:
             blockers.append(f"detailed_result_view_inventory_token_missing:{target['view_id']}:{','.join(missing_tokens)}")
     pending = [item for item in detail_views if item["status"] != "passed"]

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
+from app.bioinformatics.deg_engine.standard_package import write_formal_deg_standard_result_package
 from app.bioinformatics.plots import create_formal_deg_plot_artifact
 from app.bioinformatics.reports.formal_deg import build_formal_deg_report_production_review_gate, create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
@@ -181,6 +182,17 @@ def _register_formal(root: Path, table: Path, *, parameters: dict[str, object], 
     log_path = root / "analysis" / "formal_deg" / "formal-report_run_log.json"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(json.dumps({"schema_version": "biomedpilot.formal_deg_run_log.v1", "result_id": "formal-report"}, indent=2), encoding="utf-8")
+    standard_package = write_formal_deg_standard_result_package(
+        root,
+        result_id="formal-report",
+        task_run_id="task-formal-report",
+        result_table_path=table,
+        log_path=log_path,
+        parameter_manifest=parameters,
+        dependency_snapshot=dependency,
+        engine_name="python_scipy_statsmodels_deg_mvp",
+        engine_version="0.1.0",
+    )
     register_result(
         root,
         ResultIndexEntry(
@@ -195,12 +207,22 @@ def _register_formal(root: Path, table: Path, *, parameters: dict[str, object], 
             engine_name="python_scipy_statsmodels_deg_mvp",
             engine_version="0.1.0",
             dependency_snapshot=dependency,
-            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            output_artifacts=(
+                {"artifact_type": "deg_result_table", "path": str(table.relative_to(root)), "schema": "biomedpilot.deg_result_table.v1"},
+                {"artifact_type": "standard_result_package", "path": str(standard_package.relative_to(root)), "schema": "biomedpilot.analysis.result_package.v1"},
+            ),
             plot_artifacts=(),
             report_artifacts=(),
             validation_status="passed",
             warnings=("low_sample_size_warning_included",),
-            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-report_run_log.json"},),
+            log_artifacts=(
+                {"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-report_run_log.json"},
+                {
+                    "artifact_type": "analysis_worker_invocation_manifest",
+                    "path": str((standard_package / "logs" / "worker_invocation.json").relative_to(root)),
+                    "schema": "biomedpilot.analysis.worker_invocation.v1",
+                },
+            ),
             report_ready_eligible=False,
         ),
     )

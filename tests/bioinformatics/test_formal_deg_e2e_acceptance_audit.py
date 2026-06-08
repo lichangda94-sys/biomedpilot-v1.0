@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from app.bioinformatics.deg_engine import run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH
+from app.bioinformatics.deg_engine.standard_package import write_formal_deg_standard_result_package
 from app.bioinformatics.plots import create_formal_deg_plot_artifact
 from app.bioinformatics.reports.e2e_audit import audit_formal_deg_e2e_acceptance
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
@@ -92,6 +93,20 @@ def test_formal_deg_e2e_audit_surfaces_expired_confirmation_dependency_and_inval
         "control_samples": ["ctrl1", "ctrl2"],
     }
     dependency = {"status": "blocked", "blockers": ["missing_python_package:scipy"], "packages": {}}
+    log_path = tmp_path / "analysis" / "formal_deg" / "formal-failed-audit_run_log.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(json.dumps({"schema_version": "biomedpilot.formal_deg_run_log.v1", "result_id": "formal-failed-audit"}), encoding="utf-8")
+    standard_package = write_formal_deg_standard_result_package(
+        tmp_path,
+        result_id="formal-failed-audit",
+        task_run_id="task-formal-failed-audit",
+        result_table_path=table,
+        log_path=log_path,
+        parameter_manifest=parameters,
+        dependency_snapshot=dependency,
+        engine_name="python_scipy_statsmodels_deg_mvp",
+        engine_version="0.1.0",
+    )
     register_result(
         tmp_path,
         ResultIndexEntry(
@@ -106,7 +121,18 @@ def test_formal_deg_e2e_audit_surfaces_expired_confirmation_dependency_and_inval
             engine_name="python_scipy_statsmodels_deg_mvp",
             engine_version="0.1.0",
             dependency_snapshot=dependency,
-            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table.relative_to(tmp_path)), "schema": "biomedpilot.deg_result_table.v1"},),
+            output_artifacts=(
+                {"artifact_type": "deg_result_table", "path": str(table.relative_to(tmp_path)), "schema": "biomedpilot.deg_result_table.v1"},
+                {"artifact_type": "standard_result_package", "path": str(standard_package.relative_to(tmp_path)), "schema": "biomedpilot.analysis.result_package.v1"},
+            ),
+            log_artifacts=(
+                {"artifact_type": "formal_deg_run_log", "path": str(log_path.relative_to(tmp_path))},
+                {
+                    "artifact_type": "analysis_worker_invocation_manifest",
+                    "path": str((standard_package / "logs" / "worker_invocation.json").relative_to(tmp_path)),
+                    "schema": "biomedpilot.analysis.worker_invocation.v1",
+                },
+            ),
             validation_status="passed",
             report_ready_eligible=False,
         ),

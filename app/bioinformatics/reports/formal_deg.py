@@ -11,6 +11,10 @@ from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIR
 from app.bioinformatics.deg_engine.models import REQUIRED_DEG_RESULT_COLUMNS
 from app.bioinformatics.deg_engine.multifactor_confirmation import MULTIFACTOR_CONFIRMATION_PATH, MULTIFACTOR_CONFIRMATION_SCHEMA_VERSION, load_multifactor_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.result_schema import validate_deg_result_entry, validate_formal_deg_result_index_entry
+from app.bioinformatics.deg_engine.standard_package_source import (
+    FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+    formal_deg_standard_package_source,
+)
 from app.bioinformatics.plots.schema import validate_plot_artifact
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.registry import RESULT_INDEX, load_registry, save_registry
@@ -39,6 +43,7 @@ def evaluate_formal_deg_report_ready_gate(
     checks: dict[str, bool] = {
         "formal_deg_result_present": selected is not None,
         "result_index_v2_complete": False,
+        "standard_result_package_present": False,
         "parameter_confirmation_present": bool(confirmation),
         "parameter_confirmation_not_expired": False,
         "dependency_snapshot_passed": False,
@@ -62,7 +67,11 @@ def evaluate_formal_deg_report_ready_gate(
         checks["dependency_snapshot_passed"] = dependency.get("status") == "passed"
         if not checks["dependency_snapshot_passed"]:
             blockers.append("formal_deg_dependency_snapshot_not_passed")
-        table_validation = _validate_deg_table(root, selected)
+        standard_package_source = formal_deg_standard_package_source(root, selected)
+        checks["standard_result_package_present"] = standard_package_source.get("status") == "passed"
+        if not checks["standard_result_package_present"]:
+            blockers.extend(str(item) for item in standard_package_source.get("blockers", []) or ["formal_deg_standard_result_package_missing"])
+        table_validation = _validate_deg_table(root, selected, standard_package_source=standard_package_source)
         checks["deg_result_table_validation_passed"] = table_validation["status"] == "passed"
         blockers.extend(f"deg_table:{item}" for item in table_validation.get("blockers", []) or [])
         warnings.extend(str(item) for item in table_validation.get("warnings", []) or [])
@@ -89,6 +98,10 @@ def evaluate_formal_deg_report_ready_gate(
         "confirmation_path": str(_confirmation_path_for_entry(root, selected or {})),
         "confirmation_created_at": str(confirmation.get("created_at") or "") if isinstance(confirmation, dict) else "",
         "dependency_versions": _dependency_versions((selected or {}).get("dependency_snapshot") if isinstance((selected or {}).get("dependency_snapshot"), dict) else {}),
+        "standard_package_source_policy": FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+        "standard_result_package": str((standard_package_source if selected else {}).get("package_path_relative") or ""),
+        "standard_package_validation_status": str((standard_package_source if selected else {}).get("package_validation_status") or ""),
+        "standard_package_table_path": str((standard_package_source if selected else {}).get("table_package_relative_path") or ""),
         "allow_table_only_report": allow_table_only_report,
         "table_only_report_mode_statement": _table_only_statement() if allow_table_only_report else "",
         "max_confirmation_age_days": max_confirmation_age_days,
@@ -121,6 +134,7 @@ def create_formal_deg_report_ready_package(
     registry = load_registry(root)
     entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
     selected = next(entry for entry in entries if str(entry.get("result_id") or "") == str(gate["selected_result_id"]))
+    standard_package_source = formal_deg_standard_package_source(root, selected)
     package_dir = _next_package_dir(root, str(selected.get("result_id") or "formal_deg"))
     tables_dir = package_dir / "tables"
     plots_dir = package_dir / "plots"
@@ -128,7 +142,7 @@ def create_formal_deg_report_ready_package(
     logs_dir = package_dir / "logs"
     for directory in (tables_dir, plots_dir, manifests_dir, logs_dir):
         directory.mkdir(parents=True, exist_ok=True)
-    table_path = _deg_table_path(root, selected)
+    table_path = _deg_table_path(root, selected, standard_package_source=standard_package_source)
     if table_path.is_file():
         shutil.copy2(table_path, tables_dir / table_path.name)
     _copy_artifacts(root, selected.get("log_artifacts", []) or [], logs_dir)
@@ -144,6 +158,7 @@ def create_formal_deg_report_ready_package(
     _write_json(manifests_dir / "method_explanation.json", _method_explanation(selected))
     _write_json(manifests_dir / "validation_report.json", gate)
     _write_json(manifests_dir / "gate_snapshot.json", gate)
+    _write_json(manifests_dir / "standard_package_source.json", standard_package_source)
     _write_json(manifests_dir / "provenance.json", gate.get("provenance_required", {}))
     _write_json(manifests_dir / "warnings.json", {"warnings": gate.get("warnings", []), "result_warnings": selected.get("warnings", []) or []})
     inventory = _package_inventory(package_dir)
@@ -272,8 +287,8 @@ def _validate_confirmation(confirmation: dict[str, Any], entry: dict[str, Any], 
     return {"not_expired": not_expired, "blockers": blockers, "warnings": warnings}
 
 
-def _validate_deg_table(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
-    path = _deg_table_path(root, entry)
+def _validate_deg_table(root: Path, entry: dict[str, Any], *, standard_package_source: dict[str, Any]) -> dict[str, Any]:
+    path = _deg_table_path(root, entry, standard_package_source=standard_package_source)
     blockers: list[str] = []
     warnings: list[str] = []
     if not path.is_file():
@@ -320,15 +335,14 @@ def _validate_plot_requirement(entry: dict[str, Any], *, allow_table_only_report
     return {"status": "blocked", "plot_ids": [], "blockers": blockers, "warnings": warnings}
 
 
-def _deg_table_path(root: Path, entry: dict[str, Any]) -> Path:
-    artifacts = entry.get("output_artifacts") if isinstance(entry.get("output_artifacts"), list) else []
-    artifact = next((item for item in artifacts if isinstance(item, dict) and item.get("artifact_type") == "deg_result_table"), {})
-    path = Path(str(artifact.get("path") or ""))
+def _deg_table_path(root: Path, entry: dict[str, Any], *, standard_package_source: dict[str, Any]) -> Path:
+    path = Path(str(standard_package_source.get("table_path") or ""))
     return path if path.is_absolute() else root / path
 
 
 def _provenance(entry: dict[str, Any], root: Path) -> dict[str, Any]:
     confirmation = _load_parameter_confirmation_for_entry(root, entry)
+    standard_package_source = formal_deg_standard_package_source(root, entry) if entry else {}
     return {
         "result_id": str(entry.get("result_id") or ""),
         "task_run_id": str(entry.get("task_run_id") or ""),
@@ -340,7 +354,11 @@ def _provenance(entry: dict[str, Any], root: Path) -> dict[str, Any]:
         "dependency_snapshot_present": bool(entry.get("dependency_snapshot")),
         "dependency_versions": _dependency_versions(entry.get("dependency_snapshot") if isinstance(entry.get("dependency_snapshot"), dict) else {}),
         "result_index_path": str(root / RESULT_INDEX),
-        "result_table_path": str(_deg_table_path(root, entry)) if entry else "",
+        "result_table_path": str(_deg_table_path(root, entry, standard_package_source=standard_package_source)) if entry else "",
+        "standard_package_source_policy": FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+        "standard_result_package": str(standard_package_source.get("package_path_relative") or ""),
+        "standard_package_validation_status": str(standard_package_source.get("package_validation_status") or ""),
+        "standard_package_table_path": str(standard_package_source.get("table_package_relative_path") or ""),
         "plot_artifact_count": len(entry.get("plot_artifacts", []) or []) if entry else 0,
         "log_artifacts": entry.get("log_artifacts", []) if entry else [],
     }

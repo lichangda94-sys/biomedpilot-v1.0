@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.deg_engine.result_schema import validate_formal_deg_result_index_entry
+from app.bioinformatics.deg_engine.standard_package_source import (
+    FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+    formal_deg_standard_package_source,
+)
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.registry import RESULT_INDEX, load_registry, save_registry
 
@@ -31,19 +35,22 @@ def build_formal_deg_plot_gate(
     result_id: str | None = None,
     plot_type: str = "volcano_plot",
 ) -> dict[str, Any]:
-    registry = load_registry(project_root)
+    root = Path(project_root).expanduser().resolve()
+    registry = load_registry(root)
     entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
     selected = _select_entry(entries, result_id)
     blockers: list[str] = []
     warnings: list[str] = []
+    standard_package_source: dict[str, Any] = {}
     if plot_type not in FORMAL_DEG_PLOT_TYPES:
         blockers.append(f"unsupported_formal_deg_plot_type:{plot_type}")
     if selected is None:
         blockers.append("formal_deg_result_not_found")
     else:
-        source_validation = _validate_formal_plot_source(selected)
+        source_validation = _validate_formal_plot_source(root, selected)
         blockers.extend(source_validation["blockers"])
         warnings.extend(source_validation["warnings"])
+        standard_package_source = source_validation["standard_package_source"]
     return {
         "schema_version": FORMAL_DEG_PLOT_GATE_SCHEMA_VERSION,
         "status": "blocked" if blockers else "passed",
@@ -53,7 +60,13 @@ def build_formal_deg_plot_gate(
         "source_result_semantics": normalize_result_semantics((selected or {}).get("canonical_result_semantics") or (selected or {}).get("result_semantics"), default=""),
         "existing_plot_artifacts": list((selected or {}).get("plot_artifacts", []) or []),
         "result_options": _result_options(entries),
-        "result_index_path": str(Path(project_root).expanduser().resolve() / RESULT_INDEX),
+        "result_index_path": str(root / RESULT_INDEX),
+        "standard_package_source_policy": FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+        "standard_result_package": str(standard_package_source.get("package_path_relative") or ""),
+        "standard_package_validation_status": str(standard_package_source.get("package_validation_status") or ""),
+        "standard_package_table_path": str(standard_package_source.get("table_package_relative_path") or ""),
+        "standard_package_table_artifact": standard_package_source.get("table_artifact") if isinstance(standard_package_source.get("table_artifact"), dict) else {},
+        "standard_package_source": standard_package_source,
         "guard_copy": FORMAL_DEG_PLOT_GUARD_COPY,
         "report_ready_eligible": bool((selected or {}).get("report_ready_eligible")),
         "blockers": list(dict.fromkeys(blockers)),
@@ -119,14 +132,17 @@ def create_formal_deg_plot_artifact(
     source = next(entry for entry in entries if str(entry.get("result_id") or "") == str(gate.get("selected_result_id") or ""))
     source_semantics = normalize_result_semantics(source.get("canonical_result_semantics") or source.get("result_semantics"), default="")
     spec = build_basic_plot_spec(source, plot_type, parameters=parameters)
+    spec["data_source"] = FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY
+    spec["standard_result_package"] = str(gate.get("standard_result_package") or "")
+    spec["standard_package_table_path"] = str(gate.get("standard_package_table_path") or "")
     image_artifacts: list[dict[str, Any]] = []
     renderer_warnings: list[str] = []
     renderer_blockers: list[str] = []
     renderer_log_artifact: dict[str, Any] = {}
     if plot_type == "volcano_plot":
-        rendered = _render_volcano_svg(root, source, plot_type, parameters=parameters or {})
+        rendered = _render_volcano_svg(root, source, plot_type, standard_package_source=gate.get("standard_package_source", {}), parameters=parameters or {})
     elif plot_type == "deg_heatmap":
-        rendered = _render_heatmap_svg(root, source, plot_type, parameters=parameters or {})
+        rendered = _render_heatmap_svg(root, source, plot_type, standard_package_source=gate.get("standard_package_source", {}), parameters=parameters or {})
     else:
         rendered = {"image_artifacts": [], "warnings": [], "blockers": []}
     if plot_type in {"volcano_plot", "deg_heatmap"}:
@@ -148,10 +164,13 @@ def create_formal_deg_plot_artifact(
             "multifactor_design_provenance": _multifactor_design_provenance(source),
             "plot_parameters": parameters or {},
             "plot_policy": "formal_deg_plot_artifact_only_not_report_ready",
+            "standard_package_source_policy": FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+            "standard_result_package": str(gate.get("standard_result_package") or ""),
+            "standard_package_table_path": str(gate.get("standard_package_table_path") or ""),
         },
         plot_spec_artifact=spec,
         image_artifacts=tuple(image_artifacts),
-        table_artifacts=tuple(_source_deg_tables(source)),
+        table_artifacts=tuple([gate.get("standard_package_table_artifact", {})] if gate.get("standard_package_table_artifact") else []),
         engine_name=_renderer_engine_name(plot_type),
         engine_version="0.1.0" if plot_type == "volcano_plot" else "0.1.0",
         dependency_snapshot={
@@ -207,7 +226,7 @@ def _select_entry(entries: list[dict[str, Any]], result_id: str | None) -> dict[
     return formal[-1] if formal else None
 
 
-def _validate_formal_plot_source(entry: dict[str, Any]) -> dict[str, list[str]]:
+def _validate_formal_plot_source(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
     blockers: list[str] = []
     warnings: list[str] = []
     semantics = normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics"), default="")
@@ -215,19 +234,23 @@ def _validate_formal_plot_source(entry: dict[str, Any]) -> dict[str, list[str]]:
         blockers.append(f"formal_deg_plot_requires_formal_computed_result_source:{semantics or 'unknown'}")
     if str(entry.get("task_type") or "").lower() != "deg":
         blockers.append("formal_deg_plot_requires_deg_task_type")
-    if not _source_deg_tables(entry):
-        blockers.append("formal_deg_plot_requires_deg_result_table")
+    standard_package_source = formal_deg_standard_package_source(root, entry)
+    if standard_package_source.get("status") != "passed":
+        blockers.extend(str(item) for item in standard_package_source.get("blockers", []) or ["formal_deg_standard_result_package_missing"])
     schema_validation = validate_formal_deg_result_index_entry(entry)
     blockers.extend(str(item) for item in schema_validation.get("blockers", []) or [])
     warnings.extend(str(item) for item in schema_validation.get("warnings", []) or [])
-    return {"blockers": list(dict.fromkeys(blockers)), "warnings": list(dict.fromkeys(warnings))}
+    return {
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+        "standard_package_source": standard_package_source,
+    }
 
 
 def _is_formal_deg_candidate(entry: dict[str, Any]) -> bool:
     return (
         normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics"), default="") == "formal_computed_result"
         and str(entry.get("task_type") or "").lower() == "deg"
-        and bool(_source_deg_tables(entry))
     )
 
 
@@ -287,8 +310,8 @@ def _default_renderer_capability(plot_type: str) -> dict[str, Any]:
     return {"status": "blocked", "renderer": "spec_only", "blockers": ["real_deg_plot_renderer_not_activated"]}
 
 
-def _render_volcano_svg(root: Path, source: dict[str, Any], plot_type: str, *, parameters: dict[str, Any]) -> dict[str, Any]:
-    table = _source_table_path(root, source)
+def _render_volcano_svg(root: Path, source: dict[str, Any], plot_type: str, *, standard_package_source: dict[str, Any], parameters: dict[str, Any]) -> dict[str, Any]:
+    table = _source_table_path(root, standard_package_source)
     rows = _read_deg_rows(table)
     blockers: list[str] = []
     warnings: list[str] = []
@@ -335,6 +358,9 @@ def _render_volcano_svg(root: Path, source: dict[str, Any], plot_type: str, *, p
         "warnings": warnings,
         "blockers": blockers,
         "clinical_conclusion_enabled": False,
+        "standard_package_source_policy": FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+        "standard_result_package": str(standard_package_source.get("package_path_relative") or ""),
+        "standard_package_table_path": str(standard_package_source.get("table_package_relative_path") or ""),
     }
     log_path.write_text(json.dumps(log_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return {
@@ -359,16 +385,15 @@ def _render_volcano_svg(root: Path, source: dict[str, Any], plot_type: str, *, p
     }
 
 
-def _source_table_path(root: Path, source: dict[str, Any]) -> Path:
-    tables = _source_deg_tables(source)
-    if not tables:
-        return root / "__missing_deg_table__"
-    raw = Path(str(tables[0].get("path") or tables[0].get("file_path") or ""))
+def _source_table_path(root: Path, standard_package_source: dict[str, Any]) -> Path:
+    raw = Path(str(standard_package_source.get("table_path") or ""))
+    if not str(raw):
+        return root / "__missing_standard_package_deg_table__"
     return raw if raw.is_absolute() else root / raw
 
 
-def _render_heatmap_svg(root: Path, source: dict[str, Any], plot_type: str, *, parameters: dict[str, Any]) -> dict[str, Any]:
-    table = _source_table_path(root, source)
+def _render_heatmap_svg(root: Path, source: dict[str, Any], plot_type: str, *, standard_package_source: dict[str, Any], parameters: dict[str, Any]) -> dict[str, Any]:
+    table = _source_table_path(root, standard_package_source)
     rows = _read_deg_rows(table)
     blockers: list[str] = []
     warnings: list[str] = []
@@ -413,6 +438,9 @@ def _render_heatmap_svg(root: Path, source: dict[str, Any], plot_type: str, *, p
         "blockers": blockers,
         "semantic_note": "summary heatmap from DEG case/control means, not sample-level expression heatmap",
         "clinical_conclusion_enabled": False,
+        "standard_package_source_policy": FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY,
+        "standard_result_package": str(standard_package_source.get("package_path_relative") or ""),
+        "standard_package_table_path": str(standard_package_source.get("table_package_relative_path") or ""),
     }
     log_path.write_text(json.dumps(log_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return {
