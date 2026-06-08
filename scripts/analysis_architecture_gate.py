@@ -73,6 +73,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     standard_worker_entrypoint_matrix = architecture_status.get("standard_worker_entrypoint_matrix") if isinstance(architecture_status.get("standard_worker_entrypoint_matrix"), dict) else {}
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
+    lite_task_bridge_coverage_matrix = architecture_status.get("lite_task_bridge_coverage_matrix") if isinstance(architecture_status.get("lite_task_bridge_coverage_matrix"), dict) else {}
     legacy_sidecar_transition_matrix = architecture_status.get("legacy_sidecar_transition_matrix") if isinstance(architecture_status.get("legacy_sidecar_transition_matrix"), dict) else {}
     frontend_consumption_matrix = architecture_status.get("frontend_consumption_matrix") if isinstance(architecture_status.get("frontend_consumption_matrix"), dict) else {}
     reproducibility_provenance_matrix = architecture_status.get("reproducibility_provenance_matrix") if isinstance(architecture_status.get("reproducibility_provenance_matrix"), dict) else {}
@@ -230,6 +231,21 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "task_system_boundary_rows": [
             dict(row)
             for row in task_system_boundary_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "lite_task_bridge_coverage_matrix": {
+            "schema_version": lite_task_bridge_coverage_matrix.get("schema_version"),
+            "status": lite_task_bridge_coverage_matrix.get("status"),
+            "module_count": lite_task_bridge_coverage_matrix.get("module_count"),
+            "covered_module_count": lite_task_bridge_coverage_matrix.get("covered_module_count"),
+            "blocked_module_count": lite_task_bridge_coverage_matrix.get("blocked_module_count"),
+            "blocker_counts": lite_task_bridge_coverage_matrix.get("blocker_counts", {}),
+            "test_file": lite_task_bridge_coverage_matrix.get("test_file"),
+            "boundary": lite_task_bridge_coverage_matrix.get("boundary"),
+        },
+        "lite_task_bridge_coverage_rows": [
+            dict(row)
+            for row in lite_task_bridge_coverage_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "legacy_sidecar_transition_matrix": {
@@ -633,6 +649,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     external_tool_adapter_rows = [row for row in payload.get("external_tool_adapter_rows", []) if isinstance(row, dict)]
     task_system_boundary_matrix = payload.get("task_system_boundary_matrix") if isinstance(payload.get("task_system_boundary_matrix"), dict) else {}
     task_system_boundary_rows = [row for row in payload.get("task_system_boundary_rows", []) if isinstance(row, dict)]
+    lite_task_bridge_coverage_matrix = payload.get("lite_task_bridge_coverage_matrix") if isinstance(payload.get("lite_task_bridge_coverage_matrix"), dict) else {}
+    lite_task_bridge_coverage_rows = [row for row in payload.get("lite_task_bridge_coverage_rows", []) if isinstance(row, dict)]
     legacy_sidecar_transition_matrix = payload.get("legacy_sidecar_transition_matrix") if isinstance(payload.get("legacy_sidecar_transition_matrix"), dict) else {}
     legacy_sidecar_transition_rows = [row for row in payload.get("legacy_sidecar_transition_rows", []) if isinstance(row, dict)]
     frontend_consumption_matrix = payload.get("frontend_consumption_matrix") if isinstance(payload.get("frontend_consumption_matrix"), dict) else {}
@@ -739,6 +757,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_task_system_boundary_summary_table(task_system_boundary_matrix, task_system_boundary_rows))
+    lines.extend(
+        [
+            "",
+            "### Lite Task Bridge Coverage Matrix",
+            "",
+        ]
+    )
+    lines.extend(_lite_task_bridge_coverage_summary_table(lite_task_bridge_coverage_matrix, lite_task_bridge_coverage_rows))
     lines.extend(
         [
             "",
@@ -1427,6 +1453,37 @@ def _task_system_boundary_summary_table(matrix: dict[str, Any], rows: list[dict[
         *table,
         "",
         *_markdown_table(["Module", "Status", "Result Task Types", "Task Invocation", "Worker Manifest", "Formal Worker"], module_rows, ["module_id", "status", "task_types", "task_invocation", "worker_manifest", "formal_worker"]),
+    ]
+
+
+def _lite_task_bridge_coverage_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Covered lite modules",
+            "count": matrix.get("covered_module_count", 0),
+            "detail": matrix.get("test_file", ""),
+        },
+        {
+            "metric": "Blocked lite modules",
+            "count": matrix.get("blocked_module_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    module_rows = [
+        {
+            "module_id": row.get("module_id"),
+            "status": row.get("status"),
+            "fixture": row.get("fixture_input_status"),
+            "worker_backend": row.get("worker_backend"),
+            "coverage_test": row.get("coverage_test"),
+            "contracts": row.get("required_contracts", []),
+        }
+        for row in rows
+    ]
+    return [
+        *_markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"]),
+        "",
+        *_markdown_table(["Module", "Status", "Fixture", "Worker", "Coverage Test", "Contracts"], module_rows, ["module_id", "status", "fixture", "worker_backend", "coverage_test", "contracts"]),
     ]
 
 

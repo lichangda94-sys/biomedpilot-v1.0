@@ -158,6 +158,22 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert task_boundary_rows["deg"]["result_index_task_types"] == ["deg", "recomputed_deg", "differential_expression"]
     assert task_boundary_rows["correlation"]["direct_cli_is_not_ui_task_result"] is True
     assert "legacy_sidecar_boundary_transitional:correlation" in task_boundary_rows["correlation"]["warnings"]
+    assert payload["lite_task_bridge_coverage_matrix"]["schema_version"] == "biomedpilot.analysis.lite_task_bridge_coverage_matrix.v1"
+    assert payload["lite_task_bridge_coverage_matrix"]["status"] == "passed"
+    assert payload["lite_task_bridge_coverage_matrix"]["module_count"] == 10
+    assert payload["lite_task_bridge_coverage_matrix"]["covered_module_count"] == 10
+    assert payload["lite_task_bridge_coverage_matrix"]["blocked_module_count"] == 0
+    assert payload["lite_task_bridge_coverage_matrix"]["blocker_counts"] == {}
+    assert payload["lite_task_bridge_coverage_matrix"]["test_file"] == "tests/test_analysis_runtime_task_bridge.py"
+    lite_coverage_rows = {row["module_id"]: row for row in payload["lite_task_bridge_coverage_rows"]}
+    assert lite_coverage_rows["deg"]["status"] == "passed"
+    assert lite_coverage_rows["deg"]["worker_backend"] == "rscript"
+    assert lite_coverage_rows["deg"]["fixture_input_status"] == "present"
+    assert lite_coverage_rows["molecular_dynamics"]["fixture_input_status"] == "present"
+    assert lite_coverage_rows["molecular_dynamics"]["fixture_input"] == "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json"
+    assert "standard_result_package validation passed" in lite_coverage_rows["deg"]["required_contracts"]
+    assert "result_index registered testing_level result" in lite_coverage_rows["deg"]["required_contracts"]
+    assert "report_ready_eligible false" in lite_coverage_rows["deg"]["required_contracts"]
     assert payload["legacy_sidecar_transition_matrix"]["schema_version"] == "biomedpilot.analysis.legacy_sidecar_transition_matrix.v1"
     assert payload["legacy_sidecar_transition_matrix"]["status"] == "partial"
     assert payload["legacy_sidecar_transition_matrix"]["passed_row_count"] == 4
@@ -396,6 +412,7 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Standard Worker Entrypoint Matrix" in text
     assert "External Tool Adapter Isolation Matrix" in text
     assert "Task System Boundary Matrix" in text
+    assert "Lite Task Bridge Coverage Matrix" in text
     assert "Legacy Sidecar Transition Matrix" in text
     assert "Frontend Standard Package Consumption Matrix" in text
     assert "Reproducibility Provenance Matrix" in text
@@ -406,6 +423,9 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in text
     assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in text
     assert "task_center_registered" in text
+    assert "test_all_registered_lite_modules_run_through_standard_r_worker_package_contract" in text
+    assert "standard_result_package validation passed" in text
+    assert "report_ready_eligible false" in text
     assert "pending_standard_worker_migration" in text
     assert "legacy_sidecar_writer_contract" in text
     assert "registry_current_adapter_status_transitional:correlation" in text
@@ -603,6 +623,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "external_tool_adapter_rows" in schema["required"]
     assert "task_system_boundary_matrix" in schema["required"]
     assert "task_system_boundary_rows" in schema["required"]
+    assert "lite_task_bridge_coverage_matrix" in schema["required"]
+    assert "lite_task_bridge_coverage_rows" in schema["required"]
     assert "legacy_sidecar_transition_matrix" in schema["required"]
     assert "legacy_sidecar_transition_rows" in schema["required"]
     assert "frontend_consumption_matrix" in schema["required"]
@@ -635,6 +657,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["external_tool_adapter_rows"]["type"] == "array"
     assert schema["properties"]["task_system_boundary_matrix"]["type"] == "object"
     assert schema["properties"]["task_system_boundary_rows"]["type"] == "array"
+    assert schema["properties"]["lite_task_bridge_coverage_matrix"]["type"] == "object"
+    assert schema["properties"]["lite_task_bridge_coverage_rows"]["type"] == "array"
     assert schema["properties"]["legacy_sidecar_transition_matrix"]["type"] == "object"
     assert schema["properties"]["legacy_sidecar_transition_rows"]["type"] == "array"
     assert schema["properties"]["frontend_consumption_matrix"]["type"] == "object"

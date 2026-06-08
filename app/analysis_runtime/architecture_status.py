@@ -107,6 +107,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         registry=registry,
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
+    lite_task_bridge_coverage_matrix = build_lite_task_bridge_coverage_matrix(registry=registry)
     legacy_sidecar_transition_matrix = build_legacy_sidecar_transition_matrix(registry=registry)
     frontend_consumption_matrix = build_frontend_standard_package_consumption_matrix()
     reproducibility_provenance_matrix = build_reproducibility_provenance_matrix()
@@ -170,9 +171,14 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-09",
             "Main backend task-system invocation boundary",
-            "warn" if legacy_sidecar_transition_matrix.get("status") == "partial" else ("pass" if legacy_sidecar_transition_matrix.get("status") == "passed" else "fail"),
+            "fail"
+            if task_system_boundary_matrix.get("status") != "passed" or lite_task_bridge_coverage_matrix.get("status") != "passed"
+            else ("warn" if legacy_sidecar_transition_matrix.get("status") == "partial" else "pass"),
             "app/analysis_runtime/task_bridge.py",
-            blockers=list(legacy_sidecar_transition_matrix.get("blocker_counts", {}).keys()),
+            blockers=[
+                *list(task_system_boundary_matrix.get("blocker_counts", {}).keys()),
+                *list(lite_task_bridge_coverage_matrix.get("blocker_counts", {}).keys()),
+            ],
             warnings=list(legacy_sidecar_transition_matrix.get("warning_counts", {}).keys()),
         ),
         _row(
@@ -296,6 +302,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
+        "lite_task_bridge_coverage_matrix": lite_task_bridge_coverage_matrix,
         "legacy_sidecar_transition_matrix": legacy_sidecar_transition_matrix,
         "frontend_consumption_matrix": frontend_consumption_matrix,
         "reproducibility_provenance_matrix": reproducibility_provenance_matrix,
@@ -1223,6 +1230,88 @@ def build_task_system_boundary_matrix(
         "warning_counts": warning_counts,
         "rows": rows,
         "boundary": "read_only_main_backend_task_system_boundary_diagnostics",
+    }
+
+
+def build_lite_task_bridge_coverage_matrix(registry: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return static evidence that lite modules are covered by task-bridge tests."""
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
+    ]
+    test_path = REPO_ROOT / "tests" / "test_analysis_runtime_task_bridge.py"
+    test_text = test_path.read_text(encoding="utf-8", errors="ignore") if test_path.is_file() else ""
+    rows = [
+        _lite_task_bridge_coverage_row(module, test_text=test_text, test_path="tests/test_analysis_runtime_task_bridge.py")
+        for module in modules
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    return {
+        "schema_version": "biomedpilot.analysis.lite_task_bridge_coverage_matrix.v1",
+        "status": "passed" if rows and not blocker_counts else "blocked",
+        "module_count": len(rows),
+        "covered_module_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "blocked_module_count": sum(1 for row in rows if row.get("status") != "passed"),
+        "blocker_counts": blocker_counts,
+        "rows": rows,
+        "test_file": "tests/test_analysis_runtime_task_bridge.py",
+        "boundary": "static_lite_task_bridge_coverage_diagnostics_no_worker_execution",
+    }
+
+
+def _lite_task_bridge_coverage_row(module: dict[str, Any], *, test_text: str, test_path: str) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    source = _module_contract_source(module)
+    modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
+    lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+    fixture_input = str(lite.get("fixture_input") or "")
+    blockers: list[str] = []
+    required_tokens = [
+        "test_all_registered_lite_modules_run_through_standard_r_worker_package_contract",
+        "run_analysis_module_task(",
+        "worker_backend=\"rscript\"",
+        "validate_standard_result_package(",
+        "build_standard_analysis_package_catalog(",
+        "load_registry(project_root)",
+        "TaskStatus.COMPLETED",
+        "biomedpilot_standard_r_worker",
+        "standard_r_worker",
+        "result_semantics\"] == \"testing_level\"",
+        "report_ready_eligible\"] is False",
+    ]
+    if lite.get("supported") is not True:
+        blockers.append(f"lite_task_bridge_coverage_lite_not_supported:{module_id}")
+    if not fixture_input:
+        blockers.append(f"lite_task_bridge_coverage_fixture_input_missing:{module_id}")
+    elif not (REPO_ROOT / fixture_input).is_file():
+        blockers.append(f"lite_task_bridge_coverage_fixture_input_not_found:{module_id}:{fixture_input}")
+    if f'if module_id == "{module_id}" and mode == "lite":' not in test_text:
+        blockers.append(f"lite_task_bridge_coverage_module_input_branch_missing:{module_id}")
+    for token in required_tokens:
+        if token not in test_text:
+            blockers.append(f"lite_task_bridge_coverage_required_test_token_missing:{module_id}:{token}")
+    return {
+        "module_id": module_id,
+        "title": str(source.get("title") or module.get("title") or module_id),
+        "status": "blocked" if blockers else "passed",
+        "fixture_input": fixture_input,
+        "fixture_input_status": "present" if fixture_input and (REPO_ROOT / fixture_input).is_file() else "missing",
+        "test_file": test_path,
+        "coverage_test": "test_all_registered_lite_modules_run_through_standard_r_worker_package_contract",
+        "worker_backend": "rscript",
+        "required_contracts": [
+            "TaskCenter completed task",
+            "standard_result_package validation passed",
+            "result_index registered testing_level result",
+            "worker_invocation boundary standard_r_worker",
+            "report_ready_eligible false",
+            "runtime/resource acquisition forbidden",
+        ],
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": [],
     }
 
 

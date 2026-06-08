@@ -197,6 +197,18 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "run_analysis_module_task" in task_boundary_text
     assert "task_types=deg；recomputed_deg；differential_expression" in task_boundary_text
     assert "formal_worker=pending_standard_worker_migration" in task_boundary_text
+    lite_coverage_text = "\n".join(str(row) for row in state["lite_task_bridge_coverage_rows"])
+    assert "Lite task bridge coverage matrix" in lite_coverage_text
+    assert "covered=10" in lite_coverage_text
+    assert "blocked=0" in lite_coverage_text
+    assert "tests/test_analysis_runtime_task_bridge.py" in lite_coverage_text
+    assert "Lite task bridge coverage: deg" in lite_coverage_text
+    assert "Lite task bridge coverage: molecular_dynamics" in lite_coverage_text
+    assert "fixture=present:analysis/fixtures/inputs/deg/module_input_lite.json" in lite_coverage_text
+    assert "worker=rscript" in lite_coverage_text
+    assert "test_all_registered_lite_modules_run_through_standard_r_worker_package_contract" in lite_coverage_text
+    assert "standard_result_package validation passed" in lite_coverage_text
+    assert "result_index registered testing_level result" in lite_coverage_text
     sidecar_text = "\n".join(str(row) for row in state["legacy_sidecar_transition_rows"])
     assert "Legacy sidecar transition matrix" in sidecar_text
     assert "passed=4" in sidecar_text
@@ -314,6 +326,10 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["task_system_boundary_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["task_system_boundary_matrix"]["passed_module_count"] == 10
     assert state["developer_diagnostics"]["task_system_boundary_rows"] == state["task_system_boundary_rows"]
+    assert state["developer_diagnostics"]["lite_task_bridge_coverage_matrix"]["status"] == "passed"
+    assert state["developer_diagnostics"]["lite_task_bridge_coverage_matrix"]["covered_module_count"] == 10
+    assert state["developer_diagnostics"]["lite_task_bridge_coverage_matrix"]["blocked_module_count"] == 0
+    assert state["developer_diagnostics"]["lite_task_bridge_coverage_rows"] == state["lite_task_bridge_coverage_rows"]
     assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert state["developer_diagnostics"]["legacy_sidecar_transition_rows"] == state["legacy_sidecar_transition_rows"]

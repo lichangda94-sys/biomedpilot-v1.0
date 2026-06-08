@@ -17,6 +17,7 @@ from app.analysis_runtime.architecture_status import (
     build_full_analysis_activation_gate,
     build_full_activation_module_matrix,
     build_legacy_sidecar_transition_matrix,
+    build_lite_task_bridge_coverage_matrix,
     build_module_interface_matrix,
     build_module_mode_readiness_matrix,
     build_reproducibility_provenance_matrix,
@@ -1455,6 +1456,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["task_system_boundary_matrix"]["status"] == "passed"
     assert status["task_system_boundary_matrix"]["passed_module_count"] == 10
     assert status["task_system_boundary_matrix"]["blocked_module_count"] == 0
+    assert status["lite_task_bridge_coverage_matrix"]["status"] == "passed"
+    assert status["lite_task_bridge_coverage_matrix"]["covered_module_count"] == 10
+    assert status["lite_task_bridge_coverage_matrix"]["blocked_module_count"] == 0
     assert status["legacy_sidecar_transition_matrix"]["status"] == "partial"
     assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 4
     assert status["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
@@ -1852,6 +1856,28 @@ def test_task_system_boundary_matrix_tracks_main_backend_task_contracts() -> Non
     assert rows["docking"]["required_task_system_invocation"] == "task_center_registered"
     assert rows["molecular_dynamics"]["result_index_task_types"] == ["molecular_dynamics"]
     assert rows["molecular_dynamics"]["direct_cli_is_not_ui_task_result"] is True
+
+
+def test_lite_task_bridge_coverage_matrix_tracks_all_lite_worker_contract_tests() -> None:
+    matrix = build_lite_task_bridge_coverage_matrix()
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.lite_task_bridge_coverage_matrix.v1"
+    assert matrix["status"] == "passed"
+    assert matrix["boundary"] == "static_lite_task_bridge_coverage_diagnostics_no_worker_execution"
+    assert matrix["test_file"] == "tests/test_analysis_runtime_task_bridge.py"
+    assert matrix["module_count"] == 10
+    assert matrix["covered_module_count"] == 10
+    assert matrix["blocked_module_count"] == 0
+    assert matrix["blocker_counts"] == {}
+    assert set(rows) == REQUIRED_MODULES
+    assert rows["deg"]["fixture_input_status"] == "present"
+    assert rows["deg"]["worker_backend"] == "rscript"
+    assert rows["deg"]["coverage_test"] == "test_all_registered_lite_modules_run_through_standard_r_worker_package_contract"
+    assert "standard_result_package validation passed" in rows["deg"]["required_contracts"]
+    assert "worker_invocation boundary standard_r_worker" in rows["deg"]["required_contracts"]
+    assert rows["molecular_dynamics"]["fixture_input"] == "analysis/fixtures/inputs/molecular_dynamics/module_input_lite.json"
+    assert rows["correlation"]["status"] == "passed"
 
 
 def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> None:
