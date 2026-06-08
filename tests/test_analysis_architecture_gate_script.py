@@ -46,7 +46,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     requirement_rows = {row["requirement_id"]: row for row in payload["requirement_rows"]}
     assert len(requirement_rows) == 20
     assert requirement_rows["RARCH-01"]["status"] == "pass"
-    assert requirement_rows["RARCH-03"]["status"] == "warn"
+    assert requirement_rows["RARCH-03"]["status"] == "pass"
     assert requirement_rows["RARCH-10"]["status"] == "pass"
     assert requirement_rows["RARCH-11"]["status"] == "pass"
     assert requirement_rows["RARCH-17"]["status"] == "pass"
@@ -123,9 +123,9 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert resource_artifact_rows["reactome_full"]["version_status"] == "placeholder"
     assert resource_artifact_rows["gromacs_tool"]["required_for_modules"] == ["molecular_dynamics"]
     assert payload["standard_worker_entrypoint_matrix"]["schema_version"] == "biomedpilot.analysis.standard_worker_entrypoint_matrix.v1"
-    assert payload["standard_worker_entrypoint_matrix"]["status"] == "partial"
-    assert payload["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
-    assert payload["standard_worker_entrypoint_matrix"]["partial_row_count"] == 1
+    assert payload["standard_worker_entrypoint_matrix"]["status"] == "passed"
+    assert payload["standard_worker_entrypoint_matrix"]["passed_row_count"] == 6
+    assert payload["standard_worker_entrypoint_matrix"]["partial_row_count"] == 0
     assert payload["standard_worker_entrypoint_matrix"]["blocked_row_count"] == 0
     assert payload["standard_worker_entrypoint_matrix"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert "deg" in payload["standard_worker_entrypoint_matrix"]["lite_module_ids"]
@@ -136,7 +136,9 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert entrypoint_rows["standard_r_worker_lite_dispatch_contract"]["status"] == "passed"
     assert entrypoint_rows["standard_r_worker_main_backend_invocation_contract"]["status"] == "passed"
     assert entrypoint_rows["standard_r_worker_no_runtime_acquisition"]["status"] == "passed"
-    assert entrypoint_rows["standard_r_worker_formal_migration_boundary"]["status"] == "partial"
+    assert entrypoint_rows["standard_r_worker_formal_migration_boundary"]["status"] == "passed"
+    assert entrypoint_rows["standard_r_worker_formal_migration_boundary"]["warnings"] == []
+    assert entrypoint_rows["standard_r_worker_formal_migration_boundary"]["migration_tracking_matrix"] == "standard_worker_migration_matrix"
     assert payload["external_tool_adapter_matrix"]["schema_version"] == "biomedpilot.analysis.external_tool_adapter_matrix.v1"
     assert payload["external_tool_adapter_matrix"]["status"] == "passed"
     assert payload["external_tool_adapter_matrix"]["passed_module_count"] == 2
@@ -434,7 +436,8 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Reproducibility Provenance Matrix" in text
     assert "mock=True; lite=True; full=False" in text
     assert "standard_r_worker_lite_dispatch_contract" in text
-    assert "standard_worker_entrypoint_formal_migration_pending:deg" in text
+    assert "entrypoint_contract_passed_formal_full_migration_tracked_by_standard_worker_migration_matrix" in text
+    assert "standard_worker_migration_matrix" in text
     assert "not_executed_in_lite_mode" in text
     assert "R_adapter_calls_AutoDock_Vina_in_chem_environment_only" in text
     assert "R_adapter_calls_GROMACS_in_chem_gpu_environment_only" in text

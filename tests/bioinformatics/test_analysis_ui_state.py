@@ -108,7 +108,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "files=requirements.txt；pyproject.toml；docker/Dockerfile.app-dev；renv/renv.app.lock" in architecture_gate_text
     architecture_status = state["developer_diagnostics"]["analysis_architecture_status"]
     assert architecture_status["requirement_summary"]["requirement_count"] == 20
-    assert "RARCH-03" in architecture_status["p2_issues"]
+    assert "RARCH-03" not in architecture_status["p2_issues"]
     assert "RARCH-15" in architecture_status["p3_issues"]
     assert architecture_status["top_architecture_risks"][0]["risk_id"] == "full_analysis_environment_locks_not_restored"
     module_interface_text = "\n".join(str(row) for row in state["module_interface_rows"])
@@ -161,15 +161,15 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "resource_lock_evidence_registry_entry_missing:gromacs_tool" in resource_artifact_text
     entrypoint_text = "\n".join(str(row) for row in state["standard_worker_entrypoint_rows"])
     assert "Standard R worker entrypoint matrix" in entrypoint_text
-    assert "passed=5" in entrypoint_text
-    assert "partial=1" in entrypoint_text
+    assert "passed=6" in entrypoint_text
+    assert "partial=0" in entrypoint_text
     assert "blocked=0" in entrypoint_text
     assert "lite_modules=deg；survival；univariate；multivariate；enrichment" in entrypoint_text
     assert "Standard R worker contract: standard_r_worker_cli_contract" in entrypoint_text
     assert "Standard R worker contract: standard_r_worker_lite_dispatch_contract" in entrypoint_text
     assert "Standard R worker contract: standard_r_worker_formal_migration_boundary" in entrypoint_text
-    assert "standard_worker_entrypoint_formal_migration_pending:deg" in entrypoint_text
-    assert "entrypoint_contract_is_not_formal_full_migration_evidence" in entrypoint_text
+    assert "pending:deg" in entrypoint_text
+    assert "entrypoint_contract_passed_formal_full_migration_tracked_by_standard_worker_migration_matrix" in entrypoint_text
     external_tool_text = "\n".join(str(row) for row in state["external_tool_adapter_rows"])
     assert "External tool adapter isolation matrix" in external_tool_text
     assert "passed=2" in external_tool_text
@@ -320,8 +320,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["resource_artifact_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["resource_artifact_matrix"]["blocked_resource_count"] == 11
     assert state["developer_diagnostics"]["resource_artifact_rows"] == state["resource_artifact_rows"]
-    assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["status"] == "partial"
-    assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
+    assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["status"] == "passed"
+    assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["passed_row_count"] == 6
     assert state["developer_diagnostics"]["standard_worker_entrypoint_rows"] == state["standard_worker_entrypoint_rows"]
     assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["external_tool_adapter_matrix"]["passed_module_count"] == 2

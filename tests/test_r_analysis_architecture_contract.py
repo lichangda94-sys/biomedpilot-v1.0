@@ -1384,7 +1384,7 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["p0_issues"] == []
     assert "full_analysis_environment_locks_not_restored" in status["p1_issues"]
     assert "full_analysis_resource_locks_not_complete" in status["p1_issues"]
-    assert "RARCH-03" in status["p2_issues"]
+    assert "RARCH-03" not in status["p2_issues"]
     assert "RARCH-08" not in status["p2_issues"]
     assert "RARCH-17" not in status["p2_issues"]
     assert "RARCH-12" in status["p3_issues"]
@@ -1449,9 +1449,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["resource_artifact_matrix"]["locked_resource_count"] == 1
     assert status["resource_artifact_matrix"]["blocked_resource_count"] == 11
     assert status["resource_artifact_matrix"]["warning_counts"]["resource_full_lock_not_ready:reactome_full"] == 1
-    assert status["standard_worker_entrypoint_matrix"]["status"] == "partial"
-    assert status["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
-    assert status["standard_worker_entrypoint_matrix"]["partial_row_count"] == 1
+    assert status["standard_worker_entrypoint_matrix"]["status"] == "passed"
+    assert status["standard_worker_entrypoint_matrix"]["passed_row_count"] == 6
+    assert status["standard_worker_entrypoint_matrix"]["partial_row_count"] == 0
     assert status["standard_worker_entrypoint_matrix"]["blocked_row_count"] == 0
     assert status["standard_worker_entrypoint_matrix"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert set(status["standard_worker_entrypoint_matrix"]["lite_module_ids"]) == REQUIRED_MODULES
@@ -2145,22 +2145,22 @@ def test_resource_artifact_matrix_tracks_full_resource_locks_without_preparing_r
     assert rows["gromacs_tool"]["required_for_modules"] == ["molecular_dynamics"]
 
 
-def test_standard_worker_entrypoint_matrix_tracks_runner_contract_and_partial_migration() -> None:
+def test_standard_worker_entrypoint_matrix_tracks_runner_contract_without_owning_formal_migration() -> None:
     matrix = build_standard_worker_entrypoint_matrix()
     rows = {row["row_id"]: row for row in matrix["rows"]}
 
     assert matrix["schema_version"] == "biomedpilot.analysis.standard_worker_entrypoint_matrix.v1"
-    assert matrix["status"] == "partial"
+    assert matrix["status"] == "passed"
     assert matrix["boundary"] == "read_only_standard_r_worker_entrypoint_contract_diagnostics"
     assert matrix["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert set(matrix["lite_module_ids"]) == REQUIRED_MODULES
     assert set(matrix["formal_pending_module_ids"]) == REQUIRED_MODULES
     assert matrix["row_count"] == 6
-    assert matrix["passed_row_count"] == 5
-    assert matrix["partial_row_count"] == 1
+    assert matrix["passed_row_count"] == 6
+    assert matrix["partial_row_count"] == 0
     assert matrix["blocked_row_count"] == 0
     assert matrix["blocker_counts"] == {}
-    assert matrix["warning_counts"]["standard_worker_entrypoint_formal_migration_pending:deg"] == 1
+    assert matrix["warning_counts"] == {}
     assert rows["standard_r_worker_cli_contract"]["status"] == "passed"
     assert rows["standard_r_worker_package_output_contract"]["status"] == "passed"
     assert rows["standard_r_worker_lite_dispatch_contract"]["status"] == "passed"
@@ -2169,8 +2169,11 @@ def test_standard_worker_entrypoint_matrix_tracks_runner_contract_and_partial_mi
     assert rows["standard_r_worker_main_backend_invocation_contract"]["status"] == "passed"
     assert rows["standard_r_worker_no_runtime_acquisition"]["status"] == "passed"
     assert rows["standard_r_worker_no_runtime_acquisition"]["blockers"] == []
-    assert rows["standard_r_worker_formal_migration_boundary"]["status"] == "partial"
-    assert "standard_worker_entrypoint_formal_migration_pending:survival" in rows["standard_r_worker_formal_migration_boundary"]["warnings"]
+    assert rows["standard_r_worker_formal_migration_boundary"]["status"] == "passed"
+    assert rows["standard_r_worker_formal_migration_boundary"]["warnings"] == []
+    assert rows["standard_r_worker_formal_migration_boundary"]["migration_tracking_matrix"] == "standard_worker_migration_matrix"
+    assert rows["standard_r_worker_formal_migration_boundary"]["migration_status"] == "not_entrypoint_readiness_evidence"
+    assert "survival" in rows["standard_r_worker_formal_migration_boundary"]["formal_pending_module_ids"]
 
 
 def test_standard_worker_matrices_use_module_manifest_when_registry_lite_runner_drifts() -> None:

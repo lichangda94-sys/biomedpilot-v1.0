@@ -1417,6 +1417,7 @@ def _standard_worker_entrypoint_summary_table(matrix: dict[str, Any], rows: list
             "evidence": row.get("evidence_path"),
             "lite_modules": row.get("lite_module_ids", []),
             "formal_pending": row.get("formal_pending_module_ids", []),
+            "boundary": row.get("boundary"),
             "warnings": row.get("warnings", []),
         }
         for row in rows
@@ -1424,7 +1425,7 @@ def _standard_worker_entrypoint_summary_table(matrix: dict[str, Any], rows: list
     return [
         *table,
         "",
-        *_markdown_table(["Contract", "Status", "Evidence", "Lite Modules", "Formal Pending", "Warnings"], entry_rows, ["row_id", "status", "evidence", "lite_modules", "formal_pending", "warnings"]),
+        *_markdown_table(["Contract", "Status", "Evidence", "Lite Modules", "Formal Pending", "Boundary", "Warnings"], entry_rows, ["row_id", "status", "evidence", "lite_modules", "formal_pending", "boundary", "warnings"]),
     ]
 
 
