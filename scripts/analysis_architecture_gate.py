@@ -262,6 +262,8 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
             "transitional_module_ids": legacy_sidecar_transition_matrix.get("transitional_module_ids", []),
             "sidecar_producer_count": legacy_sidecar_transition_matrix.get("sidecar_producer_count", 0),
             "sidecar_producers": legacy_sidecar_transition_matrix.get("sidecar_producers", []),
+            "standard_worker_lite_replacement_candidate_count": legacy_sidecar_transition_matrix.get("standard_worker_lite_replacement_candidate_count", 0),
+            "standard_worker_lite_replacement_candidate_module_ids": legacy_sidecar_transition_matrix.get("standard_worker_lite_replacement_candidate_module_ids", []),
             "boundary": legacy_sidecar_transition_matrix.get("boundary"),
         },
         "legacy_sidecar_transition_rows": [
@@ -1509,6 +1511,11 @@ def _legacy_sidecar_transition_summary_table(matrix: dict[str, Any], rows: list[
             "count": matrix.get("blocked_row_count", 0),
             "detail": matrix.get("blocker_counts", {}),
         },
+        {
+            "metric": "Lite standard-worker replacement candidates",
+            "count": matrix.get("standard_worker_lite_replacement_candidate_count", 0),
+            "detail": matrix.get("standard_worker_lite_replacement_candidate_module_ids", []),
+        },
     ]
     table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
     transition_rows = [
@@ -1517,6 +1524,7 @@ def _legacy_sidecar_transition_summary_table(matrix: dict[str, Any], rows: list[
             "status": row.get("status"),
             "evidence": row.get("evidence_path"),
             "transitional_modules": row.get("transitional_module_ids", []),
+            "replacement_candidates": row.get("standard_worker_lite_replacement_candidate_module_ids", []),
             "warnings": row.get("warnings", []),
         }
         for row in rows
@@ -1524,7 +1532,7 @@ def _legacy_sidecar_transition_summary_table(matrix: dict[str, Any], rows: list[
     return [
         *table,
         "",
-        *_markdown_table(["Contract", "Status", "Evidence", "Transitional Modules", "Warnings"], transition_rows, ["row_id", "status", "evidence", "transitional_modules", "warnings"]),
+        *_markdown_table(["Contract", "Status", "Evidence", "Transitional Modules", "Replacement Candidates", "Warnings"], transition_rows, ["row_id", "status", "evidence", "transitional_modules", "replacement_candidates", "warnings"]),
     ]
 
 

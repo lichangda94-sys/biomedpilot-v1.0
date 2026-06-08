@@ -1947,6 +1947,8 @@ def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = Non
         "transitional_module_ids": transitional_modules,
         "sidecar_producer_count": int(source_inventory_row.get("sidecar_producer_count") or 0),
         "sidecar_producers": list(source_inventory_row.get("sidecar_producers", []) or []),
+        "standard_worker_lite_replacement_candidate_count": int(source_inventory_row.get("standard_worker_lite_replacement_candidate_count") or 0),
+        "standard_worker_lite_replacement_candidate_module_ids": list(source_inventory_row.get("standard_worker_lite_replacement_candidate_module_ids", []) or []),
         "rows": rows,
         "boundary": "read_only_legacy_sidecar_transition_diagnostics",
     }
@@ -1964,31 +1966,37 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
         {
             "module_id": "deg",
             "source_surface": "controlled_two_group_deg_standard_package_sidecar",
+            "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/deg_engine/standard_package.py",
         },
         {
             "module_id": "deg",
             "source_surface": "controlled_multifactor_deg_standard_package_sidecar",
+            "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/deg_engine/multifactor_r_runner.py",
         },
         {
             "module_id": "enrichment",
             "source_surface": "controlled_enrichment_standard_package_sidecar",
+            "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/enrichment_r_adapter.py",
         },
         {
             "module_id": "survival",
             "source_surface": "controlled_survival_clinical_standard_package_sidecar",
+            "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/survival_clinical/standard_package.py",
         },
         {
             "module_id": "immune_infiltration",
             "source_surface": "immune_scoring_standard_package_sidecar",
+            "sidecar_mode_scope": "lite_testing_level",
             "file_path": "app/bioinformatics/immune_infiltration/standard_package.py",
         },
         {
             "module_id": "correlation",
             "source_surface": "correlation_standard_package_sidecar",
+            "sidecar_mode_scope": "lite_testing_level",
             "file_path": "app/bioinformatics/services/correlation_standard_package.py",
         },
     ]
@@ -1997,32 +2005,59 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
         "\"boundary_type\": \"legacy_service_adapter_sidecar\"",
         "\"migration_status\": \"sidecar_only_not_isolated_standard_worker\"",
     ]
+    registry = load_analysis_module_registry()
+    module_map = {
+        str(item.get("module_id") or ""): item
+        for item in registry.get("modules", [])
+        if isinstance(item, dict)
+    }
+    lite_coverage = build_lite_task_bridge_coverage_matrix(registry=registry)
+    lite_coverage_rows = {
+        str(item.get("module_id") or ""): item
+        for item in lite_coverage.get("rows", [])
+        if isinstance(item, dict)
+    }
     producers: list[dict[str, Any]] = []
     blockers: list[str] = []
     for target in targets:
+        module_id = str(target["module_id"])
         file_path = str(target["file_path"])
         path = REPO_ROOT / file_path
         text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
         missing_tokens = [token for token in required_tokens if token not in text]
+        replacement = _sidecar_standard_worker_replacement_status(
+            module=module_map.get(module_id, {}),
+            lite_coverage_row=lite_coverage_rows.get(module_id, {}),
+            sidecar_mode_scope=str(target.get("sidecar_mode_scope") or ""),
+        )
         if not path.is_file():
             blockers.append(f"legacy_sidecar_source_file_missing:{file_path}")
         if missing_tokens:
             blockers.append(
-                f"legacy_sidecar_source_token_missing:{target['module_id']}:{','.join(missing_tokens)}"
+                f"legacy_sidecar_source_token_missing:{module_id}:{','.join(missing_tokens)}"
             )
         producers.append(
             {
-                "module_id": str(target["module_id"]),
+                "module_id": module_id,
                 "source_surface": str(target["source_surface"]),
+                "sidecar_mode_scope": str(target.get("sidecar_mode_scope") or ""),
                 "file_path": file_path,
                 "status": "blocked" if (not path.is_file() or missing_tokens) else "partial",
                 "missing_tokens": missing_tokens,
                 "migration_status": "sidecar_only_not_isolated_standard_worker",
                 "worker_boundary": "legacy_service_adapter_sidecar",
                 "migration_next_action": "replace_with_task_center_registered_standard_worker_execution_after_full_environment_and_resource_locks",
+                **replacement,
             }
         )
     sidecar_module_ids = sorted({str(item["module_id"]) for item in producers if item.get("status") != "blocked"})
+    replacement_candidate_module_ids = sorted(
+        {
+            str(item.get("module_id") or "")
+            for item in producers
+            if item.get("standard_worker_lite_replacement_status") == "available"
+        }
+    )
     warnings = [f"legacy_sidecar_producer_transitional:{module_id}" for module_id in sidecar_module_ids]
     return {
         "row_id": "source_sidecar_producer_inventory",
@@ -2032,10 +2067,52 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
         "sidecar_producer_count": len(producers),
         "sidecar_module_count": len(sidecar_module_ids),
         "sidecar_module_ids": sidecar_module_ids,
+        "standard_worker_lite_replacement_candidate_count": len(replacement_candidate_module_ids),
+        "standard_worker_lite_replacement_candidate_module_ids": replacement_candidate_module_ids,
         "sidecar_producers": producers,
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": warnings,
         "boundary": "actual_sidecar_source_inventory_not_formal_worker_migration_evidence",
+    }
+
+
+def _sidecar_standard_worker_replacement_status(
+    *,
+    module: dict[str, Any],
+    lite_coverage_row: dict[str, Any],
+    sidecar_mode_scope: str,
+) -> dict[str, Any]:
+    source = _module_contract_source(module) if isinstance(module, dict) else {}
+    modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
+    lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+    runner = str(lite.get("runner") or "")
+    worker_backend = str(lite.get("worker_backend") or "")
+    lite_supported = lite.get("supported") is True
+    lite_path_ready = (
+        lite_supported
+        and worker_backend == "rscript"
+        and runner == "analysis/runners/run_module.R"
+        and lite_coverage_row.get("status") == "passed"
+    )
+    lite_replacement_available = lite_path_ready and sidecar_mode_scope == "lite_testing_level"
+    if lite_replacement_available:
+        replacement_status = "available"
+        replacement_next_action = "route_existing_lite_service_entrypoint_to_run_analysis_module_task_worker_backend_rscript_then_remove_sidecar"
+    elif lite_path_ready:
+        replacement_status = "not_equivalent_formal_sidecar_requires_full_standard_worker_migration"
+        replacement_next_action = "preserve_sidecar_warning_until_full_mode_standard_worker_migration_evidence_passes"
+    else:
+        replacement_status = "missing"
+        replacement_next_action = "add_or_fix_standard_worker_lite_task_bridge_coverage_before_sidecar_removal"
+    return {
+        "standard_worker_lite_supported": lite_supported,
+        "standard_worker_lite_runner": runner,
+        "standard_worker_lite_worker_backend": worker_backend,
+        "standard_worker_lite_path_status": "available" if lite_path_ready else "missing",
+        "task_bridge_lite_coverage_status": str(lite_coverage_row.get("status") or "missing"),
+        "task_bridge_lite_coverage_test": str(lite_coverage_row.get("coverage_test") or ""),
+        "standard_worker_lite_replacement_status": replacement_status,
+        "replacement_next_action": replacement_next_action,
     }
 
 

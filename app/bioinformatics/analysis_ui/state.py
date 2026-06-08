@@ -1660,6 +1660,7 @@ def build_legacy_sidecar_transition_rows(matrix: dict[str, Any]) -> list[dict[st
                 f"partial={matrix.get('partial_row_count', 0)}",
                 f"blocked={matrix.get('blocked_row_count', 0)}",
                 f"transitional_modules={len(_list(matrix.get('transitional_module_ids')))}",
+                f"replacement_candidates={compact_list(_list(matrix.get('standard_worker_lite_replacement_candidate_module_ids')))}",
                 *[f"adapter:{key}={value}" for key, value in sorted(adapter_status_counts.items())],
                 *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
             ],
@@ -1674,6 +1675,7 @@ def build_legacy_sidecar_transition_rows(matrix: dict[str, Any]) -> list[dict[st
                 _list(row.get("blockers")),
                 [
                     *[f"module:{module_id}" for module_id in _list(row.get("transitional_module_ids"))[:8]],
+                    *[f"replacement:{module_id}" for module_id in _list(row.get("standard_worker_lite_replacement_candidate_module_ids"))[:8]],
                     *_list(row.get("warnings"))[:8],
                 ],
                 basis=(

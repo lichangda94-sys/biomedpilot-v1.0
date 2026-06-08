@@ -1916,6 +1916,8 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     }
     assert matrix["sidecar_producer_count"] == 6
     assert len(matrix["sidecar_producers"]) == 6
+    assert matrix["standard_worker_lite_replacement_candidate_count"] == 2
+    assert matrix["standard_worker_lite_replacement_candidate_module_ids"] == ["correlation", "immune_infiltration"]
     assert matrix["adapter_status_counts"]["existing_python_testing_level_sidecar_pending_standard_worker_migration"] == 1
     assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:correlation"] == 1
     assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:deg"] == 1
@@ -1935,6 +1937,18 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
         "immune_infiltration",
         "survival",
     ]
+    assert rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == [
+        "correlation",
+        "immune_infiltration",
+    ]
+    producers = {
+        (item["module_id"], item["source_surface"]): item
+        for item in rows["source_sidecar_producer_inventory"]["sidecar_producers"]
+    }
+    assert producers[("correlation", "correlation_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "available"
+    assert producers[("immune_infiltration", "immune_scoring_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "available"
+    assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "not_equivalent_formal_sidecar_requires_full_standard_worker_migration"
+    assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_path_status"] == "available"
     assert rows["source_sidecar_producer_inventory"]["boundary"] == "actual_sidecar_source_inventory_not_formal_worker_migration_evidence"
 
 
