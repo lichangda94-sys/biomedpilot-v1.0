@@ -223,13 +223,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "adapter_status_is_inventory_only_not_worker_migration_evidence" in sidecar_text
     frontend_consumption_text = "\n".join(str(row) for row in state["frontend_consumption_rows"])
     assert "Frontend standard package consumption matrix" in frontend_consumption_text
-    assert "passed=4" in frontend_consumption_text
-    assert "partial=1" in frontend_consumption_text
+    assert "passed=5" in frontend_consumption_text
+    assert "partial=0" in frontend_consumption_text
     assert "blocked=0" in frontend_consumption_text
     assert "Frontend standard package consumer: catalog_source_policy" in frontend_consumption_text
     assert "Frontend standard package consumer: results_browser_tables" in frontend_consumption_text
     assert "Frontend standard package consumer: detailed_result_views_migration" in frontend_consumption_text
-    assert "detailed_result_views_still_need_standard_package_only_migration" in frontend_consumption_text
+    assert "immune_tme_scoring_page" in frontend_consumption_text
     assert "consume_result_index_registered_standard_result_packages_only" in frontend_consumption_text
     provenance_text = "\n".join(str(row) for row in state["reproducibility_provenance_rows"])
     assert "Reproducibility provenance matrix" in provenance_text
@@ -333,14 +333,14 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert state["developer_diagnostics"]["legacy_sidecar_transition_rows"] == state["legacy_sidecar_transition_rows"]
-    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["status"] == "partial"
-    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["partial_consumer_count"] == 1
-    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["pending_detail_view_count"] == 1
+    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["status"] == "passed"
+    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["partial_consumer_count"] == 0
+    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["pending_detail_view_count"] == 0
     assert "formal_deg_review_panel" not in state["developer_diagnostics"]["frontend_consumption_matrix"]["pending_detail_view_ids"]
-    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls"]
+    assert state["developer_diagnostics"]["frontend_consumption_matrix"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls", "immune_tme_scoring_page"]
     assert state["developer_diagnostics"]["frontend_consumption_rows"] == state["frontend_consumption_rows"]
-    assert "pending_detail_views=1" in frontend_consumption_text
-    assert "migrated_detail_views=2" in frontend_consumption_text
+    assert "pending_detail_views=0" in frontend_consumption_text
+    assert "migrated_detail_views=3" in frontend_consumption_text
     assert "formal_deg_review_panel" in frontend_consumption_text
     assert "formal_deg_plot_report_controls" in frontend_consumption_text
     assert state["developer_diagnostics"]["reproducibility_provenance_matrix"]["status"] == "partial"

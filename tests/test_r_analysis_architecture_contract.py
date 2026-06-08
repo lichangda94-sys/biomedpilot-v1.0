@@ -1385,7 +1385,7 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert "full_analysis_environment_locks_not_restored" in status["p1_issues"]
     assert "full_analysis_resource_locks_not_complete" in status["p1_issues"]
     assert "RARCH-03" in status["p2_issues"]
-    assert "RARCH-08" in status["p2_issues"]
+    assert "RARCH-08" not in status["p2_issues"]
     assert "RARCH-12" in status["p3_issues"]
     assert status["priority_issue_lists"]["P0"] == []
     assert {item["issue_id"] for item in status["priority_issue_lists"]["P1"]} == {
@@ -1465,9 +1465,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
     assert "deg" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
     assert "correlation" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
-    assert status["frontend_consumption_matrix"]["status"] == "partial"
-    assert status["frontend_consumption_matrix"]["passed_consumer_count"] == 4
-    assert status["frontend_consumption_matrix"]["partial_consumer_count"] == 1
+    assert status["frontend_consumption_matrix"]["status"] == "passed"
+    assert status["frontend_consumption_matrix"]["passed_consumer_count"] == 5
+    assert status["frontend_consumption_matrix"]["partial_consumer_count"] == 0
     assert status["reproducibility_provenance_matrix"]["status"] == "partial"
     assert status["reproducibility_provenance_matrix"]["passed_row_count"] == 5
     assert status["reproducibility_provenance_matrix"]["partial_row_count"] == 1
@@ -1703,6 +1703,8 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     ]
     assert matrix["passed_evidence_module_ids"] == []
     assert matrix["blocked_evidence_module_ids"] == []
+    assert matrix["formal_pending_count"] == 10
+    assert matrix["full_blocked_count"] == 10
     assert matrix["missing_evidence_module_ids"] == matrix["expected_evidence_module_ids"]
     assert matrix["module_count"] >= 10
     assert matrix["formal_pending_count"] == matrix["module_count"]
@@ -1910,18 +1912,18 @@ def test_frontend_standard_package_consumption_matrix_tracks_partial_ui_boundary
     rows = {row["row_id"]: row for row in matrix["rows"]}
 
     assert matrix["schema_version"] == "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1"
-    assert matrix["status"] == "partial"
+    assert matrix["status"] == "passed"
     assert matrix["boundary"] == "read_only_frontend_standard_package_consumption_diagnostics"
     assert matrix["consumer_count"] == 5
-    assert matrix["passed_consumer_count"] == 4
-    assert matrix["partial_consumer_count"] == 1
+    assert matrix["passed_consumer_count"] == 5
+    assert matrix["partial_consumer_count"] == 0
     assert matrix["blocked_consumer_count"] == 0
-    assert matrix["pending_detail_view_count"] == 1
-    assert matrix["pending_detail_view_ids"] == ["immune_tme_scoring_page"]
-    assert matrix["migrated_detail_view_count"] == 2
-    assert matrix["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls"]
+    assert matrix["pending_detail_view_count"] == 0
+    assert matrix["pending_detail_view_ids"] == []
+    assert matrix["migrated_detail_view_count"] == 3
+    assert matrix["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls", "immune_tme_scoring_page"]
     assert matrix["blocker_counts"] == {}
-    assert matrix["warning_counts"]["detailed_result_views_still_need_standard_package_only_migration"] == 1
+    assert matrix["warning_counts"] == {}
     assert rows["catalog_source_policy"]["status"] == "passed"
     assert rows["catalog_source_policy"]["consumer_surface"] == "build_standard_analysis_package_catalog"
     assert rows["catalog_source_policy"]["source_policy"] == "consume_result_index_registered_standard_result_packages_only"
@@ -1931,17 +1933,16 @@ def test_frontend_standard_package_consumption_matrix_tracks_partial_ui_boundary
     assert rows["analysis_center_state"]["file_path"] == "app/bioinformatics/analysis_ui/state.py"
     assert rows["results_browser_tables"]["status"] == "passed"
     assert rows["results_browser_tables"]["consumer_surface"] == "BioinformaticsResultsBrowserWidget"
-    assert rows["detailed_result_views_migration"]["status"] == "partial"
-    assert rows["detailed_result_views_migration"]["pending_detail_view_count"] == 1
-    assert rows["detailed_result_views_migration"]["pending_detail_view_ids"] == ["immune_tme_scoring_page"]
-    assert rows["detailed_result_views_migration"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls"]
+    assert rows["detailed_result_views_migration"]["status"] == "passed"
+    assert rows["detailed_result_views_migration"]["pending_detail_view_count"] == 0
+    assert rows["detailed_result_views_migration"]["pending_detail_view_ids"] == []
+    assert rows["detailed_result_views_migration"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls", "immune_tme_scoring_page"]
     assert rows["detailed_result_views_migration"]["detail_views"][0]["consumer_surface"] == "BioinformaticsResultsBrowserWidget.formal_deg_review"
     assert rows["detailed_result_views_migration"]["detail_views"][0]["source_policy"] == "standard_package_only"
     assert "FORMAL_DEG_STANDARD_PACKAGE_SOURCE_POLICY" in rows["detailed_result_views_migration"]["detail_views"][0]["required_tokens"]
     assert "build_standard_analysis_package_detail()" in rows["detailed_result_views_migration"]["migration_next_action"]
     assert rows["detailed_result_views_migration"]["blockers"] == []
-    assert "detailed_result_views_still_need_standard_package_only_migration" in rows["detailed_result_views_migration"]["warnings"]
-    assert "detailed_result_view_pending_standard_package_migration:immune_tme_scoring_page" in rows["detailed_result_views_migration"]["warnings"]
+    assert rows["detailed_result_views_migration"]["warnings"] == []
 
 
 def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> None:

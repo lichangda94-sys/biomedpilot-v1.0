@@ -55,7 +55,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "full_analysis_resource_locks_not_complete",
         "formal_algorithms_not_universally_migrated_to_isolated_standard_worker",
     }
-    assert any(item["issue_id"] == "RARCH-08" for item in payload["priority_issue_lists"]["P2"])
+    assert not any(item["issue_id"] == "RARCH-08" for item in payload["priority_issue_lists"]["P2"])
     assert any(item["issue_id"] == "RARCH-12" for item in payload["priority_issue_lists"]["P3"])
     assert len(payload["top_architecture_risks"]) == 5
     assert payload["top_architecture_risks"][0]["risk_id"] == "full_analysis_environment_locks_not_restored"
@@ -188,21 +188,20 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert legacy_sidecar_rows["registry_adapter_transition_scope"]["status"] == "partial"
     assert legacy_sidecar_rows["sidecar_boundary_test_coverage"]["status"] == "passed"
     assert payload["frontend_consumption_matrix"]["schema_version"] == "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1"
-    assert payload["frontend_consumption_matrix"]["status"] == "partial"
-    assert payload["frontend_consumption_matrix"]["passed_consumer_count"] == 4
-    assert payload["frontend_consumption_matrix"]["partial_consumer_count"] == 1
-    assert payload["frontend_consumption_matrix"]["pending_detail_view_count"] == 1
-    assert payload["frontend_consumption_matrix"]["pending_detail_view_ids"] == ["immune_tme_scoring_page"]
-    assert payload["frontend_consumption_matrix"]["migrated_detail_view_count"] == 2
-    assert payload["frontend_consumption_matrix"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls"]
+    assert payload["frontend_consumption_matrix"]["status"] == "passed"
+    assert payload["frontend_consumption_matrix"]["passed_consumer_count"] == 5
+    assert payload["frontend_consumption_matrix"]["partial_consumer_count"] == 0
+    assert payload["frontend_consumption_matrix"]["pending_detail_view_count"] == 0
+    assert payload["frontend_consumption_matrix"]["pending_detail_view_ids"] == []
+    assert payload["frontend_consumption_matrix"]["migrated_detail_view_count"] == 3
+    assert payload["frontend_consumption_matrix"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls", "immune_tme_scoring_page"]
     frontend_rows = {row["row_id"]: row for row in payload["frontend_consumption_rows"]}
     assert frontend_rows["catalog_source_policy"]["status"] == "passed"
     assert frontend_rows["results_browser_tables"]["consumer_surface"] == "BioinformaticsResultsBrowserWidget"
-    assert frontend_rows["detailed_result_views_migration"]["status"] == "partial"
-    assert frontend_rows["detailed_result_views_migration"]["pending_detail_view_count"] == 1
-    assert frontend_rows["detailed_result_views_migration"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls"]
-    assert "detailed_result_views_still_need_standard_package_only_migration" in frontend_rows["detailed_result_views_migration"]["warnings"]
-    assert "detailed_result_view_pending_standard_package_migration:immune_tme_scoring_page" in frontend_rows["detailed_result_views_migration"]["warnings"]
+    assert frontend_rows["detailed_result_views_migration"]["status"] == "passed"
+    assert frontend_rows["detailed_result_views_migration"]["pending_detail_view_count"] == 0
+    assert frontend_rows["detailed_result_views_migration"]["migrated_detail_view_ids"] == ["formal_deg_review_panel", "formal_deg_plot_report_controls", "immune_tme_scoring_page"]
+    assert frontend_rows["detailed_result_views_migration"]["warnings"] == []
     assert payload["reproducibility_provenance_matrix"]["schema_version"] == "biomedpilot.analysis.reproducibility_provenance_matrix.v1"
     assert payload["reproducibility_provenance_matrix"]["status"] == "partial"
     assert payload["reproducibility_provenance_matrix"]["passed_row_count"] == 5
@@ -428,7 +427,8 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "pending_standard_worker_migration" in text
     assert "legacy_sidecar_writer_contract" in text
     assert "registry_current_adapter_status_transitional:correlation" in text
-    assert "detailed_result_views_still_need_standard_package_only_migration" in text
+    assert "Frontend Standard Package Consumption Matrix" in text
+    assert "Migrated detail views | 3 | formal_deg_review_panel, formal_deg_plot_report_controls, immune_tme_scoring_page" in text
     assert "standard_r_worker_provenance_writer" in text
     assert "package_versions" in text
     assert "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence" in text

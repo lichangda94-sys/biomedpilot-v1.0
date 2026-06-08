@@ -106,6 +106,10 @@ from app.bioinformatics.immune_infiltration import (
     load_signature_catalog,
     run_immune_scoring,
 )
+from app.bioinformatics.immune_infiltration.standard_package_source import (
+    IMMUNE_STANDARD_PACKAGE_SOURCE_POLICY,
+    immune_scoring_standard_package_source,
+)
 from app.bioinformatics.immune_infiltration.signature_models import signature_from_dict
 from app.bioinformatics.project_readiness import (
     has_standardizable_expression_input,
@@ -6234,18 +6238,24 @@ class BioinformaticsImmuneInfiltrationWidget(QWidget):
         self._value_policy_label.setText(f"value type：{dataset.get('value_type')}；推荐 TPM / normalized expression；raw counts / unknown 默认阻断。")
 
     def _render_result(self, result: object, preflight: dict[str, object], report: dict[str, object]) -> None:
+        standard_source = immune_scoring_standard_package_source(self._project_root, result_id=str(getattr(result, "run_id", ""))) if self._project_root else {}
+        tables = standard_source.get("tables") if isinstance(standard_source.get("tables"), dict) else {}
+        score_table = tables.get("immune_score_matrix") if isinstance(tables.get("immune_score_matrix"), dict) else {}
+        coverage_table = tables.get("immune_signature_coverage") if isinstance(tables.get("immune_signature_coverage"), dict) else {}
         self._run_summary_label.setText(
             f"run：{getattr(result, 'run_id', '')}；signature {getattr(result, 'scored_signature_count', 0)}/{getattr(result, 'signature_count', 0)}；"
-            f"sample {getattr(result, 'sample_count', 0)}；report 已生成。"
+            f"sample {getattr(result, 'sample_count', 0)}；结果预览来自标准结果包；report draft 不等同于 report-ready。"
         )
-        _fill_table(self._score_preview, _tsv_rows(getattr(result, "score_matrix_path", ""), limit=8, columns=["signature_id", "display_name", "coverage_status"]))
-        _fill_table(self._coverage_preview, _tsv_rows(getattr(result, "coverage_path", ""), limit=8, columns=["signature_id", "matched_gene_count", "coverage_ratio", "status"]))
+        _fill_table(self._score_preview, _tsv_rows(str(score_table.get("path") or ""), limit=8, columns=["signature_id", "display_name", "coverage_status"]))
+        _fill_table(self._coverage_preview, _tsv_rows(str(coverage_table.get("path") or ""), limit=8, columns=["signature_id", "matched_gene_count", "coverage_ratio", "status"]))
         self._developer_details.setPlainText(
             _json(
                 {
-                    "immune_scoring_result": result.to_dict() if hasattr(result, "to_dict") else {},
+                    "standard_package_source_policy": IMMUNE_STANDARD_PACKAGE_SOURCE_POLICY,
+                    "standard_package_source": standard_source,
+                    "immune_scoring_result_receipt": result.to_dict() if hasattr(result, "to_dict") else {},
                     "linkage_preflight": preflight,
-                    "report": report,
+                    "report_draft_not_standard_package_readiness_evidence": report,
                 }
             )
         )

@@ -164,9 +164,12 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-08",
             "Frontend standard package consumption boundary",
-            "warn",
+            "fail"
+            if frontend_consumption_matrix.get("status") == "blocked"
+            else ("warn" if frontend_consumption_matrix.get("status") == "partial" else "pass"),
             "build_standard_analysis_package_catalog and Analysis Center standard package gates",
-            warnings=["detailed_result_views_still_need_standard_package_only_migration"],
+            blockers=list(frontend_consumption_matrix.get("blocker_counts", {}).keys()),
+            warnings=list(frontend_consumption_matrix.get("warning_counts", {}).keys()),
         ),
         _row(
             "RARCH-09",
@@ -1462,14 +1465,18 @@ def _frontend_detailed_result_views_migration_row() -> dict[str, Any]:
         {
             "view_id": "immune_tme_scoring_page",
             "consumer_surface": "BioinformaticsImmuneScoringWidget",
-            "file_path": "app/bioinformatics/workflow_pages.py",
-            "required_tokens": [
-                "build_immune_infiltration_readiness",
-                "run_immune_scoring",
-                "generate_immune_tme_report",
+            "file_paths": [
+                "app/bioinformatics/workflow_pages.py",
+                "app/bioinformatics/immune_infiltration/standard_package_source.py",
             ],
-            "evidence_policy": "transitional_inventory_only",
-            "migration_next_action": "replace module-private score/report previews with standard package catalog/detail artifacts",
+            "required_tokens": [
+                "immune_scoring_standard_package_source",
+                "IMMUNE_STANDARD_PACKAGE_SOURCE_POLICY",
+                "standard_package_source_policy",
+                "report_draft_not_standard_package_readiness_evidence",
+            ],
+            "evidence_policy": "standard_package_only",
+            "migration_next_action": "keep immune/TME scoring previews sourced from standard package artifact manifests",
         },
     ]
     blockers: list[str] = []

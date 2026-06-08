@@ -16,6 +16,7 @@ from app.bioinformatics.immune_infiltration import (
     load_builtin_signatures,
     run_immune_scoring,
 )
+from app.bioinformatics.immune_infiltration.standard_package_source import immune_scoring_standard_package_source
 from app.bioinformatics.project_readiness import run_project_readiness
 
 
@@ -104,6 +105,12 @@ def test_scoring_outputs_manifest_receipt_and_result_index(tmp_path: Path) -> No
     assert row["artifact_counts"]["reports"] == 1
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert "clinical_conclusion_not_generated" in row["warnings"]
+    source = immune_scoring_standard_package_source(tmp_path, result_id=result.run_id)
+    assert source["status"] == "passed"
+    assert source["source_policy"] == "result_index_registered_standard_result_package_artifacts_only"
+    assert source["tables"]["immune_score_matrix"]["within_standard_package"] is True
+    assert source["tables"]["immune_signature_coverage"]["exists"] is True
+    assert source["standard_result_package"] == str(standard_package_dir.relative_to(tmp_path))
 
 
 def test_scoring_blocks_unknown_or_raw_value_type(tmp_path: Path) -> None:

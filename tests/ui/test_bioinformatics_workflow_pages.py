@@ -35,6 +35,7 @@ try:
         BioinformaticsDegConfigWidget,
         GseaGeneSetResourceManagerDialog,
         BioinformaticsImportedDegBrowserWidget,
+        BioinformaticsImmuneInfiltrationWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -76,6 +77,56 @@ def qt_app():
 @pytest.fixture
 def project_summary(tmp_path: Path):
     return create_bioinformatics_project("UI Workflow Project", tmp_path)
+
+
+def _write_immune_expression_fixture(root: Path) -> Path:
+    matrix = root / "inputs" / "immune_tpm.tsv"
+    matrix.parent.mkdir(parents=True, exist_ok=True)
+    matrix.write_text(
+        "\n".join(
+            [
+                "gene_id\tS1\tS2\tS3",
+                "CD3D\t10\t3\t4",
+                "CD8A\t12\t2\t3",
+                "CD8B\t10\t1\t2",
+                "GZMB\t15\t1\t2",
+                "PRF1\t14\t2\t1",
+                "NKG7\t11\t1\t2",
+                "GZMA\t13\t2\t3",
+                "GNLY\t9\t1\t2",
+                "MS4A1\t0\t7\t8",
+                "ACTB\t50\t51\t52",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return matrix
+
+
+def _write_immune_standardized_registry(root: Path, matrix_path: Path) -> None:
+    path = root / "manifests" / "standardized_assets_registry.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.standardized_assets_registry.v2",
+                "assets": [
+                    {
+                        "asset_id": "immune_expr",
+                        "label_zh": "Immune TPM fixture",
+                        "asset_type": "normalized_expression_matrix",
+                        "file_path": str(matrix_path),
+                        "expression_value_type": "TPM",
+                        "gene_id_type": "symbol",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 def _write_xlsx_count_matrix(path: Path) -> Path:
@@ -4478,6 +4529,33 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     assert Path(str(manifest["user_visible_package_path"])).is_dir()
     assert "输出位置：" in widget.status_message()
     assert "仅包含 formal DEG section" in widget.status_message()
+
+
+def test_immune_scoring_page_previews_standard_package_artifacts(qt_app, project_summary) -> None:
+    matrix = _write_immune_expression_fixture(project_summary.project_root)
+    _write_immune_standardized_registry(project_summary.project_root, matrix)
+    widget = BioinformaticsImmuneInfiltrationWidget()
+    widget.refresh_project(project_summary)
+    widget._signature_ids_input.setText("cd8_t_cell,cytolytic_activity")
+
+    result = widget.run_scoring()
+
+    assert result is not None
+    summary = widget.findChild(QLabel, "immuneRunSummary")
+    assert summary is not None
+    assert "结果预览来自标准结果包" in summary.text()
+    score_table = widget.findChild(QTableWidget, "immuneScorePreviewTable")
+    coverage_table = widget.findChild(QTableWidget, "immuneCoverageTable")
+    assert score_table is not None
+    assert coverage_table is not None
+    assert "cd8_t_cell" in _table_text(score_table)
+    assert "cytolytic_activity" in _table_text(coverage_table)
+    diagnostics = widget.findChild(QPlainTextEdit, "immuneDeveloperDiagnostics")
+    assert diagnostics is not None
+    diagnostics_text = diagnostics.toPlainText()
+    assert "result_index_registered_standard_result_package_artifacts_only" in diagnostics_text
+    assert "standard_package_source" in diagnostics_text
+    assert "report_draft_not_standard_package_readiness_evidence" in diagnostics_text
 
 
 def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_summary) -> None:
