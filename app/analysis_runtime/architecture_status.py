@@ -661,11 +661,17 @@ def build_module_interface_matrix(registry: dict[str, Any] | None = None) -> dic
     }
 
 
-def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -> dict[str, Any]:
+def _module_contract_source(module: dict[str, Any]) -> dict[str, Any]:
     module_id = str(module.get("module_id") or "")
     module_manifest = str(module.get("module_manifest") or f"analysis/modules/{module_id}/module.json")
     manifest_payload = _read_json(REPO_ROOT / module_manifest) if (REPO_ROOT / module_manifest).is_file() else {}
-    source = manifest_payload if isinstance(manifest_payload, dict) and manifest_payload else module
+    return manifest_payload if isinstance(manifest_payload, dict) and manifest_payload else module
+
+
+def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    module_manifest = str(module.get("module_manifest") or f"analysis/modules/{module_id}/module.json")
+    source = _module_contract_source(module)
     modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
     mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
     lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
@@ -943,7 +949,8 @@ def build_standard_worker_entrypoint_matrix(
 def _standard_entrypoint_lite_module_ids(modules: list[dict[str, Any]], *, standard_entrypoint: str) -> list[str]:
     ids: list[str] = []
     for module in modules:
-        modes = module.get("modes") if isinstance(module.get("modes"), dict) else {}
+        source = _module_contract_source(module)
+        modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
         lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
         if lite.get("supported") is True and lite.get("runner") == standard_entrypoint and lite.get("worker_backend") == "rscript":
             ids.append(str(module.get("module_id") or ""))
@@ -2704,7 +2711,8 @@ def _standard_worker_migration_row(
     valid_evidence_by_module: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     module_id = str(module.get("module_id") or "")
-    modes = module.get("modes") if isinstance(module.get("modes"), dict) else {}
+    source = _module_contract_source(module)
+    modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
     mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
     lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
     full = modes.get("full") if isinstance(modes.get("full"), dict) else {}
@@ -2734,7 +2742,7 @@ def _standard_worker_migration_row(
     prerequisite_status = _standard_worker_migration_prerequisite_status(
         blockers=migration_blockers,
         formal_worker_status=formal_worker_status,
-        full_environment=str(module.get("full_environment") or ""),
+        full_environment=str(source.get("full_environment") or module.get("full_environment") or ""),
         current_adapter_status=current_adapter_status,
     )
     return {
@@ -2747,8 +2755,8 @@ def _standard_worker_migration_row(
         "migration_evidence_status": evidence_status,
         "current_adapter_status": current_adapter_status,
         "standard_entrypoint": standard_entrypoint if lite_uses_standard_worker else "",
-        "analysis_environment": str(module.get("analysis_environment") or ""),
-        "full_environment": str(module.get("full_environment") or ""),
+        "analysis_environment": str(source.get("analysis_environment") or module.get("analysis_environment") or ""),
+        "full_environment": str(source.get("full_environment") or module.get("full_environment") or ""),
         "full_blocker": str(full.get("blocker") or ""),
         "result_index_task_types": [str(item) for item in module.get("result_index_task_types", []) if item],
         "migration_readiness_status": "blocked" if migration_blockers else "candidate_evidence_ready",

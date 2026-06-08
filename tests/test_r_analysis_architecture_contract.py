@@ -2112,6 +2112,22 @@ def test_standard_worker_entrypoint_matrix_tracks_runner_contract_and_partial_mi
     assert "standard_worker_entrypoint_formal_migration_pending:survival" in rows["standard_r_worker_formal_migration_boundary"]["warnings"]
 
 
+def test_standard_worker_matrices_use_module_manifest_when_registry_lite_runner_drifts() -> None:
+    registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_modules.json"))
+    for module in registry["modules"]:
+        if module["module_id"] == "correlation":
+            module["modes"]["lite"].pop("runner", None)
+            module["modes"]["lite"]["worker_backend"] = "python_fixture"
+
+    entrypoint = build_standard_worker_entrypoint_matrix(registry=registry)
+    migration = build_standard_worker_migration_matrix(registry=registry)
+    migration_rows = {row["module_id"]: row for row in migration["rows"]}
+
+    assert "correlation" in entrypoint["lite_module_ids"]
+    assert migration_rows["correlation"]["lite_status"] == "standard_worker_lite_ready"
+    assert migration_rows["correlation"]["standard_entrypoint"] == "analysis/runners/run_module.R"
+
+
 def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_by_default() -> None:
     registry = load_standard_worker_migration_evidence_registry()
     validation = validate_standard_worker_migration_evidence_registry(registry)
@@ -2197,7 +2213,7 @@ def test_standard_worker_migration_evidence_registry_blocks_expected_module_scop
     ]
 
 
-def test_standard_worker_migration_matrix_does_not_accept_full_supported_module_without_registry_evidence() -> None:
+def test_standard_worker_migration_matrix_does_not_accept_registry_only_full_supported_drift() -> None:
     registry = deepcopy(read_json(ROOT / "analysis" / "registry" / "analysis_modules.json"))
     modules = {item["module_id"]: item for item in registry["modules"]}  # type: ignore[index]
     modules["deg"]["modes"]["full"]["supported"] = True
@@ -2205,14 +2221,13 @@ def test_standard_worker_migration_matrix_does_not_accept_full_supported_module_
     matrix = build_standard_worker_migration_matrix(registry)
     rows = {row["module_id"]: row for row in matrix["rows"]}
 
-    assert rows["deg"]["full_status"] == "ready_unverified"
+    assert rows["deg"]["full_status"] == "blocked"
     assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"
     assert rows["deg"]["migration_evidence_status"] == "missing"
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
-    assert "full_mode_not_supported_in_registry" not in rows["deg"]["migration_blockers"]
-    assert rows["deg"]["migration_blockers"] == ["registry_evidence_entry_missing_or_blocked"]
-    assert rows["deg"]["migration_prerequisite_status"]["full_mode_registry"] == "ready_unverified"
-    assert rows["deg"]["migration_next_action"] == "register_schema_valid_standard_worker_migration_evidence"
+    assert "full_mode_not_supported_in_registry" in rows["deg"]["migration_blockers"]
+    assert rows["deg"]["migration_prerequisite_status"]["full_mode_registry"] == "blocked"
+    assert rows["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert matrix["formal_pending_count"] == matrix["module_count"]
 
 
