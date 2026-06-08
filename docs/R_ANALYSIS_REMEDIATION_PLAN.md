@@ -214,6 +214,8 @@ Update: runtime acquisition and default dependency P0 guards now emit machine-re
 
 Update: module interface compliance now emits `module_interface_matrix`, covering module manifests, standard entrypoints, input/output schemas, mock/lite/full declarations, and mock fixture standard package validation. This matrix is visible in the gate JSON, Markdown report, and Analysis Center, giving future remediation a module-by-module contract baseline before formal worker migration.
 
+Update: module mode readiness now emits `module_mode_readiness_matrix`, covering per-module mock status, lite status, full status, lite environment, full environment, declared full blocker, full activation blockers, and migration next action. It remains `partial` because full mode is still blocked, but the RARCH-04 gap is now module-readable instead of a single generic warning.
+
 Update: standard worker entrypoint diagnostics now emit `standard_worker_entrypoint_matrix`, covering the shared `analysis/runners/run_module.R` CLI contract, standard package output contract, lite module dispatch coverage, main-backend invocation through `run_standard_r_worker()`, and runtime install/download absence. The matrix is `partial`: shared lite entrypoint contracts pass, while formal module migration remains pending until registry-owned full-mode standard-worker evidence exists.
 
 Update: chemistry external-tool adapter isolation now emits `external_tool_adapter_matrix`, covering docking and molecular dynamics. The matrix verifies that lite adapters stay in `r-bio-core`, do not execute AutoDock Vina or GROMACS, keep runtime installs forbidden, avoid default app dependencies, and point full execution at `r-chem-full` or `r-chem-gpu` with external resource/tool locks. It is a diagnostic and remediation surface only; full tool execution remains blocked until environment locks, tool/resource locks, and standard-worker migration evidence pass.
@@ -618,6 +620,7 @@ Completed:
 
 - Added `build_standard_worker_migration_matrix()` with one row per registered module.
 - The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
+- Added `module_mode_readiness_matrix` to expose RARCH-04 mock/lite/full mode status per module while keeping full mode blocked.
 - Added `standard_worker_entrypoint_matrix` to audit `analysis/runners/run_module.R`, standard package output, lite dispatch coverage, main-backend standard-worker invocation, and runtime install/download absence separately from formal migration evidence.
 - Added Analysis Center `analysis_resource_gate_rows` so full resource lock blockers are visible independently from environment readiness and remediation queue rows.
 - Added `requirement_summary`, `priority_issue_lists`, `p2_issues`, `p3_issues`, and `top_architecture_risks` directly to `build_analysis_architecture_status()` and made the gate script reuse them.

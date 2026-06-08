@@ -71,6 +71,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     analysis_architecture_gate_rows = build_analysis_architecture_gate_rows(analysis_architecture_status)
     module_interface_matrix = analysis_architecture_status.get("module_interface_matrix") if isinstance(analysis_architecture_status.get("module_interface_matrix"), dict) else {}
     module_interface_rows = build_module_interface_rows(module_interface_matrix)
+    module_mode_readiness_matrix = analysis_architecture_status.get("module_mode_readiness_matrix") if isinstance(analysis_architecture_status.get("module_mode_readiness_matrix"), dict) else {}
+    module_mode_readiness_rows = build_module_mode_readiness_rows(module_mode_readiness_matrix)
     standard_worker_entrypoint_matrix = analysis_architecture_status.get("standard_worker_entrypoint_matrix") if isinstance(analysis_architecture_status.get("standard_worker_entrypoint_matrix"), dict) else {}
     standard_worker_entrypoint_rows = build_standard_worker_entrypoint_rows(standard_worker_entrypoint_matrix)
     external_tool_adapter_matrix = analysis_architecture_status.get("external_tool_adapter_matrix") if isinstance(analysis_architecture_status.get("external_tool_adapter_matrix"), dict) else {}
@@ -160,6 +162,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
         "module_interface_matrix": module_interface_matrix,
         "module_interface_rows": module_interface_rows,
+        "module_mode_readiness_matrix": module_mode_readiness_matrix,
+        "module_mode_readiness_rows": module_mode_readiness_rows,
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "standard_worker_entrypoint_rows": standard_worker_entrypoint_rows,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
@@ -194,6 +198,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "analysis_architecture_gate_rows": analysis_architecture_gate_rows,
             "module_interface_matrix": module_interface_matrix,
             "module_interface_rows": module_interface_rows,
+            "module_mode_readiness_matrix": module_mode_readiness_matrix,
+            "module_mode_readiness_rows": module_mode_readiness_rows,
             "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
             "standard_worker_entrypoint_rows": standard_worker_entrypoint_rows,
             "external_tool_adapter_matrix": external_tool_adapter_matrix,
@@ -1379,6 +1385,47 @@ def build_external_tool_adapter_rows(matrix: dict[str, Any]) -> list[dict[str, A
                     f"{row.get('external_tool_policy')}; "
                     f"default_app_dependency={row.get('default_app_dependency')}"
                 ),
+            )
+        )
+    return rows
+
+
+def build_module_mode_readiness_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    module_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    blocker_counts = matrix.get("blocker_counts") if isinstance(matrix.get("blocker_counts"), dict) else {}
+    warning_counts = matrix.get("warning_counts") if isinstance(matrix.get("warning_counts"), dict) else {}
+    rows = [
+        _formal_deg_gate_row(
+            "Analysis module mode readiness matrix",
+            matrix.get("status") or "blocked",
+            [f"{key}={value}" for key, value in sorted(blocker_counts.items())],
+            [
+                f"passed={matrix.get('passed_module_count', 0)}",
+                f"partial={matrix.get('partial_module_count', 0)}",
+                f"blocked={matrix.get('blocked_module_count', 0)}",
+                f"full_blocked_modules={compact_list(_list(matrix.get('full_blocked_module_ids')))}",
+                *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
+            ],
+            basis=f"modules={matrix.get('module_count', 0)}; {matrix.get('boundary', 'read_only_mock_lite_full_mode_layering_diagnostics')}",
+        )
+    ]
+    for row in module_rows:
+        rows.append(
+            _formal_deg_gate_row(
+                f"Mode readiness: {row.get('module_id')}",
+                row.get("status") or "blocked",
+                _list(row.get("blockers")),
+                [
+                    f"mock={row.get('mock_status')}",
+                    f"lite={row.get('lite_status')}",
+                    f"full={row.get('full_status')}",
+                    f"lite_env={row.get('lite_environment')}",
+                    f"full_env={row.get('full_environment')}",
+                    f"full_blocker={row.get('full_blocker')}",
+                    f"next={row.get('migration_next_action')}",
+                    *_list(row.get("warnings"))[:5],
+                ],
+                basis=f"{row.get('module_manifest')}; runner={row.get('lite_runner')}; backend={row.get('lite_worker_backend')}",
             )
         )
     return rows

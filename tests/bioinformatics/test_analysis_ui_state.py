@@ -34,6 +34,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["enrichment_gate_rows"]
     assert state["analysis_architecture_gate_rows"]
     assert state["module_interface_rows"]
+    assert state["module_mode_readiness_rows"]
     assert state["full_activation_module_rows"]
     assert state["standard_worker_migration_rows"]
     assert state["analysis_architecture_remediation_rows"]
@@ -120,6 +121,18 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "fixture=passed" in module_interface_text
     assert "analysis/modules/deg/module.json" in module_interface_text
     assert "r-bio-core->r-chem-gpu" in module_interface_text
+    mode_readiness_text = "\n".join(str(row) for row in state["module_mode_readiness_rows"])
+    assert "Analysis module mode readiness matrix" in mode_readiness_text
+    assert "partial=10" in mode_readiness_text
+    assert "blocked=0" in mode_readiness_text
+    assert "full_blocked_modules=deg；survival；univariate；multivariate；enrichment" in mode_readiness_text
+    assert "Mode readiness: deg" in mode_readiness_text
+    assert "mock=passed" in mode_readiness_text
+    assert "lite=passed" in mode_readiness_text
+    assert "full=blocked" in mode_readiness_text
+    assert "lite_env=r-bio-core" in mode_readiness_text
+    assert "full_env=r-chem-gpu" in mode_readiness_text
+    assert "module_full_mode_blocked:deg" in mode_readiness_text
     entrypoint_text = "\n".join(str(row) for row in state["standard_worker_entrypoint_rows"])
     assert "Standard R worker entrypoint matrix" in entrypoint_text
     assert "passed=5" in entrypoint_text
@@ -257,6 +270,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["module_interface_matrix"]["status"] == "passed"
     assert state["developer_diagnostics"]["module_interface_matrix"]["passed_module_count"] == 10
     assert state["developer_diagnostics"]["module_interface_rows"] == state["module_interface_rows"]
+    assert state["developer_diagnostics"]["module_mode_readiness_matrix"]["status"] == "partial"
+    assert state["developer_diagnostics"]["module_mode_readiness_matrix"]["partial_module_count"] == 10
+    assert state["developer_diagnostics"]["module_mode_readiness_rows"] == state["module_mode_readiness_rows"]
     assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
     assert state["developer_diagnostics"]["standard_worker_entrypoint_rows"] == state["standard_worker_entrypoint_rows"]

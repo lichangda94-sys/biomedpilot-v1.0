@@ -17,6 +17,7 @@ from app.analysis_runtime.architecture_status import (
     build_full_activation_module_matrix,
     build_legacy_sidecar_transition_matrix,
     build_module_interface_matrix,
+    build_module_mode_readiness_matrix,
     build_reproducibility_provenance_matrix,
     build_standard_worker_entrypoint_matrix,
     build_task_system_boundary_matrix,
@@ -1424,6 +1425,12 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["module_interface_matrix"]["status"] == "passed"
     assert status["module_interface_matrix"]["passed_module_count"] == 10
     assert status["module_interface_matrix"]["blocked_module_count"] == 0
+    assert status["module_mode_readiness_matrix"]["status"] == "partial"
+    assert status["module_mode_readiness_matrix"]["passed_module_count"] == 0
+    assert status["module_mode_readiness_matrix"]["partial_module_count"] == 10
+    assert status["module_mode_readiness_matrix"]["blocked_module_count"] == 0
+    assert set(status["module_mode_readiness_matrix"]["full_blocked_module_ids"]) == REQUIRED_MODULES
+    assert status["module_mode_readiness_matrix"]["warning_counts"]["module_full_mode_blocked:deg"] == 1
     assert status["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert status["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
     assert status["standard_worker_entrypoint_matrix"]["partial_row_count"] == 1
@@ -1961,6 +1968,35 @@ def test_module_interface_matrix_tracks_standard_module_contracts() -> None:
     assert rows["deg"]["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+
+
+def test_module_mode_readiness_matrix_tracks_mock_lite_full_layering_without_enabling_full() -> None:
+    matrix = build_module_mode_readiness_matrix()
+    rows = {row["module_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.module_mode_readiness_matrix.v1"
+    assert matrix["status"] == "partial"
+    assert matrix["module_count"] == 10
+    assert matrix["passed_module_count"] == 0
+    assert matrix["partial_module_count"] == 10
+    assert matrix["blocked_module_count"] == 0
+    assert set(matrix["full_blocked_module_ids"]) == REQUIRED_MODULES
+    assert matrix["blocker_counts"] == {}
+    assert matrix["warning_counts"]["module_full_mode_blocked:deg"] == 1
+    assert matrix["boundary"] == "read_only_mock_lite_full_mode_layering_diagnostics"
+    assert rows["deg"]["mock_status"] == "passed"
+    assert rows["deg"]["lite_status"] == "passed"
+    assert rows["deg"]["lite_environment"] == "r-bio-core"
+    assert rows["deg"]["lite_worker_backend"] == "rscript"
+    assert rows["deg"]["full_status"] == "blocked"
+    assert rows["deg"]["full_supported"] is False
+    assert rows["deg"]["full_environment"] == "r-bio-full"
+    assert rows["deg"]["full_blocker"] == "full_r_worker_container_not_available"
+    assert "module_full_mode_blocked:deg" in rows["deg"]["warnings"]
+    assert rows["docking"]["full_environment"] == "r-chem-full"
+    assert rows["docking"]["lite_result_semantics"] == "testing_level"
+    assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert rows["molecular_dynamics"]["full_status"] == "blocked"
 
 
 def test_standard_worker_entrypoint_matrix_tracks_runner_contract_and_partial_migration() -> None:

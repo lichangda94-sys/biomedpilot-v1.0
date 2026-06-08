@@ -83,6 +83,16 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert module_interface_rows["deg"]["mock_fixture_validation_status"] == "passed"
     assert module_interface_rows["deg"]["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
     assert module_interface_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert payload["module_mode_readiness_matrix"]["schema_version"] == "biomedpilot.analysis.module_mode_readiness_matrix.v1"
+    assert payload["module_mode_readiness_matrix"]["status"] == "partial"
+    assert payload["module_mode_readiness_matrix"]["partial_module_count"] == 10
+    assert payload["module_mode_readiness_matrix"]["blocked_module_count"] == 0
+    assert "deg" in payload["module_mode_readiness_matrix"]["full_blocked_module_ids"]
+    module_mode_rows = {row["module_id"]: row for row in payload["module_mode_readiness_rows"]}
+    assert module_mode_rows["deg"]["mock_status"] == "passed"
+    assert module_mode_rows["deg"]["lite_status"] == "passed"
+    assert module_mode_rows["deg"]["full_status"] == "blocked"
+    assert module_mode_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert payload["standard_worker_entrypoint_matrix"]["schema_version"] == "biomedpilot.analysis.standard_worker_entrypoint_matrix.v1"
     assert payload["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert payload["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
@@ -555,6 +565,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert "full_analysis_activation_gate" in schema["required"]
     assert "module_interface_matrix" in schema["required"]
     assert "module_interface_rows" in schema["required"]
+    assert "module_mode_readiness_matrix" in schema["required"]
+    assert "module_mode_readiness_rows" in schema["required"]
     assert "standard_worker_entrypoint_matrix" in schema["required"]
     assert "standard_worker_entrypoint_rows" in schema["required"]
     assert "external_tool_adapter_matrix" in schema["required"]
@@ -581,6 +593,8 @@ def test_analysis_architecture_gate_report_schema_is_present_and_matches_payload
     assert schema["properties"]["execution_policy"]["const"] == "read_only_no_worker_execution_no_runtime_install_no_resource_download"
     assert schema["properties"]["module_interface_matrix"]["type"] == "object"
     assert schema["properties"]["module_interface_rows"]["type"] == "array"
+    assert schema["properties"]["module_mode_readiness_matrix"]["type"] == "object"
+    assert schema["properties"]["module_mode_readiness_rows"]["type"] == "array"
     assert schema["properties"]["standard_worker_entrypoint_matrix"]["type"] == "object"
     assert schema["properties"]["standard_worker_entrypoint_rows"]["type"] == "array"
     assert schema["properties"]["external_tool_adapter_matrix"]["type"] == "object"

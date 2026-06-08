@@ -67,6 +67,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     p1_issues = [str(item) for item in architecture_status.get("p1_issues", []) if item]
     full_gate_status = str(full_gate.get("status") or "unknown") if isinstance(full_gate, dict) else "unknown"
     module_interface_matrix = architecture_status.get("module_interface_matrix") if isinstance(architecture_status.get("module_interface_matrix"), dict) else {}
+    module_mode_readiness_matrix = architecture_status.get("module_mode_readiness_matrix") if isinstance(architecture_status.get("module_mode_readiness_matrix"), dict) else {}
     standard_worker_entrypoint_matrix = architecture_status.get("standard_worker_entrypoint_matrix") if isinstance(architecture_status.get("standard_worker_entrypoint_matrix"), dict) else {}
     external_tool_adapter_matrix = architecture_status.get("external_tool_adapter_matrix") if isinstance(architecture_status.get("external_tool_adapter_matrix"), dict) else {}
     task_system_boundary_matrix = architecture_status.get("task_system_boundary_matrix") if isinstance(architecture_status.get("task_system_boundary_matrix"), dict) else {}
@@ -117,6 +118,24 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         "module_interface_rows": [
             dict(row)
             for row in module_interface_matrix.get("rows", [])
+            if isinstance(row, dict)
+        ],
+        "module_mode_readiness_matrix": {
+            "schema_version": module_mode_readiness_matrix.get("schema_version"),
+            "status": module_mode_readiness_matrix.get("status"),
+            "module_count": module_mode_readiness_matrix.get("module_count"),
+            "passed_module_count": module_mode_readiness_matrix.get("passed_module_count"),
+            "partial_module_count": module_mode_readiness_matrix.get("partial_module_count"),
+            "blocked_module_count": module_mode_readiness_matrix.get("blocked_module_count"),
+            "status_counts": module_mode_readiness_matrix.get("status_counts", {}),
+            "blocker_counts": module_mode_readiness_matrix.get("blocker_counts", {}),
+            "warning_counts": module_mode_readiness_matrix.get("warning_counts", {}),
+            "full_blocked_module_ids": module_mode_readiness_matrix.get("full_blocked_module_ids", []),
+            "boundary": module_mode_readiness_matrix.get("boundary"),
+        },
+        "module_mode_readiness_rows": [
+            dict(row)
+            for row in module_mode_readiness_matrix.get("rows", [])
             if isinstance(row, dict)
         ],
         "standard_worker_entrypoint_matrix": {
@@ -558,6 +577,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
     module_interface_matrix = payload.get("module_interface_matrix") if isinstance(payload.get("module_interface_matrix"), dict) else {}
     module_interface_rows = [row for row in payload.get("module_interface_rows", []) if isinstance(row, dict)]
+    module_mode_readiness_matrix = payload.get("module_mode_readiness_matrix") if isinstance(payload.get("module_mode_readiness_matrix"), dict) else {}
+    module_mode_readiness_rows = [row for row in payload.get("module_mode_readiness_rows", []) if isinstance(row, dict)]
     standard_worker_entrypoint_matrix = payload.get("standard_worker_entrypoint_matrix") if isinstance(payload.get("standard_worker_entrypoint_matrix"), dict) else {}
     standard_worker_entrypoint_rows = [row for row in payload.get("standard_worker_entrypoint_rows", []) if isinstance(row, dict)]
     external_tool_adapter_matrix = payload.get("external_tool_adapter_matrix") if isinstance(payload.get("external_tool_adapter_matrix"), dict) else {}
@@ -622,6 +643,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_module_interface_summary_table(module_interface_matrix, module_interface_rows))
+    lines.extend(
+        [
+            "",
+            "### Module Mode Readiness Matrix",
+            "",
+        ]
+    )
+    lines.extend(_module_mode_readiness_summary_table(module_mode_readiness_matrix, module_mode_readiness_rows))
     lines.extend(
         [
             "",
@@ -1121,6 +1150,43 @@ def _module_interface_summary_table(matrix: dict[str, Any], rows: list[dict[str,
         *table,
         "",
         *_markdown_table(["Module", "Status", "Modes", "Mock Fixture", "Environment"], module_rows, ["module_id", "status", "modes", "fixture", "environment"]),
+    ]
+
+
+def _module_mode_readiness_summary_table(matrix: dict[str, Any], rows: list[dict[str, Any]]) -> list[str]:
+    summary = [
+        {
+            "metric": "Passed modules",
+            "count": matrix.get("passed_module_count", 0),
+            "detail": "",
+        },
+        {
+            "metric": "Partial modules",
+            "count": matrix.get("partial_module_count", 0),
+            "detail": matrix.get("warning_counts", {}),
+        },
+        {
+            "metric": "Blocked modules",
+            "count": matrix.get("blocked_module_count", 0),
+            "detail": matrix.get("blocker_counts", {}),
+        },
+    ]
+    table = _markdown_table(["Metric", "Count", "Detail"], summary, ["metric", "count", "detail"])
+    module_rows = [
+        {
+            "module_id": row.get("module_id"),
+            "status": row.get("status"),
+            "mock": row.get("mock_status"),
+            "lite": f"{row.get('lite_status')}; {row.get('lite_environment')}",
+            "full": f"{row.get('full_status')}; {row.get('full_environment')}; {row.get('full_blocker')}",
+            "next": row.get("migration_next_action"),
+        }
+        for row in rows
+    ]
+    return [
+        *table,
+        "",
+        *_markdown_table(["Module", "Status", "Mock", "Lite", "Full", "Next"], module_rows, ["module_id", "status", "mock", "lite", "full", "next"]),
     ]
 
 

@@ -85,6 +85,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         resource_validation=resource_validation,
         standard_worker_migration_matrix=standard_worker_migration_matrix,
     )
+    module_mode_readiness_matrix = build_module_mode_readiness_matrix(
+        registry=registry,
+        full_activation_module_matrix=full_activation_module_matrix,
+    )
     external_tool_adapter_matrix = build_external_tool_adapter_matrix(
         registry=registry,
         resource_validation=resource_validation,
@@ -126,10 +130,10 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         _row(
             "RARCH-04",
             "Mock / lite / full mode declarations",
-            "warn" if _all_modules_declare_modes(modules) else "fail",
+            "warn" if module_mode_readiness_matrix.get("status") == "partial" else ("pass" if module_mode_readiness_matrix.get("status") == "passed" else "fail"),
             "analysis/registry/analysis_modules.json::modules[*].modes",
-            warnings=["full_modes_declared_but_currently_blocked"] if _all_modules_declare_modes(modules) else [],
-            blockers=[] if _all_modules_declare_modes(modules) else ["analysis_module_modes_incomplete"],
+            warnings=list(module_mode_readiness_matrix.get("warning_counts", {}).keys()),
+            blockers=list(module_mode_readiness_matrix.get("blocker_counts", {}).keys()),
         ),
         _row("RARCH-05", "Unified input and output schemas", "pass" if _required_schemas_exist() else "fail", "analysis/schemas/input and analysis/schemas/output"),
         _row(
@@ -276,6 +280,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "priority_issue_lists": priority_issue_lists,
         "top_architecture_risks": top_architecture_risks,
         "module_interface_matrix": module_interface_matrix,
+        "module_mode_readiness_matrix": module_mode_readiness_matrix,
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
@@ -434,6 +439,119 @@ def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -
         "full_environment": str(source.get("full_environment") or module.get("full_environment") or ""),
         "result_package_required": [str(item) for item in source.get("result_package_required", []) if item],
         "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def build_module_mode_readiness_matrix(
+    *,
+    registry: dict[str, Any] | None = None,
+    full_activation_module_matrix: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return module-by-module mock/lite/full mode layering diagnostics.
+
+    This is a read-only RARCH-04 contract surface. It proves that mock/lite/full
+    are declared and makes full-mode blockers visible, but it does not run or
+    enable full analysis.
+    """
+
+    payload = registry if isinstance(registry, dict) else load_analysis_module_registry()
+    activation_matrix = (
+        full_activation_module_matrix
+        if isinstance(full_activation_module_matrix, dict)
+        else build_full_activation_module_matrix(registry=payload)
+    )
+    activation_by_module = {
+        str(row.get("module_id") or ""): row
+        for row in activation_matrix.get("rows", [])
+        if isinstance(row, dict) and row.get("module_id")
+    }
+    modules = [
+        item
+        for item in payload.get("modules", [])
+        if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
+    ]
+    rows = [_module_mode_readiness_row(module, activation_row=activation_by_module.get(str(module.get("module_id") or ""), {})) for module in modules]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.module_mode_readiness_matrix.v1",
+        "status": "blocked" if blocker_counts else ("partial" if warning_counts else "passed"),
+        "module_count": len(rows),
+        "passed_module_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "partial_module_count": sum(1 for row in rows if row.get("status") == "partial"),
+        "blocked_module_count": sum(1 for row in rows if row.get("status") == "blocked"),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "full_blocked_module_ids": [
+            str(row.get("module_id") or "")
+            for row in rows
+            if row.get("full_status") == "blocked"
+        ],
+        "rows": rows,
+        "boundary": "read_only_mock_lite_full_mode_layering_diagnostics",
+    }
+
+
+def _module_mode_readiness_row(module: dict[str, Any], *, activation_row: dict[str, Any]) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "")
+    module_manifest = str(module.get("module_manifest") or f"analysis/modules/{module_id}/module.json")
+    manifest = _read_json(REPO_ROOT / module_manifest) if (REPO_ROOT / module_manifest).is_file() else {}
+    source = manifest if isinstance(manifest, dict) and manifest else module
+    modes = source.get("modes") if isinstance(source.get("modes"), dict) else {}
+    mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
+    lite = modes.get("lite") if isinstance(modes.get("lite"), dict) else {}
+    full = modes.get("full") if isinstance(modes.get("full"), dict) else {}
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if not module_id:
+        blockers.append("module_mode_module_id_missing")
+    if not (REPO_ROOT / module_manifest).is_file():
+        blockers.append(f"module_mode_manifest_missing:{module_id}:{module_manifest}")
+    for mode_name, mode_payload in (("mock", mock), ("lite", lite), ("full", full)):
+        if not mode_payload:
+            blockers.append(f"module_mode_missing:{module_id}:{mode_name}")
+        elif "supported" not in mode_payload:
+            blockers.append(f"module_mode_supported_flag_missing:{module_id}:{mode_name}")
+    mock_status = "passed" if mock.get("supported") is True else "blocked"
+    lite_status = "passed" if lite.get("supported") is True else "blocked"
+    if mock_status == "blocked":
+        blockers.append(f"module_mode_mock_not_supported:{module_id}")
+    if lite_status == "blocked":
+        blockers.append(f"module_mode_lite_not_supported:{module_id}")
+    full_supported = full.get("supported") is True
+    activation_blockers = [str(item) for item in activation_row.get("blockers", []) if item]
+    full_blocker = str(full.get("blocker") or "")
+    full_status = "passed" if full_supported and not activation_blockers else "blocked"
+    if full_status == "blocked":
+        warnings.append(f"module_full_mode_blocked:{module_id}")
+        if full_blocker:
+            warnings.append(f"module_full_mode_declared_blocker:{module_id}:{full_blocker}")
+    return {
+        "module_id": module_id,
+        "title": str(source.get("title") or module.get("title") or module_id),
+        "status": "blocked" if blockers else ("partial" if warnings else "passed"),
+        "module_manifest": module_manifest,
+        "mock_supported": bool(mock.get("supported")),
+        "mock_fixture_input": str(mock.get("fixture_input") or ""),
+        "mock_fixture_output_package": str(mock.get("fixture_output_package") or ""),
+        "mock_status": mock_status,
+        "lite_supported": bool(lite.get("supported")),
+        "lite_environment": str(lite.get("environment") or source.get("analysis_environment") or module.get("analysis_environment") or ""),
+        "lite_runner": str(lite.get("runner") or source.get("standard_entrypoint") or module.get("standard_entrypoint") or ""),
+        "lite_worker_backend": str(lite.get("worker_backend") or ""),
+        "lite_result_semantics": str(lite.get("result_semantics") or "testing_level"),
+        "lite_status": lite_status,
+        "full_supported": full_supported,
+        "full_environment": str(source.get("full_environment") or module.get("full_environment") or ""),
+        "full_blocker": full_blocker,
+        "full_status": full_status,
+        "full_activation_status": str(activation_row.get("status") or "blocked"),
+        "full_activation_blockers": activation_blockers,
+        "migration_next_action": str(activation_row.get("migration_next_action") or "inspect_full_mode_blockers"),
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
     }
 
 
