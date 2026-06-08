@@ -693,6 +693,11 @@ def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -
             blockers.append(f"module_interface_mode_missing:{module_id}:{mode_name}")
         elif "supported" not in mode_payload:
             blockers.append(f"module_interface_mode_supported_flag_missing:{module_id}:{mode_name}")
+    if lite.get("supported") is True:
+        if str(lite.get("runner") or "") != standard_entrypoint:
+            blockers.append(f"module_interface_lite_runner_not_standard_entrypoint:{module_id}")
+        if str(lite.get("worker_backend") or "") != "rscript":
+            blockers.append(f"module_interface_lite_worker_backend_not_rscript:{module_id}")
     fixture_validation: dict[str, Any] = {}
     if not mock_package:
         blockers.append(f"module_interface_mock_fixture_package_missing:{module_id}")
@@ -715,6 +720,8 @@ def _module_interface_row(module: dict[str, Any], *, standard_entrypoint: str) -
         "output_schema": str(source.get("output_schema") or ""),
         "mock_supported": bool(mock.get("supported")),
         "lite_supported": bool(lite.get("supported")),
+        "lite_runner": str(lite.get("runner") or ""),
+        "lite_worker_backend": str(lite.get("worker_backend") or ""),
         "full_supported": bool(full.get("supported")),
         "mock_fixture_output_package": mock_package,
         "mock_fixture_validation_status": str(fixture_validation.get("status") or ("missing" if not mock_package else "blocked")),

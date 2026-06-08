@@ -345,6 +345,7 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
         assert (ROOT / modes["mock"]["fixture_output_package"]).is_dir()
         if module_id in {"deg", "enrichment", "survival", "univariate", "multivariate", "immune_infiltration", "correlation", "spatial_transcriptomics", "docking", "molecular_dynamics"}:
             assert modes["lite"]["supported"] is True
+            assert modes["lite"]["runner"] == registry["standard_entrypoint"]
             assert modes["lite"]["worker_backend"] == "rscript"
             assert (ROOT / modes["lite"]["fixture_input"]).is_file()
         else:
@@ -1974,11 +1975,14 @@ def test_module_interface_matrix_tracks_standard_module_contracts() -> None:
     assert rows["deg"]["output_schema"] == "analysis/schemas/output/result_package.schema.json"
     assert rows["deg"]["mock_supported"] is True
     assert rows["deg"]["lite_supported"] is True
+    assert rows["deg"]["lite_runner"] == "analysis/runners/run_module.R"
+    assert rows["deg"]["lite_worker_backend"] == "rscript"
     assert rows["deg"]["full_supported"] is False
     assert rows["deg"]["mock_fixture_validation_status"] == "passed"
     assert rows["deg"]["result_package_required"] == ["result.json", "provenance.json", "tables", "plots", "reports", "logs"]
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
+    assert rows["correlation"]["lite_runner"] == "analysis/runners/run_module.R"
 
 
 def test_module_mode_readiness_matrix_tracks_mock_lite_full_layering_without_enabling_full() -> None:

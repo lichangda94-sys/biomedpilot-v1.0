@@ -15,6 +15,7 @@
       "supported": true,
       "environment": "r-bio-core",
       "worker_backend": "rscript",
+      "runner": "analysis/runners/run_module.R",
       "fixture_input": "analysis/fixtures/inputs/correlation/module_input_lite.json"
     },
     "full": {
