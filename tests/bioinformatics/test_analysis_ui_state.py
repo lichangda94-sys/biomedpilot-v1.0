@@ -245,7 +245,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "runtime:external_tool_versions" in provenance_text
     assert "Provenance contract: standard_r_worker_provenance_writer" in provenance_text
     assert "Provenance contract: legacy_sidecar_provenance_boundary" in provenance_text
-    assert "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence" in provenance_text
+    assert "legacy_sidecar_provenance_transitional:deg" in provenance_text
+    assert "legacy_sidecar_provenance_transitional:correlation" in provenance_text
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text

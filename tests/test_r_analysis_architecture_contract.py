@@ -1983,7 +1983,8 @@ def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> 
     assert matrix["partial_row_count"] == 1
     assert matrix["blocked_row_count"] == 0
     assert matrix["blocker_counts"] == {}
-    assert matrix["warning_counts"]["legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"] == 1
+    assert matrix["warning_counts"]["legacy_sidecar_provenance_transitional:correlation"] == 1
+    assert matrix["warning_counts"]["legacy_sidecar_provenance_transitional:deg"] == 1
     assert {"input_hash", "parameter_hash", "random_seed", "engine", "runtime", "command"} <= set(matrix["required_fields"])
     assert {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"} <= set(matrix["required_runtime_fields"])
     assert {"name", "version"} <= set(matrix["required_engine_fields"])
@@ -2001,9 +2002,16 @@ def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> 
     assert "runtime_install_policy" in rows["worker_invocation_schema"]["required_fields"]
     assert "resource_download_policy" in rows["worker_invocation_schema"]["required_fields"]
     assert rows["legacy_sidecar_provenance_boundary"]["status"] == "partial"
-    assert rows["legacy_sidecar_provenance_boundary"]["warnings"] == [
-        "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"
+    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_module_ids"] == [
+        "correlation",
+        "deg",
+        "enrichment",
+        "immune_infiltration",
+        "survival",
     ]
+    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 6
+    assert "legacy_sidecar_provenance_transitional:deg" in rows["legacy_sidecar_provenance_boundary"]["warnings"]
+    assert rows["legacy_sidecar_provenance_boundary"]["boundary"] == "formal_full_completion_requires_standard_worker_migration_evidence_not_sidecar_provenance"
 
 
 def test_module_interface_matrix_tracks_standard_module_contracts() -> None:

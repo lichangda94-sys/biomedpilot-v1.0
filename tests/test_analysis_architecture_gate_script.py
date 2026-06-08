@@ -226,9 +226,15 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert provenance_rows["standard_r_worker_provenance_writer"]["status"] == "passed"
     assert provenance_rows["worker_invocation_schema"]["status"] == "passed"
     assert provenance_rows["legacy_sidecar_provenance_boundary"]["status"] == "partial"
-    assert provenance_rows["legacy_sidecar_provenance_boundary"]["warnings"] == [
-        "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"
+    assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_module_ids"] == [
+        "correlation",
+        "deg",
+        "enrichment",
+        "immune_infiltration",
+        "survival",
     ]
+    assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 6
+    assert "legacy_sidecar_provenance_transitional:deg" in provenance_rows["legacy_sidecar_provenance_boundary"]["warnings"]
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False
     assert set(payload["environment_readiness"]["blocked_environment_ids"]) == {
@@ -440,7 +446,7 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Migrated detail views | 3 | formal_deg_review_panel, formal_deg_plot_report_controls, immune_tme_scoring_page" in text
     assert "standard_r_worker_provenance_writer" in text
     assert "package_versions" in text
-    assert "legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence" in text
+    assert "legacy_sidecar_provenance_transitional:correlation" in text
     assert "Runtime package install" in text
     assert "Runtime resource download" in text
     assert "Default app-dev heavy dependency" in text

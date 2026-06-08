@@ -1619,18 +1619,7 @@ def build_reproducibility_provenance_matrix() -> dict[str, Any]:
             evidence_path="analysis/runners/run_module.R::write_provenance",
         ),
         _worker_invocation_schema_row(),
-        {
-            "row_id": "legacy_sidecar_provenance_boundary",
-            "title": "Legacy service adapter sidecars remain transitional provenance only",
-            "status": "partial",
-            "evidence_path": "app/analysis_runtime/standard_package.py::write_legacy_service_adapter_invocation_manifest",
-            "required_fields": [],
-            "required_runtime_fields": [],
-            "required_engine_fields": [],
-            "blockers": [],
-            "warnings": ["legacy_service_adapter_sidecars_are_not_isolated_standard_worker_provenance_evidence"],
-            "boundary": "formal_full_completion_requires_standard_worker_migration_evidence_not_sidecar_provenance",
-        },
+        _legacy_sidecar_provenance_boundary_row(),
     ]
     blocker_counts = _count_row_blockers(rows, "blockers")
     warning_counts = _count_row_blockers(rows, "warnings")
@@ -1726,6 +1715,33 @@ def _worker_invocation_schema_row() -> dict[str, Any]:
         "blockers": blockers,
         "warnings": [],
         "boundary": "worker_invocation_contract_only_no_worker_execution",
+    }
+
+
+def _legacy_sidecar_provenance_boundary_row() -> dict[str, Any]:
+    source_inventory = _legacy_sidecar_source_inventory_row()
+    producers = [
+        item
+        for item in source_inventory.get("sidecar_producers", [])
+        if isinstance(item, dict) and item.get("status") != "blocked"
+    ]
+    module_ids = [str(item) for item in source_inventory.get("sidecar_module_ids", []) if item]
+    warnings = [f"legacy_sidecar_provenance_transitional:{module_id}" for module_id in module_ids]
+    return {
+        "row_id": "legacy_sidecar_provenance_boundary",
+        "title": "Legacy service adapter sidecar provenance remains transitional only",
+        "status": "blocked" if source_inventory.get("status") == "blocked" else ("partial" if producers else "passed"),
+        "evidence_path": "app/bioinformatics/* standard package sidecar writers and app/analysis_runtime/standard_package.py",
+        "required_fields": [],
+        "required_runtime_fields": [],
+        "required_engine_fields": [],
+        "sidecar_module_count": len(module_ids),
+        "sidecar_module_ids": module_ids,
+        "sidecar_producer_count": len(producers),
+        "sidecar_producers": producers,
+        "blockers": list(source_inventory.get("blockers", []) or []),
+        "warnings": warnings,
+        "boundary": "formal_full_completion_requires_standard_worker_migration_evidence_not_sidecar_provenance",
     }
 
 
