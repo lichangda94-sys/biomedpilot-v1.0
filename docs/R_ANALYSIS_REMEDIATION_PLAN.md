@@ -92,6 +92,8 @@ Update: locked resources now require schema-valid lock evidence. `analysis/schem
 
 Update: full resource lock evidence now requires SHA-256 hash evidence with a 64-character hex value that matches the referenced `cache_path` content and an explicit `cache_content.non_empty=true` declaration. File cache paths are hashed directly, and directory cache paths use a deterministic hash over sorted relative file paths and contents. Empty cache directories are blocked as `analysis_resource_lock_evidence_cache_path_empty`, because a lock must prove actual prepared resource content. If `cache_content.file_count` is provided, it must match the actual file count under `cache_path`. The `repository_fixture` hash marker remains allowed only for the built-in mock fixture and cannot be used to lock Reactome, MSigDB, spatial, chemistry, or external tool resources.
 
+Update: resource artifact diagnostics now emit `resource_artifact_matrix`, covering per-resource version/hash/license/cache/evidence status, runtime-download policy, and required modules. The matrix keeps the built-in mock fixture locked while showing full Reactome/MSigDB/GO/KEGG/OrgDb, spatial, CellChatDB, AutoDock Vina, docking template, GROMACS, and MD force-field resources as partial until schema-valid prelocked evidence exists.
+
 Update: the Bioinformatics gene-set resource manager now blocks Reactome/GO/KEGG runtime downloads by default. Common resources remain visible as guidance, but user/UI flows must import GMT files or use externally prepared prelocked resources; parser/download code requires an explicit developer/test override and is not a normal runtime acquisition path.
 
 Update: the standard package catalog now reads result-index `standard_result_package` artifacts and is exposed in Analysis Center state as `standard_analysis_packages`. This is a read-only UI bridge; detailed module result views still need migration.
@@ -624,6 +626,7 @@ Completed:
 - The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
 - Added `module_mode_readiness_matrix` to expose RARCH-04 mock/lite/full mode status per module while keeping full mode blocked.
 - Added `environment_artifact_matrix` to expose RARCH-12/RARCH-13/RARCH-14 Dockerfile and renv lock artifact status per environment while keeping full mode blocked.
+- Added `resource_artifact_matrix` to expose RARCH-15 full resource lock artifact status per resource while keeping full resource locks blocked.
 - Added `standard_worker_entrypoint_matrix` to audit `analysis/runners/run_module.R`, standard package output, lite dispatch coverage, main-backend standard-worker invocation, and runtime install/download absence separately from formal migration evidence.
 - Added Analysis Center `analysis_resource_gate_rows` so full resource lock blockers are visible independently from environment readiness and remediation queue rows.
 - Added `requirement_summary`, `priority_issue_lists`, `p2_issues`, `p3_issues`, and `top_architecture_risks` directly to `build_analysis_architecture_status()` and made the gate script reuse them.

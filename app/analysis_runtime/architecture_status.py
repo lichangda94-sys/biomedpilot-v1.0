@@ -5,7 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from .registry import REPO_ROOT, load_analysis_module_registry
-from .resources import validate_analysis_environment_registry, validate_analysis_resource_manifest
+from .resources import (
+    load_analysis_resource_lock_evidence_registry,
+    load_analysis_resource_manifest,
+    validate_analysis_environment_registry,
+    validate_analysis_resource_manifest,
+)
 from .standard_package import validate_standard_result_package
 
 
@@ -78,6 +83,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         environment_validation=environment_validation,
     )
     resource_validation = validate_analysis_resource_manifest()
+    resource_artifact_matrix = build_resource_artifact_matrix(resource_validation=resource_validation)
     full_analysis_activation_gate = build_full_analysis_activation_gate(
         environment_validation=environment_validation,
         resource_validation=resource_validation,
@@ -286,6 +292,7 @@ def build_analysis_architecture_status() -> dict[str, Any]:
         "module_interface_matrix": module_interface_matrix,
         "module_mode_readiness_matrix": module_mode_readiness_matrix,
         "environment_artifact_matrix": environment_artifact_matrix,
+        "resource_artifact_matrix": resource_artifact_matrix,
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
         "task_system_boundary_matrix": task_system_boundary_matrix,
@@ -496,6 +503,138 @@ def _environment_artifact_row(environment: dict[str, Any], *, readiness_blocker:
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
+
+
+def build_resource_artifact_matrix(
+    *,
+    manifest: dict[str, Any] | None = None,
+    resource_validation: dict[str, Any] | None = None,
+    evidence_registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return per-resource lock artifact diagnostics without preparing resources."""
+
+    resource_manifest = manifest if isinstance(manifest, dict) else load_analysis_resource_manifest()
+    registry = evidence_registry if isinstance(evidence_registry, dict) else load_analysis_resource_lock_evidence_registry()
+    validation = (
+        resource_validation
+        if isinstance(resource_validation, dict)
+        else validate_analysis_resource_manifest(
+            resource_manifest,
+            resource_lock_evidence_registry=registry,
+        )
+    )
+    resources = [item for item in resource_manifest.get("resources", []) if isinstance(item, dict)]
+    expected_resource_ids = {str(item) for item in validation.get("expected_resource_ids", []) if item}
+    missing_resource_ids = {str(item) for item in validation.get("missing_resource_ids", []) if item}
+    evidence_entries = {
+        str(item.get("resource_id") or ""): str(item.get("evidence_path") or "")
+        for item in registry.get("evidence_entries", [])
+        if isinstance(item, dict)
+    }
+    rows = [
+        _resource_artifact_row(
+            resource,
+            expected_resource_ids=expected_resource_ids,
+            missing_resource_ids=missing_resource_ids,
+            evidence_entries=evidence_entries,
+        )
+        for resource in resources
+    ]
+    blocker_counts = _count_row_blockers(rows, "blockers")
+    warning_counts = _count_row_blockers(rows, "warnings")
+    status_counts = _count_row_values(rows, "status")
+    return {
+        "schema_version": "biomedpilot.analysis.resource_artifact_matrix.v1",
+        "status": "blocked" if blocker_counts else ("partial" if warning_counts else "passed"),
+        "resource_count": len(rows),
+        "locked_resource_count": sum(1 for row in rows if row.get("lock_status") == "locked"),
+        "blocked_resource_count": sum(1 for row in rows if row.get("lock_status") != "locked"),
+        "passed_resource_count": sum(1 for row in rows if row.get("status") == "passed"),
+        "partial_resource_count": sum(1 for row in rows if row.get("status") == "partial"),
+        "failed_resource_count": sum(1 for row in rows if row.get("status") == "blocked"),
+        "evidence_registry_status": validation.get("evidence_registry_status"),
+        "evidence_entry_count": validation.get("evidence_registry_entry_count"),
+        "expected_resource_ids": list(validation.get("expected_resource_ids", [])),
+        "missing_resource_ids": list(validation.get("missing_resource_ids", [])),
+        "status_counts": status_counts,
+        "blocker_counts": blocker_counts,
+        "warning_counts": warning_counts,
+        "rows": rows,
+        "boundary": "read_only_full_resource_lock_artifact_diagnostics",
+    }
+
+
+def _resource_artifact_row(
+    resource: dict[str, Any],
+    *,
+    expected_resource_ids: set[str],
+    missing_resource_ids: set[str],
+    evidence_entries: dict[str, str],
+) -> dict[str, Any]:
+    resource_id = str(resource.get("resource_id") or "")
+    status = str(resource.get("status") or "")
+    runtime_download_allowed = resource.get("runtime_download_allowed")
+    cache_path = str(resource.get("cache_path") or "")
+    cache_exists = (REPO_ROOT / cache_path).exists() if cache_path else False
+    lock_evidence = str(resource.get("lock_evidence") or evidence_entries.get(resource_id) or "")
+    evidence_path = REPO_ROOT / lock_evidence if lock_evidence else REPO_ROOT / "__missing_resource_lock_evidence__"
+    evidence_status = "present" if evidence_path.is_file() else ("missing" if resource_id in expected_resource_ids or status == "locked" else "not_required")
+    placeholder_fields = [
+        field
+        for field in ("version", "hash", "license")
+        if _is_placeholder_value(resource.get(field))
+    ]
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if not resource_id:
+        blockers.append("resource_artifact_resource_id_missing")
+    if runtime_download_allowed is not False:
+        blockers.append(f"resource_artifact_runtime_download_not_forbidden:{resource_id or 'unknown'}")
+    if status == "locked":
+        if placeholder_fields:
+            blockers.append(f"resource_artifact_locked_placeholder_fields:{resource_id}:{','.join(placeholder_fields)}")
+        if evidence_status != "present":
+            blockers.append(f"resource_artifact_locked_evidence_missing:{resource_id}")
+    elif resource_id in expected_resource_ids or status:
+        warnings.append(f"resource_full_lock_not_ready:{resource_id}")
+        for field in placeholder_fields:
+            warnings.append(f"resource_placeholder_field:{resource_id}:{field}")
+        if resource_id in missing_resource_ids:
+            warnings.append(f"resource_lock_evidence_registry_entry_missing:{resource_id}")
+        if evidence_status != "present":
+            warnings.append(f"resource_lock_evidence_missing:{resource_id}")
+        if cache_path and not cache_exists:
+            warnings.append(f"resource_cache_path_not_prepared:{resource_id}")
+    else:
+        blockers.append(f"resource_artifact_status_missing:{resource_id or 'unknown'}")
+    return {
+        "resource_id": resource_id,
+        "title": str(resource.get("title") or resource_id),
+        "status": "blocked" if blockers else ("partial" if warnings else "passed"),
+        "resource_family": str(resource.get("resource_family") or ""),
+        "lock_status": status,
+        "resource_lock_required": resource_id in expected_resource_ids,
+        "version": str(resource.get("version") or ""),
+        "version_status": "placeholder" if "version" in placeholder_fields else "declared",
+        "source": str(resource.get("source") or ""),
+        "hash": str(resource.get("hash") or ""),
+        "hash_status": "placeholder" if "hash" in placeholder_fields else "declared",
+        "license": str(resource.get("license") or ""),
+        "license_status": "placeholder" if "license" in placeholder_fields else "declared",
+        "cache_path": cache_path,
+        "cache_path_status": "present" if cache_exists else "missing",
+        "lock_evidence": lock_evidence,
+        "lock_evidence_status": evidence_status,
+        "runtime_download_allowed": runtime_download_allowed,
+        "required_for_modules": [str(item) for item in resource.get("required_for_modules", []) if item],
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def _is_placeholder_value(value: Any) -> bool:
+    text = str(value or "").strip()
+    return not text or text in {"required_before_full_mode", "<version>", "<source>", "<sha256>", "<license>"}
 
 
 def build_module_interface_matrix(registry: dict[str, Any] | None = None) -> dict[str, Any]:

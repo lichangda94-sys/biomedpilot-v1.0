@@ -75,6 +75,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     module_mode_readiness_rows = build_module_mode_readiness_rows(module_mode_readiness_matrix)
     environment_artifact_matrix = analysis_architecture_status.get("environment_artifact_matrix") if isinstance(analysis_architecture_status.get("environment_artifact_matrix"), dict) else {}
     environment_artifact_rows = build_environment_artifact_rows(environment_artifact_matrix)
+    resource_artifact_matrix = analysis_architecture_status.get("resource_artifact_matrix") if isinstance(analysis_architecture_status.get("resource_artifact_matrix"), dict) else {}
+    resource_artifact_rows = build_resource_artifact_rows(resource_artifact_matrix)
     standard_worker_entrypoint_matrix = analysis_architecture_status.get("standard_worker_entrypoint_matrix") if isinstance(analysis_architecture_status.get("standard_worker_entrypoint_matrix"), dict) else {}
     standard_worker_entrypoint_rows = build_standard_worker_entrypoint_rows(standard_worker_entrypoint_matrix)
     external_tool_adapter_matrix = analysis_architecture_status.get("external_tool_adapter_matrix") if isinstance(analysis_architecture_status.get("external_tool_adapter_matrix"), dict) else {}
@@ -168,6 +170,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "module_mode_readiness_rows": module_mode_readiness_rows,
         "environment_artifact_matrix": environment_artifact_matrix,
         "environment_artifact_rows": environment_artifact_rows,
+        "resource_artifact_matrix": resource_artifact_matrix,
+        "resource_artifact_rows": resource_artifact_rows,
         "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
         "standard_worker_entrypoint_rows": standard_worker_entrypoint_rows,
         "external_tool_adapter_matrix": external_tool_adapter_matrix,
@@ -206,6 +210,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "module_mode_readiness_rows": module_mode_readiness_rows,
             "environment_artifact_matrix": environment_artifact_matrix,
             "environment_artifact_rows": environment_artifact_rows,
+            "resource_artifact_matrix": resource_artifact_matrix,
+            "resource_artifact_rows": resource_artifact_rows,
             "standard_worker_entrypoint_matrix": standard_worker_entrypoint_matrix,
             "standard_worker_entrypoint_rows": standard_worker_entrypoint_rows,
             "external_tool_adapter_matrix": external_tool_adapter_matrix,
@@ -1474,6 +1480,48 @@ def build_environment_artifact_rows(matrix: dict[str, Any]) -> list[dict[str, An
                     *_list(row.get("warnings"))[:5],
                 ],
                 basis=f"{row.get('purpose')}; runtime_install={row.get('runtime_package_install')}",
+            )
+        )
+    return rows
+
+
+def build_resource_artifact_rows(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    resource_rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    blocker_counts = matrix.get("blocker_counts") if isinstance(matrix.get("blocker_counts"), dict) else {}
+    warning_counts = matrix.get("warning_counts") if isinstance(matrix.get("warning_counts"), dict) else {}
+    rows = [
+        _formal_deg_gate_row(
+            "Analysis resource artifact matrix",
+            matrix.get("status") or "blocked",
+            [f"{key}={value}" for key, value in sorted(blocker_counts.items())],
+            [
+                f"locked={matrix.get('locked_resource_count', 0)}",
+                f"blocked_full={matrix.get('blocked_resource_count', 0)}",
+                f"evidence_entries={matrix.get('evidence_entry_count', 0)}",
+                f"missing={compact_list(_list(matrix.get('missing_resource_ids')))}",
+                *[f"warning:{key}={value}" for key, value in sorted(warning_counts.items())],
+            ],
+            basis=f"resources={matrix.get('resource_count', 0)}; {matrix.get('boundary', 'read_only_full_resource_lock_artifact_diagnostics')}",
+        )
+    ]
+    for row in resource_rows:
+        rows.append(
+            _formal_deg_gate_row(
+                f"Resource artifact: {row.get('resource_id')}",
+                row.get("status") or "blocked",
+                _list(row.get("blockers")),
+                [
+                    f"family={row.get('resource_family')}",
+                    f"lock={row.get('lock_status')}",
+                    f"version={row.get('version_status')}",
+                    f"hash={row.get('hash_status')}",
+                    f"license={row.get('license_status')}",
+                    f"cache={row.get('cache_path_status')}:{row.get('cache_path')}",
+                    f"evidence={row.get('lock_evidence_status')}:{row.get('lock_evidence')}",
+                    f"modules={compact_list(_list(row.get('required_for_modules')))}",
+                    *_list(row.get("warnings"))[:5],
+                ],
+                basis=f"runtime_download={row.get('runtime_download_allowed')}; resource_lock_required={row.get('resource_lock_required')}",
             )
         )
     return rows

@@ -5803,6 +5803,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                     *(analysis_state.get("module_interface_rows", []) or []),
                     *(analysis_state.get("module_mode_readiness_rows", []) or []),
                     *(analysis_state.get("environment_artifact_rows", []) or []),
+                    *(analysis_state.get("resource_artifact_rows", []) or []),
                     *(analysis_state.get("standard_worker_entrypoint_rows", []) or []),
                     *(analysis_state.get("external_tool_adapter_rows", []) or []),
                     *(analysis_state.get("task_system_boundary_rows", []) or []),

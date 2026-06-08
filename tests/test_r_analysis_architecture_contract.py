@@ -20,6 +20,7 @@ from app.analysis_runtime.architecture_status import (
     build_module_interface_matrix,
     build_module_mode_readiness_matrix,
     build_reproducibility_provenance_matrix,
+    build_resource_artifact_matrix,
     build_standard_worker_entrypoint_matrix,
     build_task_system_boundary_matrix,
     build_analysis_remediation_queue,
@@ -1437,6 +1438,10 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["environment_artifact_matrix"]["partial_environment_count"] == 4
     assert status["environment_artifact_matrix"]["blocked_environment_count"] == 0
     assert status["environment_artifact_matrix"]["warning_counts"]["environment_renv_lock_scaffold_only_not_restored:r-bio-full"] == 1
+    assert status["resource_artifact_matrix"]["status"] == "partial"
+    assert status["resource_artifact_matrix"]["locked_resource_count"] == 1
+    assert status["resource_artifact_matrix"]["blocked_resource_count"] == 11
+    assert status["resource_artifact_matrix"]["warning_counts"]["resource_full_lock_not_ready:reactome_full"] == 1
     assert status["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert status["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
     assert status["standard_worker_entrypoint_matrix"]["partial_row_count"] == 1
@@ -2040,6 +2045,39 @@ def test_environment_artifact_matrix_tracks_docker_renv_split_without_restoring_
     assert rows["r-chem-gpu"]["renv_policy_environment"] == "r-chem-full"
     assert rows["r-chem-gpu"]["external_tool_lock_required"] is True
     assert rows["r-chem-gpu"]["status"] == "partial"
+
+
+def test_resource_artifact_matrix_tracks_full_resource_locks_without_preparing_resources() -> None:
+    matrix = build_resource_artifact_matrix()
+    rows = {row["resource_id"]: row for row in matrix["rows"]}
+
+    assert matrix["schema_version"] == "biomedpilot.analysis.resource_artifact_matrix.v1"
+    assert matrix["status"] == "partial"
+    assert matrix["resource_count"] == 12
+    assert matrix["locked_resource_count"] == 1
+    assert matrix["blocked_resource_count"] == 11
+    assert matrix["passed_resource_count"] == 1
+    assert matrix["partial_resource_count"] == 11
+    assert matrix["failed_resource_count"] == 0
+    assert matrix["evidence_entry_count"] == 0
+    assert "reactome_full" in matrix["missing_resource_ids"]
+    assert matrix["warning_counts"]["resource_full_lock_not_ready:reactome_full"] == 1
+    assert matrix["warning_counts"]["resource_lock_evidence_registry_entry_missing:gromacs_tool"] == 1
+    assert matrix["boundary"] == "read_only_full_resource_lock_artifact_diagnostics"
+    assert rows["mock_fixture_builtin_v1"]["status"] == "passed"
+    assert rows["mock_fixture_builtin_v1"]["lock_status"] == "locked"
+    assert rows["mock_fixture_builtin_v1"]["resource_lock_required"] is False
+    assert rows["mock_fixture_builtin_v1"]["lock_evidence_status"] == "present"
+    assert rows["reactome_full"]["status"] == "partial"
+    assert rows["reactome_full"]["resource_family"] == "pathway_database"
+    assert rows["reactome_full"]["version_status"] == "placeholder"
+    assert rows["reactome_full"]["hash_status"] == "placeholder"
+    assert rows["reactome_full"]["license_status"] == "placeholder"
+    assert rows["reactome_full"]["cache_path_status"] == "missing"
+    assert rows["reactome_full"]["lock_evidence_status"] == "missing"
+    assert rows["reactome_full"]["runtime_download_allowed"] is False
+    assert rows["gromacs_tool"]["resource_family"] == "external_scientific_tool"
+    assert rows["gromacs_tool"]["required_for_modules"] == ["molecular_dynamics"]
 
 
 def test_standard_worker_entrypoint_matrix_tracks_runner_contract_and_partial_migration() -> None:

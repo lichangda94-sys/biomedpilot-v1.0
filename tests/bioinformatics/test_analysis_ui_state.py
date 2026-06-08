@@ -146,6 +146,19 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "renv=present:renv/renv.bio-full.lock" in environment_artifact_text
     assert "renv_status=scaffold_only_not_restored" in environment_artifact_text
     assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in environment_artifact_text
+    resource_artifact_text = "\n".join(str(row) for row in state["resource_artifact_rows"])
+    assert "Analysis resource artifact matrix" in resource_artifact_text
+    assert "locked=1" in resource_artifact_text
+    assert "blocked_full=11" in resource_artifact_text
+    assert "evidence_entries=0" in resource_artifact_text
+    assert "Resource artifact: mock_fixture_builtin_v1" in resource_artifact_text
+    assert "Resource artifact: reactome_full" in resource_artifact_text
+    assert "version=placeholder" in resource_artifact_text
+    assert "hash=placeholder" in resource_artifact_text
+    assert "license=placeholder" in resource_artifact_text
+    assert "evidence=missing:" in resource_artifact_text
+    assert "resource_full_lock_not_ready:reactome_full" in resource_artifact_text
+    assert "resource_lock_evidence_registry_entry_missing:gromacs_tool" in resource_artifact_text
     entrypoint_text = "\n".join(str(row) for row in state["standard_worker_entrypoint_rows"])
     assert "Standard R worker entrypoint matrix" in entrypoint_text
     assert "passed=5" in entrypoint_text
@@ -289,6 +302,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["environment_artifact_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["environment_artifact_matrix"]["partial_environment_count"] == 4
     assert state["developer_diagnostics"]["environment_artifact_rows"] == state["environment_artifact_rows"]
+    assert state["developer_diagnostics"]["resource_artifact_matrix"]["status"] == "partial"
+    assert state["developer_diagnostics"]["resource_artifact_matrix"]["blocked_resource_count"] == 11
+    assert state["developer_diagnostics"]["resource_artifact_rows"] == state["resource_artifact_rows"]
     assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["standard_worker_entrypoint_matrix"]["passed_row_count"] == 5
     assert state["developer_diagnostics"]["standard_worker_entrypoint_rows"] == state["standard_worker_entrypoint_rows"]
