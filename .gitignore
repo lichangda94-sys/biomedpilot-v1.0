@@ -1,0 +1,168 @@
+# =========================
+# BioMedPilot .gitignore
+# =========================
+
+# -------------------------
+# macOS
+# -------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# -------------------------
+# Python cache
+# -------------------------
+pycache/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# -------------------------
+# Virtual environments
+# -------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -------------------------
+# Python build files
+# -------------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# -------------------------
+# IDE / editor
+# -------------------------
+.vscode/
+.idea/
+*.swp
+.swo
+
+# -------------------------
+# Environment variables and secrets
+# -------------------------
+.env
+.env.
+*.env
+secrets/
+credentials/
+*.key
+*.pem
+
+# -------------------------
+# Local logs
+# -------------------------
+logs/
+*.log
+
+# -------------------------
+# Local outputs and analysis results
+# -------------------------
+outputs/
+results/
+reports/generated/
+exports/
+tmp/
+temp/
+
+# -------------------------
+# Private or raw research data
+# Do not upload patient data, unpublished data, or private datasets.
+# -------------------------
+data/raw/
+data/private/
+data/sensitive/
+datasets/private/
+
+# -------------------------
+# Large biomedical files
+# Keep example data small and public.
+# -------------------------
+*.bam
+*.bai
+*.sam
+*.fastq
+*.fq
+*.fastq.gz
+*.fq.gz
+*.vcf
+*.vcf.gz
+*.h5ad
+*.loom
+*.rds
+*.RDS
+
+# -------------------------
+# R / RStudio
+# -------------------------
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# -------------------------
+# renv / local R package library
+# Keep renv.lock if you use renv for reproducibility.
+# Ignore the local package library.
+# -------------------------
+renv/library/
+renv/staging/
+renv/python/
+renv/sandbox/
+
+# -------------------------
+# Jupyter Notebook checkpoints
+# -------------------------
+.ipynb_checkpoints/
+
+# -------------------------
+# Packaging / app build artifacts
+# -------------------------
+*.app/
+.dmg
+.pkg
+.spec
+
+# -------------------------
+# Node / frontend, if added later
+# -------------------------
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# -------------------------
+# Database / local storage
+# -------------------------
+*.sqlite
+*.sqlite3
+*.db
+
+# -------------------------
+# Local model files
+# -------------------------
+models/
+*.gguf
+*.bin
+*.safetensors
+
+# -------------------------
+# Keep these files tracked if present
+# -------------------------
+!README.md
+!LICENSE
+!requirements.txt
+!requirements-r.txt
+!environment.yml
+!renv.lock
+!docs/
+!examples/
