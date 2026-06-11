@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from app.analysis_runtime.legacy_sidecar_policy import legacy_sidecar_execution_gate
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.results.models import ResultIndexEntry
@@ -32,6 +33,7 @@ def run_formal_controlled_deg(
     fdr_threshold: float = 0.05,
     pseudocount: float = 1e-9,
     dependency_snapshot: dict[str, Any] | None = None,
+    allow_legacy_sidecar_execution: bool = False,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     resolver = resolve_analysis_inputs(root).to_dict()
@@ -68,6 +70,18 @@ def run_formal_controlled_deg(
     confirmed_parameter_manifest = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
     if confirmed_parameter_manifest:
         parameter_manifest = confirmed_parameter_manifest
+
+    sidecar_gate = legacy_sidecar_execution_gate("deg", allow_legacy_sidecar_execution=allow_legacy_sidecar_execution)
+    if sidecar_gate.get("status") != "passed":
+        return _blocked(
+            *[str(item) for item in sidecar_gate.get("blockers", []) or []],
+            deg_ready_package=deg_ready,
+            parameter_manifest=parameter_manifest,
+            dependency_snapshot=dependency,
+            result_schema_gate=schema_gate,
+            confirmation_gate=confirmation_gate,
+            legacy_sidecar_execution_gate=sidecar_gate,
+        )
 
     bundle = python_backend.run_controlled_deg(
         deg_ready,

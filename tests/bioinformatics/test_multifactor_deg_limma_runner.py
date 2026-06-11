@@ -23,7 +23,7 @@ def test_multifactor_limma_backend_detects_external_r_runtime() -> None:
 
 
 def test_controlled_multifactor_limma_fixture_registers_formal_result(tmp_path: Path) -> None:
-    result = run_controlled_multifactor_limma_fixture(tmp_path)
+    result = run_controlled_multifactor_limma_fixture(tmp_path, allow_legacy_sidecar_execution=True)
 
     assert result["status"] == "passed", result.get("blockers")
     assert result["parameter_manifest"]["design_formula"] == "~ batch + group"
@@ -91,3 +91,13 @@ def test_controlled_multifactor_limma_fixture_registers_formal_result(tmp_path: 
     log = json.loads(log_path.read_text(encoding="utf-8"))
     assert log["task_run_id"] == result["task_run_id"]
     assert log["dependency_snapshot"]["status"] == "passed"
+
+
+def test_multifactor_limma_blocks_direct_legacy_sidecar_execution_by_default(tmp_path: Path) -> None:
+    result = run_controlled_multifactor_limma_fixture(tmp_path)
+
+    assert result["status"] == "blocked"
+    assert "legacy_service_adapter_sidecar_execution_disabled" in result["blockers"]
+    assert "standard_worker_migration_required:deg" in result["blockers"]
+    assert result["legacy_sidecar_execution_gate"]["required_task_system_invocation"] == "task_center_registered"
+    assert load_registry(tmp_path)["results"] == []

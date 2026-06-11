@@ -10,7 +10,7 @@ from app.bioinformatics.results.registry import load_registry
 
 
 def test_multifactor_deg_result_enters_plot_audit_and_section_report(tmp_path: Path) -> None:
-    run = run_controlled_multifactor_limma_fixture(tmp_path)
+    run = run_controlled_multifactor_limma_fixture(tmp_path, allow_legacy_sidecar_execution=True)
     assert run["status"] == "passed", run.get("blockers")
 
     plot = create_formal_deg_plot_artifact(tmp_path, result_id=run["result_id"], plot_type="volcano_plot")

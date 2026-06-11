@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from app.analysis_runtime.legacy_sidecar_policy import legacy_sidecar_execution_gate
 from app.analysis_runtime.r_worker import run_external_r_command
 from app.analysis_runtime.standard_package import write_legacy_service_adapter_invocation_manifest
 from app.bioinformatics.results.models import ResultIndexEntry
@@ -55,7 +56,11 @@ def check_multifactor_r_backend(method: str) -> dict[str, Any]:
     }
 
 
-def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[str, Any]:
+def run_controlled_multifactor_limma_fixture(
+    project_root: str | Path,
+    *,
+    allow_legacy_sidecar_execution: bool = False,
+) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     dependency = check_multifactor_r_backend("limma")
     deg_ready = _fixture_deg_ready_package(value_type="log_expression")
@@ -72,6 +77,17 @@ def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[s
     ]
     if blockers:
         return _blocked(*blockers, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, confirmation_gate=confirmation_gate, result_schema_gate=schema_gate)
+
+    sidecar_gate = legacy_sidecar_execution_gate("deg", allow_legacy_sidecar_execution=allow_legacy_sidecar_execution)
+    if sidecar_gate.get("status") != "passed":
+        return _blocked(
+            *[str(item) for item in sidecar_gate.get("blockers", []) or []],
+            parameter_manifest=parameter_manifest,
+            dependency_snapshot=dependency,
+            confirmation_gate=confirmation_gate,
+            result_schema_gate=schema_gate,
+            legacy_sidecar_execution_gate=sidecar_gate,
+        )
 
     result_id = str(confirmation["output_plan"]["result_id"])
     task_run_id = str(confirmation["output_plan"]["task_run_id"])
@@ -178,7 +194,12 @@ def run_controlled_multifactor_limma_fixture(project_root: str | Path) -> dict[s
     }
 
 
-def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value_type: str = "count") -> dict[str, Any]:
+def run_controlled_multifactor_deseq2_fixture(
+    project_root: str | Path,
+    *,
+    value_type: str = "count",
+    allow_legacy_sidecar_execution: bool = False,
+) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     dependency = check_multifactor_r_backend("DESeq2")
     deg_ready = _fixture_deg_ready_package(value_type=value_type)
@@ -195,6 +216,17 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
     ]
     if blockers:
         return _blocked(*blockers, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, confirmation_gate=confirmation_gate, result_schema_gate=schema_gate)
+
+    sidecar_gate = legacy_sidecar_execution_gate("deg", allow_legacy_sidecar_execution=allow_legacy_sidecar_execution)
+    if sidecar_gate.get("status") != "passed":
+        return _blocked(
+            *[str(item) for item in sidecar_gate.get("blockers", []) or []],
+            parameter_manifest=parameter_manifest,
+            dependency_snapshot=dependency,
+            confirmation_gate=confirmation_gate,
+            result_schema_gate=schema_gate,
+            legacy_sidecar_execution_gate=sidecar_gate,
+        )
 
     result_id = str(confirmation["output_plan"]["result_id"])
     task_run_id = str(confirmation["output_plan"]["task_run_id"])
@@ -301,7 +333,12 @@ def run_controlled_multifactor_deseq2_fixture(project_root: str | Path, *, value
     }
 
 
-def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_type: str = "count") -> dict[str, Any]:
+def run_controlled_multifactor_edger_fixture(
+    project_root: str | Path,
+    *,
+    value_type: str = "count",
+    allow_legacy_sidecar_execution: bool = False,
+) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     dependency = check_multifactor_r_backend("edgeR")
     deg_ready = _fixture_deg_ready_package(value_type=value_type)
@@ -318,6 +355,17 @@ def run_controlled_multifactor_edger_fixture(project_root: str | Path, *, value_
     ]
     if blockers:
         return _blocked(*blockers, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, confirmation_gate=confirmation_gate, result_schema_gate=schema_gate)
+
+    sidecar_gate = legacy_sidecar_execution_gate("deg", allow_legacy_sidecar_execution=allow_legacy_sidecar_execution)
+    if sidecar_gate.get("status") != "passed":
+        return _blocked(
+            *[str(item) for item in sidecar_gate.get("blockers", []) or []],
+            parameter_manifest=parameter_manifest,
+            dependency_snapshot=dependency,
+            confirmation_gate=confirmation_gate,
+            result_schema_gate=schema_gate,
+            legacy_sidecar_execution_gate=sidecar_gate,
+        )
 
     result_id = str(confirmation["output_plan"]["result_id"])
     task_run_id = str(confirmation["output_plan"]["task_run_id"])

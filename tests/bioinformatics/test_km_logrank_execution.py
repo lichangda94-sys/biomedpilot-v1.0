@@ -13,7 +13,7 @@ def test_controlled_km_logrank_registers_formal_result_without_hr_or_report(tmp_
     manifest = _manifest(tmp_path)
     confirmation = confirm_km_logrank_parameters(tmp_path, manifest)
 
-    result = run_controlled_km_logrank(tmp_path, manifest, confirmation)
+    result = run_controlled_km_logrank(tmp_path, manifest, confirmation, allow_legacy_sidecar_execution=True)
 
     assert result["status"] == "passed"
     assert Path(result["km_curve_table"]).is_file()
@@ -54,6 +54,20 @@ def test_controlled_km_logrank_registers_formal_result_without_hr_or_report(tmp_
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert "clinical_conclusion_not_generated" in row["warnings"]
     assert "legacy_sidecar_package_not_standard_worker_migration_evidence" in row["warnings"]
+
+
+def test_controlled_km_logrank_blocks_direct_legacy_sidecar_execution_by_default(tmp_path: Path) -> None:
+    manifest = _manifest(tmp_path)
+    confirmation = confirm_km_logrank_parameters(tmp_path, manifest)
+
+    result = run_controlled_km_logrank(tmp_path, manifest, confirmation)
+
+    assert result["status"] == "blocked"
+    assert result["failure_reason"] == "legacy_sidecar_execution_gate_blocked"
+    assert "legacy_service_adapter_sidecar_execution_disabled" in result["blockers"]
+    assert "standard_worker_migration_required:survival" in result["blockers"]
+    assert result["legacy_sidecar_execution_gate"]["required_task_system_invocation"] == "task_center_registered"
+    assert load_registry(tmp_path)["results"] == []
 
 
 def test_controlled_km_logrank_blocks_missing_confirmation_without_traceback(tmp_path: Path) -> None:

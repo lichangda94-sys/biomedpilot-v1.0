@@ -18,7 +18,7 @@ def test_survival_km_e2e_acceptance_passes_complete_chain(tmp_path) -> None:
     package = build_survival_package({"input_package_id": "pkg", "clinical_asset": {"path": str(clinical)}})
     manifest = build_km_logrank_parameter_manifest(package, outcome_gate={"status": "passed", "survival_outcome_gate_id": "outcome-1", "blockers": []}, grouping_variable="arm", group_a="A", group_b="B", dependency_snapshot={"status": "passed", "python_lifelines": {"available": True, "version": "test"}})
     confirmation = confirm_km_logrank_parameters(tmp_path, manifest)
-    result = run_controlled_km_logrank(tmp_path, manifest, confirmation)
+    result = run_controlled_km_logrank(tmp_path, manifest, confirmation, allow_legacy_sidecar_execution=True)
     create_km_plot_artifact(str(tmp_path), result["result_id"])
 
     audit = audit_survival_km_e2e_acceptance(tmp_path, result["result_id"], confirmation=confirmation)

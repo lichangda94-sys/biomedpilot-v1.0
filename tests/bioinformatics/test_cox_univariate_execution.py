@@ -13,7 +13,7 @@ def test_controlled_cox_univariate_registers_formal_result_without_risk_score(tm
     manifest = _manifest(tmp_path)
     confirmation = confirm_cox_univariate_parameters(tmp_path, manifest)
 
-    result = run_controlled_cox_univariate(tmp_path, manifest, confirmation)
+    result = run_controlled_cox_univariate(tmp_path, manifest, confirmation, allow_legacy_sidecar_execution=True)
 
     assert result["status"] == "passed"
     standard_package_dir = Path(result["standard_result_package_dir"])
@@ -54,6 +54,20 @@ def test_controlled_cox_univariate_registers_formal_result_without_risk_score(tm
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert "clinical_conclusion_not_generated" in row["warnings"]
     assert "legacy_sidecar_package_review_only_not_ui_execution_readiness" in row["warnings"]
+
+
+def test_controlled_cox_blocks_direct_legacy_sidecar_execution_by_default(tmp_path: Path) -> None:
+    manifest = _manifest(tmp_path)
+    confirmation = confirm_cox_univariate_parameters(tmp_path, manifest)
+
+    result = run_controlled_cox_univariate(tmp_path, manifest, confirmation)
+
+    assert result["status"] == "blocked"
+    assert result["failure_reason"] == "legacy_sidecar_execution_gate_blocked"
+    assert "legacy_service_adapter_sidecar_execution_disabled" in result["blockers"]
+    assert "standard_worker_migration_required:survival" in result["blockers"]
+    assert result["legacy_sidecar_execution_gate"]["required_worker_boundary"] == "standard_r_worker"
+    assert load_registry(tmp_path)["results"] == []
 
 
 def test_controlled_cox_blocks_missing_confirmation_without_traceback(tmp_path: Path) -> None:

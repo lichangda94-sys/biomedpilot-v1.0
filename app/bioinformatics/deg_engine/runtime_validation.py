@@ -148,7 +148,11 @@ def _run_fixture(dependency_snapshot: dict[str, Any]) -> dict[str, Any]:
                 "warnings": list(confirmation.get("warnings", []) or []),
             }
         try:
-            result = run_formal_controlled_deg(root, dependency_snapshot=dependency_snapshot)
+            result = run_formal_controlled_deg(
+                root,
+                dependency_snapshot=dependency_snapshot,
+                allow_legacy_sidecar_execution=True,
+            )
         except Exception as exc:  # pragma: no cover - indicates a B9.3 regression.
             return {
                 "status": "failed",

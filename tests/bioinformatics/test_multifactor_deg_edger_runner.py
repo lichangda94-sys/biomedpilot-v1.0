@@ -20,7 +20,7 @@ def test_multifactor_edger_backend_detects_external_r_runtime() -> None:
 
 
 def test_controlled_multifactor_edger_fixture_registers_formal_result(tmp_path: Path) -> None:
-    result = run_controlled_multifactor_edger_fixture(tmp_path)
+    result = run_controlled_multifactor_edger_fixture(tmp_path, allow_legacy_sidecar_execution=True)
 
     assert result["status"] == "passed", result.get("blockers")
     assert result["parameter_manifest"]["backend_method"] == "edgeR"

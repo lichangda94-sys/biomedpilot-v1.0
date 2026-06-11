@@ -19,7 +19,7 @@ def test_formal_deg_e2e_acceptance_audit_passes_full_user_flow(tmp_path: Path, m
     _patch_backend(monkeypatch)
     dependency = _dependency()
     confirmation = save_deg_parameter_confirmation(tmp_path, dependency_snapshot=dependency)
-    run = run_formal_controlled_deg(tmp_path, dependency_snapshot=dependency)
+    run = run_formal_controlled_deg(tmp_path, dependency_snapshot=dependency, allow_legacy_sidecar_execution=True)
     result_id = str(run["result_id"])
     imported = ResultIndexEntry(result_id="imported", task_run_id="task-imported", task_type="deg", result_semantics="imported_external_result", validation_status="passed")
     register_result(tmp_path, imported)
@@ -54,7 +54,7 @@ def test_formal_deg_e2e_audit_blocks_missing_plot_with_clear_reason(tmp_path: Pa
     _patch_backend(monkeypatch)
     dependency = _dependency()
     save_deg_parameter_confirmation(tmp_path, dependency_snapshot=dependency)
-    run = run_formal_controlled_deg(tmp_path, dependency_snapshot=dependency)
+    run = run_formal_controlled_deg(tmp_path, dependency_snapshot=dependency, allow_legacy_sidecar_execution=True)
 
     audit = audit_formal_deg_e2e_acceptance(tmp_path, result_id=str(run["result_id"]))
 
@@ -68,7 +68,7 @@ def test_formal_deg_e2e_audit_accepts_explicit_table_only_without_plot_misleadin
     _patch_backend(monkeypatch)
     dependency = _dependency()
     save_deg_parameter_confirmation(tmp_path, dependency_snapshot=dependency)
-    run = run_formal_controlled_deg(tmp_path, dependency_snapshot=dependency)
+    run = run_formal_controlled_deg(tmp_path, dependency_snapshot=dependency, allow_legacy_sidecar_execution=True)
     result_id = str(run["result_id"])
     package = create_formal_deg_report_ready_package(tmp_path, result_id=result_id, allow_table_only_report=True)
 

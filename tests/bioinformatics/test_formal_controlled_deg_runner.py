@@ -33,6 +33,7 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     result = run_formal_controlled_deg(
         tmp_path,
         dependency_snapshot=dependency,
+        allow_legacy_sidecar_execution=True,
     )
 
     assert result["status"] == "passed"
@@ -82,6 +83,36 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert "clinical_conclusion_not_generated" in row["warnings"]
     assert "legacy_sidecar_package_review_only_not_ui_execution_readiness" in row["warnings"]
+
+
+def test_formal_controlled_deg_runner_blocks_direct_legacy_sidecar_execution_by_default(tmp_path: Path, monkeypatch) -> None:
+    matrix = tmp_path / "matrix.tsv"
+    matrix.write_text("gene\tcase1\tcase2\tctrl1\tctrl2\nTP53\t10\t12\t5\t6\nEGFR\t2\t2\t8\t9\n", encoding="utf-8")
+    sample = tmp_path / "sample.tsv"
+    sample.write_text("sample_id\tgroup\ncase1\tcase\ncase2\tcase\nctrl1\tcontrol\nctrl2\tcontrol\n", encoding="utf-8")
+    group = tmp_path / "group.json"
+    group.write_text(json.dumps({"group_design": {"sample_group_assignments": {"case1": "case", "case2": "case", "ctrl1": "control", "ctrl2": "control"}}}), encoding="utf-8")
+    _write_standardized_state(
+        tmp_path,
+        [
+            _asset("expr", "raw_count_matrix", "expression_repository", matrix, value_type="count", gene_id_type="symbol"),
+            _asset("sample", "sample_metadata", "sample_metadata_repository", sample),
+            _asset("group", "group_design", "group_design_repository", group),
+        ],
+        default_expression="expr",
+    )
+    _patch_backend(monkeypatch)
+    dependency = {"status": "passed", "engine_candidate": "python_scipy_statsmodels", "blockers": [], "packages": {}}
+    confirmation = save_deg_parameter_confirmation(tmp_path, dependency_snapshot=dependency)
+    assert confirmation["status"] == "confirmed"
+
+    result = run_formal_controlled_deg(tmp_path, dependency_snapshot=dependency)
+
+    assert result["status"] == "blocked"
+    assert "legacy_service_adapter_sidecar_execution_disabled" in result["blockers"]
+    assert "standard_worker_migration_required:deg" in result["blockers"]
+    assert result["legacy_sidecar_execution_gate"]["required_worker_boundary"] == "standard_r_worker"
+    assert load_registry(tmp_path)["results"] == []
 
 
 def test_formal_controlled_deg_runner_requires_user_parameter_confirmation(tmp_path: Path, monkeypatch) -> None:

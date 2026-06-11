@@ -75,9 +75,9 @@ def _multifactor_runtime_payload(root: Path) -> dict[str, Any]:
         from app.bioinformatics.results.registry import load_registry
 
         fixture_runners = {
-            "limma": lambda path: run_controlled_multifactor_limma_fixture(path),
-            "DESeq2": lambda path: run_controlled_multifactor_deseq2_fixture(path),
-            "edgeR": lambda path: run_controlled_multifactor_edger_fixture(path),
+            "limma": lambda path: run_controlled_multifactor_limma_fixture(path, allow_legacy_sidecar_execution=True),
+            "DESeq2": lambda path: run_controlled_multifactor_deseq2_fixture(path, allow_legacy_sidecar_execution=True),
+            "edgeR": lambda path: run_controlled_multifactor_edger_fixture(path, allow_legacy_sidecar_execution=True),
         }
         dependency_checks = {method: check_multifactor_r_backend(method) for method in fixture_runners}
         fixture_results: dict[str, Any] = {}

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.analysis_runtime.legacy_sidecar_policy import legacy_sidecar_execution_gate
 from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 
@@ -19,7 +20,13 @@ ENGINE_NAME = "biomedpilot_controlled_km_logrank"
 ENGINE_VERSION = "0.1.0"
 
 
-def run_controlled_km_logrank(project_root: str | Path, parameter_manifest: dict[str, Any], confirmation: dict[str, Any]) -> dict[str, Any]:
+def run_controlled_km_logrank(
+    project_root: str | Path,
+    parameter_manifest: dict[str, Any],
+    confirmation: dict[str, Any],
+    *,
+    allow_legacy_sidecar_execution: bool = False,
+) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     blockers: list[str] = []
     warnings = list(parameter_manifest.get("warnings", []) or [])
@@ -40,6 +47,33 @@ def run_controlled_km_logrank(project_root: str | Path, parameter_manifest: dict
         log_payload = _task_log(task_run_id, parameter_manifest, dependency, "blocked", "", "", "", warnings, blockers, "km_logrank_gates_not_passed")
         _write_json(log_path, log_payload)
         return {"status": "blocked", "result_id": "", "task_run_id": task_run_id, "warnings": warnings, "blockers": list(dict.fromkeys(blockers)), "failure_reason": "km_logrank_gates_not_passed", "task_run_log_path": str(log_path)}
+
+    sidecar_gate = legacy_sidecar_execution_gate("survival", allow_legacy_sidecar_execution=allow_legacy_sidecar_execution)
+    if sidecar_gate.get("status") != "passed":
+        blockers.extend(str(item) for item in sidecar_gate.get("blockers", []) or [])
+        log_payload = _task_log(
+            task_run_id,
+            parameter_manifest,
+            dependency,
+            "blocked",
+            "",
+            "",
+            "",
+            warnings,
+            blockers,
+            "legacy_sidecar_execution_gate_blocked",
+        )
+        _write_json(log_path, log_payload)
+        return {
+            "status": "blocked",
+            "result_id": "",
+            "task_run_id": task_run_id,
+            "warnings": warnings,
+            "blockers": list(dict.fromkeys(blockers)),
+            "failure_reason": "legacy_sidecar_execution_gate_blocked",
+            "task_run_log_path": str(log_path),
+            "legacy_sidecar_execution_gate": sidecar_gate,
+        }
 
     rows = read_table(asset_path(parameter_manifest.get("provenance", {}).get("clinical_asset") if isinstance(parameter_manifest.get("provenance"), dict) else None))
     if not rows:

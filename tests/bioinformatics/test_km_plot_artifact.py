@@ -39,4 +39,4 @@ def _run(tmp_path):
     )
     package = build_survival_package({"input_package_id": "pkg", "clinical_asset": {"path": str(clinical)}})
     manifest = build_km_logrank_parameter_manifest(package, outcome_gate={"status": "passed", "survival_outcome_gate_id": "outcome-1", "blockers": []}, grouping_variable="arm", group_a="A", group_b="B", dependency_snapshot={"status": "passed", "python_lifelines": {"available": True, "version": "test"}})
-    return run_controlled_km_logrank(tmp_path, manifest, confirm_km_logrank_parameters(tmp_path, manifest))
+    return run_controlled_km_logrank(tmp_path, manifest, confirm_km_logrank_parameters(tmp_path, manifest), allow_legacy_sidecar_execution=True)
