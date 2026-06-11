@@ -186,15 +186,12 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert payload["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
     assert payload["legacy_sidecar_transition_matrix"]["blocker_counts"] == {}
-    assert payload["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 5
-    assert payload["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_count"] == 1
-    assert payload["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_module_ids"] == [
-        "immune_infiltration",
-    ]
+    assert payload["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 4
+    assert payload["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_count"] == 0
+    assert payload["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_module_ids"] == []
     assert set(payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]) == {
         "deg",
         "enrichment",
-        "immune_infiltration",
         "survival",
     }
     assert "correlation" not in payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
@@ -204,9 +201,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert legacy_sidecar_rows["migration_evidence_forbids_sidecar"]["status"] == "passed"
     assert legacy_sidecar_rows["registry_adapter_transition_scope"]["status"] == "passed"
     assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["status"] == "partial"
-    assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == [
-        "immune_infiltration",
-    ]
+    assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == []
     assert legacy_sidecar_rows["sidecar_boundary_test_coverage"]["status"] == "passed"
     assert payload["frontend_consumption_matrix"]["schema_version"] == "biomedpilot.analysis.frontend_standard_package_consumption_matrix.v1"
     assert payload["frontend_consumption_matrix"]["status"] == "passed"
@@ -241,10 +236,9 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_module_ids"] == [
         "deg",
         "enrichment",
-        "immune_infiltration",
         "survival",
     ]
-    assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 5
+    assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 4
     assert "legacy_sidecar_provenance_transitional:deg" in provenance_rows["legacy_sidecar_provenance_boundary"]["warnings"]
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False

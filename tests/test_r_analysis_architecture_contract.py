@@ -1468,11 +1468,10 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 5
     assert status["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert status["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
-    assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 5
+    assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 4
     assert set(status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]) == {
         "deg",
         "enrichment",
-        "immune_infiltration",
         "survival",
     }
     assert "deg" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
@@ -1912,14 +1911,13 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert set(matrix["transitional_module_ids"]) == {
         "deg",
         "enrichment",
-        "immune_infiltration",
         "survival",
     }
-    assert matrix["sidecar_producer_count"] == 5
-    assert len(matrix["sidecar_producers"]) == 5
-    assert matrix["standard_worker_lite_replacement_candidate_count"] == 1
-    assert matrix["standard_worker_lite_replacement_candidate_module_ids"] == ["immune_infiltration"]
-    assert matrix["adapter_status_counts"]["existing_standard_worker_lite_contract_pending_full_migration"] == 1
+    assert matrix["sidecar_producer_count"] == 4
+    assert len(matrix["sidecar_producers"]) == 4
+    assert matrix["standard_worker_lite_replacement_candidate_count"] == 0
+    assert matrix["standard_worker_lite_replacement_candidate_module_ids"] == []
+    assert matrix["adapter_status_counts"]["existing_standard_worker_lite_contract_pending_full_migration"] == 2
     assert "legacy_sidecar_producer_transitional:correlation" not in matrix["warning_counts"]
     assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:deg"] == 1
     assert rows["legacy_sidecar_writer_contract"]["status"] == "passed"
@@ -1934,17 +1932,13 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert rows["source_sidecar_producer_inventory"]["sidecar_module_ids"] == [
         "deg",
         "enrichment",
-        "immune_infiltration",
         "survival",
     ]
-    assert rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == [
-        "immune_infiltration",
-    ]
+    assert rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == []
     producers = {
         (item["module_id"], item["source_surface"]): item
         for item in rows["source_sidecar_producer_inventory"]["sidecar_producers"]
     }
-    assert producers[("immune_infiltration", "immune_scoring_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "available"
     assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "not_equivalent_formal_sidecar_requires_full_standard_worker_migration"
     assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_path_status"] == "available"
     assert rows["source_sidecar_producer_inventory"]["boundary"] == "actual_sidecar_source_inventory_not_formal_worker_migration_evidence"
@@ -2022,10 +2016,9 @@ def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> 
     assert rows["legacy_sidecar_provenance_boundary"]["sidecar_module_ids"] == [
         "deg",
         "enrichment",
-        "immune_infiltration",
         "survival",
     ]
-    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 5
+    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 4
     assert "legacy_sidecar_provenance_transitional:deg" in rows["legacy_sidecar_provenance_boundary"]["warnings"]
     assert rows["legacy_sidecar_provenance_boundary"]["boundary"] == "formal_full_completion_requires_standard_worker_migration_evidence_not_sidecar_provenance"
 
@@ -2899,7 +2892,9 @@ def test_standard_r_runner_immune_lite_mode_writes_real_fixture_heatmap_package(
     assert completed.returncode == 0, completed.stderr
     result = read_json(output_dir / "result.json")
     provenance = read_json(output_dir / "provenance.json")
-    table = (output_dir / "tables" / "lite_immune_scores.tsv").read_text(encoding="utf-8")
+    table = (output_dir / "tables" / "immune_score_matrix.tsv").read_text(encoding="utf-8")
+    coverage = output_dir / "tables" / "signature_gene_coverage.tsv"
+    sample_summary = output_dir / "tables" / "sample_score_summary.tsv"
     plot = output_dir / "plots" / "lite_immune_heatmap.svg"
     assert result["module_id"] == "immune_infiltration"
     assert result["mode"] == "lite"
@@ -2907,9 +2902,9 @@ def test_standard_r_runner_immune_lite_mode_writes_real_fixture_heatmap_package(
     assert result["result_semantics"] == "testing_level"
     assert "clinical_conclusion_not_generated" in result["warnings"]
     assert "lite_immune_infiltration_heatmap_svg" in str(result["plots"])
-    assert "signature" in table.splitlines()[0]
-    assert "score" in table.splitlines()[0]
-    assert "not_generated" in table
+    assert "signature_id" in table.splitlines()[0]
+    assert coverage.is_file()
+    assert sample_summary.is_file()
     assert plot.is_file()
     assert "<svg" in plot.read_text(encoding="utf-8", errors="ignore")
     assert provenance["runtime"]["r_version"] != "not_executed"  # type: ignore[index]

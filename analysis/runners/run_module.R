@@ -165,8 +165,14 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "multivariate" && mode == "lite" && table_file == "lite_multivariate_association.tsv") {
     return("lite_multivariate_clinical_association_table")
   }
-  if (module_id == "immune_infiltration" && mode == "lite" && table_file == "lite_immune_scores.tsv") {
-    return("lite_immune_infiltration_score_table")
+  if (module_id == "immune_infiltration" && mode == "lite" && table_file == "immune_score_matrix.tsv") {
+    return("immune_score_matrix")
+  }
+  if (module_id == "immune_infiltration" && mode == "lite" && table_file == "signature_gene_coverage.tsv") {
+    return("immune_signature_coverage")
+  }
+  if (module_id == "immune_infiltration" && mode == "lite" && table_file == "sample_score_summary.tsv") {
+    return("immune_sample_score_summary")
   }
   if (module_id == "correlation" && mode == "lite" && table_file == "lite_correlation_result.tsv") {
     return("lite_expression_correlation_table")
@@ -748,37 +754,86 @@ run_lite_immune_infiltration <- function() {
   sample_ids <- colnames(expression_matrix)
   signature_names <- unique(as.character(signatures$signature))
   score_matrix <- matrix(NA_real_, nrow = length(signature_names), ncol = length(sample_ids), dimnames = list(signature_names, sample_ids))
-  rows <- list()
+  score_rows <- list()
+  coverage_rows <- list()
   omitted_signatures <- character(0)
   for (signature_name in signature_names) {
     signature_genes <- unique(as.character(signatures$gene[signatures$signature == signature_name]))
     matched_genes <- intersect(signature_genes, rownames(expression_matrix))
+    missing_genes <- setdiff(signature_genes, matched_genes)
+    requested_count <- length(signature_genes)
+    matched_count <- length(matched_genes)
+    coverage_ratio <- if (requested_count > 0) matched_count / requested_count else 0
+    coverage_status <- if (matched_count < 1) {
+      "failed_no_matched_genes"
+    } else if (requested_count == 1) {
+      "single_gene_signature"
+    } else if (matched_count < 3 || coverage_ratio < 0.2) {
+      "low_coverage_warning"
+    } else {
+      "ok"
+    }
+    coverage_rows[[length(coverage_rows) + 1]] <- data.frame(
+      signature_id = signature_name,
+      display_name = signature_name,
+      category = "immune_signature",
+      requested_gene_count = requested_count,
+      matched_gene_count = matched_count,
+      missing_gene_count = length(missing_genes),
+      coverage_ratio = sprintf("%.4f", coverage_ratio),
+      matched_genes = paste(matched_genes, collapse = ","),
+      missing_genes = paste(missing_genes, collapse = ","),
+      status = coverage_status,
+      stringsAsFactors = FALSE
+    )
+    score_row <- data.frame(
+      signature_id = signature_name,
+      display_name = signature_name,
+      category = "immune_signature",
+      matched_gene_count = matched_count,
+      coverage_status = coverage_status,
+      stringsAsFactors = FALSE
+    )
     if (length(matched_genes) < 1) {
       omitted_signatures <- c(omitted_signatures, signature_name)
+      for (sample_id in sample_ids) {
+        score_row[[sample_id]] <- ""
+      }
+      score_rows[[length(score_rows) + 1]] <- score_row
       next
     }
     scores <- colMeans(expression_matrix[matched_genes, , drop = FALSE])
     score_matrix[signature_name, ] <- scores
     for (sample_id in sample_ids) {
-      rows[[length(rows) + 1]] <- data.frame(
-        signature = signature_name,
-        sample_id = sample_id,
-        score = unname(scores[[sample_id]]),
-        genes_used = paste(matched_genes, collapse = "/"),
-        method = "base_r_signature_mean_fixture",
-        clinical_conclusion = "not_generated",
-        stringsAsFactors = FALSE
-      )
+      score_row[[sample_id]] <- unname(scores[[sample_id]])
     }
+    score_rows[[length(score_rows) + 1]] <- score_row
   }
-  if (length(rows) == 0) {
+  if (length(score_rows) == 0 || all(is.na(score_matrix))) {
     write_result(module_id, task_id, mode, "blocked", c("lite_immune_no_signature_gene_overlap"), c(), "Lite immune infiltration blocked because no signature genes overlap the expression matrix.")
     write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
     writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), "immune_no_overlap"), file.path(output_dir, "logs", "worker.log"))
     quit(status = 2)
   }
-  result_table <- do.call(rbind, rows)
-  write.table(result_table, file = file.path(output_dir, "tables", "lite_immune_scores.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  result_table <- do.call(rbind, score_rows)
+  coverage_table <- do.call(rbind, coverage_rows)
+  write.table(result_table, file = file.path(output_dir, "tables", "immune_score_matrix.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  write.table(coverage_table, file = file.path(output_dir, "tables", "signature_gene_coverage.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+  summary_rows <- list()
+  for (sample_id in sample_ids) {
+    sample_values <- suppressWarnings(as.numeric(result_table[[sample_id]]))
+    sample_values <- sample_values[!is.na(sample_values)]
+    summary_rows[[length(summary_rows) + 1]] <- data.frame(
+      sample_id = sample_id,
+      scored_signature_count = length(sample_values),
+      mean_score = if (length(sample_values) > 0) mean(sample_values) else NA_real_,
+      min_score = if (length(sample_values) > 0) min(sample_values) else NA_real_,
+      max_score = if (length(sample_values) > 0) max(sample_values) else NA_real_,
+      stringsAsFactors = FALSE
+    )
+  }
+  sample_summary <- do.call(rbind, summary_rows)
+  write.table(sample_summary, file = file.path(output_dir, "tables", "sample_score_summary.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
   score_matrix <- score_matrix[stats::complete.cases(score_matrix), , drop = FALSE]
   plot_path <- file.path(output_dir, "plots", "lite_immune_heatmap.svg")
   palette <- heat.colors(20)

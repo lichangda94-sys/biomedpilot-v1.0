@@ -1934,13 +1934,12 @@ def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = Non
         _source_token_contract_row(
             row_id="sidecar_boundary_test_coverage",
             title="Tests cover sidecar direct-call and not-migration boundaries",
-            file_path="tests/bioinformatics/test_immune_infiltration.py",
+            file_path="tests/bioinformatics/test_formal_controlled_deg_runner.py",
             required_tokens=[
                 "legacy_service_adapter_direct_call",
                 "legacy_service_adapter_sidecar",
-                "testing_level",
             ],
-            evidence_path="tests/bioinformatics/test_immune_infiltration.py and tests/test_analysis_runtime_task_bridge.py",
+            evidence_path="tests/bioinformatics/test_formal_controlled_deg_runner.py, tests/bioinformatics/test_enrichment_r_adapter.py, and tests/bioinformatics/test_km_logrank_execution.py",
         ),
     ]
     blocker_counts = _count_row_blockers(rows, "blockers")
@@ -1999,12 +1998,6 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
             "source_surface": "controlled_survival_clinical_standard_package_sidecar",
             "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/survival_clinical/standard_package.py",
-        },
-        {
-            "module_id": "immune_infiltration",
-            "source_surface": "immune_scoring_standard_package_sidecar",
-            "sidecar_mode_scope": "lite_testing_level",
-            "file_path": "app/bioinformatics/immune_infiltration/standard_package.py",
         },
     ]
     required_tokens = [

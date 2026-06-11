@@ -1212,7 +1212,9 @@ def test_immune_lite_mode_runs_through_standard_r_worker_with_real_heatmap_artif
     package_dir = Path(result["result_package_dir"])
     result_json = read_json(package_dir / "result.json")
     provenance = read_json(package_dir / "provenance.json")
-    table = (package_dir / "tables" / "lite_immune_scores.tsv").read_text(encoding="utf-8")
+    table = (package_dir / "tables" / "immune_score_matrix.tsv").read_text(encoding="utf-8")
+    coverage = package_dir / "tables" / "signature_gene_coverage.tsv"
+    sample_summary = package_dir / "tables" / "sample_score_summary.tsv"
     plot = package_dir / "plots" / "lite_immune_heatmap.svg"
     catalog = build_standard_analysis_package_catalog(tmp_path)
     registry = load_registry(tmp_path)
@@ -1223,8 +1225,9 @@ def test_immune_lite_mode_runs_through_standard_r_worker_with_real_heatmap_artif
     assert result_json["summary"]["clinical_conclusion_status"] == "not_generated"  # type: ignore[index]
     assert "clinical_conclusion_not_generated" in result_json["warnings"]
     assert "lite_immune_infiltration_heatmap_svg" in str(result_json["plots"])
-    assert "signature" in table.splitlines()[0]
-    assert "not_generated" in table
+    assert "signature_id" in table.splitlines()[0]
+    assert coverage.is_file()
+    assert sample_summary.is_file()
     assert plot.is_file()
     assert "<svg" in plot.read_text(encoding="utf-8", errors="ignore")
     assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
@@ -1232,7 +1235,7 @@ def test_immune_lite_mode_runs_through_standard_r_worker_with_real_heatmap_artif
     assert registry["results"][0]["report_ready_eligible"] is False
     assert catalog["rows"][0]["module_id"] == "immune_infiltration"
     assert catalog["rows"][0]["mode"] == "lite"
-    assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
+    assert catalog["rows"][0]["artifact_counts"]["tables"] == 3
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 1
 
 

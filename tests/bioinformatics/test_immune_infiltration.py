@@ -79,29 +79,32 @@ def test_scoring_outputs_manifest_receipt_and_result_index(tmp_path: Path) -> No
     )
     assert validation["status"] == "passed"
     invocation = json.loads((standard_package_dir / "logs" / "worker_invocation.json").read_text(encoding="utf-8"))
-    assert invocation["worker_backend"] == "legacy_service_adapter"
-    assert invocation["invocation_status"] == "sidecar_recorded"
-    assert invocation["worker_boundary"]["task_system_invocation"] == "legacy_service_adapter_direct_call"
+    assert invocation["worker_backend"] == "rscript"
+    assert invocation["invocation_status"] == "completed"
+    assert invocation["worker_boundary"]["boundary_type"] == "standard_r_worker"
+    assert invocation["worker_boundary"]["task_system_invocation"] == "task_center_registered"
     manifest = json.loads(Path(result.manifest_path).read_text(encoding="utf-8"))
     assert manifest["schema_version"] == "biomedpilot.immune_tme_scoring_manifest.v1"
     assert manifest["scored_signature_count"] >= 1
+    assert manifest["worker_boundary"] == "standard_r_worker"
     assert "KM/Cox/log-rank" in " ".join(manifest["blocked_downstream"])
     index = json.loads((tmp_path / "results" / "summaries" / "result_index.json").read_text(encoding="utf-8"))
-    assert any(entry["analysis_type"] == "immune_tme_scoring" for entry in index["results"])
-    entry = next(entry for entry in index["results"] if entry["result_id"] == result.run_id)
+    assert any(entry["task_type"] == "analysis:immune_infiltration" for entry in index["results"])
+    entry = next(entry for entry in index["results"] if entry["task_run_id"] == result.run_id)
     assert entry["result_semantics"] == "testing_level"
     assert entry["report_ready_eligible"] is False
     assert any(item["artifact_type"] == "analysis_worker_invocation_manifest" for item in entry["log_artifacts"])
     assert any(item["artifact_type"] == "standard_result_package" for item in entry["output_artifacts"])
     catalog = build_standard_analysis_package_catalog(tmp_path)
-    row = next(item for item in catalog["rows"] if item["result_id"] == result.run_id)
+    row = next(item for item in catalog["rows"] if item["task_run_id"] == result.run_id)
     assert row["module_id"] == "immune_infiltration"
     assert row["mode"] == "lite"
     assert row["result_semantics"] == "testing_level"
-    assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
-    assert row["worker_backend"] == "legacy_service_adapter"
-    assert row["worker_invocation_status"] == "sidecar_recorded"
+    assert row["worker_boundary_type"] == "standard_r_worker"
+    assert row["worker_backend"] == "rscript"
+    assert row["worker_invocation_status"] == "completed"
     assert row["artifact_counts"]["tables"] == 3
+    assert row["artifact_counts"]["plots"] == 1
     assert row["artifact_counts"]["reports"] == 1
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert "clinical_conclusion_not_generated" in row["warnings"]

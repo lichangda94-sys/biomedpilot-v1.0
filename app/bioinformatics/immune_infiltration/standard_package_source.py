@@ -29,7 +29,11 @@ def immune_scoring_standard_package_source(
         for row in catalog.get("rows", []) or []
         if isinstance(row, dict)
         and str(row.get("module_id") or "") == "immune_infiltration"
-        and (not result_id or str(row.get("result_id") or "") == str(result_id))
+        and (
+            not result_id
+            or str(row.get("result_id") or "") == str(result_id)
+            or str(row.get("task_run_id") or "") == str(result_id)
+        )
     ]
     if not rows:
         return _blocked("immune_standard_result_package_missing", result_id=result_id or "")

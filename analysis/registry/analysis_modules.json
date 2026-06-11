@@ -236,7 +236,7 @@
         {
             "module_id": "immune_infiltration",
             "title": "Immune infiltration heatmap",
-            "current_adapter_status": "python_contracts_exist_for_scoring_pending_r_worker_boundary",
+      "current_adapter_status": "existing_standard_worker_lite_contract_pending_full_migration",
             "modes": {
                 "mock": {
                     "supported": true,
