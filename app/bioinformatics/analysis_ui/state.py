@@ -134,6 +134,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         km_confirmation_gate=survival_gates["confirmation_gate"],
         cox_parameter_gate=survival_gates["cox_parameter_gate"],
         cox_confirmation_gate=survival_gates["cox_confirmation_gate"],
+        standard_worker_migration_matrix=standard_worker_migration_matrix,
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         legacy_asset_pipeline=legacy_pipeline,

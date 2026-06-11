@@ -297,5 +297,40 @@ def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
     assert "controlled DEG MVP" in reason
 
 
+def test_survival_execution_actions_require_standard_worker_migration_even_after_domain_gates_pass() -> None:
+    rows = build_action_rows(
+        packages=[{"package_type": "tcga_clinical_survival_preflight", "blockers": [], "warnings": []}],
+        survival_dependency={"status": "passed", "blockers": []},
+        km_parameter_gate={"status": "passed", "blockers": []},
+        km_confirmation_gate={"status": "passed", "blockers": []},
+        cox_parameter_gate={"status": "passed", "blockers": []},
+        cox_confirmation_gate={"status": "passed", "blockers": []},
+        standard_worker_migration_matrix={
+            "rows": [
+                {
+                    "module_id": "survival",
+                    "formal_worker_status": "pending_standard_worker_migration",
+                    "full_status": "blocked",
+                    "migration_blockers": [
+                        "full_mode_not_supported_in_registry",
+                        "registry_evidence_entry_missing_or_blocked",
+                    ],
+                }
+            ]
+        },
+        report_gate={"status": "blocked"},
+    )
+
+    km = _row(rows, "km_cox_logrank")
+    cox = _row(rows, "cox_univariate")
+    assert km["enabled"] is False
+    assert km["state"] == "blocked_standard_worker_migration"
+    assert "standard_worker_migration_pending:survival" in str(km["disabled_reason"])
+    assert "standard_worker_full_mode_not_ready:survival" in str(km["disabled_reason"])
+    assert cox["enabled"] is False
+    assert cox["state"] == "blocked_standard_worker_migration"
+    assert "registry_evidence_entry_missing_or_blocked" in str(cox["disabled_reason"])
+
+
 def _row(rows: list[dict[str, object]], action_id: str) -> dict[str, object]:
     return next(row for row in rows if row["action_id"] == action_id)

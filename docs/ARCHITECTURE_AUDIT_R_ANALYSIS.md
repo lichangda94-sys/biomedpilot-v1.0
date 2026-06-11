@@ -206,6 +206,7 @@ Existing controlled survival/clinical executors now write a standard result pack
 - The sidecar provenance records `worker_boundary.boundary_type=legacy_service_adapter_sidecar` and `migration_status=sidecar_only_not_isolated_standard_worker`.
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
 - The sidecar also writes `logs/worker_invocation.json` and the current result index registers it as `analysis_worker_invocation_manifest`.
+- Analysis UI execution actions for KM/log-rank and Cox univariate now require the survival row in `standard_worker_migration_matrix` to pass before they can become normal-user runnable actions; the current missing full standard-worker evidence keeps those buttons disabled even if B12/B13/B14 domain gates pass.
 - This is a package-contract migration step, not a claim that survival/clinical execution has been fully migrated into the isolated standard worker, and it does not enable clinical conclusions, risk grouping, plot artifacts, or report-ready output.
 
 Existing exploratory immune / TME scoring now writes a task-bridge standard R-worker lite package:
@@ -494,6 +495,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Disabled controlled enrichment ORA/GSEA legacy formal sidecar execution until full standard-worker, environment-lock, and resource-lock evidence pass.
 - Added controlled DEG standard result package sidecars for successful two-group Python formal DEG and multi-factor limma/DESeq2/edgeR fixture results, registered in result index v2 without enabling new execution, plot/report-ready output, or clinical interpretation.
 - Added controlled KM/log-rank and Cox univariate standard result package sidecars plus indexed worker invocation manifests registered in result index v2 without enabling clinical conclusions, risk grouping, plot/report-ready output, or isolated worker claims.
+- Hardened Analysis UI KM/log-rank and Cox univariate execution controls so normal-user execution requires survival standard-worker migration evidence instead of only B12/B13/B14 domain gates.
 - Migrated exploratory immune/TME scoring lite execution to the task bridge standard R-worker path and registered its standard result package in result index v2 without enabling GSVA/CellChat/Seurat, report-ready output, or clinical interpretation.
 - Migrated local Pearson correlation lite execution to the task bridge standard R-worker path, with result index v2 registration and no report-ready output, causal interpretation, clinical interpretation, or full/formal worker migration claim.
 - Added per-module manifest scaffolds for all target modules.

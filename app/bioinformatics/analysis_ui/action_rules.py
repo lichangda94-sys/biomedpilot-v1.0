@@ -28,6 +28,7 @@ def build_action_rows(
     km_confirmation_gate: dict[str, Any] | None = None,
     cox_parameter_gate: dict[str, Any] | None = None,
     cox_confirmation_gate: dict[str, Any] | None = None,
+    standard_worker_migration_matrix: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
     formal_deg_report_gate: dict[str, Any] | None = None,
     legacy_asset_pipeline: dict[str, Any] | None = None,
@@ -51,6 +52,7 @@ def build_action_rows(
     km_confirmation_gate = km_confirmation_gate or {}
     cox_parameter_gate = cox_parameter_gate or {}
     cox_confirmation_gate = cox_confirmation_gate or {}
+    standard_worker_migration_matrix = standard_worker_migration_matrix or {}
     report_gate = report_gate or {}
     formal_deg_report_gate = formal_deg_report_gate or {}
     legacy_asset_pipeline = legacy_asset_pipeline or {}
@@ -80,9 +82,9 @@ def build_action_rows(
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
     rows.append(_km_parameter_confirmation_action(survival_package, km_parameter_gate, km_confirmation_gate))
-    rows.append(_km_logrank_action(survival_package, survival_dependency, km_parameter_gate, km_confirmation_gate))
+    rows.append(_km_logrank_action(survival_package, survival_dependency, km_parameter_gate, km_confirmation_gate, standard_worker_migration_matrix))
     rows.append(_cox_parameter_confirmation_action(survival_package, cox_parameter_gate, cox_confirmation_gate))
-    rows.append(_cox_univariate_action(survival_package, survival_dependency, cox_parameter_gate, cox_confirmation_gate))
+    rows.append(_cox_univariate_action(survival_package, survival_dependency, cox_parameter_gate, cox_confirmation_gate, standard_worker_migration_matrix))
     rows.append(_constant_disabled_action("cox_multivariate", "Run multivariate Cox", "hidden_until_ready", "Multivariate Cox, adjusted HR and variable selection are disabled in B14."))
     rows.append(_constant_disabled_action("risk_score", "Generate risk score", "hidden_until_ready", "Risk score, nomogram and clinical risk grouping are disabled in B14."))
     rows.append(_constant_disabled_action("survival_formal", "Survival report-ready", "hidden_until_ready", "Cox/KM survival report-ready package is not implemented in B14."))
@@ -573,7 +575,7 @@ def _km_parameter_confirmation_action(package: dict[str, Any] | None, parameter_
     return _disabled("km_logrank_parameter_confirmation", "Confirm KM/log-rank parameters", "blocked_missing_parameters", "; ".join(blockers), "Resolve KM/log-rank parameter gate first.")
 
 
-def _km_logrank_action(package: dict[str, Any] | None, dependency: dict[str, Any], parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any]) -> dict[str, Any]:
+def _km_logrank_action(package: dict[str, Any] | None, dependency: dict[str, Any], parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any], standard_worker_migration_matrix: dict[str, Any]) -> dict[str, Any]:
     blockers: list[str] = []
     state = "hidden_until_ready"
     if not package:
@@ -592,6 +594,10 @@ def _km_logrank_action(package: dict[str, Any] | None, dependency: dict[str, Any
     if dependency.get("status") != "passed":
         blockers.extend(_list(dependency.get("blockers")) or ["blocked_missing_backend"])
         state = "blocked_missing_backend"
+    worker_blockers = _standard_worker_module_blockers(standard_worker_migration_matrix, "survival")
+    if worker_blockers:
+        blockers.extend(worker_blockers)
+        state = "blocked_standard_worker_migration"
     if not blockers:
         return {
             "action_id": "km_cox_logrank",
@@ -603,7 +609,7 @@ def _km_logrank_action(package: dict[str, Any] | None, dependency: dict[str, Any
             "disabled_reason": "",
             "next_action": "Run B13 controlled two-group KM/log-rank only; no Cox, HR, report-ready or clinical conclusion.",
         }
-    return _disabled("km_cox_logrank", "Run two-group KM/log-rank", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, KM parameter, confirmation and lifelines dependency gates.")
+    return _disabled("km_cox_logrank", "Run two-group KM/log-rank", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, KM parameter, confirmation, dependency and standard-worker migration gates.")
 
 
 def _cox_parameter_confirmation_action(package: dict[str, Any] | None, parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any]) -> dict[str, Any]:
@@ -638,7 +644,7 @@ def _cox_parameter_confirmation_action(package: dict[str, Any] | None, parameter
     return _disabled("cox_univariate_parameter_confirmation", "Confirm Cox univariate parameters", "blocked_missing_parameters", "; ".join(blockers), "Resolve Cox univariate parameter gate first.")
 
 
-def _cox_univariate_action(package: dict[str, Any] | None, dependency: dict[str, Any], parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any]) -> dict[str, Any]:
+def _cox_univariate_action(package: dict[str, Any] | None, dependency: dict[str, Any], parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any], standard_worker_migration_matrix: dict[str, Any]) -> dict[str, Any]:
     blockers: list[str] = []
     state = "hidden_until_ready"
     if not package:
@@ -657,6 +663,10 @@ def _cox_univariate_action(package: dict[str, Any] | None, dependency: dict[str,
     if dependency.get("status") != "passed":
         blockers.extend(_list(dependency.get("blockers")) or ["blocked_missing_backend"])
         state = "blocked_missing_backend"
+    worker_blockers = _standard_worker_module_blockers(standard_worker_migration_matrix, "survival")
+    if worker_blockers:
+        blockers.extend(worker_blockers)
+        state = "blocked_standard_worker_migration"
     if not blockers:
         return {
             "action_id": "cox_univariate",
@@ -668,7 +678,21 @@ def _cox_univariate_action(package: dict[str, Any] | None, dependency: dict[str,
             "disabled_reason": "",
             "next_action": "Run B14 controlled Cox univariate only; no multivariate Cox, risk score or clinical conclusion.",
         }
-    return _disabled("cox_univariate", "Run single-variable Cox", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, Cox parameter, confirmation and lifelines dependency gates.")
+    return _disabled("cox_univariate", "Run single-variable Cox", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, Cox parameter, confirmation, dependency and standard-worker migration gates.")
+
+
+def _standard_worker_module_blockers(matrix: dict[str, Any], module_id: str) -> list[str]:
+    rows = matrix.get("rows") if isinstance(matrix.get("rows"), list) else []
+    row = next((item for item in rows if isinstance(item, dict) and item.get("module_id") == module_id), None)
+    if not row:
+        return [f"standard_worker_migration_evidence_missing:{module_id}"]
+    blockers: list[str] = []
+    if row.get("formal_worker_status") != "migrated_to_isolated_standard_worker":
+        blockers.append(f"standard_worker_migration_pending:{module_id}")
+    if row.get("full_status") != "passed":
+        blockers.append(f"standard_worker_full_mode_not_ready:{module_id}")
+    blockers.extend(_list(row.get("migration_blockers")))
+    return list(dict.fromkeys(blockers))
 
 
 def _plot_action(results: list[dict[str, Any]]) -> dict[str, Any]:

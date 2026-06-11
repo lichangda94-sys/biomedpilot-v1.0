@@ -116,6 +116,8 @@ Update: controlled DEG executors now mirror successful formal results into stand
 
 Update: controlled KM/log-rank and Cox univariate executors now mirror successful controlled formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result tables, task logs, parameter manifests, dependency snapshots, hashes, engine metadata, and sidecar-only worker-boundary metadata. This does not enable clinical conclusions, risk grouping, plot artifacts, report-ready survival/clinical output, or complete isolated worker migration.
 
+Update: Analysis UI KM/log-rank and Cox univariate execution actions now require survival standard-worker migration evidence in addition to B12/B13/B14 domain gates. The current `standard_worker_migration_matrix` marks survival full/formal migration as pending, so normal-user execution stays disabled until a task-center registered standard-worker full package can be proven.
+
 Update: exploratory immune / TME scoring now routes through `run_analysis_module_task(..., worker_backend="rscript")`, writes a standard R-worker lite package with score matrix, signature coverage, sample summary, scoring manifest, receipt, heatmap SVG, and worker invocation artifacts, and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable GSVA/CellChat/Seurat, report-ready output, clinical interpretation, or full-mode migration.
 
 Update: local expression correlation now routes through `run_analysis_module_task(..., worker_backend="rscript")`, writes a task-bridge standard R-worker package, and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable report-ready output, causal interpretation, clinical interpretation, or full/formal isolated worker migration.
@@ -416,6 +418,7 @@ Completed:
 - Controlled KM/log-rank formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
 - Controlled Cox univariate formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
 - Controlled KM/log-rank and Cox univariate sidecars now write `logs/worker_invocation.json` and register it in result index v2 as `analysis_worker_invocation_manifest`.
+- Analysis UI execution buttons for KM/log-rank and Cox univariate are blocked until survival standard-worker migration evidence passes, even when B12/B13/B14 domain gates pass.
 - Univariate `mock` remains available without R.
 - Univariate `lite` can run a fixed base R clinical association fixture through `analysis/runners/run_module.R`.
 - Univariate standard result package includes `result.json`, `provenance.json`, `tables/lite_univariate_association.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
