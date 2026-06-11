@@ -162,7 +162,8 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert task_boundary_rows["deg"]["worker_invocation_manifest_required"] is True
     assert task_boundary_rows["deg"]["result_index_task_types"] == ["deg", "recomputed_deg", "differential_expression"]
     assert task_boundary_rows["correlation"]["direct_cli_is_not_ui_task_result"] is True
-    assert "legacy_sidecar_boundary_transitional:correlation" in task_boundary_rows["correlation"]["warnings"]
+    assert "legacy_sidecar_boundary_transitional:correlation" not in task_boundary_rows["correlation"]["warnings"]
+    assert "current_adapter_pending_standard_worker_migration:correlation" in task_boundary_rows["correlation"]["warnings"]
     assert payload["lite_task_bridge_coverage_matrix"]["schema_version"] == "biomedpilot.analysis.lite_task_bridge_coverage_matrix.v1"
     assert payload["lite_task_bridge_coverage_matrix"]["status"] == "passed"
     assert payload["lite_task_bridge_coverage_matrix"]["module_count"] == 10
@@ -185,20 +186,18 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert payload["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
     assert payload["legacy_sidecar_transition_matrix"]["blocker_counts"] == {}
-    assert payload["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 6
-    assert payload["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_count"] == 2
+    assert payload["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 5
+    assert payload["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_count"] == 1
     assert payload["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_module_ids"] == [
-        "correlation",
         "immune_infiltration",
     ]
     assert set(payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]) == {
-        "correlation",
         "deg",
         "enrichment",
         "immune_infiltration",
         "survival",
     }
-    assert "correlation" in payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
+    assert "correlation" not in payload["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
     legacy_sidecar_rows = {row["row_id"]: row for row in payload["legacy_sidecar_transition_rows"]}
     assert legacy_sidecar_rows["legacy_sidecar_writer_contract"]["status"] == "passed"
     assert legacy_sidecar_rows["catalog_task_center_guard"]["status"] == "passed"
@@ -206,7 +205,6 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert legacy_sidecar_rows["registry_adapter_transition_scope"]["status"] == "passed"
     assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["status"] == "partial"
     assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == [
-        "correlation",
         "immune_infiltration",
     ]
     assert legacy_sidecar_rows["sidecar_boundary_test_coverage"]["status"] == "passed"
@@ -241,13 +239,12 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert provenance_rows["worker_invocation_schema"]["status"] == "passed"
     assert provenance_rows["legacy_sidecar_provenance_boundary"]["status"] == "partial"
     assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_module_ids"] == [
-        "correlation",
         "deg",
         "enrichment",
         "immune_infiltration",
         "survival",
     ]
-    assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 6
+    assert provenance_rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 5
     assert "legacy_sidecar_provenance_transitional:deg" in provenance_rows["legacy_sidecar_provenance_boundary"]["warnings"]
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False
@@ -456,12 +453,12 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "report_ready_eligible false" in text
     assert "pending_standard_worker_migration" in text
     assert "legacy_sidecar_writer_contract" in text
-    assert "legacy_sidecar_producer_transitional:correlation" in text
+    assert "legacy_sidecar_producer_transitional:correlation" not in text
     assert "Frontend Standard Package Consumption Matrix" in text
     assert "Migrated detail views | 3 | formal_deg_review_panel, formal_deg_plot_report_controls, immune_tme_scoring_page" in text
     assert "standard_r_worker_provenance_writer" in text
     assert "package_versions" in text
-    assert "legacy_sidecar_provenance_transitional:correlation" in text
+    assert "legacy_sidecar_provenance_transitional:correlation" not in text
     assert "Runtime package install" in text
     assert "Runtime resource download" in text
     assert "Default app-dev heavy dependency" in text

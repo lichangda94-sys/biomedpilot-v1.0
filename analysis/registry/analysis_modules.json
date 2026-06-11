@@ -278,7 +278,7 @@
         {
             "module_id": "correlation",
             "title": "Expression correlation analysis",
-            "current_adapter_status": "existing_python_testing_level_sidecar_pending_standard_worker_migration",
+            "current_adapter_status": "existing_standard_worker_lite_contract_pending_full_migration",
             "modes": {
                 "mock": {
                     "supported": true,

@@ -1468,16 +1468,15 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 5
     assert status["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert status["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
-    assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 6
+    assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 5
     assert set(status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]) == {
-        "correlation",
         "deg",
         "enrichment",
         "immune_infiltration",
         "survival",
     }
     assert "deg" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
-    assert "correlation" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
+    assert "correlation" not in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
     assert status["frontend_consumption_matrix"]["status"] == "passed"
     assert status["frontend_consumption_matrix"]["passed_consumer_count"] == 5
     assert status["frontend_consumption_matrix"]["partial_consumer_count"] == 0
@@ -1657,7 +1656,8 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert migration_actions["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert migration_actions["univariate"]["prerequisite_status"]["formal_runtime_contract"] == "available_or_not_required"
     assert "analysis/registry/analysis_environments.json" in migration_actions["univariate"]["recommended_files"]
-    assert migration_actions["correlation"]["prerequisite_status"]["legacy_sidecar_boundary"] == "not_migration_evidence"
+    assert migration_actions["correlation"]["prerequisite_status"]["legacy_sidecar_boundary"] == "not_present"
+    assert migration_actions["correlation"]["prerequisite_status"]["lite_standard_worker_path"] == "passed"
     assert all(item["status"] == "blocked" for item in items.values())
 
 
@@ -1728,7 +1728,7 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert matrix["migration_next_action_counts"]["declare_scoped_full_mode_only_after_environment_and_resource_locks"] == matrix["module_count"]
     assert matrix["migration_blocker_counts"]["full_mode_not_supported_in_registry"] == matrix["module_count"]
     assert matrix["migration_blocker_counts"]["registry_evidence_entry_missing_or_blocked"] == matrix["module_count"]
-    assert matrix["migration_blocker_counts"]["legacy_sidecar_output_is_not_migration_evidence"] == 1
+    assert "legacy_sidecar_output_is_not_migration_evidence" not in matrix["migration_blocker_counts"]
     assert {"deg", "survival", "univariate", "multivariate", "enrichment", "immune_infiltration", "spatial_transcriptomics", "docking", "molecular_dynamics"} <= set(rows)
     assert rows["deg"]["mock_status"] == "passed"
     assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"
@@ -1752,8 +1752,9 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert "registry_evidence_entry_missing_or_blocked" in rows["deg"]["migration_blockers"]
     assert rows["correlation"]["lite_status"] == "standard_worker_lite_ready"
     assert rows["correlation"]["standard_entrypoint"] == "analysis/runners/run_module.R"
-    assert "legacy_sidecar_output_is_not_migration_evidence" in rows["correlation"]["migration_blockers"]
-    assert rows["correlation"]["migration_prerequisite_status"]["legacy_sidecar_boundary"] == "not_migration_evidence"
+    assert "legacy_sidecar_output_is_not_migration_evidence" not in rows["correlation"]["migration_blockers"]
+    assert rows["correlation"]["migration_prerequisite_status"]["legacy_sidecar_boundary"] == "not_present"
+    assert rows["correlation"]["current_adapter_status"] == "existing_standard_worker_lite_contract_pending_full_migration"
     assert rows["univariate"]["formal_worker_status"] == "pending_standard_worker_migration"
     assert "formal_runtime_contract_not_implemented" not in rows["univariate"]["migration_blockers"]
     assert rows["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
@@ -1866,7 +1867,8 @@ def test_task_system_boundary_matrix_tracks_main_backend_task_contracts() -> Non
     assert rows["deg"]["blockers"] == []
     assert "formal_worker_migration_pending:deg" in rows["deg"]["warnings"]
     assert rows["correlation"]["result_index_task_types"] == ["correlation"]
-    assert "legacy_sidecar_boundary_transitional:correlation" in rows["correlation"]["warnings"]
+    assert "legacy_sidecar_boundary_transitional:correlation" not in rows["correlation"]["warnings"]
+    assert "current_adapter_pending_standard_worker_migration:correlation" in rows["correlation"]["warnings"]
     assert rows["docking"]["result_index_task_types"] == ["docking"]
     assert rows["docking"]["required_task_system_invocation"] == "task_center_registered"
     assert rows["molecular_dynamics"]["result_index_task_types"] == ["molecular_dynamics"]
@@ -1908,44 +1910,40 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert matrix["blocked_row_count"] == 0
     assert matrix["blocker_counts"] == {}
     assert set(matrix["transitional_module_ids"]) == {
-        "correlation",
         "deg",
         "enrichment",
         "immune_infiltration",
         "survival",
     }
-    assert matrix["sidecar_producer_count"] == 6
-    assert len(matrix["sidecar_producers"]) == 6
-    assert matrix["standard_worker_lite_replacement_candidate_count"] == 2
-    assert matrix["standard_worker_lite_replacement_candidate_module_ids"] == ["correlation", "immune_infiltration"]
-    assert matrix["adapter_status_counts"]["existing_python_testing_level_sidecar_pending_standard_worker_migration"] == 1
-    assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:correlation"] == 1
+    assert matrix["sidecar_producer_count"] == 5
+    assert len(matrix["sidecar_producers"]) == 5
+    assert matrix["standard_worker_lite_replacement_candidate_count"] == 1
+    assert matrix["standard_worker_lite_replacement_candidate_module_ids"] == ["immune_infiltration"]
+    assert matrix["adapter_status_counts"]["existing_standard_worker_lite_contract_pending_full_migration"] == 1
+    assert "legacy_sidecar_producer_transitional:correlation" not in matrix["warning_counts"]
     assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:deg"] == 1
     assert rows["legacy_sidecar_writer_contract"]["status"] == "passed"
     assert rows["catalog_task_center_guard"]["status"] == "passed"
     assert rows["migration_evidence_forbids_sidecar"]["status"] == "passed"
     assert rows["sidecar_boundary_test_coverage"]["status"] == "passed"
     assert rows["registry_adapter_transition_scope"]["status"] == "passed"
-    assert "correlation" in rows["registry_adapter_transition_scope"]["transitional_module_ids"]
+    assert "correlation" not in rows["registry_adapter_transition_scope"]["transitional_module_ids"]
     assert rows["registry_adapter_transition_scope"]["warnings"] == []
     assert rows["registry_adapter_transition_scope"]["boundary"] == "adapter_status_is_inventory_only_actual_sidecar_evidence_comes_from_source_inventory"
     assert rows["source_sidecar_producer_inventory"]["status"] == "partial"
     assert rows["source_sidecar_producer_inventory"]["sidecar_module_ids"] == [
-        "correlation",
         "deg",
         "enrichment",
         "immune_infiltration",
         "survival",
     ]
     assert rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == [
-        "correlation",
         "immune_infiltration",
     ]
     producers = {
         (item["module_id"], item["source_surface"]): item
         for item in rows["source_sidecar_producer_inventory"]["sidecar_producers"]
     }
-    assert producers[("correlation", "correlation_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "available"
     assert producers[("immune_infiltration", "immune_scoring_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "available"
     assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "not_equivalent_formal_sidecar_requires_full_standard_worker_migration"
     assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_path_status"] == "available"
@@ -2002,7 +2000,7 @@ def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> 
     assert matrix["partial_row_count"] == 1
     assert matrix["blocked_row_count"] == 0
     assert matrix["blocker_counts"] == {}
-    assert matrix["warning_counts"]["legacy_sidecar_provenance_transitional:correlation"] == 1
+    assert "legacy_sidecar_provenance_transitional:correlation" not in matrix["warning_counts"]
     assert matrix["warning_counts"]["legacy_sidecar_provenance_transitional:deg"] == 1
     assert {"input_hash", "parameter_hash", "random_seed", "engine", "runtime", "command"} <= set(matrix["required_fields"])
     assert {"r_version", "bioconductor_version", "package_versions", "external_tool_versions"} <= set(matrix["required_runtime_fields"])
@@ -2022,13 +2020,12 @@ def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> 
     assert "resource_download_policy" in rows["worker_invocation_schema"]["required_fields"]
     assert rows["legacy_sidecar_provenance_boundary"]["status"] == "partial"
     assert rows["legacy_sidecar_provenance_boundary"]["sidecar_module_ids"] == [
-        "correlation",
         "deg",
         "enrichment",
         "immune_infiltration",
         "survival",
     ]
-    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 6
+    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 5
     assert "legacy_sidecar_provenance_transitional:deg" in rows["legacy_sidecar_provenance_boundary"]["warnings"]
     assert rows["legacy_sidecar_provenance_boundary"]["boundary"] == "formal_full_completion_requires_standard_worker_migration_evidence_not_sidecar_provenance"
 

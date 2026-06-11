@@ -11,13 +11,9 @@ from itertools import chain
 from pathlib import Path
 from uuid import uuid4
 
-from app.bioinformatics.results.models import ResultIndexEntry
-from app.bioinformatics.results.registry import register_result
-
-from .correlation_standard_package import write_correlation_standard_result_package
+from app.analysis_runtime.task_bridge import run_analysis_module_task
 
 
-CORRELATION_RESULTS_FILENAME = "correlation_results.csv"
 CORRELATION_SUMMARY_FILENAME = "correlation_summary.json"
 
 
@@ -30,7 +26,7 @@ def run_expression_correlation(
     max_results: int = 200,
     project_root: str | Path | None = None,
 ) -> dict[str, object]:
-    """Compute Pearson correlation against a target gene across sample columns."""
+    """Run lite expression correlation through the standard analysis task bridge."""
 
     source = Path(expression_path).expanduser().resolve()
     if not source.is_file():
@@ -46,119 +42,78 @@ def run_expression_correlation(
     if target_row is None:
         raise ValueError(f"未在表达矩阵中找到目标基因：{target}")
     target_values = [_safe_float(target_row[index]) if index < len(target_row) else None for index in sample_indices]
-    results: list[dict[str, object]] = []
-    skipped = 0
-    for row in rows:
-        gene = str(row[0]).strip()
-        if not gene or _same_gene(gene, target):
-            continue
-        values = [_safe_float(row[index]) if index < len(row) else None for index in sample_indices]
-        paired = [(x, y) for x, y in zip(target_values, values, strict=False) if x is not None and y is not None]
-        if len(paired) < 3:
-            skipped += 1
-            continue
-        x_values = [item[0] for item in paired]
-        y_values = [item[1] for item in paired]
-        coefficient = _pearson(x_values, y_values)
-        if coefficient is None:
-            skipped += 1
-            continue
-        results.append(
-            {
-                "gene_id": gene,
-                "target_gene": target,
-                "pearson_r": coefficient,
-                "absolute_r": abs(coefficient),
-                "sample_count": len(paired),
-            }
-        )
-    results.sort(key=lambda row: (-float(row["absolute_r"]), str(row["gene_id"])))
-    limited = results[: max(1, int(max_results or 200))]
     target_dir = Path(output_dir).expanduser().resolve()
     target_dir.mkdir(parents=True, exist_ok=True)
     result_id = f"correlation_{uuid4().hex[:10]}"
-    result_path = target_dir / CORRELATION_RESULTS_FILENAME
-    summary_path = target_dir / CORRELATION_SUMMARY_FILENAME
-    _write_rows(result_path, limited)
+    root = Path(project_root).expanduser().resolve() if project_root is not None else target_dir.parent
+    bridge_input_path = target_dir / "task_bridge_expression.tsv"
+    _write_task_bridge_expression_matrix(bridge_input_path, header, rows)
+    dataset = dataset_id or _dataset_id_from_path(source)
+    bridge_result = run_analysis_module_task(
+        root,
+        {
+            "schema_version": "biomedpilot.analysis.module_input.v1",
+            "module_id": "correlation",
+            "mode": "lite",
+            "task_id": result_id,
+            "project_id": dataset or root.name,
+            "inputs": {
+                "input_package_id": dataset,
+                "source_dataset_id": dataset,
+                "expression_matrix_path": str(bridge_input_path),
+            },
+            "parameters": {
+                "analysis_family": "expression_correlation",
+                "method": "base_r_pearson_correlation_fixture",
+                "target_gene": target,
+                "max_results": int(max_results or 200),
+                "clinical_conclusion_policy": "not_generated",
+            },
+            "runtime": {"random_seed": 7, "requested_environment": "r-bio-core-lite"},
+        },
+        output_dir=target_dir / "standard_result_package",
+        worker_backend="rscript",
+    )
+    standard_package_dir = Path(str(bridge_result["result_package_dir"]))
+    result_path = standard_package_dir / "tables" / "lite_correlation_result.tsv"
+    result_rows = _read_result_table(result_path) if result_path.is_file() else []
+    tested_rows = [
+        row
+        for row in result_rows
+        if not _same_gene(row.get("feature_id", ""), target) and _table_float(row.get("correlation")) is not None
+    ]
+    result_entry = bridge_result.get("result_entry") if isinstance(bridge_result.get("result_entry"), dict) else {}
+    summary_path = standard_package_dir / "logs" / CORRELATION_SUMMARY_FILENAME
     summary = {
         "schema_version": "biomedpilot.correlation_results.v1",
-        "result_id": result_id,
+        "result_id": str(result_entry.get("result_id") or f"analysis-package-{result_id}"),
         "task_run_id": result_id,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "dataset_id": dataset_id or _dataset_id_from_path(source),
+        "dataset_id": dataset,
         "source_expression_path": str(source),
+        "task_bridge_expression_path": str(bridge_input_path),
         "target_gene": target,
         "result_path": str(result_path),
         "summary_path": str(summary_path),
-        "correlation_executed": True,
+        "standard_result_package_dir": str(standard_package_dir),
+        "correlation_executed": bridge_result.get("status") == "passed",
         "network_used": False,
         "method": "pearson",
         "sample_count": sum(1 for value in target_values if value is not None),
-        "gene_count_tested": len(results),
-        "row_count_skipped": skipped,
-        "returned_result_count": len(limited),
+        "gene_count_tested": len(tested_rows),
+        "row_count_skipped": max(0, len(rows) - len(tested_rows) - 1),
+        "returned_result_count": len(result_rows),
+        "worker_backend": "rscript",
+        "worker_boundary_type": "standard_r_worker",
+        "task_system_invocation": "task_center_registered",
+        "result_semantics": "testing_level",
+        "report_ready_eligible": False,
+        "clinical_conclusion_status": "not_generated",
+        "blockers": list(bridge_result.get("blockers", [])),
+        "warnings": list(bridge_result.get("warnings", [])),
     }
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    root = Path(project_root).expanduser().resolve() if project_root is not None else target_dir.parent
-    standard_package_dir = write_correlation_standard_result_package(
-        root,
-        result_id=result_id,
-        result_path=result_path,
-        summary_path=summary_path,
-        summary=summary,
-    )
-    summary["standard_result_package_dir"] = str(standard_package_dir)
-    _register_standard_correlation_result(root, summary, result_path, summary_path, standard_package_dir)
-    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
-
-
-def _register_standard_correlation_result(root: Path, summary: dict[str, object], result_path: Path, summary_path: Path, standard_package_dir: Path) -> None:
-    result_id = str(summary.get("result_id") or "")
-    now = str(summary.get("generated_at") or datetime.now(timezone.utc).isoformat(timespec="seconds"))
-    entry = ResultIndexEntry(
-        result_id=result_id,
-        task_run_id=str(summary.get("task_run_id") or result_id),
-        task_type="analysis:correlation",
-        result_semantics="testing_level",
-        input_package_id=str(summary.get("dataset_id") or ""),
-        source_dataset_id=str(summary.get("dataset_id") or ""),
-        source_repository_manifest=str(summary.get("source_expression_path") or ""),
-        parameters_manifest={
-            "schema_version": "biomedpilot.correlation_parameter_manifest.v1",
-            "dataset_id": summary.get("dataset_id") or "",
-            "target_gene": summary.get("target_gene") or "",
-            "method": summary.get("method") or "pearson",
-            "max_results_returned": summary.get("returned_result_count") or 0,
-        },
-        engine_name="biomedpilot_local_pearson_correlation",
-        engine_version="1",
-        dependency_snapshot={"mode": "lite", "runtime": "python_standard_library", "heavy_r_dependencies": "not_used"},
-        output_artifacts=(
-            {"artifact_type": "correlation_result_table", "path": _relative_or_absolute(root, result_path), "schema": "biomedpilot.correlation_result_table.v1"},
-            {"artifact_type": "correlation_summary", "path": _relative_or_absolute(root, summary_path), "schema": "biomedpilot.correlation_results.v1"},
-            {"artifact_type": "standard_result_package", "path": _relative_or_absolute(root, standard_package_dir), "schema": "biomedpilot.analysis.result_package.v1"},
-        ),
-        plot_artifacts=(),
-        report_artifacts=(),
-        validation_status="passed",
-        warnings=("testing_level_local_pearson_correlation", "clinical_conclusion_not_generated"),
-        blockers=(),
-        log_artifacts=(
-            {"artifact_type": "correlation_summary", "path": _relative_or_absolute(root, summary_path)},
-            {
-                "artifact_type": "analysis_worker_invocation_manifest",
-                "path": _relative_or_absolute(root, standard_package_dir / "logs" / "worker_invocation.json"),
-                "schema": "biomedpilot.analysis.worker_invocation.v1",
-            },
-        ),
-        failure_reason="",
-        created_at=now,
-        updated_at=now,
-        report_ready_eligible=False,
-        migration_status="legacy_service_adapter_sidecar",
-    )
-    register_result(root, entry)
 
 
 def _read_matrix(path: Path) -> tuple[list[str], list[list[str]]]:
@@ -216,35 +171,25 @@ def _safe_float(value: object) -> float | None:
     return None if math.isnan(numeric) else numeric
 
 
-def _pearson(x_values: list[float], y_values: list[float]) -> float | None:
-    if len(x_values) != len(y_values) or len(x_values) < 3:
-        return None
-    x_mean = sum(x_values) / len(x_values)
-    y_mean = sum(y_values) / len(y_values)
-    numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(x_values, y_values, strict=False))
-    x_den = math.sqrt(sum((x - x_mean) ** 2 for x in x_values))
-    y_den = math.sqrt(sum((y - y_mean) ** 2 for y in y_values))
-    denominator = x_den * y_den
-    if denominator == 0:
-        return None
-    return numerator / denominator
-
-
-def _write_rows(path: Path, rows: list[dict[str, object]]) -> None:
-    fieldnames = ["gene_id", "target_gene", "pearson_r", "absolute_r", "sample_count"]
+def _write_task_bridge_expression_matrix(path: Path, header: list[str], rows: list[list[str]]) -> None:
+    fieldnames = ["feature_id", *header[1:]]
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        writer.writeheader()
+        writer = csv.writer(handle, delimiter="\t")
+        writer.writerow(fieldnames)
         for row in rows:
-            writer.writerow({field: _format(row.get(field)) for field in fieldnames})
+            writer.writerow([row[0], *[row[index] if index < len(row) else "" for index in range(1, len(header))]])
 
 
-def _format(value: object) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, float):
-        return f"{value:.12g}"
-    return str(value)
+def _read_result_table(path: Path) -> list[dict[str, str]]:
+    with path.open(encoding="utf-8", newline="") as handle:
+        return [dict(row) for row in csv.DictReader(handle, delimiter="\t")]
+
+
+def _table_float(value: object) -> float | None:
+    text = str(value or "").strip()
+    if not text or text.upper() == "NA":
+        return None
+    return _safe_float(text)
 
 
 def _dataset_id_from_path(path: Path) -> str:
@@ -252,13 +197,6 @@ def _dataset_id_from_path(path: Path) -> str:
         if part.upper().startswith("GSE"):
             return part.upper()
     return path.stem
-
-
-def _relative_or_absolute(root: Path, path: Path) -> str:
-    try:
-        return str(path.relative_to(root))
-    except ValueError:
-        return str(path)
 
 
 __all__ = ["run_expression_correlation"]

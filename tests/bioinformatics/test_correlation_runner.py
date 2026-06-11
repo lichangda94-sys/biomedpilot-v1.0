@@ -28,11 +28,14 @@ def test_expression_correlation_runs_against_target_gene(tmp_path: Path) -> None
     assert summary["correlation_executed"] is True
     assert summary["network_used"] is False
     assert summary["gene_count_tested"] == 2
-    rows = list(csv.DictReader(Path(str(summary["result_path"])).open(encoding="utf-8")))
-    assert rows[0]["gene_id"] in {"EGFR", "GAPDH"}
-    assert abs(float(rows[0]["pearson_r"])) == 1.0
+    rows = list(csv.DictReader(Path(str(summary["result_path"])).open(encoding="utf-8"), delimiter="\t"))
+    non_target_rows = [row for row in rows if row["feature_id"] != "TP53" and row["correlation"] != "NA"]
+    assert non_target_rows[0]["feature_id"] in {"EGFR", "GAPDH"}
+    assert abs(float(non_target_rows[0]["correlation"])) == 1.0
     payload = json.loads(Path(str(summary["summary_path"])).read_text(encoding="utf-8"))
     assert payload["target_gene"] == "TP53"
+    assert payload["worker_boundary_type"] == "standard_r_worker"
+    assert payload["task_system_invocation"] == "task_center_registered"
     standard_package_dir = Path(str(summary["standard_result_package_dir"]))
     assert standard_package_dir.is_dir()
     validation = validate_standard_result_package(
@@ -43,9 +46,10 @@ def test_expression_correlation_runs_against_target_gene(tmp_path: Path) -> None
     )
     assert validation["status"] == "passed"
     invocation = json.loads((standard_package_dir / "logs" / "worker_invocation.json").read_text(encoding="utf-8"))
-    assert invocation["worker_backend"] == "legacy_service_adapter"
-    assert invocation["invocation_status"] == "sidecar_recorded"
-    assert invocation["worker_boundary"]["task_system_invocation"] == "legacy_service_adapter_direct_call"
+    assert invocation["worker_backend"] == "rscript"
+    assert invocation["invocation_status"] == "completed"
+    assert invocation["worker_boundary"]["boundary_type"] == "standard_r_worker"
+    assert invocation["worker_boundary"]["task_system_invocation"] == "task_center_registered"
     index = json.loads((tmp_path / "results" / "summaries" / "result_index.json").read_text(encoding="utf-8"))
     entry = next(item for item in index["results"] if item["result_id"] == summary["result_id"])
     assert entry["result_semantics"] == "testing_level"
@@ -57,9 +61,9 @@ def test_expression_correlation_runs_against_target_gene(tmp_path: Path) -> None
     assert row["module_id"] == "correlation"
     assert row["mode"] == "lite"
     assert row["result_semantics"] == "testing_level"
-    assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
-    assert row["worker_backend"] == "legacy_service_adapter"
-    assert row["worker_invocation_status"] == "sidecar_recorded"
+    assert row["worker_boundary_type"] == "standard_r_worker"
+    assert row["worker_backend"] == "rscript"
+    assert row["worker_invocation_status"] == "completed"
     assert row["artifact_counts"]["tables"] == 1
     assert row["artifact_counts"]["reports"] == 1
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
@@ -85,5 +89,6 @@ def test_expression_correlation_reads_geo_series_matrix_table_block(tmp_path: Pa
     summary = run_expression_correlation(expression, target_gene="TP53", output_dir=tmp_path / "correlation")
 
     assert summary["gene_count_tested"] == 1
-    rows = list(csv.DictReader(Path(str(summary["result_path"])).open(encoding="utf-8")))
-    assert rows[0]["gene_id"] == "EGFR"
+    rows = list(csv.DictReader(Path(str(summary["result_path"])).open(encoding="utf-8"), delimiter="\t"))
+    non_target_rows = [row for row in rows if row["feature_id"] != "TP53"]
+    assert non_target_rows[0]["feature_id"] == "EGFR"

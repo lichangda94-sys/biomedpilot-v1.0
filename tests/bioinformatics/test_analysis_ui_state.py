@@ -214,14 +214,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "passed=5" in sidecar_text
     assert "partial=1" in sidecar_text
     assert "blocked=0" in sidecar_text
-    assert "replacement_candidates=correlation；immune_infiltration" in sidecar_text
-    assert "transitional_modules=5" in sidecar_text
+    assert "replacement_candidates=immune_infiltration" in sidecar_text
+    assert "transitional_modules=4" in sidecar_text
     assert "Legacy sidecar contract: legacy_sidecar_writer_contract" in sidecar_text
     assert "Legacy sidecar contract: catalog_task_center_guard" in sidecar_text
     assert "Legacy sidecar contract: migration_evidence_forbids_sidecar" in sidecar_text
     assert "Legacy sidecar contract: registry_adapter_transition_scope" in sidecar_text
     assert "Legacy sidecar contract: source_sidecar_producer_inventory" in sidecar_text
-    assert "replacement:correlation" in sidecar_text
     assert "replacement:immune_infiltration" in sidecar_text
     assert "legacy_sidecar_producer_transitional:deg" in sidecar_text
     assert "actual_sidecar_source_inventory_not_formal_worker_migration_evidence" in sidecar_text
@@ -249,7 +248,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Provenance contract: standard_r_worker_provenance_writer" in provenance_text
     assert "Provenance contract: legacy_sidecar_provenance_boundary" in provenance_text
     assert "legacy_sidecar_provenance_transitional:deg" in provenance_text
-    assert "legacy_sidecar_provenance_transitional:correlation" in provenance_text
+    assert "legacy_sidecar_provenance_transitional:correlation" not in provenance_text
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text
@@ -339,7 +338,6 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert state["developer_diagnostics"]["legacy_sidecar_transition_matrix"]["standard_worker_lite_replacement_candidate_module_ids"] == [
-        "correlation",
         "immune_infiltration",
     ]
     assert state["developer_diagnostics"]["legacy_sidecar_transition_rows"] == state["legacy_sidecar_transition_rows"]

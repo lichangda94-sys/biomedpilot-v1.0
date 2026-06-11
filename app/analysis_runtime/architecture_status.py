@@ -1221,10 +1221,17 @@ def build_task_system_boundary_matrix(
         for item in payload.get("modules", [])
         if isinstance(item, dict) and item.get("module_id") in TARGET_MODULE_IDS
     ]
+    source_inventory = _legacy_sidecar_source_inventory_row()
+    sidecar_module_ids = {
+        str(item)
+        for item in source_inventory.get("sidecar_module_ids", [])
+        if item
+    }
     rows = [
         _task_system_boundary_row(
             module,
             migration_row=migration_by_module.get(str(module.get("module_id") or ""), {}),
+            actual_sidecar_module_ids=sidecar_module_ids,
         )
         for module in modules
     ]
@@ -1783,7 +1790,12 @@ def _source_token_contract_row(
     }
 
 
-def _task_system_boundary_row(module: dict[str, Any], *, migration_row: dict[str, Any]) -> dict[str, Any]:
+def _task_system_boundary_row(
+    module: dict[str, Any],
+    *,
+    migration_row: dict[str, Any],
+    actual_sidecar_module_ids: set[str] | None = None,
+) -> dict[str, Any]:
     module_id = str(module.get("module_id") or "")
     modes = module.get("modes") if isinstance(module.get("modes"), dict) else {}
     mock = modes.get("mock") if isinstance(modes.get("mock"), dict) else {}
@@ -1815,7 +1827,8 @@ def _task_system_boundary_row(module: dict[str, Any], *, migration_row: dict[str
     formal_worker_status = str(migration_row.get("formal_worker_status") or "pending_standard_worker_migration")
     if formal_worker_status != "migrated_to_isolated_standard_worker":
         warnings.append(f"formal_worker_migration_pending:{module_id}")
-    if "legacy" in current_adapter_status or "sidecar" in current_adapter_status:
+    source_sidecar_modules = actual_sidecar_module_ids or set()
+    if module_id in source_sidecar_modules:
         warnings.append(f"legacy_sidecar_boundary_transitional:{module_id}")
     elif "pending" in current_adapter_status or "existing" in current_adapter_status or "planned" in current_adapter_status:
         warnings.append(f"current_adapter_pending_standard_worker_migration:{module_id}")
@@ -1992,12 +2005,6 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
             "source_surface": "immune_scoring_standard_package_sidecar",
             "sidecar_mode_scope": "lite_testing_level",
             "file_path": "app/bioinformatics/immune_infiltration/standard_package.py",
-        },
-        {
-            "module_id": "correlation",
-            "source_surface": "correlation_standard_package_sidecar",
-            "sidecar_mode_scope": "lite_testing_level",
-            "file_path": "app/bioinformatics/services/correlation_standard_package.py",
         },
     ]
     required_tokens = [
