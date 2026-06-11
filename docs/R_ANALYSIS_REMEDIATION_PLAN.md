@@ -114,6 +114,8 @@ Update: controlled ORA/GSEA legacy formal execution is now blocked until full st
 
 Update: controlled DEG executors now mirror successful formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This covers two-group Python controlled formal DEG plus multi-factor limma/DESeq2/edgeR fixture-proven formal results. It preserves result table, task log, parameter manifest, dependency snapshot, hashes, command provenance, and sidecar-only worker-boundary metadata; multi-factor sidecars also preserve formula/contrast provenance and R package versions. This does not enable new DEG execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration.
 
+Update: Analysis UI two-group controlled DEG and multi-factor DEG execution actions now require DEG standard-worker migration evidence in addition to DEG domain gates. The current `standard_worker_migration_matrix` marks DEG full/formal migration as pending, so normal-user DEG execution stays disabled until a task-center registered standard-worker full package can be proven.
+
 Update: controlled KM/log-rank and Cox univariate executors now mirror successful controlled formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result tables, task logs, parameter manifests, dependency snapshots, hashes, engine metadata, and sidecar-only worker-boundary metadata. This does not enable clinical conclusions, risk grouping, plot artifacts, report-ready survival/clinical output, or complete isolated worker migration.
 
 Update: Analysis UI KM/log-rank and Cox univariate execution actions now require survival standard-worker migration evidence in addition to B12/B13/B14 domain gates. The current `standard_worker_migration_matrix` marks survival full/formal migration as pending, so normal-user execution stays disabled until a task-center registered standard-worker full package can be proven.
@@ -460,6 +462,7 @@ Completed:
 - Successful controlled edgeR multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
 - Multi-factor DEG standard package sidecars record `legacy_service_adapter_sidecar` worker-boundary metadata.
 - Blocked incompatible non-count DESeq2/edgeR requests still stop before result index registration.
+- Analysis UI execution buttons for two-group and multi-factor DEG are blocked until DEG standard-worker migration evidence passes, even when DEG domain gates pass.
 
 Remaining:
 

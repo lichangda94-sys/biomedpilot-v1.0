@@ -163,7 +163,7 @@ def test_legacy_asset_pipeline_action_is_review_only() -> None:
     assert _row(rows, "formal_deg")["enabled"] is False
 
 
-def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:
+def test_formal_deg_execution_requires_user_confirmation_and_standard_worker_migration() -> None:
     rows = build_action_rows(
         packages=[{"package_type": "deg_recompute", "status": "config_only", "blockers": [], "warnings": []}],
         deg_dependency={"status": "passed", "blockers": []},
@@ -176,10 +176,36 @@ def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:
     )
 
     formal_deg = _row(rows, "formal_deg")
-    assert formal_deg["enabled"] is True
-    assert formal_deg["state"] == "enabled_formal_deg"
-    assert formal_deg["button_behavior"] == "enabled_controlled_two_group_mvp"
+    assert formal_deg["enabled"] is False
+    assert formal_deg["state"] == "blocked_standard_worker_migration"
+    assert "standard_worker_migration_evidence_missing:deg" in str(formal_deg["disabled_reason"])
     assert _row(rows, "formal_deg_parameter_confirmation")["state"] == "confirmed"
+
+    enabled = build_action_rows(
+        packages=[{"package_type": "deg_recompute", "status": "config_only", "blockers": [], "warnings": []}],
+        deg_dependency={"status": "passed", "blockers": []},
+        deg_ready_gate={"status": "passed", "blockers": []},
+        parameter_gate={"status": "passed", "blockers": []},
+        confirmation_gate={"status": "passed", "blockers": []},
+        result_schema_gate={"status": "passed", "blockers": []},
+        standard_worker_migration_matrix={
+            "rows": [
+                {
+                    "module_id": "deg",
+                    "formal_worker_status": "migrated_to_isolated_standard_worker",
+                    "full_status": "passed",
+                    "migration_blockers": [],
+                }
+            ]
+        },
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+    )
+
+    formal_deg_enabled = _row(enabled, "formal_deg")
+    assert formal_deg_enabled["enabled"] is True
+    assert formal_deg_enabled["state"] == "enabled_formal_deg"
+    assert formal_deg_enabled["button_behavior"] == "enabled_controlled_two_group_mvp"
 
 
 def test_multifactor_deg_action_requires_joint_gate_state() -> None:
@@ -205,12 +231,33 @@ def test_multifactor_deg_action_requires_joint_gate_state() -> None:
     assert "missing_design_formula" in action["disabled_reason"]
     assert "multifactor_deg_parameter_confirmation_missing" in action["disabled_reason"]
 
+    blocked_by_worker = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        multifactor_gate_state={"status": "passed", "blockers": []},
+    )
+    assert _row(blocked_by_worker, "multifactor_deg")["enabled"] is False
+    assert _row(blocked_by_worker, "multifactor_deg")["state"] == "blocked_standard_worker_migration"
+    assert "standard_worker_migration_evidence_missing:deg" in str(_row(blocked_by_worker, "multifactor_deg")["disabled_reason"])
+
     enabled = build_action_rows(
         packages=[],
         deg_dependency={"status": "blocked"},
         survival_dependency={"status": "preflight_only"},
         report_gate={"status": "blocked"},
         multifactor_gate_state={"status": "passed", "blockers": []},
+        standard_worker_migration_matrix={
+            "rows": [
+                {
+                    "module_id": "deg",
+                    "formal_worker_status": "migrated_to_isolated_standard_worker",
+                    "full_status": "passed",
+                    "migration_blockers": [],
+                }
+            ]
+        },
     )
     assert _row(enabled, "multifactor_deg")["enabled"] is True
     assert _row(enabled, "multifactor_deg")["button_behavior"] == "enabled_only_when_multifactor_gates_pass"

@@ -196,6 +196,7 @@ Existing controlled DEG executors now write a standard result package sidecar:
 - The sidecar preserves the parameter manifest, dependency snapshot, input/parameter/table hashes, engine metadata, and command provenance. Multi-factor DEG sidecars also preserve formula, contrast, covariates, batch variables, and R/package versions.
 - The sidecar provenance records `worker_boundary.boundary_type=legacy_service_adapter_sidecar` and `migration_status=sidecar_only_not_isolated_standard_worker`.
 - The current result index registers the sidecar as an `output_artifacts` item with `artifact_type=standard_result_package`.
+- Analysis UI execution actions for two-group controlled DEG and multi-factor DEG now require the DEG row in `standard_worker_migration_matrix` to pass before they can become normal-user runnable actions; current missing full standard-worker evidence keeps those buttons disabled even if domain gates and user confirmation pass.
 - This is a package-contract migration step, not a claim that DEG has been fully migrated into the isolated standard worker.
 
 Existing controlled survival/clinical executors now write a standard result package sidecar:
@@ -494,6 +495,7 @@ The current standard-worker migration matrix is intentionally still `partial`: a
 - Added docking and molecular dynamics lite external-tool adapter contract fixtures that produce standard command-manifest packages without executing AutoDock Vina/GROMACS or generating scientific docking/MD results.
 - Disabled controlled enrichment ORA/GSEA legacy formal sidecar execution until full standard-worker, environment-lock, and resource-lock evidence pass.
 - Added controlled DEG standard result package sidecars for successful two-group Python formal DEG and multi-factor limma/DESeq2/edgeR fixture results, registered in result index v2 without enabling new execution, plot/report-ready output, or clinical interpretation.
+- Hardened Analysis UI two-group and multi-factor DEG execution controls so normal-user execution requires DEG standard-worker migration evidence instead of only DEG domain gates.
 - Added controlled KM/log-rank and Cox univariate standard result package sidecars plus indexed worker invocation manifests registered in result index v2 without enabling clinical conclusions, risk grouping, plot/report-ready output, or isolated worker claims.
 - Hardened Analysis UI KM/log-rank and Cox univariate execution controls so normal-user execution requires survival standard-worker migration evidence instead of only B12/B13/B14 domain gates.
 - Migrated exploratory immune/TME scoring lite execution to the task bridge standard R-worker path and registered its standard result package in result index v2 without enabling GSVA/CellChat/Seurat, report-ready output, or clinical interpretation.

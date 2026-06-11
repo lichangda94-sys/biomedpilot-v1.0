@@ -68,8 +68,8 @@ def build_action_rows(
     rows.extend(_legacy_asset_pipeline_operation_actions(legacy_asset_pipeline))
     rows.append(_deg_preflight_action(deg_package))
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate, input_adaptation_gate, design_quality_gate, data_quality_gate, method_recommendation_gate))
-    rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate, input_adaptation_gate, design_quality_gate, data_quality_gate, method_recommendation_gate))
-    rows.append(_multifactor_deg_action(multifactor_gate_state))
+    rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate, input_adaptation_gate, design_quality_gate, data_quality_gate, method_recommendation_gate, standard_worker_migration_matrix))
+    rows.append(_multifactor_deg_action(multifactor_gate_state, standard_worker_migration_matrix))
     rows.append(_enrichment_confirmation_action(enrichment_gate_state))
     rows.append(_controlled_ora_action(enrichment_gate_state))
     rows.append(_controlled_gsea_action(enrichment_gate_state))
@@ -178,6 +178,7 @@ def _formal_deg_action(
     design_quality_gate: dict[str, Any],
     data_quality_gate: dict[str, Any],
     method_recommendation_gate: dict[str, Any],
+    standard_worker_migration_matrix: dict[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     state = "hidden_until_ready"
@@ -229,6 +230,11 @@ def _formal_deg_action(
         blockers.extend(_list(confirmation_gate.get("blockers")) or ["formal_deg_parameter_confirmation_missing"])
         if state == "hidden_until_ready":
             state = "blocked_missing_user_confirmation"
+    worker_blockers = _standard_worker_module_blockers(standard_worker_migration_matrix, "deg")
+    if worker_blockers:
+        blockers.extend(worker_blockers)
+        if state == "hidden_until_ready":
+            state = "blocked_standard_worker_migration"
     if state == "hidden_until_ready":
         return {
             "action_id": "formal_deg",
@@ -240,7 +246,7 @@ def _formal_deg_action(
             "disabled_reason": "",
             "next_action": "Run audited two-group controlled DEG MVP with confirmed parameters and register result index v2 output.",
         }
-    return _disabled("formal_deg", "Run controlled two-group DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve resolver, DEG-ready, dependency, parameter, user confirmation and result schema gates.")
+    return _disabled("formal_deg", "Run controlled two-group DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve resolver, DEG-ready, dependency, parameter, user confirmation, result schema and standard-worker migration gates.")
 
 
 def _formal_deg_confirmation_action(
@@ -301,8 +307,11 @@ def _formal_deg_confirmation_action(
     }
 
 
-def _multifactor_deg_action(gate_state: dict[str, Any]) -> dict[str, Any]:
-    blockers = _list(gate_state.get("blockers"))
+def _multifactor_deg_action(gate_state: dict[str, Any], standard_worker_migration_matrix: dict[str, Any]) -> dict[str, Any]:
+    domain_blockers = _list(gate_state.get("blockers"))
+    blockers = list(domain_blockers)
+    worker_blockers = _standard_worker_module_blockers(standard_worker_migration_matrix, "deg")
+    blockers.extend(worker_blockers)
     if gate_state.get("status") == "passed" and not blockers:
         return {
             "action_id": "multifactor_deg",
@@ -319,9 +328,9 @@ def _multifactor_deg_action(gate_state: dict[str, Any]) -> dict[str, Any]:
     return _disabled(
         "multifactor_deg",
         "Run controlled multi-factor DEG",
-        "blocked_multifactor_gate",
+        "blocked_standard_worker_migration" if worker_blockers and gate_state.get("status") == "passed" and not domain_blockers else "blocked_multifactor_gate",
         "; ".join(dict.fromkeys(blockers)),
-        "Resolve design QA, contrast, method, dependency, user confirmation and result schema gates before multi-factor DEG.",
+        "Resolve design QA, contrast, method, dependency, user confirmation, result schema and standard-worker migration gates before multi-factor DEG.",
     )
 
 
