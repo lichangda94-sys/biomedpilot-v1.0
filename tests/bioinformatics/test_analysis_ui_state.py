@@ -447,6 +447,10 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert row["worker_backend"] == "python_fixture"
     assert row["worker_invocation_status"] == "fixture_copy_completed"
     assert row["worker_boundary_type"] == "analysis_task_bridge_fixture"
+    assert row["ui_execution_eligible"] is False
+    assert row["migration_evidence_eligible"] is False
+    assert row["execution_readiness_policy"] == "standard_package_catalog_is_review_only_not_ui_action_readiness"
+    assert row["migration_evidence_policy"] == "not_standard_worker_migration_evidence"
     assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
     assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
     assert row["input_manifest"]["validation_status"] == "passed"

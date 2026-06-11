@@ -259,6 +259,11 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["worker_invocation_status"] == "fixture_copy_completed"
     assert row["worker_boundary_type"] == "analysis_task_bridge_fixture"
     assert row["worker_migration_status"] == "mock_fixture_contract"
+    assert row["ui_execution_eligible"] is False
+    assert row["migration_evidence_eligible"] is False
+    assert row["execution_readiness_policy"] == "standard_package_catalog_is_review_only_not_ui_action_readiness"
+    assert row["migration_evidence_policy"] == "not_standard_worker_migration_evidence"
+    assert "standard_package_catalog_row_is_not_ui_execution_readiness" in row["policy_blockers"]
     assert row["input_manifest_path_relative"] == "analysis_results/enrichment-mock-task/module_input.json"
     assert row["input_manifest_validation_status"] == "passed"
     assert row["input_manifest"]["schema"] == "analysis/schemas/input/module_input.schema.json"
@@ -380,6 +385,11 @@ def test_standard_analysis_package_catalog_blocks_direct_cli_standard_worker_as_
     assert row["worker_migration_status"] == "standard_worker_direct_cli_contract"
     assert row["validation_status"] == "passed"
     assert row["artifact_counts"]["tables"] == 1
+    assert row["ui_execution_eligible"] is False
+    assert row["migration_evidence_eligible"] is False
+    assert row["execution_readiness_policy"] == "standard_package_catalog_is_review_only_not_ui_action_readiness"
+    assert row["migration_evidence_policy"] == "standard_worker_nonformal_package_not_migration_evidence"
+    assert "standard_worker_package_not_full_formal_migration_evidence" in row["policy_blockers"]
     assert "standard_r_worker_package_not_task_center_registered:standard_worker_direct_cli" in row["blockers"]
     assert any(
         "standard_r_worker_package_not_task_center_registered:standard_worker_direct_cli" in item
@@ -1059,6 +1069,10 @@ def test_enrichment_lite_mode_runs_through_standard_r_worker_and_catalog(tmp_pat
     assert registry["results"][0]["engine_name"] == "biomedpilot_standard_r_worker"
     assert catalog["rows"][0]["mode"] == "lite"
     assert catalog["rows"][0]["worker_boundary_type"] == "standard_r_worker"
+    assert catalog["rows"][0]["ui_execution_eligible"] is False
+    assert catalog["rows"][0]["migration_evidence_eligible"] is False
+    assert catalog["rows"][0]["migration_evidence_policy"] == "standard_worker_nonformal_package_not_migration_evidence"
+    assert "standard_worker_package_not_full_formal_migration_evidence" in catalog["rows"][0]["policy_blockers"]
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
 
 

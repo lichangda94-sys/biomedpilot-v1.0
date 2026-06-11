@@ -44,10 +44,16 @@ def test_controlled_km_logrank_registers_formal_result_without_hr_or_report(tmp_
     assert row["worker_boundary_type"] == "legacy_service_adapter_sidecar"
     assert row["worker_backend"] == "legacy_service_adapter"
     assert row["worker_invocation_status"] == "sidecar_recorded"
+    assert row["ui_execution_eligible"] is False
+    assert row["migration_evidence_eligible"] is False
+    assert row["execution_readiness_policy"] == "legacy_sidecar_review_only_not_ui_execution_readiness"
+    assert row["migration_evidence_policy"] == "forbidden_legacy_sidecar_not_standard_worker_migration_evidence"
+    assert "legacy_sidecar_package_not_ui_execution_readiness" in row["policy_blockers"]
     assert row["artifact_counts"]["tables"] == 2
     assert row["artifact_counts"]["reports"] == 1
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert "clinical_conclusion_not_generated" in row["warnings"]
+    assert "legacy_sidecar_package_not_standard_worker_migration_evidence" in row["warnings"]
 
 
 def test_controlled_km_logrank_blocks_missing_confirmation_without_traceback(tmp_path: Path) -> None:

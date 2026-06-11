@@ -64,6 +64,14 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
             provenance_boundary = provenance_payload.get("worker_boundary") if isinstance(provenance_payload.get("worker_boundary"), dict) else {}
             invocation_boundary = invocation_payload.get("worker_boundary") if isinstance(invocation_payload.get("worker_boundary"), dict) else {}
             worker_boundary = invocation_boundary or provenance_boundary
+            worker_boundary_type = str(worker_boundary.get("boundary_type") or _default_worker_boundary_type(provenance_payload))
+            mode = str(result_payload.get("mode") or (entry.get("dependency_snapshot") or {}).get("mode") or "")
+            result_semantics = str(entry.get("result_semantics") or "")
+            catalog_policy = _catalog_consumption_policy(
+                worker_boundary_type,
+                mode=mode,
+                result_semantics=result_semantics,
+            )
             package_manifest = detail["package_manifest"]
             input_manifest = detail["input_manifest"]
             rows.append(
@@ -72,11 +80,11 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "result_id": str(entry.get("result_id") or ""),
                     "task_run_id": str(entry.get("task_run_id") or ""),
                     "task_type": str(entry.get("task_type") or ""),
-                    "result_semantics": str(entry.get("result_semantics") or ""),
+                    "result_semantics": result_semantics,
                     "package_path": str(package_dir),
                     "package_path_relative": _relative_or_absolute(root, package_dir),
                     "module_id": str(result_payload.get("module_id") or _module_id_from_entry(entry)),
-                    "mode": str(result_payload.get("mode") or (entry.get("dependency_snapshot") or {}).get("mode") or ""),
+                    "mode": mode,
                     "status": str(result_payload.get("status") or validation.get("result_status") or ""),
                     "validation_status": str(validation.get("status") or "blocked"),
                     "result_package_schema": str(validation.get("result_package_schema") or ""),
@@ -96,8 +104,13 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "worker_backend": str(invocation_payload.get("worker_backend") or ""),
                     "worker_invocation_status": str(invocation_payload.get("invocation_status") or ""),
                     "worker_boundary": worker_boundary,
-                    "worker_boundary_type": str(worker_boundary.get("boundary_type") or _default_worker_boundary_type(provenance_payload)),
+                    "worker_boundary_type": worker_boundary_type,
                     "worker_migration_status": str(worker_boundary.get("migration_status") or ""),
+                    "ui_execution_eligible": bool(catalog_policy["ui_execution_eligible"]),
+                    "migration_evidence_eligible": bool(catalog_policy["migration_evidence_eligible"]),
+                    "execution_readiness_policy": str(catalog_policy["execution_readiness_policy"]),
+                    "migration_evidence_policy": str(catalog_policy["migration_evidence_policy"]),
+                    "policy_blockers": list(catalog_policy["policy_blockers"]),
                     "command": str(provenance_payload.get("command") or ""),
                     "input_hash": str(provenance_payload.get("input_hash") or ""),
                     "parameter_hash": str(provenance_payload.get("parameter_hash") or ""),
@@ -120,7 +133,15 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                             ]
                         )
                     ),
-                    "warnings": list(dict.fromkeys([*validation.get("warnings", []), *result_payload.get("warnings", [])])),
+                    "warnings": list(
+                        dict.fromkeys(
+                            [
+                                *validation.get("warnings", []),
+                                *result_payload.get("warnings", []),
+                                *catalog_policy["warnings"],
+                            ]
+                        )
+                    ),
                 }
             )
     blockers = [f"standard_analysis_package_invalid:{row['result_id']}:{item}" for row in rows for item in row["blockers"]]
@@ -186,6 +207,11 @@ def _blocked_catalog_row(
         "worker_boundary": {},
         "worker_boundary_type": "",
         "worker_migration_status": "",
+        "ui_execution_eligible": False,
+        "migration_evidence_eligible": False,
+        "execution_readiness_policy": "blocked_standard_result_package_not_read",
+        "migration_evidence_policy": "blocked_standard_result_package_not_read",
+        "policy_blockers": ["standard_result_package_not_read"],
         "command": "",
         "input_hash": "",
         "parameter_hash": "",
@@ -318,6 +344,61 @@ def _catalog_task_system_boundary_blockers(invocation: dict[str, Any], provenanc
     if task_system_invocation == "task_center_registered":
         return []
     return [f"standard_r_worker_package_not_task_center_registered:{task_system_invocation or 'missing'}"]
+
+
+def _catalog_consumption_policy(worker_boundary_type: str, *, mode: str, result_semantics: str) -> dict[str, Any]:
+    """Describe how a catalog row may be used by UI/release gates.
+
+    Catalog rows are read-only result-package diagnostics. Legacy sidecars are
+    intentionally kept visible for review, but they must never become evidence
+    that a normal user can execute the analysis through the isolated standard
+    worker boundary.
+    """
+
+    if worker_boundary_type == "standard_r_worker" and mode == "full" and result_semantics == "formal_computed_result":
+        return {
+            "ui_execution_eligible": False,
+            "migration_evidence_eligible": True,
+            "execution_readiness_policy": "standard_package_catalog_is_review_only_not_ui_action_readiness",
+            "migration_evidence_policy": "candidate_requires_registry_owned_standard_worker_evidence",
+            "policy_blockers": ["standard_package_catalog_row_is_not_ui_execution_readiness"],
+            "warnings": [],
+        }
+    if worker_boundary_type == "standard_r_worker":
+        return {
+            "ui_execution_eligible": False,
+            "migration_evidence_eligible": False,
+            "execution_readiness_policy": "standard_package_catalog_is_review_only_not_ui_action_readiness",
+            "migration_evidence_policy": "standard_worker_nonformal_package_not_migration_evidence",
+            "policy_blockers": [
+                "standard_package_catalog_row_is_not_ui_execution_readiness",
+                "standard_worker_package_not_full_formal_migration_evidence",
+            ],
+            "warnings": [],
+        }
+    if worker_boundary_type == "legacy_service_adapter_sidecar":
+        return {
+            "ui_execution_eligible": False,
+            "migration_evidence_eligible": False,
+            "execution_readiness_policy": "legacy_sidecar_review_only_not_ui_execution_readiness",
+            "migration_evidence_policy": "forbidden_legacy_sidecar_not_standard_worker_migration_evidence",
+            "policy_blockers": [
+                "legacy_sidecar_package_not_ui_execution_readiness",
+                "legacy_sidecar_package_not_standard_worker_migration_evidence",
+            ],
+            "warnings": [
+                "legacy_sidecar_package_review_only_not_ui_execution_readiness",
+                "legacy_sidecar_package_not_standard_worker_migration_evidence",
+            ],
+        }
+    return {
+        "ui_execution_eligible": False,
+        "migration_evidence_eligible": False,
+        "execution_readiness_policy": "standard_package_catalog_is_review_only_not_ui_action_readiness",
+        "migration_evidence_policy": "not_standard_worker_migration_evidence",
+        "policy_blockers": ["standard_package_catalog_row_is_not_ui_execution_readiness"],
+        "warnings": [],
+    }
 
 
 def _resolve_artifact_path(root: Path, value: object) -> Path:

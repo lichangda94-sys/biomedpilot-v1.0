@@ -76,6 +76,14 @@ def test_controlled_multifactor_limma_fixture_registers_formal_result(tmp_path: 
     assert catalog["rows"][0]["worker_backend"] == "legacy_service_adapter"
     assert catalog["rows"][0]["worker_invocation_status"] == "sidecar_recorded"
     assert catalog["rows"][0]["worker_migration_status"] == "sidecar_only_not_isolated_standard_worker"
+    assert catalog["rows"][0]["ui_execution_eligible"] is False
+    assert catalog["rows"][0]["migration_evidence_eligible"] is False
+    assert catalog["rows"][0]["execution_readiness_policy"] == "legacy_sidecar_review_only_not_ui_execution_readiness"
+    assert (
+        catalog["rows"][0]["migration_evidence_policy"]
+        == "forbidden_legacy_sidecar_not_standard_worker_migration_evidence"
+    )
+    assert "legacy_sidecar_package_not_ui_execution_readiness" in catalog["rows"][0]["policy_blockers"]
     assert catalog["rows"][0]["artifact_counts"]["tables"] == 1
     assert catalog["rows"][0]["artifact_counts"]["plots"] == 0
 
