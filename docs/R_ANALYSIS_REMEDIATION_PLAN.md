@@ -104,6 +104,8 @@ Update: standard package catalog rows now include consumption-policy fields for 
 
 Update: direct legacy sidecar execution is now blocked by default for controlled DEG, multi-factor DEG, KM/log-rank, and Cox univariate executors. Focused tests and runtime-validation tools may opt into `allow_legacy_sidecar_execution=True` to audit the old sidecar contract, but normal callers receive `legacy_service_adapter_sidecar_execution_disabled` and `standard_worker_migration_required:<module>` until task-center registered standard-worker migration evidence exists.
 
+Update: the architecture gate now includes a static `legacy_sidecar_override_allowlist` row. It scans `allow_legacy_sidecar_execution=True` usage and blocks any occurrence outside tests, `app/bioinformatics/deg_engine/runtime_validation.py`, and `scripts/releasebuild_formal_deg_gate.py`.
+
 Update: module interface, entrypoint, and migration matrices now require every lite-supported module manifest to explicitly declare `runner=analysis/runners/run_module.R` and `worker_backend=rscript`. The correlation module manifest is now aligned with the registry, and registry-only mode drift can no longer prove lite/full worker readiness without the module manifest carrying the same contract.
 
 Update: RARCH-17 is now driven by target-module presence plus `module_interface_matrix` evidence instead of reusing formal standard-worker migration state. The current target modules pass the shared module interface contract; formal/full worker migration remains tracked separately by the standard-worker entrypoint, task boundary, provenance boundary, and P1 migration matrices.

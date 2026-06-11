@@ -182,7 +182,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert "report_ready_eligible false" in lite_coverage_rows["deg"]["required_contracts"]
     assert payload["legacy_sidecar_transition_matrix"]["schema_version"] == "biomedpilot.analysis.legacy_sidecar_transition_matrix.v1"
     assert payload["legacy_sidecar_transition_matrix"]["status"] == "partial"
-    assert payload["legacy_sidecar_transition_matrix"]["passed_row_count"] == 5
+    assert payload["legacy_sidecar_transition_matrix"]["passed_row_count"] == 6
     assert payload["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert payload["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
     assert payload["legacy_sidecar_transition_matrix"]["blocker_counts"] == {}
@@ -198,6 +198,8 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert legacy_sidecar_rows["legacy_sidecar_writer_contract"]["status"] == "passed"
     assert legacy_sidecar_rows["catalog_task_center_guard"]["status"] == "passed"
     assert legacy_sidecar_rows["migration_evidence_forbids_sidecar"]["status"] == "passed"
+    assert legacy_sidecar_rows["legacy_sidecar_override_allowlist"]["status"] == "passed"
+    assert all(item["allowed"] is True for item in legacy_sidecar_rows["legacy_sidecar_override_allowlist"]["override_hits"])
     assert legacy_sidecar_rows["registry_adapter_transition_scope"]["status"] == "passed"
     assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["status"] == "partial"
     assert legacy_sidecar_rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == []

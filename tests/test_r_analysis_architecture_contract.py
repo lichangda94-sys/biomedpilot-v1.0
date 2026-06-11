@@ -1465,7 +1465,7 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["lite_task_bridge_coverage_matrix"]["covered_module_count"] == 10
     assert status["lite_task_bridge_coverage_matrix"]["blocked_module_count"] == 0
     assert status["legacy_sidecar_transition_matrix"]["status"] == "partial"
-    assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 5
+    assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 6
     assert status["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert status["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
     assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 3
@@ -1902,8 +1902,8 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert matrix["schema_version"] == "biomedpilot.analysis.legacy_sidecar_transition_matrix.v1"
     assert matrix["status"] == "partial"
     assert matrix["boundary"] == "read_only_legacy_sidecar_transition_diagnostics"
-    assert matrix["row_count"] == 6
-    assert matrix["passed_row_count"] == 5
+    assert matrix["row_count"] == 7
+    assert matrix["passed_row_count"] == 6
     assert matrix["partial_row_count"] == 1
     assert matrix["blocked_row_count"] == 0
     assert matrix["blocker_counts"] == {}
@@ -1922,6 +1922,10 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert rows["legacy_sidecar_writer_contract"]["status"] == "passed"
     assert rows["catalog_task_center_guard"]["status"] == "passed"
     assert rows["migration_evidence_forbids_sidecar"]["status"] == "passed"
+    assert rows["legacy_sidecar_override_allowlist"]["status"] == "passed"
+    assert rows["legacy_sidecar_override_allowlist"]["boundary"] == "normal_app_ui_paths_must_not_opt_into_legacy_sidecar_execution"
+    assert "app/bioinformatics/deg_engine/runtime_validation.py" in rows["legacy_sidecar_override_allowlist"]["allowed_paths"]
+    assert all(item["allowed"] is True for item in rows["legacy_sidecar_override_allowlist"]["override_hits"])
     assert rows["sidecar_boundary_test_coverage"]["status"] == "passed"
     assert rows["registry_adapter_transition_scope"]["status"] == "passed"
     assert "correlation" not in rows["registry_adapter_transition_scope"]["transitional_module_ids"]

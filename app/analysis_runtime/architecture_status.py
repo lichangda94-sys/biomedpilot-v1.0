@@ -1931,6 +1931,7 @@ def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = Non
             "boundary": "adapter_status_is_inventory_only_actual_sidecar_evidence_comes_from_source_inventory",
         },
         source_inventory_row,
+        _legacy_sidecar_override_allowlist_row(),
         _source_token_contract_row(
             row_id="sidecar_boundary_test_coverage",
             title="Tests cover sidecar direct-call and not-migration boundaries",
@@ -1963,6 +1964,55 @@ def build_legacy_sidecar_transition_matrix(registry: dict[str, Any] | None = Non
         "standard_worker_lite_replacement_candidate_module_ids": list(source_inventory_row.get("standard_worker_lite_replacement_candidate_module_ids", []) or []),
         "rows": rows,
         "boundary": "read_only_legacy_sidecar_transition_diagnostics",
+    }
+
+
+def _legacy_sidecar_override_allowlist_row() -> dict[str, Any]:
+    allowed_paths = {
+        "app/bioinformatics/deg_engine/runtime_validation.py",
+        "scripts/releasebuild_formal_deg_gate.py",
+    }
+    allowed_prefixes = ("tests/",)
+    scanned_roots = ["app", "scripts", "tests"]
+    override_token = "allow_legacy_sidecar_execution" + "=True"
+    hits: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for root_name in scanned_roots:
+        root = REPO_ROOT / root_name
+        if not root.exists():
+            continue
+        for path in sorted(item for item in root.rglob("*.py") if item.is_file()):
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if override_token not in text:
+                continue
+            relative = str(path.relative_to(REPO_ROOT))
+            allowed = relative in allowed_paths or any(relative.startswith(prefix) for prefix in allowed_prefixes)
+            hits.append(
+                {
+                    "path": relative,
+                    "allowed": allowed,
+                    "policy": (
+                        "test_or_runtime_validation_override_allowed"
+                        if allowed
+                        else "production_or_ui_override_forbidden"
+                    ),
+                }
+            )
+            if not allowed:
+                blockers.append(f"legacy_sidecar_override_not_allowlisted:{relative}")
+    return {
+        "row_id": "legacy_sidecar_override_allowlist",
+        "title": "Legacy sidecar execution override is restricted to tests and validation tooling",
+        "status": "blocked" if blockers else "passed",
+        "evidence_path": f"static scan: {override_token}",
+        "scan_roots": scanned_roots,
+        "allowed_paths": sorted(allowed_paths),
+        "allowed_prefixes": list(allowed_prefixes),
+        "override_hit_count": len(hits),
+        "override_hits": hits,
+        "blockers": blockers,
+        "warnings": [],
+        "boundary": "normal_app_ui_paths_must_not_opt_into_legacy_sidecar_execution",
     }
 
 

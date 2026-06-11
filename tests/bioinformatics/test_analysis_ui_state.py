@@ -211,9 +211,11 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "result_index registered testing_level result" in lite_coverage_text
     sidecar_text = "\n".join(str(row) for row in state["legacy_sidecar_transition_rows"])
     assert "Legacy sidecar transition matrix" in sidecar_text
-    assert "passed=5" in sidecar_text
+    assert "passed=6" in sidecar_text
     assert "partial=1" in sidecar_text
     assert "blocked=0" in sidecar_text
+    assert "Legacy sidecar contract: legacy_sidecar_override_allowlist" in sidecar_text
+    assert "normal_app_ui_paths_must_not_opt_into_legacy_sidecar_execution" in sidecar_text
     assert "replacement_candidates=None" in sidecar_text
     assert "transitional_modules=2" in sidecar_text
     assert "Legacy sidecar contract: legacy_sidecar_writer_contract" in sidecar_text
