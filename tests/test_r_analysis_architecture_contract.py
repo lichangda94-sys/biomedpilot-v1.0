@@ -1468,10 +1468,9 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["legacy_sidecar_transition_matrix"]["passed_row_count"] == 5
     assert status["legacy_sidecar_transition_matrix"]["partial_row_count"] == 1
     assert status["legacy_sidecar_transition_matrix"]["blocked_row_count"] == 0
-    assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 4
+    assert status["legacy_sidecar_transition_matrix"]["sidecar_producer_count"] == 3
     assert set(status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]) == {
         "deg",
-        "enrichment",
         "survival",
     }
     assert "deg" in status["legacy_sidecar_transition_matrix"]["transitional_module_ids"]
@@ -1910,14 +1909,14 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert matrix["blocker_counts"] == {}
     assert set(matrix["transitional_module_ids"]) == {
         "deg",
-        "enrichment",
         "survival",
     }
-    assert matrix["sidecar_producer_count"] == 4
-    assert len(matrix["sidecar_producers"]) == 4
+    assert matrix["sidecar_producer_count"] == 3
+    assert len(matrix["sidecar_producers"]) == 3
     assert matrix["standard_worker_lite_replacement_candidate_count"] == 0
     assert matrix["standard_worker_lite_replacement_candidate_module_ids"] == []
     assert matrix["adapter_status_counts"]["existing_standard_worker_lite_contract_pending_full_migration"] == 2
+    assert matrix["adapter_status_counts"]["legacy_formal_execution_disabled_pending_full_standard_worker_migration"] == 1
     assert "legacy_sidecar_producer_transitional:correlation" not in matrix["warning_counts"]
     assert matrix["warning_counts"]["legacy_sidecar_producer_transitional:deg"] == 1
     assert rows["legacy_sidecar_writer_contract"]["status"] == "passed"
@@ -1931,7 +1930,6 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     assert rows["source_sidecar_producer_inventory"]["status"] == "partial"
     assert rows["source_sidecar_producer_inventory"]["sidecar_module_ids"] == [
         "deg",
-        "enrichment",
         "survival",
     ]
     assert rows["source_sidecar_producer_inventory"]["standard_worker_lite_replacement_candidate_module_ids"] == []
@@ -2015,10 +2013,9 @@ def test_reproducibility_provenance_matrix_tracks_static_contract_evidence() -> 
     assert rows["legacy_sidecar_provenance_boundary"]["status"] == "partial"
     assert rows["legacy_sidecar_provenance_boundary"]["sidecar_module_ids"] == [
         "deg",
-        "enrichment",
         "survival",
     ]
-    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 4
+    assert rows["legacy_sidecar_provenance_boundary"]["sidecar_producer_count"] == 3
     assert "legacy_sidecar_provenance_transitional:deg" in rows["legacy_sidecar_provenance_boundary"]["warnings"]
     assert rows["legacy_sidecar_provenance_boundary"]["boundary"] == "formal_full_completion_requires_standard_worker_migration_evidence_not_sidecar_provenance"
 
@@ -2649,7 +2646,6 @@ def test_active_bioinformatics_r_subprocess_invocation_is_centralized_in_analysi
 
 def test_transition_r_adapters_do_not_own_subprocess_defaults() -> None:
     adapter_paths = [
-        ROOT / "app" / "bioinformatics" / "enrichment_r_adapter.py",
         ROOT / "app" / "bioinformatics" / "deg_engine" / "multifactor_r_runner.py",
     ]
 
@@ -2659,6 +2655,15 @@ def test_transition_r_adapters_do_not_own_subprocess_defaults() -> None:
         assert "subprocess.run" not in text
         assert "Popen(" not in text
         assert "run_external_r_command" in text
+
+    enrichment_adapter = ROOT / "app" / "bioinformatics" / "enrichment_r_adapter.py"
+    text = enrichment_adapter.read_text(encoding="utf-8")
+    assert "import subprocess" not in text
+    assert "subprocess.run" not in text
+    assert "Popen(" not in text
+    assert "run_external_r_command" not in text
+    assert "legacy_execution_policy" in text
+    assert "disabled_until_full_standard_worker_migration_evidence_passes" in text
 
 
 def test_standard_r_runner_mock_mode_copies_module_fixture_package(tmp_path: Path) -> None:

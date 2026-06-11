@@ -1988,12 +1988,6 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
             "file_path": "app/bioinformatics/deg_engine/multifactor_r_runner.py",
         },
         {
-            "module_id": "enrichment",
-            "source_surface": "controlled_enrichment_standard_package_sidecar",
-            "sidecar_mode_scope": "formal_controlled",
-            "file_path": "app/bioinformatics/enrichment_r_adapter.py",
-        },
-        {
             "module_id": "survival",
             "source_surface": "controlled_survival_clinical_standard_package_sidecar",
             "sidecar_mode_scope": "formal_controlled",

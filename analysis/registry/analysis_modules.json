@@ -191,7 +191,7 @@
         {
             "module_id": "enrichment",
             "title": "ORA and preranked GSEA enrichment",
-            "current_adapter_status": "existing_controlled_adapters_pending_standard_worker_wrapper",
+            "current_adapter_status": "legacy_formal_execution_disabled_pending_full_standard_worker_migration",
             "modes": {
                 "mock": {
                     "supported": true,

@@ -215,7 +215,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "partial=1" in sidecar_text
     assert "blocked=0" in sidecar_text
     assert "replacement_candidates=None" in sidecar_text
-    assert "transitional_modules=3" in sidecar_text
+    assert "transitional_modules=2" in sidecar_text
     assert "Legacy sidecar contract: legacy_sidecar_writer_contract" in sidecar_text
     assert "Legacy sidecar contract: catalog_task_center_guard" in sidecar_text
     assert "Legacy sidecar contract: migration_evidence_forbids_sidecar" in sidecar_text
