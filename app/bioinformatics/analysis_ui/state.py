@@ -1669,6 +1669,13 @@ def build_legacy_sidecar_transition_rows(matrix: dict[str, Any]) -> list[dict[st
         )
     ]
     for row in sidecar_rows:
+        sidecar_producers = [item for item in row.get("sidecar_producers", []) or [] if isinstance(item, dict)]
+        default_gate_passed = sum(1 for item in sidecar_producers if item.get("default_execution_gate_status") == "passed")
+        default_gate_diagnostics = (
+            [f"default_execution_gates=passed:{default_gate_passed}/{len(sidecar_producers)}"]
+            if sidecar_producers
+            else []
+        )
         rows.append(
             _formal_deg_gate_row(
                 f"Legacy sidecar contract: {row.get('row_id')}",
@@ -1677,6 +1684,7 @@ def build_legacy_sidecar_transition_rows(matrix: dict[str, Any]) -> list[dict[st
                 [
                     *[f"module:{module_id}" for module_id in _list(row.get("transitional_module_ids"))[:8]],
                     *[f"replacement:{module_id}" for module_id in _list(row.get("standard_worker_lite_replacement_candidate_module_ids"))[:8]],
+                    *default_gate_diagnostics,
                     *_list(row.get("warnings"))[:8],
                 ],
                 basis=(

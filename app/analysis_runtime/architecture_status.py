@@ -2030,18 +2030,24 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
             "source_surface": "controlled_two_group_deg_standard_package_sidecar",
             "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/deg_engine/standard_package.py",
+            "gate_file_paths": ["app/bioinformatics/deg_engine/formal_runner.py"],
         },
         {
             "module_id": "deg",
             "source_surface": "controlled_multifactor_deg_standard_package_sidecar",
             "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/deg_engine/multifactor_r_runner.py",
+            "gate_file_paths": ["app/bioinformatics/deg_engine/multifactor_r_runner.py"],
         },
         {
             "module_id": "survival",
             "source_surface": "controlled_survival_clinical_standard_package_sidecar",
             "sidecar_mode_scope": "formal_controlled",
             "file_path": "app/bioinformatics/survival_clinical/standard_package.py",
+            "gate_file_paths": [
+                "app/bioinformatics/survival_clinical/km_executor.py",
+                "app/bioinformatics/survival_clinical/cox_executor.py",
+            ],
         },
     ]
     required_tokens = [
@@ -2069,6 +2075,13 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
         path = REPO_ROOT / file_path
         text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
         missing_tokens = [token for token in required_tokens if token not in text]
+        gate_file_paths = [str(item) for item in target.get("gate_file_paths", []) if str(item)]
+        gate_evidence = _legacy_sidecar_default_gate_evidence(module_id, gate_file_paths)
+        missing_gate_tokens = [
+            f"{item['file_path']}:{token}"
+            for item in gate_evidence["gate_files"]
+            for token in item["missing_tokens"]
+        ]
         replacement = _sidecar_standard_worker_replacement_status(
             module=module_map.get(module_id, {}),
             lite_coverage_row=lite_coverage_rows.get(module_id, {}),
@@ -2080,14 +2093,23 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
             blockers.append(
                 f"legacy_sidecar_source_token_missing:{module_id}:{','.join(missing_tokens)}"
             )
+        if gate_evidence["status"] != "passed":
+            blockers.append(
+                f"legacy_sidecar_default_gate_missing:{module_id}:{','.join(missing_gate_tokens) or 'missing_gate_file'}"
+            )
         producers.append(
             {
                 "module_id": module_id,
                 "source_surface": str(target["source_surface"]),
                 "sidecar_mode_scope": str(target.get("sidecar_mode_scope") or ""),
                 "file_path": file_path,
-                "status": "blocked" if (not path.is_file() or missing_tokens) else "partial",
+                "status": "blocked" if (not path.is_file() or missing_tokens or gate_evidence["status"] != "passed") else "partial",
                 "missing_tokens": missing_tokens,
+                "default_execution_gate_status": gate_evidence["status"],
+                "default_execution_gate_policy": "legacy_sidecar_direct_execution_blocked_by_default",
+                "gate_file_paths": gate_file_paths,
+                "gate_files": gate_evidence["gate_files"],
+                "missing_gate_tokens": missing_gate_tokens,
                 "migration_status": "sidecar_only_not_isolated_standard_worker",
                 "worker_boundary": "legacy_service_adapter_sidecar",
                 "migration_next_action": "replace_with_task_center_registered_standard_worker_execution_after_full_environment_and_resource_locks",
@@ -2117,6 +2139,40 @@ def _legacy_sidecar_source_inventory_row() -> dict[str, Any]:
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": warnings,
         "boundary": "actual_sidecar_source_inventory_not_formal_worker_migration_evidence",
+    }
+
+
+def _legacy_sidecar_default_gate_evidence(module_id: str, gate_file_paths: list[str]) -> dict[str, Any]:
+    required_tokens = [
+        "legacy_sidecar_execution_gate(",
+        f"\"{module_id}\"",
+        "allow_legacy_sidecar_execution=allow_legacy_sidecar_execution",
+        "legacy_sidecar_execution_gate",
+    ]
+    rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for file_path in gate_file_paths:
+        path = REPO_ROOT / file_path
+        text = path.read_text(encoding="utf-8", errors="ignore") if path.is_file() else ""
+        missing_tokens = [token for token in required_tokens if token not in text]
+        if not path.is_file():
+            blockers.append(f"legacy_sidecar_gate_file_missing:{file_path}")
+        if missing_tokens:
+            blockers.append(f"legacy_sidecar_gate_token_missing:{file_path}:{','.join(missing_tokens)}")
+        rows.append(
+            {
+                "file_path": file_path,
+                "status": "blocked" if (not path.is_file() or missing_tokens) else "passed",
+                "missing_tokens": missing_tokens,
+                "required_tokens": required_tokens,
+            }
+        )
+    if not gate_file_paths:
+        blockers.append("legacy_sidecar_gate_file_paths_missing")
+    return {
+        "status": "blocked" if blockers else "passed",
+        "gate_files": rows,
+        "blockers": blockers,
     }
 
 

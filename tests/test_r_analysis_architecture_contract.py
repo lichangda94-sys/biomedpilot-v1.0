@@ -1943,6 +1943,21 @@ def test_legacy_sidecar_transition_matrix_tracks_transition_only_boundary() -> N
     }
     assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_replacement_status"] == "not_equivalent_formal_sidecar_requires_full_standard_worker_migration"
     assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["standard_worker_lite_path_status"] == "available"
+    assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["default_execution_gate_status"] == "passed"
+    assert producers[("deg", "controlled_two_group_deg_standard_package_sidecar")]["gate_file_paths"] == [
+        "app/bioinformatics/deg_engine/formal_runner.py"
+    ]
+    assert producers[("deg", "controlled_multifactor_deg_standard_package_sidecar")]["default_execution_gate_status"] == "passed"
+    assert producers[("survival", "controlled_survival_clinical_standard_package_sidecar")]["default_execution_gate_status"] == "passed"
+    assert producers[("survival", "controlled_survival_clinical_standard_package_sidecar")]["gate_file_paths"] == [
+        "app/bioinformatics/survival_clinical/km_executor.py",
+        "app/bioinformatics/survival_clinical/cox_executor.py",
+    ]
+    assert all(
+        gate_file["status"] == "passed"
+        for producer in producers.values()
+        for gate_file in producer["gate_files"]
+    )
     assert rows["source_sidecar_producer_inventory"]["boundary"] == "actual_sidecar_source_inventory_not_formal_worker_migration_evidence"
 
 

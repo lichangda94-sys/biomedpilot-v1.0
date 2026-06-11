@@ -223,6 +223,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Legacy sidecar contract: migration_evidence_forbids_sidecar" in sidecar_text
     assert "Legacy sidecar contract: registry_adapter_transition_scope" in sidecar_text
     assert "Legacy sidecar contract: source_sidecar_producer_inventory" in sidecar_text
+    assert "default_execution_gates=passed:3/3" in sidecar_text
     assert "replacement:immune_infiltration" not in sidecar_text
     assert "legacy_sidecar_producer_transitional:deg" in sidecar_text
     assert "actual_sidecar_source_inventory_not_formal_worker_migration_evidence" in sidecar_text
