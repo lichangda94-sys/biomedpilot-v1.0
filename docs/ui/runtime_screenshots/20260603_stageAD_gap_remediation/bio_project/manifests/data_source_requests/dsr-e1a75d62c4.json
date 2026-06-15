@@ -1,0 +1,24 @@
+{
+  "request_id": "dsr-e1a75d62c4",
+  "source_type": "gtex",
+  "user_title": "GTEx 数据来源配置",
+  "user_selection_summary": "GTEx 正常组织表达资源入口；作为独立资源管理。",
+  "internal_selection": {
+    "ui_page": "Data Source",
+    "source_key": "gtex",
+    "visual_baseline": "high-fidelity-mockup-sourced PySide gated UI shell",
+    "next_gate": "Data Check & Preparation"
+  },
+  "expected_assets": [
+    "gtex_metadata_preview",
+    "download_plan",
+    "expression_matrix"
+  ],
+  "actual_assets": [],
+  "status": "draft",
+  "warnings": [
+    "GTEx 不自动作为 TCGA normal control。"
+  ],
+  "created_at": "2026-06-03T09:32:32+00:00",
+  "updated_at": "2026-06-03T09:32:32+00:00"
+}

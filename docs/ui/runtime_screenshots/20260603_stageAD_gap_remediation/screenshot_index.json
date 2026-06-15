@@ -1,0 +1,8 @@
+{
+  "settings_general_detail": "docs/ui/runtime_screenshots/20260603_stageAD_gap_remediation/settings_general_detail_panel.png",
+  "labtools_profiles_records": "docs/ui/runtime_screenshots/20260603_stageAD_gap_remediation/labtools_three_profiles_record_selector.png",
+  "bio_tcga_local": "docs/ui/runtime_screenshots/20260603_stageAD_gap_remediation/bio_tcga_local_folder_entry.png",
+  "bio_gtex_local": "docs/ui/runtime_screenshots/20260603_stageAD_gap_remediation/bio_gtex_local_folder_entry.png",
+  "meta_result_gate": "docs/ui/runtime_screenshots/20260603_stageAD_gap_remediation/meta_result_report_gate_testing.png",
+  "meta_export_gate": "docs/ui/runtime_screenshots/20260603_stageAD_gap_remediation/meta_report_export_gate_testing.png"
+}

@@ -1,0 +1,207 @@
+{
+  "root": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_gap_xuam37xi",
+  "meta": {
+    "project_root": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_gap_xuam37xi/meta/Live_Meta_Gap_Audit",
+    "manifest": {
+      "schema_version": "biomedpilot.meta_minimal_workflow_manifest.v1",
+      "updated_at": "2026-06-03T09:31:36.496928+00:00",
+      "trigger": "ui_runtime/meta_report_export_gate.json",
+      "project_dir": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_gap_xuam37xi/meta/Live_Meta_Gap_Audit",
+      "visual_baseline": "UIShell mature Meta 12-step gated page",
+      "testing_query_zh": "甲状腺癌与脂联素水平",
+      "workflow_status": "testing_minimal_online_path",
+      "completed_service_artifact_count": 5,
+      "service_artifacts": {
+        "pubmed_search": {
+          "artifact": "ui_runtime/meta_pubmed_search_adapter.json",
+          "exists": true,
+          "service": "PubMedSearchService.search_pubmed",
+          "success": true,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "pubmed_preview": {
+          "artifact": "ui_runtime/meta_pubmed_preview_adapter.json",
+          "exists": true,
+          "service": "PubMedCandidatesHandoffService.load_preview",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "literature_import": {
+          "artifact": "ui_runtime/meta_pubmed_handoff_adapter.json",
+          "exists": true,
+          "service": "PubMedCandidatesHandoffService.import_selected_candidates",
+          "success": true,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "dedup_review_queue": {
+          "artifact": "ui_runtime/meta_dedup_review_queue_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "deduplicated_set": {
+          "artifact": "ui_runtime/meta_deduplicated_set_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "screening_queue": {
+          "artifact": "ui_runtime/meta_dedup_to_screening_queue_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "screening_decisions": {
+          "artifact": "ui_runtime/meta_screening_decisions_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "fulltext_registry": {
+          "artifact": "ui_runtime/meta_fulltext_registry_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "extraction_schema": {
+          "artifact": "ui_runtime/meta_extraction_schema_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "extraction_effect_rows": {
+          "artifact": "ui_runtime/meta_extraction_effect_rows_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "quality_assessment": {
+          "artifact": "ui_runtime/meta_quality_assessment_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "analysis_plan": {
+          "artifact": "ui_runtime/meta_analysis_plan_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "analysis_preflight": {
+          "artifact": "ui_runtime/meta_analysis_preflight_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "result_report_gate": {
+          "artifact": "ui_runtime/meta_result_report_gate.json",
+          "exists": true,
+          "service": "MetaAnalysisWorkspaceWidget.result_report_gate",
+          "success": null,
+          "disabled_reason": "Result review is testing-only until formal synthesis result, plots, and report-ready package are validated.",
+          "formal_action_enabled": false
+        },
+        "report_export_gate": {
+          "artifact": "ui_runtime/meta_report_export_gate.json",
+          "exists": true,
+          "service": "MetaAnalysisWorkspaceWidget.report_export_gate",
+          "success": null,
+          "disabled_reason": "Export buttons remain disabled until report-ready gate passes; this action only writes the gate audit artifact.",
+          "formal_action_enabled": false
+        }
+      },
+      "formal_statistics_enabled": false,
+      "formal_export_enabled": false,
+      "disabled_reason": "Formal statistics/report export remain gated until effect schema, analysis result schema, and report-ready package are validated."
+    },
+    "result_gate_exists": true,
+    "export_gate_exists": true
+  },
+  "bio": {
+    "GSE6004": {
+      "preview_status": "尚未添加",
+      "summary_status": "planned",
+      "metadata_success": true,
+      "readiness_status": "partially_ready"
+    },
+    "GSE153659": {
+      "preview_status": "尚未添加",
+      "summary_status": "planned",
+      "metadata_success": true,
+      "readiness_status": "partially_ready"
+    },
+    "local_sources": [
+      {
+        "source_type": "geo_accession",
+        "metadata_source": "geo"
+      },
+      {
+        "source_type": "geo_accession",
+        "metadata_source": "geo"
+      },
+      {
+        "source_type": "tcga_local_folder",
+        "metadata_source": "tcga"
+      },
+      {
+        "source_type": "geo_accession",
+        "metadata_source": "geo"
+      },
+      {
+        "source_type": "geo_accession",
+        "metadata_source": "geo"
+      },
+      {
+        "source_type": "gtex_local_folder",
+        "metadata_source": "gtex"
+      },
+      {
+        "source_type": "geo_accession",
+        "metadata_source": "geo"
+      }
+    ]
+  },
+  "settings": {
+    "manifest_exists": true,
+    "last_action": {
+      "action_type": "capability_overview_config",
+      "payload": {
+        "capability": "图像分析引擎",
+        "status_key": "available",
+        "config_panel": "overview_test_gate",
+        "automatic_install_or_update": false
+      },
+      "install_or_update_requires_user_click": true,
+      "automatic_install_or_update": false
+    }
+  },
+  "labtools": {
+    "profile_count": 3,
+    "passage_selector_count": 3,
+    "record_count": 1,
+    "record_profile_id": "cell_profile_b175ea293eaa4205846df7ce313f4bee"
+  }
+}

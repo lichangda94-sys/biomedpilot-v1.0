@@ -1,0 +1,622 @@
+{
+  "status": "passed",
+  "window_title": "BioMedPilot / 医研智析",
+  "window_visible": true,
+  "window_active": false,
+  "active_window_title": "",
+  "window_size": {
+    "width": 1120,
+    "height": 720
+  },
+  "macos_activation": {
+    "before_show": {
+      "attempted": true,
+      "available": true,
+      "success": false,
+      "reason": "appkit_activation_rejected; application_services_rejected:transform=-50;front=-13066"
+    },
+    "after_show": {
+      "attempted": true,
+      "available": true,
+      "success": false,
+      "reason": "appkit_activation_rejected; application_services_rejected:transform=-50;front=-13066"
+    }
+  },
+  "top_level_widgets": [
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QLabel",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QPushButton",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "MainWindow",
+      "title": "BioMedPilot / 医研智析",
+      "visible": true,
+      "width": 1120,
+      "height": 720
+    },
+    {
+      "type": "QComboBox",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QComboBox",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QComboBox",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QComboBox",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QComboBox",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QLabel",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QPushButton",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QLabel",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QComboBox",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QLabel",
+      "title": "",
+      "visible": false,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    },
+    {
+      "type": "QFrame",
+      "title": "",
+      "visible": false,
+      "width": 100,
+      "height": 30
+    }
+  ]
+}

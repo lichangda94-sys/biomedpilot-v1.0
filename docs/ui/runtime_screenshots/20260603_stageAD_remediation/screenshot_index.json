@@ -1,0 +1,8 @@
+{
+  "settings": "docs/ui/runtime_screenshots/20260603_stageAD_remediation/settings_general_artifact_ready.png",
+  "centers": "docs/ui/runtime_screenshots/20260603_stageAD_remediation/centers_project_open_recent.png",
+  "labtools_image": "docs/ui/runtime_screenshots/20260603_stageAD_remediation/labtools_image_action_manifest.png",
+  "bio_data_source": "docs/ui/runtime_screenshots/20260603_stageAD_remediation/bio_data_source_gse6004_ready.png",
+  "meta_import": "docs/ui/runtime_screenshots/20260603_stageAD_remediation/meta_pubmed_import_dedup_manifest.png",
+  "labtools_input_image": "docs/ui/runtime_screenshots/20260603_stageAD_remediation/scratch_input_pillow.png"
+}

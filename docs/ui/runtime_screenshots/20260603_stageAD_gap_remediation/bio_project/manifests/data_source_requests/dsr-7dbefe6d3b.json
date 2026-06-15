@@ -1,0 +1,26 @@
+{
+  "request_id": "dsr-7dbefe6d3b",
+  "source_type": "tcga",
+  "user_title": "TCGA 数据来源配置",
+  "user_selection_summary": "TCGA metadata preview 与下载计划入口；TCGA 与 GTEx 不自动合并。",
+  "internal_selection": {
+    "ui_page": "Data Source",
+    "source_key": "tcga",
+    "visual_baseline": "high-fidelity-mockup-sourced PySide gated UI shell",
+    "next_gate": "Data Check & Preparation"
+  },
+  "expected_assets": [
+    "gdc_metadata_preview",
+    "download_plan",
+    "expression_matrix",
+    "clinical_metadata"
+  ],
+  "actual_assets": [],
+  "status": "draft",
+  "warnings": [
+    "TCGA+GTEx 联合分析需要显式配置和批次校正。",
+    "此入口不直接进入 DEG/GSEA。"
+  ],
+  "created_at": "2026-06-03T09:32:32+00:00",
+  "updated_at": "2026-06-03T09:32:32+00:00"
+}

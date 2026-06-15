@@ -1,0 +1,212 @@
+{
+  "root": "/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6",
+  "meta": {
+    "project_root": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/meta/Live_Meta_Thyroid_Adiponectin",
+    "manifest_exists": true,
+    "manifest": {
+      "schema_version": "biomedpilot.meta_minimal_workflow_manifest.v1",
+      "updated_at": "2026-06-03T09:06:43.109192+00:00",
+      "trigger": "ui_runtime/meta_pubmed_handoff_adapter.json",
+      "project_dir": "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/meta/Live_Meta_Thyroid_Adiponectin",
+      "visual_baseline": "UIShell mature Meta 12-step gated page",
+      "testing_query_zh": "甲状腺癌与脂联素水平",
+      "workflow_status": "testing_minimal_online_path",
+      "completed_service_artifact_count": 3,
+      "service_artifacts": {
+        "pubmed_search": {
+          "artifact": "ui_runtime/meta_pubmed_search_adapter.json",
+          "exists": true,
+          "service": "PubMedSearchService.search_pubmed",
+          "success": true,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "pubmed_preview": {
+          "artifact": "ui_runtime/meta_pubmed_preview_adapter.json",
+          "exists": true,
+          "service": "PubMedCandidatesHandoffService.load_preview",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "literature_import": {
+          "artifact": "ui_runtime/meta_pubmed_handoff_adapter.json",
+          "exists": true,
+          "service": "PubMedCandidatesHandoffService.import_selected_candidates",
+          "success": true,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "dedup_review_queue": {
+          "artifact": "ui_runtime/meta_dedup_review_queue_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "deduplicated_set": {
+          "artifact": "ui_runtime/meta_deduplicated_set_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "screening_queue": {
+          "artifact": "ui_runtime/meta_dedup_to_screening_queue_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "screening_decisions": {
+          "artifact": "ui_runtime/meta_screening_decisions_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "fulltext_registry": {
+          "artifact": "ui_runtime/meta_fulltext_registry_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "extraction_schema": {
+          "artifact": "ui_runtime/meta_extraction_schema_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "extraction_effect_rows": {
+          "artifact": "ui_runtime/meta_extraction_effect_rows_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "quality_assessment": {
+          "artifact": "ui_runtime/meta_quality_assessment_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "analysis_plan": {
+          "artifact": "ui_runtime/meta_analysis_plan_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        },
+        "analysis_preflight": {
+          "artifact": "ui_runtime/meta_analysis_preflight_adapter.json",
+          "exists": false,
+          "service": "",
+          "success": null,
+          "disabled_reason": "",
+          "formal_action_enabled": false
+        }
+      },
+      "formal_statistics_enabled": false,
+      "formal_export_enabled": false,
+      "disabled_reason": "Formal statistics/report export remain gated until effect schema, analysis result schema, and report-ready package are validated."
+    }
+  },
+  "bio": {
+    "GSE6004": {
+      "preview_status": "尚未添加",
+      "summary_status": "planned",
+      "metadata_success": true,
+      "metadata_message": "GSE6004：元数据已下载 / 表达矩阵待下载 / 已发现补充文件 / 可进入识别",
+      "geo_manifest_exists": true,
+      "bridge_manifest_exists": true,
+      "bridge_manifest": {
+        "schema_version": "biomedpilot.bio_data_source_to_data_check_manifest.v1",
+        "updated_at": "2026-06-03T09:07:05.834838+00:00",
+        "trigger": "continue_to_recognition",
+        "visual_baseline": "UIShell mature Bio 7-step gated page",
+        "selected_source_count": 1,
+        "selected_file_count": 1,
+        "selected_sources": [
+          {
+            "key": "geo:GSE6004",
+            "name": "GSE6004",
+            "source_type": "geo_accession",
+            "source_files": [
+              "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/bio/raw_data/geo/GSE6004/GSE6004_family.soft.gz"
+            ],
+            "ready_for_recognition": true
+          }
+        ],
+        "selected_paths": [
+          "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/bio/raw_data/geo/GSE6004/GSE6004_family.soft.gz"
+        ],
+        "recognition_report_path": "logs/recognition/recognition_report.json",
+        "readiness_report_path": "logs/readiness/readiness_report.json",
+        "analysis_capability_matrix_path": "manifests/analysis_capability_matrix.json",
+        "recognition_file_count": 1,
+        "readiness_status": "partially_ready",
+        "formal_analysis_enabled": false,
+        "disabled_reason": ""
+      }
+    },
+    "GSE153659": {
+      "preview_status": "尚未添加",
+      "summary_status": "planned",
+      "metadata_success": true,
+      "metadata_message": "GSE153659：元数据已下载 / 表达矩阵待下载 / 已发现补充文件 / 可进入识别",
+      "geo_manifest_exists": true,
+      "bridge_manifest_exists": true,
+      "bridge_manifest": {
+        "schema_version": "biomedpilot.bio_data_source_to_data_check_manifest.v1",
+        "updated_at": "2026-06-03T09:07:14.770325+00:00",
+        "trigger": "continue_to_recognition",
+        "visual_baseline": "UIShell mature Bio 7-step gated page",
+        "selected_source_count": 2,
+        "selected_file_count": 2,
+        "selected_sources": [
+          {
+            "key": "geo:GSE153659",
+            "name": "GSE153659",
+            "source_type": "geo_accession",
+            "source_files": [
+              "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/bio/raw_data/geo/GSE153659/GSE153659_family.soft.gz"
+            ],
+            "ready_for_recognition": true
+          },
+          {
+            "key": "geo:GSE6004",
+            "name": "GSE6004",
+            "source_type": "geo_accession",
+            "source_files": [
+              "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/bio/raw_data/geo/GSE6004/GSE6004_family.soft.gz"
+            ],
+            "ready_for_recognition": true
+          }
+        ],
+        "selected_paths": [
+          "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/bio/raw_data/geo/GSE153659/GSE153659_family.soft.gz",
+          "/private/var/folders/15/q7k4g18j2d5fx429w97f2b5c0000gn/T/biomedpilot_stage_ad_live_95y8ose6/bio/raw_data/geo/GSE6004/GSE6004_family.soft.gz"
+        ],
+        "recognition_report_path": "logs/recognition/recognition_report.json",
+        "readiness_report_path": "logs/readiness/readiness_report.json",
+        "analysis_capability_matrix_path": "manifests/analysis_capability_matrix.json",
+        "recognition_file_count": 2,
+        "readiness_status": "partially_ready",
+        "formal_analysis_enabled": false,
+        "disabled_reason": ""
+      }
+    }
+  }
+}
