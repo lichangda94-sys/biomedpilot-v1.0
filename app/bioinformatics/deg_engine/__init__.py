@@ -56,11 +56,13 @@ from .r_edger_planning import (
 from .r_edger_runtime import detect_r_edger_runtime_capabilities, run_r_edger_rscript_execution
 from .r_edger_runtime_validation import run_r_edger_runtime_validation
 from .formal_runner import run_formal_controlled_deg
+from .input_adaptation import build_deg_input_adaptation_gate
 from .python_backend import run_controlled_deg
 from .result_schema import build_formal_deg_result_schema_gate, validate_deg_result_bundle, validate_deg_result_entry, validate_formal_deg_result_index_entry
 
 __all__ = [
     "build_deg_parameter_manifest",
+    "build_deg_input_adaptation_gate",
     "build_formal_deg_result_schema_gate",
     "build_multifactor_deg_preflight_manifest",
     "build_r_deg_adapter_contract",

@@ -1,0 +1,107 @@
+{
+  "blockers": [],
+  "capabilities": {
+    "enrichment_plot_barplot": true,
+    "enrichment_plot_dotplot": true,
+    "gsea_plot_curve": true,
+    "gsea_preranked_clusterprofiler": true,
+    "gsea_preranked_fgsea": true,
+    "ora_enricher": true,
+    "ora_go": true,
+    "ora_kegg": true,
+    "ora_reactome": true
+  },
+  "created_at": "2026-05-29T01:16:27+00:00",
+  "install_action": "none_detect_first_only",
+  "optional_packages": {
+    "GO.db": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "3.20.0"
+    },
+    "KEGGREST": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "1.46.0"
+    },
+    "pathview": {
+      "available": false,
+      "importable": false,
+      "missing_reason": "package_not_installed_or_not_on_libpaths:pathview",
+      "version": ""
+    }
+  },
+  "packages": {
+    "AnnotationDbi": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "1.68.0"
+    },
+    "DOSE": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "4.0.1"
+    },
+    "ReactomePA": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "1.50.0"
+    },
+    "clusterProfiler": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "4.14.6"
+    },
+    "enrichplot": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "1.26.6"
+    },
+    "fgsea": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "1.32.4"
+    },
+    "ggplot2": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "3.5.2"
+    },
+    "msigdbr": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "26.1.0"
+    },
+    "org.Hs.eg.db": {
+      "available": true,
+      "importable": true,
+      "missing_reason": "",
+      "version": "3.20.0"
+    }
+  },
+  "packaging_policy": "external_runtime_not_bundled",
+  "rscript": {
+    "architecture": "arm64",
+    "available": true,
+    "library_paths": [
+      "/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library"
+    ],
+    "path": "/usr/local/bin/Rscript",
+    "version": "R version 4.4.2 (2024-10-31)"
+  },
+  "schema_version": "biomedpilot.external_enrichment_r_backend_detection.v1",
+  "status": "passed",
+  "warnings": [
+    "optional_r_package_missing:pathview:package_not_installed_or_not_on_libpaths:pathview"
+  ]
+}

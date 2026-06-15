@@ -78,6 +78,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
     assert "B9.2 controlled activation" in formal_gate_text
+    assert "DEG real-project input adaptation" in formal_gate_text
     assert "Multi-factor DEG preflight" in formal_gate_text
     assert "multi_factor_design_config_missing" in formal_gate_text
     assert "R adapter contract: limma" in formal_gate_text
