@@ -20,19 +20,29 @@ def step_by_id(project_dir: Path) -> dict[str, object]:
     return {step.step_id: step for step in state.steps}
 
 
-def test_meta_workflow_integration_state_has_eight_chinese_stages(tmp_path: Path) -> None:
+def test_meta_workflow_integration_state_has_preview_chinese_stages(tmp_path: Path) -> None:
     state = meta_workflow_integration_state_from_project(tmp_path)
 
-    assert state.step_count == 8
+    assert state.step_count == 18
     assert [step.title_zh for step in state.steps] == [
         "项目首页",
+        "页面能力审计",
         "研究问题与 PICO",
         "检索策略",
         "文献库与导入",
         "去重与筛选",
-        "数据提取与质量评价",
+        "排除标准",
+        "标题摘要筛选",
+        "全文管理",
+        "数据提取",
+        "AI 辅助提取",
+        "质量评价",
+        "分析计划",
         "统计分析",
+        "图表结果",
+        "PRISMA",
         "报告导出",
+        "复现包",
     ]
     for step in state.steps:
         assert step.status
@@ -108,12 +118,12 @@ def test_literature_pubmed_dedup_extraction_quality_and_analysis_plan_summaries(
     assert "selected=1" in steps["literature_import"].artifact_summary
     assert "records=1" in steps["literature_import"].artifact_summary
     assert "duplicate_groups=1" in steps["screening"].artifact_summary
-    assert "fulltext_records=1" in steps["screening"].artifact_summary
-    assert "effect_rows=1" in steps["extraction_quality"].artifact_summary
-    assert steps["extraction_quality"].warning_count >= 1
-    assert "suggestions=1" in steps["extraction_quality"].artifact_summary
-    assert "completed=1" in steps["extraction_quality"].artifact_summary
-    assert "confirmed=True" in steps["analysis_results"].artifact_summary
+    assert "fulltext_records=1" in steps["fulltext_management"].artifact_summary
+    assert "effect_rows=1" in steps["manual_extraction"].artifact_summary
+    assert steps["manual_extraction"].warning_count >= 1
+    assert "suggestions=1" in steps["ai_extraction"].artifact_summary
+    assert "completed=1" in steps["quality_assessment"].artifact_summary
+    assert "confirmed=True" in steps["analysis_plan"].artifact_summary
 
 
 def test_placeholder_pages_do_not_generate_statistics_figures_reports_or_prisma(tmp_path: Path) -> None:
@@ -122,11 +132,12 @@ def test_placeholder_pages_do_not_generate_statistics_figures_reports_or_prisma(
 
     steps = step_by_id(tmp_path)
 
-    assert steps["analysis_results"].safety_flags["runs_statistics"] is False
-    assert steps["analysis_results"].status == "有警告"
-    assert "不自动运行统计" in steps["analysis_results"].artifact_summary
-    assert steps["prisma_reporting"].placeholder is True
-    assert steps["prisma_reporting"].safety_flags["advances_prisma"] is False
+    assert steps["statistics_analysis"].safety_flags["runs_statistics"] is False
+    assert steps["statistics_analysis"].status == "待确认"
+    assert "result_files=0" in steps["statistics_analysis"].artifact_summary
+    assert steps["prisma"].placeholder is False
+    assert steps["prisma"].status == "未开始"
+    assert steps["prisma"].safety_flags["advances_prisma"] is False
     assert not (tmp_path / "analysis" / "runs").exists()
     assert not (tmp_path / "analysis" / "results").exists()
     assert not (tmp_path / "figures").exists()

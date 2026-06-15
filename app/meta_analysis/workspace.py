@@ -290,7 +290,17 @@ def _workflow_stage_zh(stage: str) -> str:
         "search_strategy": "检索策略",
         "literature_import": "文献库与导入",
         "screening": "去重与筛选",
-        "extraction_quality": "数据提取与质量评价",
+        "fulltext_management": "全文管理",
+        "manual_extraction": "数据提取",
+        "extraction_quality": "数据提取",
+        "ai_extraction": "AI 辅助提取",
+        "quality_assessment": "质量评价",
+        "analysis_plan": "分析计划",
+        "statistics_analysis": "统计分析",
+        "figure_results": "图表结果",
+        "prisma": "PRISMA",
+        "report_export": "报告导出",
+        "reproducibility_package": "复现包",
         "analysis_results": "统计分析",
         "prisma_reporting": "报告导出",
     }.get(stage, "项目首页")
@@ -319,8 +329,9 @@ def _nav_stage_label(title: str) -> str:
         "文献库与导入": "文献库与导入",
         "文献筛选": "去重与筛选",
         "去重与筛选": "去重与筛选",
-        "提取与质量评价": "数据提取与质量评价",
-        "数据提取与质量评价": "数据提取与质量评价",
+        "提取与质量评价": "数据提取",
+        "数据提取与质量评价": "数据提取",
+        "数据提取": "数据提取",
         "统计分析": "统计分析",
         "报告导出": "报告导出",
     }.get(title, title)
@@ -667,10 +678,14 @@ if QWidget is not None:
             if self._current_project_dir is None:
                 if step.route_key == "workflow_home":
                     return self._meta_project_home_page(state)
+                if step.route_key == "page_button_audit":
+                    return _page_button_audit_page(None, on_next=lambda: self.show_step("pico_workspace"), on_route=self.show_step)
                 return _no_project_page(step)
             project_dir = self._current_project_dir
             if step.route_key == "workflow_home":
                 return _project_home_page(state, project_dir, self._current_meta_project, on_go_pico=lambda: self.show_step("pico_workspace"))
+            if step.route_key == "page_button_audit":
+                return _page_button_audit_page(project_dir, on_next=lambda: self.show_step("pico_workspace"), on_route=self.show_step)
             if step.route_key == "pico_workspace":
                 return _pico_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("search_strategy"))
             if step.route_key == "search_strategy":
@@ -678,13 +693,31 @@ if QWidget is not None:
             if step.route_key == "literature_import":
                 return _literature_acquisition_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("screening_review"))
             if step.route_key == "screening_review":
-                return _dedup_review_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("manual_extraction"))
+                return _dedup_review_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("exclusion_criteria"))
+            if step.route_key == "exclusion_criteria":
+                return _exclusion_criteria_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("title_abstract_screening"))
+            if step.route_key == "title_abstract_screening":
+                return _title_abstract_screening_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("fulltext_management"))
+            if step.route_key == "fulltext_management":
+                return _fulltext_management_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("manual_extraction"))
             if step.route_key == "manual_extraction":
-                return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
+                return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("ai_extraction"))
+            if step.route_key == "ai_extraction":
+                return _ai_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("quality_assessment"))
+            if step.route_key == "quality_assessment":
+                return _quality_assessment_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("analysis_plan"))
+            if step.route_key == "analysis_plan":
+                return _analysis_plan_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
             if step.route_key == "statistics_analysis":
-                return _analysis_plan_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
+                return _statistics_analysis_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("figure_results"))
+            if step.route_key == "figure_results":
+                return _figure_results_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("prisma"))
+            if step.route_key == "prisma":
+                return _prisma_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
             if step.route_key == "report_export":
-                return _report_export_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("workflow_home"))
+                return _report_export_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("reproducibility_package"))
+            if step.route_key == "reproducibility_package":
+                return _reproducibility_package_page(project_dir, on_refresh=self._rebuild_pages)
             return _placeholder_step_page(step)
 
         def _meta_project_home_page(self, state) -> QFrame:
@@ -809,6 +842,2028 @@ if QWidget is not None:
         layout.addWidget(button)
         layout.addStretch(1)
         return frame
+
+
+    def _page_button_audit_page(project_dir: Path | None, *, on_next: Callable[[], None], on_route: Callable[[str], None]) -> QFrame:
+        rows = _button_audit_rows()
+        frame = QFrame()
+        frame.setObjectName("metaPageButtonAuditPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(
+            _page_header(
+                "页面能力审计",
+                "逐页列出 preview Meta 模块当前可见按钮、模块、接入服务、跳转目标和边界。",
+                "只读审计",
+            )
+        )
+        layout.addWidget(
+            _info_card(
+                "审计范围",
+                [
+                    f"已记录页面/按钮/模块项：{len(rows)}",
+                    "范围限定为 active runtime，不包含 legacy 快照。",
+                    "本页不运行检索、统计、OCR、报告导出或任何项目写入。",
+                    "生产级能力仍需样例 walkthrough、统一测试、统计专家复核和打包验证后才能声明完成。",
+                ],
+                object_name="metaButtonAuditSummary",
+            )
+        )
+        table = QTableWidget()
+        table.setObjectName("metaPageButtonAuditTable")
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["页面", "按钮 / 模块", "接入功能或指向", "边界"])
+        table.setRowCount(len(rows))
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setAlternatingRowColors(True)
+        for row, values in enumerate(rows):
+            for col, value in enumerate(values):
+                table.setItem(row, col, QTableWidgetItem(value))
+        layout.addWidget(table, 1)
+        actions = QHBoxLayout()
+        export_button = QPushButton("导出审计记录 JSON")
+        export_button.setObjectName("metaSecondaryButton")
+        export_csv_button = QPushButton("导出审计表 CSV")
+        export_csv_button.setObjectName("metaSecondaryButton")
+        export_capability_manifest_button = QPushButton("导出能力总清单")
+        export_capability_manifest_button.setObjectName("metaSecondaryButton")
+        export_package_button = QPushButton("导出页面审计包")
+        export_package_button.setObjectName("metaSecondaryButton")
+        export_delivery_package_button = QPushButton("导出完整交付包")
+        export_delivery_package_button.setObjectName("metaPrimaryButton")
+        export_integrity_manifest_button = QPushButton("导出交付校验清单")
+        export_integrity_manifest_button.setObjectName("metaSecondaryButton")
+        go_selected_button = QPushButton("跳转到选中页面")
+        go_selected_button.setObjectName("metaSecondaryButton")
+        next_button = QPushButton("继续：研究问题 / PICO")
+        next_button.setObjectName("metaPrimaryButton")
+        next_button.setEnabled(project_dir is not None)
+        actions.addWidget(export_button)
+        actions.addWidget(export_csv_button)
+        actions.addWidget(export_capability_manifest_button)
+        actions.addWidget(export_package_button)
+        actions.addWidget(export_delivery_package_button)
+        actions.addWidget(export_integrity_manifest_button)
+        actions.addWidget(go_selected_button)
+        next_button.clicked.connect(on_next)
+        actions.addWidget(next_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        docs_path = Path(__file__).resolve().parents[2] / "docs" / "meta_preview_page_button_audit_2026-06-11.md"
+        scope = str(project_dir) if project_dir is not None else "未选择项目；显示全局 preview 页面能力审计"
+        layout.addWidget(_developer_details(f"project_dir={scope}\naudit_doc={docs_path}"))
+
+        def do_export_audit() -> None:
+            export_root = (project_dir / "audit") if project_dir is not None else (default_storage_root() / "meta_analysis" / "audit")
+            export_root.mkdir(parents=True, exist_ok=True)
+            export_path = export_root / "meta_page_button_audit_runtime.json"
+            payload = _page_button_audit_payload(project_dir, rows, docs_path)
+            export_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            _show_message(f"已导出页面能力审计：{export_path}")
+
+        def do_export_audit_csv() -> None:
+            path = _write_page_button_audit_csv(project_dir, rows)
+            _show_message(f"已导出页面能力审计 CSV：{path.name}")
+
+        def do_export_capability_manifest() -> None:
+            path = _write_meta_workflow_capability_manifest(project_dir, rows)
+            _show_message(f"已导出工作流能力总清单：{path.name}")
+
+        def do_export_audit_package() -> None:
+            path = _write_page_button_audit_package(project_dir, rows, docs_path)
+            _show_message(f"已导出页面审计包：{path.name}")
+
+        def do_export_delivery_package() -> None:
+            path = _write_meta_preview_delivery_package(project_dir, rows, docs_path)
+            _show_message(f"已导出完整交付包：{path.name}")
+
+        def do_export_integrity_manifest() -> None:
+            path = _write_meta_preview_integrity_manifest(project_dir, rows, docs_path)
+            _show_message(f"已导出交付校验清单：{path.name}")
+
+        def do_go_selected_page() -> None:
+            selected_row = table.currentRow()
+            if selected_row < 0:
+                _show_message("请先选择一行审计记录。")
+                return
+            page_item = table.item(selected_row, 0)
+            page_name = page_item.text() if page_item is not None else ""
+            route = _audit_page_route(page_name)
+            if not route:
+                _show_message(f"暂无可跳转页面：{page_name}")
+                return
+            on_route(route)
+
+        export_button.clicked.connect(do_export_audit)
+        export_csv_button.clicked.connect(do_export_audit_csv)
+        export_capability_manifest_button.clicked.connect(do_export_capability_manifest)
+        export_package_button.clicked.connect(do_export_audit_package)
+        export_delivery_package_button.clicked.connect(do_export_delivery_package)
+        export_integrity_manifest_button.clicked.connect(do_export_integrity_manifest)
+        go_selected_button.clicked.connect(do_go_selected_page)
+        return frame
+
+
+    def _page_button_audit_payload(project_dir: Path | None, rows: list[tuple[str, str, str, str]], docs_path: Path) -> dict[str, object]:
+        return {
+            "schema_version": "meta_page_button_audit.runtime.v1",
+            "scope": "active_runtime_preview",
+            "audit_scope": "page_button_and_module",
+            "project_dir": str(project_dir or ""),
+            "source_doc": str(docs_path),
+            "row_count": len(rows),
+            "rows": [
+                {
+                    "page": page,
+                    "button_or_module": button,
+                    "function_or_route": target,
+                    "boundary": boundary,
+                }
+                for page, button, target, boundary in rows
+            ],
+        }
+
+
+    def _write_page_button_audit_csv(project_dir: Path | None, rows: list[tuple[str, str, str, str]]) -> Path:
+        import csv
+
+        export_root = (project_dir / "audit") if project_dir is not None else (default_storage_root() / "meta_analysis" / "audit")
+        export_root.mkdir(parents=True, exist_ok=True)
+        output_path = export_root / "meta_page_button_audit_runtime.csv"
+        with output_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["page", "button_or_module", "function_or_route", "boundary", "route_key"])
+            for page, button, target, boundary in rows:
+                writer.writerow([page, button, target, boundary, _audit_page_route(page)])
+        return output_path
+
+
+    def _write_meta_workflow_capability_manifest(project_dir: Path | None, rows: list[tuple[str, str, str, str]]) -> Path:
+        export_root = (project_dir / "audit") if project_dir is not None else (default_storage_root() / "meta_analysis" / "audit")
+        export_root.mkdir(parents=True, exist_ok=True)
+        output_path = export_root / "meta_workflow_capability_manifest.json"
+        route_counts: dict[str, int] = {}
+        page_counts: dict[str, int] = {}
+        for page, _button, _target, _boundary in rows:
+            route = _audit_page_route(page)
+            page_counts[page] = page_counts.get(page, 0) + 1
+            if route:
+                route_counts[route] = route_counts.get(route, 0) + 1
+        workflow_artifacts = (
+            "protocol/search_strategy_v2/search_execution_manifest.json",
+            "literature/literature_acquisition_organization_manifest.json",
+            "literature/literature_citation_manifest.json",
+            "literature/literature_library_export.ris",
+            "literature/literature_library_export.bib",
+            "literature/literature_library_export.csl.json",
+            "literature/literature_register.csv",
+            "exports/literature_organization_package.zip",
+            "screening/screening_organization_manifest.json",
+            "screening/title_abstract_screening_decisions.csv",
+            "fulltext/fulltext_retrieval_manifest.json",
+            "fulltext/fulltext_retrieval_register.csv",
+            "exports/fulltext_retrieval_package.zip",
+            "extraction/extraction_organization_manifest.json",
+            "exports/extraction_organization_package.zip",
+            "quality/quality_organization_manifest.json",
+            "exports/quality_assessment_package.zip",
+            "analysis/statistics_results_manifest.json",
+            "exports/statistics_results_package.zip",
+            "figures/figure_results_manifest.json",
+            "exports/figure_results_package.zip",
+            "reports/prisma_reporting_manifest.json",
+            "exports/prisma_reporting_package.zip",
+            "reports/formal_report_delivery_manifest.json",
+            "exports/formal_report_package.zip",
+        )
+        audit_artifacts = (
+            "audit/meta_page_button_audit_runtime.json",
+            "audit/meta_page_button_audit_runtime.csv",
+            "audit/meta_page_button_audit_package.zip",
+            "audit/meta_workflow_capability_manifest.json",
+        )
+        def artifact_rows(relative_paths: tuple[str, ...]) -> list[dict[str, object]]:
+            rows_out: list[dict[str, object]] = []
+            for rel in relative_paths:
+                exists = bool(project_dir and (project_dir / rel).exists())
+                rows_out.append({"path": rel, "exists": exists})
+            return rows_out
+
+        payload = {
+            "schema_version": "meta_workflow_capability_manifest.v1",
+            "project_dir": str(project_dir or ""),
+            "page_count": len(page_counts),
+            "button_or_module_count": len(rows),
+            "route_count": len(route_counts),
+            "route_counts": route_counts,
+            "page_counts": page_counts,
+            "workflow_capability_artifacts": artifact_rows(workflow_artifacts),
+            "literature_capability_artifacts": artifact_rows(workflow_artifacts),
+            "audit_artifacts": artifact_rows(audit_artifacts),
+            "boundaries": [
+                "This manifest summarizes UI route/button/module coverage and local artifact presence only.",
+                "It does not execute retrieval, import, deduplication, screening, full-text parsing, statistics, or reporting.",
+                "A runtime walkthrough is still required before claiming complete production readiness.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_page_button_audit_package(project_dir: Path | None, rows: list[tuple[str, str, str, str]], docs_path: Path) -> Path:
+        import zipfile
+
+        export_root = (project_dir / "audit") if project_dir is not None else (default_storage_root() / "meta_analysis" / "audit")
+        export_root.mkdir(parents=True, exist_ok=True)
+        runtime_json = export_root / "meta_page_button_audit_runtime.json"
+        runtime_json.write_text(json.dumps(_page_button_audit_payload(project_dir, rows, docs_path), ensure_ascii=False, indent=2), encoding="utf-8")
+        runtime_csv = _write_page_button_audit_csv(project_dir, rows)
+        capability_manifest = _write_meta_workflow_capability_manifest(project_dir, rows)
+        output_path = export_root / "meta_page_button_audit_package.zip"
+        candidate_paths = [runtime_json, runtime_csv, capability_manifest, docs_path]
+        if project_dir is not None:
+            candidate_paths.extend(
+                [
+                    project_dir / "protocol" / "search_strategy_v2" / "search_execution_manifest.json",
+                    project_dir / "literature" / "literature_acquisition_organization_manifest.json",
+                    project_dir / "literature" / "literature_citation_manifest.json",
+                    project_dir / "literature" / "literature_library_export.ris",
+                    project_dir / "literature" / "literature_library_export.bib",
+                    project_dir / "literature" / "literature_library_export.csl.json",
+                    project_dir / "literature" / "literature_register.csv",
+                    project_dir / "screening" / "screening_organization_manifest.json",
+                    project_dir / "screening" / "title_abstract_screening_decisions.csv",
+                    project_dir / "fulltext" / "fulltext_retrieval_manifest.json",
+                    project_dir / "fulltext" / "fulltext_retrieval_register.csv",
+                    project_dir / "exports" / "fulltext_retrieval_package.zip",
+                    project_dir / "extraction" / "extraction_organization_manifest.json",
+                    project_dir / "exports" / "extraction_organization_package.zip",
+                    project_dir / "quality" / "quality_organization_manifest.json",
+                    project_dir / "exports" / "quality_assessment_package.zip",
+                    project_dir / "analysis" / "statistics_results_manifest.json",
+                    project_dir / "exports" / "statistics_results_package.zip",
+                    project_dir / "figures" / "figure_results_manifest.json",
+                    project_dir / "exports" / "figure_results_package.zip",
+                    project_dir / "reports" / "prisma_reporting_manifest.json",
+                    project_dir / "exports" / "prisma_reporting_package.zip",
+                    project_dir / "reports" / "formal_report_delivery_manifest.json",
+                    project_dir / "exports" / "formal_report_package.zip",
+                    project_dir / "exports" / "literature_organization_package.zip",
+                ]
+            )
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                if project_dir is not None:
+                    try:
+                        archive_name = str(path.relative_to(project_dir))
+                    except ValueError:
+                        archive_name = f"docs/{path.name}" if path == docs_path else path.name
+                else:
+                    archive_name = f"docs/{path.name}" if path == docs_path else path.name
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "meta_page_button_audit_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_page_button_audit_package.v1",
+                        "project_dir": str(project_dir or ""),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains UI button/module audit and existing local workflow organization artifacts only.",
+                            "It does not run retrieval, screening, full-text parsing, statistics, or report generation.",
+                            "Runtime validation and desktop walkthrough are still required before completion can be claimed.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_meta_preview_delivery_package(project_dir: Path | None, rows: list[tuple[str, str, str, str]], docs_path: Path) -> Path:
+        import zipfile
+
+        export_root = (project_dir / "audit") if project_dir is not None else (default_storage_root() / "meta_analysis" / "audit")
+        export_root.mkdir(parents=True, exist_ok=True)
+        generated_paths = [
+            _write_page_button_audit_csv(project_dir, rows),
+            _write_meta_workflow_capability_manifest(project_dir, rows),
+            _write_page_button_audit_package(project_dir, rows, docs_path),
+        ]
+        if project_dir is not None:
+            generated_paths.extend(
+                [
+                    _write_search_execution_manifest(project_dir),
+                    _write_search_strategy_package(project_dir),
+                    _write_literature_capability_artifact_index(project_dir),
+                    _write_literature_organization_package(project_dir),
+                    _write_fulltext_retrieval_package(project_dir),
+                    _write_extraction_organization_package(project_dir),
+                    _write_quality_assessment_package(project_dir),
+                    _write_statistics_results_package(project_dir),
+                    _write_figure_results_package(project_dir),
+                    _write_prisma_reporting_package(project_dir),
+                    _write_formal_report_package(project_dir),
+                ]
+            )
+        generated_paths.append(_write_meta_preview_integrity_manifest(project_dir, rows, docs_path))
+        candidate_paths = [docs_path, *generated_paths]
+        if project_dir is not None:
+            candidate_paths.extend(
+                [
+                    project_dir / "protocol" / "search_strategy_v2" / "search_strategy_drafts.json",
+                    project_dir / "protocol" / "search_strategy_v2" / "search_strategy_confirmed.json",
+                    project_dir / "protocol" / "search_strategy_v2" / "search_strategy_draft.md",
+                    project_dir / "protocol" / "search_strategy_v2" / "search_strategy_draft.txt",
+                    project_dir / "literature" / "literature_records.json",
+                    project_dir / "literature" / "import_batches.json",
+                    project_dir / "literature" / "library_manifest.json",
+                    project_dir / "screening" / "screening_organization_manifest.json",
+                    project_dir / "screening" / "title_abstract_screening_decisions.csv",
+                    project_dir / "fulltext" / "fulltext_retrieval_manifest.json",
+                    project_dir / "fulltext" / "fulltext_retrieval_register.csv",
+                    project_dir / "exports" / "fulltext_retrieval_package.zip",
+                    project_dir / "extraction" / "extraction_organization_manifest.json",
+                    project_dir / "exports" / "extraction_organization_package.zip",
+                    project_dir / "quality" / "quality_organization_manifest.json",
+                    project_dir / "exports" / "quality_assessment_package.zip",
+                    project_dir / "analysis" / "statistics_results_manifest.json",
+                    project_dir / "exports" / "statistics_results_package.zip",
+                    project_dir / "figures" / "figure_results_manifest.json",
+                    project_dir / "exports" / "figure_results_package.zip",
+                    project_dir / "reports" / "prisma_reporting_manifest.json",
+                    project_dir / "exports" / "prisma_reporting_package.zip",
+                    project_dir / "reports" / "formal_report_delivery_manifest.json",
+                    project_dir / "exports" / "formal_report_package.zip",
+                ]
+            )
+        output_path = export_root / "meta_preview_delivery_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                if project_dir is not None:
+                    try:
+                        archive_name = str(path.relative_to(project_dir))
+                    except ValueError:
+                        archive_name = f"docs/{path.name}" if path == docs_path else path.name
+                else:
+                    archive_name = f"docs/{path.name}" if path == docs_path else path.name
+                if archive_name in included or archive_name == "audit/meta_preview_delivery_package.zip":
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "meta_preview_delivery_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_preview_delivery_package.v1",
+                        "project_dir": str(project_dir or ""),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package is a local audit and literature/search organization handoff.",
+                            "It does not execute external database retrieval, import new literature, make reviewer decisions, parse full text, run statistics, or generate final reports.",
+                            "Desktop walkthrough, syntax checks, tests, and real project validation remain required before completion can be claimed.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_meta_preview_integrity_manifest(project_dir: Path | None, rows: list[tuple[str, str, str, str]], docs_path: Path) -> Path:
+        import hashlib
+
+        export_root = (project_dir / "audit") if project_dir is not None else (default_storage_root() / "meta_analysis" / "audit")
+        export_root.mkdir(parents=True, exist_ok=True)
+        expected_paths = [docs_path]
+        if project_dir is not None:
+            expected_paths.extend(
+                [
+                    project_dir / "audit" / "meta_page_button_audit_runtime.json",
+                    project_dir / "audit" / "meta_page_button_audit_runtime.csv",
+                    project_dir / "audit" / "meta_workflow_capability_manifest.json",
+                    project_dir / "audit" / "meta_page_button_audit_package.zip",
+                    project_dir / "audit" / "meta_preview_delivery_package.zip",
+                    project_dir / "protocol" / "search_strategy_v2" / "search_execution_manifest.json",
+                    project_dir / "exports" / "search_strategy_package.zip",
+                    project_dir / "literature" / "literature_acquisition_organization_manifest.json",
+                    project_dir / "literature" / "literature_citation_manifest.json",
+                    project_dir / "literature" / "literature_library_export.ris",
+                    project_dir / "literature" / "literature_library_export.bib",
+                    project_dir / "literature" / "literature_library_export.csl.json",
+                    project_dir / "literature" / "literature_register.csv",
+                    project_dir / "literature" / "literature_capability_artifact_index.json",
+                    project_dir / "exports" / "literature_organization_package.zip",
+                    project_dir / "screening" / "screening_organization_manifest.json",
+                    project_dir / "screening" / "title_abstract_screening_decisions.csv",
+                    project_dir / "fulltext" / "fulltext_retrieval_manifest.json",
+                    project_dir / "fulltext" / "fulltext_retrieval_register.csv",
+                    project_dir / "exports" / "fulltext_retrieval_package.zip",
+                    project_dir / "extraction" / "extraction_organization_manifest.json",
+                    project_dir / "exports" / "extraction_organization_package.zip",
+                    project_dir / "quality" / "quality_organization_manifest.json",
+                    project_dir / "exports" / "quality_assessment_package.zip",
+                    project_dir / "analysis" / "statistics_results_manifest.json",
+                    project_dir / "exports" / "statistics_results_package.zip",
+                    project_dir / "figures" / "figure_results_manifest.json",
+                    project_dir / "exports" / "figure_results_package.zip",
+                    project_dir / "reports" / "prisma_reporting_manifest.json",
+                    project_dir / "exports" / "prisma_reporting_package.zip",
+                    project_dir / "reports" / "formal_report_delivery_manifest.json",
+                    project_dir / "exports" / "formal_report_package.zip",
+                ]
+            )
+        entries: list[dict[str, object]] = []
+        for path in expected_paths:
+            exists = path.exists() and path.is_file()
+            digest = ""
+            size = 0
+            if exists:
+                data = path.read_bytes()
+                digest = hashlib.sha256(data).hexdigest()
+                size = len(data)
+            if project_dir is not None:
+                try:
+                    label = str(path.relative_to(project_dir))
+                except ValueError:
+                    label = f"docs/{path.name}" if path == docs_path else str(path)
+            else:
+                label = f"docs/{path.name}" if path == docs_path else path.name
+            entries.append({"path": label, "exists": exists, "size_bytes": size, "sha256": digest})
+        output_path = export_root / "meta_preview_integrity_manifest.json"
+        payload = {
+            "schema_version": "meta_preview_integrity_manifest.v1",
+            "project_dir": str(project_dir or ""),
+            "button_or_module_count": len(rows),
+            "checked_count": len(entries),
+            "present_count": len([item for item in entries if item["exists"]]),
+            "missing_count": len([item for item in entries if not item["exists"]]),
+            "artifacts": entries,
+            "boundaries": [
+                "This manifest provides local file presence and SHA-256 hashes only.",
+                "It does not validate runtime behavior, scientific correctness, database access, or production readiness.",
+                "Missing artifacts can be generated from their corresponding UI buttons when project prerequisites exist.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _audit_page_route(page_name: str) -> str:
+        return {
+            "项目首页": "workflow_home",
+            "页面能力审计": "page_button_audit",
+            "研究问题与 PICO": "pico_workspace",
+            "检索策略": "search_strategy",
+            "文献库与导入": "literature_import",
+            "去重与筛选": "screening_review",
+            "排除标准": "exclusion_criteria",
+            "标题摘要筛选": "title_abstract_screening",
+            "全文管理": "fulltext_management",
+            "数据提取": "manual_extraction",
+            "AI 辅助提取": "ai_extraction",
+            "质量评价": "quality_assessment",
+            "分析计划": "analysis_plan",
+            "统计分析": "statistics_analysis",
+            "图表结果": "figure_results",
+            "PRISMA": "prisma",
+            "报告导出": "report_export",
+            "复现包": "reproducibility_package",
+        }.get(page_name, "")
+
+
+    def _button_audit_rows() -> list[tuple[str, str, str, str]]:
+        return [
+            ("项目首页", "新建 / 打开项目", "创建或校验 Meta 项目 manifest、config、目录结构", "本地项目管理，不联网"),
+            ("项目首页", "新建 Meta 项目", "切换到 workflow_home，显示项目创建表单", "仅导航到本地项目管理界面"),
+            ("项目首页", "打开已有项目", "打开本地目录选择器并校验 Meta 项目 manifest/config", "只读取本地项目目录"),
+            ("项目首页", "选择保存位置", "打开本地目录选择器，填充项目保存位置", "不创建项目"),
+            ("项目首页", "创建项目", "调用 create_meta_analysis_project 创建项目目录、manifest、config 和基础结构", "本地写入，不联网"),
+            ("项目首页", "选择已有项目文件夹", "打开本地目录选择器并调用 open_meta_analysis_project 校验项目", "只打开本地已有项目"),
+            ("项目首页", "返回首页 / 返回模块首页", "返回 Meta 模块首页或上一级入口", "仅导航"),
+            ("项目首页", "继续：研究问题 / PICO", "跳转 pico_workspace", "仅导航"),
+            ("项目首页", "模块：项目管理表单", "接入项目名称、研究主题、保存位置、最终项目路径预览和本地项目打开/创建流程", "只管理本地项目目录"),
+            ("项目首页", "模块：流程进度摘要", "读取 workflow integration state，展示各页面 artifact 数量、状态和下一步", "只读展示，不推进流程"),
+            ("无项目空状态", "继续：研究问题 / PICO（禁用）", "项目未创建/打开前保持 disabled，引导用户先完成项目管理", "禁用按钮不执行业务动作"),
+            ("页面能力审计", "导出审计表 CSV", "写入 audit/meta_page_button_audit_runtime.csv，包含页面、按钮或模块、接入功能、边界和 route_key", "只导出审计表，不运行流程"),
+            ("页面能力审计", "导出审计记录 JSON", "写入 audit/meta_page_button_audit_runtime.json，包含页面、按钮/模块、接入功能和边界", "只导出审计 JSON，不运行流程"),
+            ("页面能力审计", "导出能力总清单", "写入 audit/meta_workflow_capability_manifest.json，汇总 route/page/button-or-module 覆盖和全流程 artifact 存在状态", "只检查本地 artifact 是否存在"),
+            ("页面能力审计", "导出页面审计包", "写入 audit/meta_page_button_audit_package.zip，打包按钮/模块审计 JSON、Markdown 审计表和现有全流程整理 manifest/package", "只打包本地 artifact，不运行流程"),
+            ("页面能力审计", "导出完整交付包", "写入 audit/meta_preview_delivery_package.zip，一键生成并打包页面审计、能力总清单、检索、文献、筛选、全文、提取、质量、统计、图表、PRISMA 和报告交付包", "本地交付包，不运行外部检索或声明正式结论"),
+            ("页面能力审计", "导出交付校验清单", "写入 audit/meta_preview_integrity_manifest.json，记录关键交付 artifact 是否存在、大小和 SHA-256", "只做本地文件校验，不验证运行时行为"),
+            ("页面能力审计", "跳转到选中页面", "根据审计表选中行的页面名称跳转到对应 Meta route", "只导航，不执行业务动作"),
+            ("页面能力审计", "模块：页面/按钮/模块审计表", "展示 runtime 审计 rows，包含页面、按钮或模块、接入功能、边界和 route_key", "只读展示，导出需用户点击按钮"),
+            ("研究问题与 PICO", "生成 / 保存 / 确认 PICO", "PICOWorkspaceService 草稿、人工编辑和 confirmed protocol", "不自动执行检索"),
+            ("研究问题与 PICO", "生成 PICO 草稿", "PICOWorkspaceService 根据研究问题生成 PICO/PICOS/PECO 草稿", "草稿不进入正式流程"),
+            ("研究问题与 PICO", "保存草稿编辑", "保存人工编辑后的 PICO draft 和 UI draft 字段", "不自动确认 protocol"),
+            ("研究问题与 PICO", "确认研究问题", "写入 protocol/pico_workspace_confirmed.json", "确认后仍需人工生成检索策略"),
+            ("研究问题与 PICO", "下一步：检索策略", "跳转 search_strategy", "仅导航"),
+            ("研究问题与 PICO", "模块：研究问题输入与 PICO/PICOS/PECO 草稿字段", "接入 protocol/pico_workspace_draft.json、confirmed protocol 和 UI draft 字段", "草稿必须人工确认后才进入正式流程"),
+            ("研究问题与 PICO", "模块：已确认研究问题卡片", "读取 protocol/pico_workspace_confirmed.json，展示已确认研究问题、PICO、meta type 和备注", "只读展示 confirmed 状态"),
+            ("检索策略", "生成检索策略", "SearchStrategyBuilderService 生成 PubMed/WOS/Embase/Cochrane/CNKI/WanFang/VIP 草稿", "非 PubMed 数据库只生成策略"),
+            ("检索策略", "确认 / 导出 / 复制检索式", "保存 reviewer confirmation，导出 TXT/MD/JSON，复制当前查询", "不自动导入文献"),
+            ("检索策略", "保存当前编辑", "保存当前数据库检索式编辑", "不自动确认检索式"),
+            ("检索策略", "确认当前检索式", "确认当前数据库检索式", "不自动执行非 PubMed 数据库"),
+            ("检索策略", "确认全部检索式", "确认全部数据库检索式", "不自动执行非 PubMed 数据库"),
+            ("检索策略", "导出 TXT / MD / JSON", "导出检索策略 TXT、Markdown 和 JSON artifact", "只导出本地策略"),
+            ("检索策略", "复制检索式", "复制当前编辑器中的检索式到剪贴板", "不联网"),
+            ("检索策略", "复制数据库入口", "复制当前数据库的人工检索入口 URL，包括 PubMed/WOS/Embase/Cochrane/CNKI/WanFang/VIP", "不自动打开浏览器，不联网"),
+            ("检索策略", "导出检索执行清单", "写入 protocol/search_strategy_v2/search_execution_manifest.json，记录 PubMed testing 执行路径和各外部数据库人工入口", "不证明数据库权限或检索完整性"),
+            ("检索策略", "导出检索策略包", "写入 exports/search_strategy_package.zip，打包检索策略草稿、确认记录、TXT/MD/JSON 和执行清单", "只打包本地检索策略 artifact，不执行检索"),
+            ("检索策略", "执行 PubMed testing-level 检索", "PubMedSearchService 执行 reviewer-confirmed PubMed 查询", "需要人工选择 candidates"),
+            ("检索策略", "选择加入文献库 / 忽略本批次", "PubMedCandidatesHandoffService 写入或跳过候选文献", "不自动去重或筛选"),
+            ("检索策略", "全选 / 取消全选", "选择或清空 PubMed candidate table 当前行选择", "只改变 UI selection"),
+            ("检索策略", "选择加入文献库", "把选中的 PubMed candidates 写入文献库 handoff", "不自动去重或筛选"),
+            ("检索策略", "忽略本批次", "将当前 PubMed candidate 批次标记为忽略/不导入", "不删除远端数据"),
+            ("检索策略", "下一步：文献库与导入", "跳转 literature_import", "仅导航"),
+            ("检索策略", "模块：数据库列表与检索式编辑器", "接入 search_strategy_drafts/confirmed，按数据库展示草稿、确认检索式和人工入口", "非 PubMed 数据库不在线执行"),
+            ("检索策略", "模块：PubMed 候选文献表与详情", "读取 protocol/pubmed_candidates preview/report，展示 PMID、题名、摘要、期刊和处理状态", "候选文献需人工选择后才进入文献库"),
+            ("文献库与导入", "导入选中文献", "将 PubMed candidates 写入 LiteratureLibraryService", "导入后仍需去重"),
+            ("文献库与导入", "全选 / 取消全选", "选择或清空候选文献列表当前选择", "只改变 UI selection"),
+            ("文献库与导入", "忽略本批次", "清空/忽略当前候选批次选择，不写入文献库", "不删除文献库记录"),
+            ("文献库与导入", "选择文件导入", "MultiSourceLiteratureImportService 导入本地 PubMed XML/MEDLINE、WOS text/tab、RIS、Embase RIS、Cochrane RIS、CNKI 风格导出", "文件导入，不是在线抓取"),
+            ("文献库与导入", "筛选 / 摘要 / 备注", "过滤文献表、导出摘要、保存备注", "不改变筛选结论"),
+            ("文献库与导入", "导出文献库摘要", "导出当前文献库摘要", "只导出本地摘要"),
+            ("文献库与导入", "保存备注", "保存页面备注 / 操作反馈", "不改变文献筛选结论"),
+            ("文献库与导入", "复制 PubMed 链接 / 复制 DOI 链接", "根据当前文献 PMID/DOI 生成 https://pubmed.ncbi.nlm.nih.gov/{pmid}/ 或 https://doi.org/{doi} 并复制到剪贴板", "不自动打开浏览器，不联网"),
+            ("文献库与导入", "复制引用信息", "基于当前 normalized literature record 复制标题、作者、年份、期刊、DOI、PMID 和来源", "不调用外部引用管理器"),
+            ("文献库与导入", "导出引用整理清单", "写入 literature/literature_citation_manifest.json，汇总全部文献 citation text、DOI/PubMed 链接和缺失字段", "不调用 Crossref、PubMed、Zotero 或 EndNote"),
+            ("文献库与导入", "导出 RIS", "写入 literature/literature_library_export.ris，供 EndNote/Zotero 等引用工具人工导入", "本地 RIS 生成，不调用外部引用管理器"),
+            ("文献库与导入", "导出 BibTeX", "写入 literature/literature_library_export.bib，供 BibTeX/Zotero 等引用工具人工导入", "本地 BibTeX 生成，不调用外部引用管理器"),
+            ("文献库与导入", "导出 CSL-JSON", "写入 literature/literature_library_export.csl.json，供 Zotero/Pandoc citeproc 等工作流人工导入", "本地 CSL-JSON 生成，不调用外部引用管理器"),
+            ("文献库与导入", "导出文献台账 CSV", "写入 literature/literature_register.csv，包含题名、作者、年份、期刊、DOI/PMID、链接和筛选/去重状态", "本地 CSV 台账，不改变决策状态"),
+            ("文献库与导入", "导出文献整理包", "写入 exports/literature_organization_package.zip，打包文献库、引用清单、RIS/BibTeX/CSL-JSON、检索/筛选/全文整理 manifest", "本地打包，不包含自动下载全文"),
+            ("文献库与导入", "生成全部文献整理产物", "写入 literature/literature_capability_artifact_index.json，并生成检索、引用、筛选、全文和文献整理包 artifact", "只生成本地整理产物，不执行业务流程"),
+            ("文献库与导入", "导出获取/整理清单", "写入 literature/literature_acquisition_organization_manifest.json，汇总 PubMed preview、本地导入、文献库、去重、筛选、全文组织状态", "只汇总 artifact，不推进流程"),
+            ("文献库与导入", "下一步：去重与筛选", "跳转 screening_review", "仅导航"),
+            ("文献库与导入", "模块：PubMed 候选列表", "读取 PubMed handoff preview，支持全选、取消、导入或忽略候选批次", "候选导入不等于去重或筛选"),
+            ("文献库与导入", "模块：文献库表格与详情", "读取 literature/literature_records.json、import_batches.json 和 library_manifest.json，展示题名、作者、年份、来源和状态", "只展示/整理 normalized library"),
+            ("文献库与导入", "模块：文献备注区", "写入本地 literature notes，记录页面备注和操作反馈", "备注不改变筛选决策"),
+            ("去重与筛选", "生成重复组", "DedupReviewV2Service 建立重复候选组", "不删除原始文献"),
+            ("去重与筛选", "保存人工决定", "保存 keep/merge/master/not-duplicate/skip 决策", "人工决定优先"),
+            ("去重与筛选", "生成去重后文献库", "导出 deduplicated literature", "不破坏源 library"),
+            ("去重与筛选", "创建标题摘要筛选队列", "TitleAbstractScreeningV2Service 创建 reviewer queue", "队列不等于筛选决定"),
+            ("去重与筛选", "导出筛选整理清单", "写入 screening/screening_organization_manifest.json，汇总重复组、去重决定、去重后文献、筛选队列、筛选决定和全文需求", "不自动推进 PRISMA、全文或提取"),
+            ("去重与筛选", "纳入 / 排除 / 不确定 / 需要全文", "快速写入当前标题摘要筛选记录的人工决策", "人工决定，不调用 AI 自动判定"),
+            ("去重与筛选", "保存并下一篇", "保存当前筛选决定并推进到下一条未筛选记录", "只推进本地 UI 队列"),
+            ("去重与筛选", "保存筛选决定", "保存当前记录的标题摘要筛选人工决定", "不自动推进全文或 PRISMA"),
+            ("去重与筛选", "下一步：排除标准", "跳转 exclusion_criteria", "仅导航"),
+            ("去重与筛选", "模块：重复组列表与候选详情", "读取 deduplication duplicate groups、review queue 和人工决策，展示 master/merge/not duplicate 信息", "不自动删除或合并源文献"),
+            ("去重与筛选", "模块：标题摘要快速筛选区", "读取/写入 screening queue 和人工 decision，支持 include/exclude/uncertain/needs-full-text", "人工筛选决定优先"),
+            ("排除标准", "保存草稿 / 确认 / 新增理由", "ExclusionCriteriaLibraryService 管理项目排除标准", "不自动排除文献"),
+            ("排除标准", "保存排除标准草稿", "保存项目排除标准草稿", "不自动排除文献"),
+            ("排除标准", "确认排除标准", "写入 confirmed exclusion criteria artifact", "确认标准不自动应用到既有文献"),
+            ("排除标准", "新增理由", "增加自定义排除理由", "不自动排除文献"),
+            ("排除标准", "下一步：标题摘要筛选", "跳转 title_abstract_screening", "仅导航"),
+            ("排除标准", "模块：排除标准库与自定义理由", "接入 screening/exclusion_criteria_library_v1.json、selection 和 confirmed artifact", "标准确认后才作为筛选理由来源"),
+            ("标题摘要筛选", "生成筛选队列 / 保存人工决定", "保存 include/exclude/uncertain/needs-full-text 决策", "AI/model 建议不写最终决定"),
+            ("标题摘要筛选", "生成筛选队列", "TitleAbstractScreeningV2Service 创建 reviewer queue", "队列不等于筛选决定"),
+            ("标题摘要筛选", "保存人工决定", "保存当前标题摘要筛选人工决定", "不自动推进全文"),
+            ("标题摘要筛选", "导出筛选决定 CSV", "写入 screening/title_abstract_screening_decisions.csv，导出现有筛选队列、人工决定、排除理由和备注", "只导出现有状态，不生成新决定"),
+            ("标题摘要筛选", "下一步：全文管理", "跳转 fulltext_management", "仅导航"),
+            ("标题摘要筛选", "模块：筛选队列列表与决策表单", "接入 title_abstract_queue_v2.json 和 decisions_v2.json，展示题名摘要、排除理由和备注", "不由 AI 自动写最终决定"),
+            ("全文管理", "建立全文队列", "FullTextManagementService 从筛选结果创建全文 registry", "不自动下载 PDF"),
+            ("全文管理", "上传全文 / OCR 识别 PDF", "绑定本地 PDF，FullTextParsingService 生成 testing-level 解析 artifact", "OCR/解析不写最终提取值"),
+            ("全文管理", "上传全文", "绑定本地 PDF 文件到全文 registry 记录", "不下载 PDF"),
+            ("全文管理", "OCR 识别 PDF", "FullTextParsingService 对本地 PDF 执行 testing-level OCR/解析", "解析结果不写最终提取值"),
+            ("全文管理", "全文确认 / 标记无法获取 / 保存全文筛选", "更新全文状态、排除原因和 eligibility 决定", "需人工复核"),
+            ("全文管理", "标记无法获取", "将全文状态标记为 unavailable", "人工状态，不绕过全文获取"),
+            ("全文管理", "全文确认", "确认当前记录全文已获取/可用", "需人工复核"),
+            ("全文管理", "保存全文状态", "保存当前全文管理状态", "不自动筛选全文"),
+            ("全文管理", "保存全文筛选", "保存全文 eligibility 状态和排除原因", "不自动推进数据提取"),
+            ("全文管理", "复制获取链接", "根据选中文献 DOI/PMID/PMCID 复制 DOI、PubMed、PMC 获取链接集合", "不自动打开浏览器，不联网，不下载全文"),
+            ("全文管理", "导出全文获取 CSV", "写入 fulltext/fulltext_retrieval_register.csv，导出 DOI/PubMed/PMC 链接、本地 PDF 路径和人工获取状态台账", "只导出现有全文候选，不下载全文"),
+            ("全文管理", "导出全文获取清单", "写入 fulltext/fulltext_retrieval_manifest.json，汇总 DOI/PubMed/PMC 链接、本地 PDF 路径和人工获取状态", "不自动下载全文，不绕过访问权限"),
+            ("全文管理", "导出全文获取包", "写入 exports/fulltext_retrieval_package.zip，打包全文获取清单、CSV、全文管理/解析 manifest 和缺失全文报告", "只打包本地全文获取 artifact，不下载全文"),
+            ("全文管理", "下一步：数据提取", "跳转 manual_extraction", "仅导航"),
+            ("全文管理", "模块：全文 registry 列表与状态编辑区", "接入 fulltext_management_registry_v1、fulltext_registry、parse manifest 和 eligibility records", "不自动下载全文或绕过权限"),
+            ("全文管理", "模块：全文获取链接集合", "根据 DOI/PMID/PMCID 生成 DOI、PubMed、PMC 链接用于人工获取", "只复制链接，不打开外部站点"),
+            ("数据提取", "新建 study unit / 新建提取行", "ManualExtractionEffectRowService 建立人工提取结构", "不生成 analysis-ready dataset"),
+            ("数据提取", "新建 study unit", "创建人工提取 study unit", "不生成 analysis-ready dataset"),
+            ("数据提取", "新建提取行", "创建人工 effect row draft", "不运行统计"),
+            ("数据提取", "保存 / 完成 / 用户确认 / 标记缺失", "保存结构化提取行并记录人工确认", "不运行统计"),
+            ("数据提取", "保存结构化草稿", "保存当前结构化提取字段为 draft", "不确认最终提取"),
+            ("数据提取", "完成本行提取", "将当前 effect row 标记为完成", "不运行统计"),
+            ("数据提取", "用户确认", "记录用户确认当前提取行", "不运行统计"),
+            ("数据提取", "标记缺失数据", "将当前提取字段标记为缺失数据", "不做插补"),
+            ("数据提取", "CSV 模板 / 当前导出 / 草稿导入", "导出模板和当前表，CSV 导入为 draft", "冲突不静默覆盖"),
+            ("数据提取", "导出空模板 CSV", "导出 manual_extraction_template.csv", "只导出模板"),
+            ("数据提取", "导出当前 CSV", "导出 manual_extraction_current.csv", "只导出现有提取行"),
+            ("数据提取", "导入 CSV 草稿", "导入 CSV 为 extraction draft", "冲突不静默覆盖"),
+            ("数据提取", "导出提取整理清单", "写入 extraction/extraction_organization_manifest.json，汇总 study unit、effect row、结构化提取、校验和 AI 建议状态", "只汇总提取 artifact，不生成分析数据集"),
+            ("数据提取", "导出提取整理包", "写入 exports/extraction_organization_package.zip，打包提取 JSON、模板/当前 CSV、校验报告和 AI 建议记录", "只打包本地提取 artifact，不运行统计"),
+            ("数据提取", "下一步：AI 辅助提取", "跳转 ai_extraction", "仅导航"),
+            ("数据提取", "模块：文献、study unit、effect row 三列表", "读取可提取文献、study units 和 effect rows，支持选择后填充结构化表单", "选择不会自动确认数据"),
+            ("数据提取", "模块：结构化提取表单", "接入研究基本信息、PICO/PECO、效应量和诊断字段，写入 manual extraction draft", "用户确认前不生成 analysis-ready dataset"),
+            ("AI 辅助提取", "接受 / 拒绝 / 写入人工草稿", "AIAssistedExtractionQueueService 审核建议并写入 draft", "accepted 仍非最终值"),
+            ("AI 辅助提取", "接受建议", "将选中 AI suggestion 标记为 accepted", "不直接写最终提取"),
+            ("AI 辅助提取", "拒绝建议", "将选中 AI suggestion 标记为 rejected", "不删除人工草稿"),
+            ("AI 辅助提取", "写入人工草稿", "将 accepted suggestion 应用为人工提取 draft", "仍需人工确认"),
+            ("AI 辅助提取", "下一步：质量评价", "跳转 quality_assessment", "仅导航"),
+            ("AI 辅助提取", "模块：AI suggestion 队列", "读取 extraction_ai_suggestion_queue/application，展示 confidence、状态和建议 ID", "建议必须人工审核"),
+            ("质量评价", "保存评分草稿 / 已确认 / 导出 CSV", "QualityAssessmentService 保存、确认和导出质量评价", "不自动 GRADE"),
+            ("质量评价", "保存评分草稿", "保存当前质量评价 domain rating、overall rating 和备注为草稿", "不自动确认"),
+            ("质量评价", "已确认", "将当前质量评价记录标记为用户确认", "不自动 GRADE，不替代人工评分"),
+            ("质量评价", "导出 CSV", "写入 exports/quality_assessment_v1.csv", "只导出质量评价表"),
+            ("质量评价", "导出 JSON", "写入 quality/quality_assessment_v1_export.json，导出质量评价 v1 记录", "只导出本地质量评价记录"),
+            ("质量评价", "导出质量评价包", "写入 exports/quality_assessment_package.zip，打包质量评价 JSON/CSV、summary、alias 和组织清单", "只打包质量评价 artifact，不改变评分状态"),
+            ("质量评价", "下一步：分析计划", "跳转 analysis_plan", "仅导航"),
+            ("质量评价", "模块：质量评价研究列表与评分表单", "接入 quality_assessment_records_v1、summary 和 tool registry，展示 domain rating、overall rating 和备注", "不自动 GRADE，不替代人工确认"),
+            ("分析计划", "生成 / 保存 / 确认分析计划", "AnalysisPlanService 生成并锁定 confirmed plan", "确认不代表统计已运行"),
+            ("分析计划", "生成分析计划草稿", "AnalysisPlanService 基于 protocol、提取、质量记录生成 draft", "不运行统计"),
+            ("分析计划", "保存计划编辑", "保存人工编辑后的 analysis plan draft", "不确认计划"),
+            ("分析计划", "确认分析计划", "写入 confirmed analysis plan", "不运行统计"),
+            ("分析计划", "模块：分析计划编辑表单", "接入 draft/confirmed analysis plan，展示效应量类型、模型偏好、亚组/敏感性/发表偏倚计划", "确认计划不等于运行统计"),
+            ("分析计划", "模块：统计前置审核区", "接入 effect normalization precheck、pairwise executor 和 statistical result review", "testing-level 结果需人工审核"),
+            ("分析计划", "刷新效应量标准化预检查", "刷新并展示 effect normalization precheck 状态", "只刷新页面提示，不改写研究结论"),
+            ("分析计划", "运行 pairwise executor", "PairwiseMetaExecutorService 基于 confirmed analysis plan 运行 testing-level pairwise 计算", "结果必须经人工审核，不能直接进入最终报告"),
+            ("分析计划", "接受进入报告草稿 / 标记需要修订 / 不纳入报告 / 申请报告就绪", "StatisticalResultReviewService 记录统计结果审核状态和报告就绪申请", "只记录审核流转，不代表投稿级结论"),
+            ("分析计划", "接受进入报告草稿", "StatisticalResultReviewService 将统计结果标记为可进入报告草稿", "不代表投稿级结论"),
+            ("分析计划", "标记需要修订", "StatisticalResultReviewService 将统计结果标记为需要修订", "不改写统计结果"),
+            ("分析计划", "不纳入报告", "StatisticalResultReviewService 将统计结果标记为不进入报告", "不删除统计结果"),
+            ("分析计划", "申请报告就绪", "StatisticalResultReviewService 申请或授予报告就绪状态", "仍需满足审核 gate"),
+            ("分析计划", "下一步：统计分析", "跳转 statistics_analysis", "仅导航"),
+            ("统计分析", "运行统计分析", "MetaStatisticsEngineService 从 confirmed plan 运行 testing-level 统计", "不生成医学结论"),
+            ("统计分析", "导出统计结果清单", "写入 analysis/statistics_results_manifest.json，汇总 confirmed plan、analysis manifest、run 和 result 文件", "只汇总本地统计 artifact，不运行统计"),
+            ("统计分析", "导出统计结果包", "写入 exports/statistics_results_package.zip，打包分析计划、analysis manifest、统计 run/result 和审核记录", "只打包现有统计 artifact，不认证结果可发布"),
+            ("统计分析", "下一步：图表结果", "跳转 figure_results", "仅导航"),
+            ("统计分析", "模块：统计结果 JSON 预览", "读取 latest analysis result JSON 并展示 run_count、输入校验和 testing-level 结果", "不生成医学结论"),
+            ("图表结果", "图表 artifact 表", "读取现有 figure/result artifact", "本页不重新计算统计"),
+            ("图表结果", "导出图表结果清单", "写入 figures/figure_results_manifest.json，汇总 figure artifact 和统计 result 文件", "只汇总现有图表/结果，不生成新图"),
+            ("图表结果", "导出图表结果包", "写入 exports/figure_results_package.zip，打包 figures 目录和统计 result 文件", "只打包现有图表/结果，不重跑统计"),
+            ("图表结果", "下一步：PRISMA", "跳转 prisma", "仅导航"),
+            ("图表结果", "模块：figure artifact 表", "读取 figures/figure_artifacts.json 和 analysis/results，展示 figure_id、type、format、path", "不重新计算统计或渲染新图"),
+            ("PRISMA", "生成 summary / 导出 Markdown", "PRISMAService 从真实流程记录汇总数字", "不伪造 PRISMA 计数"),
+            ("PRISMA", "生成 PRISMA summary", "PRISMAService 汇总并保存 reports/prisma_flow_summary.json", "数字来自本地流程记录"),
+            ("PRISMA", "导出 Markdown", "导出 reports/prisma_flow_summary.md", "不伪造 PRISMA 计数"),
+            ("PRISMA", "导出 PRISMA 报告包", "写入 exports/prisma_reporting_package.zip，生成并打包 PRISMA summary JSON/Markdown、简化 flow Markdown/SVG 和 manifest", "不改写源流程记录，不伪造计数"),
+            ("PRISMA", "下一步：报告导出", "跳转 report_export", "仅导航"),
+            ("PRISMA", "模块：PRISMA summary 卡片", "读取 reports/prisma_flow_summary.json，展示 identified、duplicates、screened、excluded、included", "数字来自本地流程记录"),
+            ("报告导出", "生成草稿 / HTML / DOCX", "FormalMarkdownReportBuilder 和 PublicationExportService 输出 testing report", "非投稿级报告"),
+            ("报告导出", "生成报告草稿", "FormalMarkdownReportBuilder 生成 Markdown 草稿", "testing 报告"),
+            ("报告导出", "导出 HTML", "PublicationExportService 导出 HTML testing report", "非投稿级报告"),
+            ("报告导出", "导出 DOCX", "PublicationExportService 导出 DOCX testing report", "非投稿级报告"),
+            ("报告导出", "打开报告位置", "复制项目 reports 目录绝对路径到剪贴板并提示位置", "不自动打开 Finder 或外部应用"),
+            ("报告导出", "导出报告交付包", "写入 exports/formal_report_package.zip，打包 Markdown、HTML、DOCX、report manifest、PRISMA artifact 和交付清单", "testing 报告包，不代表投稿级交付"),
+            ("报告导出", "下一步：复现包", "跳转 reproducibility_package", "仅导航"),
+            ("报告导出", "模块：报告预览", "读取 reports/formal_meta_report.md 并展示 Markdown 前 12000 字符", "预览不代表投稿级审稿完成"),
+            ("复现包", "导出可复现项目包", "PublicationExportService 打包关键 artifact", "用于内部迁移和复核"),
+            ("复现包", "模块：复现包列表", "读取 exports/reproducibility_package_*.zip 并展示已有 package", "只列出本地包"),
+            ("所有页面", "开发者诊断", "展开 artifact、manifest、debug 路径", "只读显示"),
+        ]
+
+
+    def _write_literature_acquisition_manifest(project_dir: Path) -> Path:
+        protocol_dir = project_dir / "protocol" / "pubmed_candidates"
+        literature_dir = project_dir / "literature"
+        dedup_dir = project_dir / "deduplication"
+        screening_dir = project_dir / "screening"
+        fulltext_dir = project_dir / "fulltext"
+        preview_paths = tuple(sorted(protocol_dir.glob("*_candidates_preview.json"))) if protocol_dir.exists() else ()
+        selection_paths = tuple(sorted(protocol_dir.glob("*_candidate_selection.json"))) if protocol_dir.exists() else ()
+        records_payload = _load_json_object(literature_dir / "literature_records.json")
+        batches_payload = _load_json_object(literature_dir / "import_batches.json")
+        manifest_payload = _load_json_object(literature_dir / "library_manifest.json")
+        dedup_payload = _load_json_object(dedup_dir / "deduplicated_literature_v2.json")
+        duplicate_groups_payload = _load_json_object(dedup_dir / "duplicate_groups_v2.json")
+        screening_queue_payload = _load_json_object(screening_dir / "title_abstract_queue_v2.json")
+        screening_decisions_payload = _load_json_object(screening_dir / "title_abstract_decisions_v2.json")
+        fulltext_registry_payload = _load_json_object(fulltext_dir / "fulltext_management_registry_v1.json")
+        rows = _items_from_payload(records_payload, "records", "literature_records")
+        batches = _items_from_payload(batches_payload, "batches", "import_batches")
+        duplicate_groups = _items_from_payload(duplicate_groups_payload, "duplicate_groups", "groups")
+        screening_queue = _items_from_payload(screening_queue_payload, "records", "screening_records")
+        screening_decisions = _items_from_payload(screening_decisions_payload, "decisions", "screening_records")
+        fulltext_records = _items_from_payload(fulltext_registry_payload, "records")
+        output_path = literature_dir / "literature_acquisition_organization_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_literature_acquisition_organization_manifest.v1",
+            "project_dir": str(project_dir),
+            "purpose": "Track literature acquisition, import, normalization, deduplication, screening preparation, and full-text organization artifacts for the preview Meta workflow.",
+            "online_retrieval": {
+                "pubmed_candidate_preview_count": len(preview_paths),
+                "pubmed_selection_artifact_count": len(selection_paths),
+                "pubmed_candidate_preview_paths": [str(path.relative_to(project_dir)) for path in preview_paths],
+                "pubmed_selection_paths": [str(path.relative_to(project_dir)) for path in selection_paths],
+                "non_pubmed_online_clients": "not_connected_in_preview; search strategy export only",
+            },
+            "local_import": {
+                "import_batch_count": len(batches),
+                "source_counts": manifest_payload.get("source_counts", {}),
+                "library_manifest_path": "literature/library_manifest.json" if (literature_dir / "library_manifest.json").exists() else "",
+                "import_batches_path": "literature/import_batches.json" if (literature_dir / "import_batches.json").exists() else "",
+            },
+            "library": {
+                "record_count": len(rows),
+                "records_path": "literature/literature_records.json" if (literature_dir / "literature_records.json").exists() else "",
+                "missing_doi_count": len([row for row in rows if not str(row.get("doi", "")).strip()]),
+                "missing_pmid_count": len([row for row in rows if not str(row.get("pmid", "")).strip()]),
+                "missing_abstract_count": len([row for row in rows if not str(row.get("abstract", "")).strip()]),
+                "pubmed_link_count": len([row for row in rows if str(row.get("pmid", "")).strip()]),
+                "doi_link_count": len([row for row in rows if str(row.get("doi", "")).strip()]),
+            },
+            "organization": {
+                "duplicate_group_count": len(duplicate_groups),
+                "deduplicated_literature_exists": bool(dedup_payload),
+                "screening_queue_count": len(screening_queue),
+                "screening_decision_count": len(screening_decisions),
+                "fulltext_record_count": len(fulltext_records),
+            },
+            "boundaries": [
+                "PubMed retrieval requires reviewer-confirmed search strategy and reviewer-selected candidate handoff.",
+                "WOS, Embase, Cochrane, CNKI, WanFang, and VIP remain search-strategy/export or local-file import paths in this preview.",
+                "This manifest does not mark screening, PRISMA, extraction, analysis, or reporting as complete.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _copy_text_to_clipboard(text: str) -> None:
+        clipboard = QApplication.clipboard() if QApplication is not None else None
+        if clipboard is not None:
+            clipboard.setText(text)
+
+
+    def _literature_citation_text(record: dict[str, object]) -> str:
+        authors = record.get("authors", "")
+        if isinstance(authors, list):
+            author_text = "; ".join(str(author) for author in authors if str(author).strip())
+        else:
+            author_text = str(authors or record.get("first_author", "") or "").strip()
+        rows = [
+            f"Title: {record.get('title', '')}",
+            f"Authors: {author_text}",
+            f"Year: {record.get('year', '')}",
+            f"Journal: {record.get('journal') or record.get('publication_title') or ''}",
+            f"DOI: {record.get('doi', '')}",
+            f"PMID: {record.get('pmid', '')}",
+            f"Source: {record.get('source_type') or record.get('source') or ''}",
+        ]
+        return "\n".join(row for row in rows if row.split(": ", 1)[-1].strip())
+
+
+    def _write_literature_citation_manifest(project_dir: Path) -> Path:
+        library = LiteratureLibraryService()
+        records = library.list_records(project_dir)
+        rows: list[dict[str, object]] = []
+        for record in records:
+            doi = str(record.get("doi", "")).strip()
+            pmid = str(record.get("pmid", "")).strip()
+            rows.append(
+                {
+                    "record_id": str(record.get("record_id", "")),
+                    "citation_text": _literature_citation_text(record),
+                    "title": str(record.get("title", "")),
+                    "authors": record.get("authors", record.get("first_author", "")),
+                    "year": str(record.get("year", "")),
+                    "journal": str(record.get("journal") or record.get("publication_title") or ""),
+                    "doi": doi,
+                    "pmid": pmid,
+                    "source": str(record.get("source_type") or record.get("source") or ""),
+                    "doi_url": f"https://doi.org/{doi}" if doi else "",
+                    "pubmed_url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
+                    "missing_fields": [
+                        field
+                        for field, value in (
+                            ("title", record.get("title", "")),
+                            ("year", record.get("year", "")),
+                            ("journal", record.get("journal") or record.get("publication_title") or ""),
+                            ("doi", doi),
+                            ("pmid", pmid),
+                        )
+                        if not str(value).strip()
+                    ],
+                }
+            )
+        output_path = project_dir / "literature" / "literature_citation_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_literature_citation_manifest.v1",
+            "project_dir": str(project_dir),
+            "record_count": len(rows),
+            "with_doi_count": len([row for row in rows if row["doi"]]),
+            "with_pmid_count": len([row for row in rows if row["pmid"]]),
+            "complete_core_citation_count": len([row for row in rows if not row["missing_fields"]]),
+            "boundaries": [
+                "This manifest organizes citation metadata from the normalized literature library.",
+                "It does not contact Crossref, PubMed, Zotero, EndNote, or any external citation service.",
+                "Reviewer should verify citation style and metadata before publication use.",
+            ],
+            "records": rows,
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_literature_ris_export(project_dir: Path) -> Path:
+        library = LiteratureLibraryService()
+        records = library.list_records(project_dir)
+        lines: list[str] = []
+        for record in records:
+            lines.append("TY  - JOUR")
+            title = str(record.get("title", "")).strip()
+            if title:
+                lines.append(f"TI  - {title}")
+            authors = record.get("authors", "")
+            if isinstance(authors, list):
+                for author in authors:
+                    text = str(author).strip()
+                    if text:
+                        lines.append(f"AU  - {text}")
+            else:
+                author_text = str(authors or record.get("first_author", "") or "").strip()
+                if author_text:
+                    lines.append(f"AU  - {author_text}")
+            year = str(record.get("year", "")).strip()
+            if year:
+                lines.append(f"PY  - {year}")
+            journal = str(record.get("journal") or record.get("publication_title") or "").strip()
+            if journal:
+                lines.append(f"JO  - {journal}")
+            doi = str(record.get("doi", "")).strip()
+            if doi:
+                lines.append(f"DO  - {doi}")
+            pmid = str(record.get("pmid", "")).strip()
+            if pmid:
+                lines.append(f"AN  - {pmid}")
+                lines.append(f"UR  - https://pubmed.ncbi.nlm.nih.gov/{pmid}/")
+            abstract = str(record.get("abstract", "")).strip()
+            if abstract:
+                lines.append(f"AB  - {abstract}")
+            source = str(record.get("source_type") or record.get("source") or "").strip()
+            if source:
+                lines.append(f"N1  - Source: {source}")
+            lines.append("ER  -")
+            lines.append("")
+        output_path = project_dir / "literature" / "literature_library_export.ris"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("\n".join(lines), encoding="utf-8")
+        return output_path
+
+
+    def _write_literature_bibtex_export(project_dir: Path) -> Path:
+        library = LiteratureLibraryService()
+        records = library.list_records(project_dir)
+        entries: list[str] = []
+        used_keys: set[str] = set()
+        for index, record in enumerate(records, start=1):
+            first_author = str(record.get("first_author", "") or "").strip()
+            if not first_author:
+                authors = record.get("authors", "")
+                if isinstance(authors, list) and authors:
+                    first_author = str(authors[0])
+                else:
+                    first_author = str(authors or "record")
+            year = str(record.get("year", "") or "unknown").strip()
+            key_base = "".join(char for char in f"{first_author}{year}" if char.isalnum()) or f"record{index}"
+            key = key_base
+            suffix = 2
+            while key in used_keys:
+                key = f"{key_base}{suffix}"
+                suffix += 1
+            used_keys.add(key)
+            fields: list[tuple[str, str]] = []
+            title = str(record.get("title", "") or "").strip()
+            if title:
+                fields.append(("title", title))
+            authors = record.get("authors", "")
+            if isinstance(authors, list):
+                author_text = " and ".join(str(author) for author in authors if str(author).strip())
+            else:
+                author_text = str(authors or first_author).strip()
+            if author_text:
+                fields.append(("author", author_text))
+            if year and year != "unknown":
+                fields.append(("year", year))
+            journal = str(record.get("journal") or record.get("publication_title") or "").strip()
+            if journal:
+                fields.append(("journal", journal))
+            doi = str(record.get("doi", "") or "").strip()
+            if doi:
+                fields.append(("doi", doi))
+            pmid = str(record.get("pmid", "") or "").strip()
+            if pmid:
+                fields.append(("pmid", pmid))
+                fields.append(("url", f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"))
+            abstract = str(record.get("abstract", "") or "").strip()
+            if abstract:
+                fields.append(("abstract", abstract))
+            source = str(record.get("source_type") or record.get("source") or "").strip()
+            if source:
+                fields.append(("note", f"Source: {source}"))
+            entry_lines = [f"@article{{{key},"]
+            for field_name, value in fields:
+                safe_value = value.replace("{", "\\{").replace("}", "\\}")
+                entry_lines.append(f"  {field_name} = {{{safe_value}}},")
+            if len(entry_lines) > 1:
+                entry_lines[-1] = entry_lines[-1].rstrip(",")
+            entry_lines.append("}")
+            entries.append("\n".join(entry_lines))
+        output_path = project_dir / "literature" / "literature_library_export.bib"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("\n\n".join(entries), encoding="utf-8")
+        return output_path
+
+
+    def _write_literature_csl_json_export(project_dir: Path) -> Path:
+        library = LiteratureLibraryService()
+        records = library.list_records(project_dir)
+        items: list[dict[str, object]] = []
+        for index, record in enumerate(records, start=1):
+            authors = record.get("authors", "")
+            if isinstance(authors, list):
+                author_items = [_csl_author_item(str(author)) for author in authors if str(author).strip()]
+            else:
+                author_text = str(authors or record.get("first_author", "") or "").strip()
+                author_items = [_csl_author_item(author_text)] if author_text else []
+            year = str(record.get("year", "") or "").strip()
+            item: dict[str, object] = {
+                "id": str(record.get("record_id") or f"record-{index}"),
+                "type": "article-journal",
+                "title": str(record.get("title", "") or ""),
+            }
+            if author_items:
+                item["author"] = author_items
+            if year:
+                item["issued"] = {"date-parts": [[int(year)]]} if year.isdigit() else {"literal": year}
+            journal = str(record.get("journal") or record.get("publication_title") or "").strip()
+            if journal:
+                item["container-title"] = journal
+            doi = str(record.get("doi", "") or "").strip()
+            if doi:
+                item["DOI"] = doi
+                item["URL"] = f"https://doi.org/{doi}"
+            pmid = str(record.get("pmid", "") or "").strip()
+            if pmid:
+                item["PMID"] = pmid
+                item.setdefault("URL", f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/")
+            abstract = str(record.get("abstract", "") or "").strip()
+            if abstract:
+                item["abstract"] = abstract
+            source = str(record.get("source_type") or record.get("source") or "").strip()
+            if source:
+                item["note"] = f"Source: {source}"
+            items.append(item)
+        output_path = project_dir / "literature" / "literature_library_export.csl.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_literature_register_csv(project_dir: Path) -> Path:
+        import csv
+
+        library = LiteratureLibraryService()
+        records = library.list_records(project_dir)
+        output_path = project_dir / "literature" / "literature_register.csv"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fields = [
+            "record_id",
+            "title",
+            "first_author",
+            "year",
+            "journal",
+            "doi",
+            "pmid",
+            "source",
+            "doi_url",
+            "pubmed_url",
+            "has_abstract",
+            "screening_status",
+            "dedup_status",
+        ]
+        with output_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for record in records:
+                doi = str(record.get("doi", "") or "").strip()
+                pmid = str(record.get("pmid", "") or "").strip()
+                writer.writerow(
+                    {
+                        "record_id": str(record.get("record_id", "")),
+                        "title": str(record.get("title", "")),
+                        "first_author": str(record.get("first_author", "")),
+                        "year": str(record.get("year", "")),
+                        "journal": str(record.get("journal") or record.get("publication_title") or ""),
+                        "doi": doi,
+                        "pmid": pmid,
+                        "source": str(record.get("source_type") or record.get("source") or ""),
+                        "doi_url": f"https://doi.org/{doi}" if doi else "",
+                        "pubmed_url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
+                        "has_abstract": bool(str(record.get("abstract", "")).strip()),
+                        "screening_status": str(record.get("screening_status", "")),
+                        "dedup_status": str(record.get("dedup_status", "")),
+                    }
+                )
+        return output_path
+
+
+    def _write_literature_organization_package(project_dir: Path) -> Path:
+        import zipfile
+
+        generated_paths = [
+            _write_literature_citation_manifest(project_dir),
+            _write_literature_ris_export(project_dir),
+            _write_literature_bibtex_export(project_dir),
+            _write_literature_csl_json_export(project_dir),
+            _write_literature_register_csv(project_dir),
+            _write_literature_acquisition_manifest(project_dir),
+        ]
+        candidate_paths = [
+            project_dir / "literature" / "literature_records.json",
+            project_dir / "literature" / "import_batches.json",
+            project_dir / "literature" / "library_manifest.json",
+            project_dir / "protocol" / "search_strategy_v2" / "search_execution_manifest.json",
+            project_dir / "screening" / "screening_organization_manifest.json",
+            project_dir / "screening" / "title_abstract_screening_decisions.csv",
+            project_dir / "fulltext" / "fulltext_retrieval_manifest.json",
+            project_dir / "fulltext" / "fulltext_retrieval_register.csv",
+            project_dir / "exports" / "fulltext_retrieval_package.zip",
+            *generated_paths,
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "literature_organization_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "literature_organization_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_literature_organization_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains local literature organization artifacts only.",
+                            "It does not include downloaded full-text PDFs unless they are already represented by project manifests.",
+                            "It does not prove external database access, final screening completion, or publication-ready citation formatting.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_literature_capability_artifact_index(project_dir: Path) -> Path:
+        requested = [
+            _write_search_execution_manifest,
+            _write_literature_acquisition_manifest,
+            _write_literature_citation_manifest,
+            _write_literature_ris_export,
+            _write_literature_bibtex_export,
+            _write_literature_csl_json_export,
+            _write_literature_register_csv,
+            _write_screening_organization_manifest,
+            _write_title_abstract_screening_decisions_csv,
+            _write_fulltext_retrieval_manifest,
+            _write_fulltext_retrieval_csv,
+            _write_fulltext_retrieval_package,
+            _write_literature_organization_package,
+        ]
+        generated: list[dict[str, object]] = []
+        for writer in requested:
+            try:
+                path = writer(project_dir)
+                generated.append(
+                    {
+                        "artifact": str(path.relative_to(project_dir)),
+                        "exists": path.exists(),
+                        "writer": writer.__name__,
+                    }
+                )
+            except Exception as exc:
+                generated.append(
+                    {
+                        "artifact": "",
+                        "exists": False,
+                        "writer": writer.__name__,
+                        "error": str(exc),
+                    }
+                )
+        output_path = project_dir / "literature" / "literature_capability_artifact_index.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_literature_capability_artifact_index.v1",
+            "project_dir": str(project_dir),
+            "generated_count": len([item for item in generated if item.get("exists")]),
+            "requested_count": len(generated),
+            "artifacts": generated,
+            "boundaries": [
+                "This action generates local literature organization artifacts only.",
+                "It does not execute database retrieval, import new records, make screening decisions, download full text, run OCR, or perform statistics.",
+                "Errors are recorded per artifact so reviewers can rerun or inspect missing prerequisites.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _csl_author_item(author: str) -> dict[str, str]:
+        parts = [part.strip() for part in author.replace(",", " ").split() if part.strip()]
+        if len(parts) >= 2:
+            return {"family": parts[-1], "given": " ".join(parts[:-1])}
+        return {"literal": author}
+
+
+    def _fulltext_retrieval_links_text(record, *, candidate=None) -> str:
+        doi = str(getattr(record, "doi", "") or getattr(candidate, "doi", "") or "").strip()
+        pmid = str(getattr(record, "pmid", "") or getattr(candidate, "pmid", "") or "").strip()
+        pmcid = str(getattr(record, "pmcid", "") or getattr(candidate, "pmcid", "") or "").strip()
+        lines = []
+        if doi:
+            lines.append(f"DOI: https://doi.org/{doi}")
+        if pmid:
+            lines.append(f"PubMed: https://pubmed.ncbi.nlm.nih.gov/{pmid}/")
+        if pmcid:
+            lines.append(f"PMC: https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/")
+        return "\n".join(lines)
+
+
+    def _write_fulltext_retrieval_manifest(project_dir: Path) -> Path:
+        management = FullTextManagementService()
+        eligibility = FullTextEligibilityService()
+        records = list(management.list_records(project_dir))
+        candidates = list(eligibility.build_candidates_from_screening(project_dir))
+        candidates_by_id = {str(getattr(candidate, "record_id", "")): candidate for candidate in candidates}
+        source_records = records or candidates
+        rows: list[dict[str, object]] = []
+        for item in source_records:
+            record_id = str(getattr(item, "record_id", ""))
+            candidate = candidates_by_id.get(record_id)
+            doi = str(getattr(item, "doi", "") or getattr(candidate, "doi", "") or "").strip()
+            pmid = str(getattr(item, "pmid", "") or getattr(candidate, "pmid", "") or "").strip()
+            pmcid = str(getattr(item, "pmcid", "") or getattr(candidate, "pmcid", "") or "").strip()
+            pdf_path = str(getattr(item, "pdf_path", "") or "")
+            rows.append(
+                {
+                    "record_id": record_id,
+                    "title": str(getattr(item, "title", "") or getattr(candidate, "title", "") or ""),
+                    "first_author": str(getattr(item, "first_author", "") or getattr(candidate, "first_author", "") or ""),
+                    "year": str(getattr(item, "year", "") or getattr(candidate, "year", "") or ""),
+                    "journal": str(getattr(item, "journal", "") or getattr(candidate, "journal", "") or ""),
+                    "doi": doi,
+                    "pmid": pmid,
+                    "pmcid": pmcid,
+                    "doi_url": f"https://doi.org/{doi}" if doi else "",
+                    "pubmed_url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
+                    "pmc_url": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else "",
+                    "pdf_path": pdf_path,
+                    "fulltext_status": str(getattr(item, "fulltext_status", getattr(item, "eligibility_status", "")) or ""),
+                    "source_screening_decision": str(getattr(item, "source_screening_decision", getattr(candidate, "screening_decision", "")) or ""),
+                    "needs_manual_retrieval": not bool(pdf_path),
+                }
+            )
+        output_path = project_dir / "fulltext" / "fulltext_retrieval_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_fulltext_retrieval_manifest.v1",
+            "project_dir": str(project_dir),
+            "record_count": len(rows),
+            "with_doi_count": len([row for row in rows if row["doi"]]),
+            "with_pmid_count": len([row for row in rows if row["pmid"]]),
+            "with_pmcid_count": len([row for row in rows if row["pmcid"]]),
+            "with_local_pdf_count": len([row for row in rows if row["pdf_path"]]),
+            "manual_retrieval_needed_count": len([row for row in rows if row["needs_manual_retrieval"]]),
+            "boundaries": [
+                "This manifest prepares manual full-text retrieval links only.",
+                "The preview build does not download PDFs automatically, bypass paywalls, or use institutional login.",
+                "PDF/OCR parsing artifacts remain auxiliary and do not write final extraction values.",
+            ],
+            "records": rows,
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_fulltext_retrieval_csv(project_dir: Path) -> Path:
+        import csv
+
+        management = FullTextManagementService()
+        eligibility = FullTextEligibilityService()
+        records = list(management.list_records(project_dir))
+        candidates = list(eligibility.build_candidates_from_screening(project_dir))
+        candidates_by_id = {str(getattr(candidate, "record_id", "")): candidate for candidate in candidates}
+        source_records = records or candidates
+        output_path = project_dir / "fulltext" / "fulltext_retrieval_register.csv"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fields = [
+            "record_id",
+            "title",
+            "first_author",
+            "year",
+            "journal",
+            "doi",
+            "pmid",
+            "pmcid",
+            "doi_url",
+            "pubmed_url",
+            "pmc_url",
+            "pdf_path",
+            "fulltext_status",
+            "source_screening_decision",
+            "needs_manual_retrieval",
+        ]
+        with output_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for item in source_records:
+                record_id = str(getattr(item, "record_id", ""))
+                candidate = candidates_by_id.get(record_id)
+                doi = str(getattr(item, "doi", "") or getattr(candidate, "doi", "") or "").strip()
+                pmid = str(getattr(item, "pmid", "") or getattr(candidate, "pmid", "") or "").strip()
+                pmcid = str(getattr(item, "pmcid", "") or getattr(candidate, "pmcid", "") or "").strip()
+                pdf_path = str(getattr(item, "pdf_path", "") or "")
+                writer.writerow(
+                    {
+                        "record_id": record_id,
+                        "title": str(getattr(item, "title", "") or getattr(candidate, "title", "") or ""),
+                        "first_author": str(getattr(item, "first_author", "") or getattr(candidate, "first_author", "") or ""),
+                        "year": str(getattr(item, "year", "") or getattr(candidate, "year", "") or ""),
+                        "journal": str(getattr(item, "journal", "") or getattr(candidate, "journal", "") or ""),
+                        "doi": doi,
+                        "pmid": pmid,
+                        "pmcid": pmcid,
+                        "doi_url": f"https://doi.org/{doi}" if doi else "",
+                        "pubmed_url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
+                        "pmc_url": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else "",
+                        "pdf_path": pdf_path,
+                        "fulltext_status": str(getattr(item, "fulltext_status", getattr(item, "eligibility_status", "")) or ""),
+                        "source_screening_decision": str(getattr(item, "source_screening_decision", getattr(candidate, "screening_decision", "")) or ""),
+                        "needs_manual_retrieval": not bool(pdf_path),
+                    }
+                )
+        return output_path
+
+
+    def _write_fulltext_retrieval_package(project_dir: Path) -> Path:
+        import zipfile
+
+        manifest = _write_fulltext_retrieval_manifest(project_dir)
+        register = _write_fulltext_retrieval_csv(project_dir)
+        candidate_paths = [
+            manifest,
+            register,
+            project_dir / "fulltext" / "fulltext_management_registry_v1.json",
+            project_dir / "fulltext" / "fulltext_parse_manifest_v1.json",
+            project_dir / "fulltext" / "fulltext_registry.json",
+            project_dir / "reports" / "missing_fulltext_report.csv",
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "fulltext_retrieval_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "fulltext_retrieval_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_fulltext_retrieval_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains local full-text retrieval manifests and registers only.",
+                            "It does not download PDFs, bypass access controls, or run OCR/full-text parsing.",
+                            "Local PDF files are referenced by manifest paths but not copied into this package.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_extraction_organization_manifest(project_dir: Path) -> Path:
+        service = ManualExtractionEffectRowService()
+        study_units = service.load_study_units(project_dir)
+        effect_rows = service.load_effect_rows(project_dir)
+        structured_rows = service.load_structured_extraction_table(project_dir)
+        validation = _load_json_object(service.validation_report_path(project_dir))
+        ai_queue = _load_json_object(project_dir / "extraction" / "extraction_ai_suggestion_queue.json")
+        ai_applications = _load_json_object(project_dir / "extraction" / "extraction_ai_suggestion_applications.json")
+        output_path = project_dir / "extraction" / "extraction_organization_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_extraction_organization_manifest.v1",
+            "project_dir": str(project_dir),
+            "study_unit_count": len(study_units),
+            "effect_row_count": len(effect_rows),
+            "structured_row_count": len(structured_rows),
+            "missing_required_fields_count": int(validation.get("missing_required_fields_count", 0) or 0),
+            "ai_suggestion_count": len(ai_queue.get("suggestions", [])) if isinstance(ai_queue.get("suggestions", []), list) else 0,
+            "ai_application_count": len(ai_applications.get("applications", [])) if isinstance(ai_applications.get("applications", []), list) else 0,
+            "artifacts": [
+                {"path": "extraction/extraction_manifest.json", "exists": (project_dir / "extraction" / "extraction_manifest.json").exists()},
+                {"path": "extraction/extraction_study_units.json", "exists": service.study_units_path(project_dir).exists()},
+                {"path": "extraction/extraction_effect_rows.json", "exists": service.effect_rows_path(project_dir).exists()},
+                {"path": "extraction/manual_extraction_template.csv", "exists": (project_dir / "extraction" / "manual_extraction_template.csv").exists()},
+                {"path": "extraction/manual_extraction_current.csv", "exists": (project_dir / "extraction" / "manual_extraction_current.csv").exists()},
+                {"path": "extraction/extraction_validation_report.json", "exists": service.validation_report_path(project_dir).exists()},
+                {"path": "extraction/extraction_ai_suggestion_queue.json", "exists": (project_dir / "extraction" / "extraction_ai_suggestion_queue.json").exists()},
+                {"path": "extraction/extraction_ai_suggestion_applications.json", "exists": (project_dir / "extraction" / "extraction_ai_suggestion_applications.json").exists()},
+            ],
+            "boundaries": [
+                "This manifest summarizes local manual extraction and AI suggestion artifacts only.",
+                "It does not create an analysis-ready dataset, run meta-analysis, or infer missing data.",
+                "AI suggestions remain draft inputs until explicitly reviewed by a human.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_extraction_organization_package(project_dir: Path) -> Path:
+        import zipfile
+
+        service = ManualExtractionEffectRowService()
+        template_result = service.export_empty_template_csv(project_dir, actor="reviewer")
+        current_result = service.export_current_csv(project_dir, actor="reviewer")
+        generated_paths = [
+            _write_extraction_organization_manifest(project_dir),
+            Path(template_result.output_path),
+            Path(current_result.output_path),
+        ]
+        candidate_paths = [
+            project_dir / "extraction" / "extraction_manifest.json",
+            service.study_units_path(project_dir),
+            service.effect_rows_path(project_dir),
+            service.evidence_refs_path(project_dir),
+            service.validation_report_path(project_dir),
+            service.extraction_audit_path(project_dir),
+            project_dir / "extraction" / "extraction_ai_suggestion_queue.json",
+            project_dir / "extraction" / "extraction_ai_suggestion_applications.json",
+            *generated_paths,
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "extraction_organization_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "extraction_organization_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_extraction_organization_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains local extraction artifacts only.",
+                            "It does not run statistics, impute missing values, or mark extraction complete.",
+                            "Imported CSV rows remain draft data unless separately confirmed by a reviewer.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_quality_organization_manifest(project_dir: Path) -> Path:
+        service = QualityAssessmentService()
+        records_v1 = service.load_quality_assessment_records_v1(project_dir)
+        legacy_records = service.load_quality_assessments(project_dir)
+        summary = _load_json_object(project_dir / "quality" / "quality_assessment_summary_v1.json")
+        output_path = project_dir / "quality" / "quality_organization_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        completed = len([record for record in records_v1 if str(record.get("status", "")) == "completed_by_user"])
+        payload = {
+            "schema_version": "meta_quality_organization_manifest.v1",
+            "project_dir": str(project_dir),
+            "quality_record_v1_count": len(records_v1),
+            "legacy_quality_record_count": len(legacy_records),
+            "completed_by_user_count": completed,
+            "summary": summary,
+            "artifacts": [
+                {"path": "quality/quality_assessment_records_v1.json", "exists": (project_dir / "quality" / "quality_assessment_records_v1.json").exists()},
+                {"path": "quality/quality_assessment_summary_v1.json", "exists": (project_dir / "quality" / "quality_assessment_summary_v1.json").exists()},
+                {"path": "quality/quality_assessment_v1_export.json", "exists": (project_dir / "quality" / "quality_assessment_v1_export.json").exists()},
+                {"path": "exports/quality_assessment_v1.csv", "exists": (project_dir / "exports" / "quality_assessment_v1.csv").exists()},
+                {"path": "quality/quality_table.csv", "exists": (project_dir / "quality" / "quality_table.csv").exists()},
+                {"path": "exports/quality_assessment_table.csv", "exists": (project_dir / "exports" / "quality_assessment_table.csv").exists()},
+            ],
+            "boundaries": [
+                "This manifest summarizes local quality assessment artifacts only.",
+                "It does not change ratings, complete records, or override reviewer confirmation.",
+                "Quality outputs remain dependent on human-reviewed study-level assessment records.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_quality_assessment_package(project_dir: Path) -> Path:
+        import zipfile
+
+        service = QualityAssessmentService()
+        beta_outputs = service.export_quality_beta_outputs(project_dir)
+        generated_paths = [
+            service.export_quality_assessments_v1_json(project_dir),
+            service.export_quality_assessments_v1_csv(project_dir),
+            _write_quality_organization_manifest(project_dir),
+            *[Path(value) for value in beta_outputs.values()],
+        ]
+        candidate_paths = [
+            project_dir / "quality" / "quality_assessment_records_v1.json",
+            project_dir / "quality" / "quality_assessment_summary_v1.json",
+            project_dir / "quality" / "quality_assessments.json",
+            project_dir / "quality" / "quality_assessment.json",
+            project_dir / "quality" / "quality_table.csv",
+            project_dir / "exports" / "quality_assessment_table.csv",
+            *generated_paths,
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "quality_assessment_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "quality_assessment_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_quality_assessment_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains local quality assessment artifacts only.",
+                            "It does not alter quality ratings or mark unconfirmed records complete.",
+                            "Analysis readiness still depends on confirmed extraction and analysis plan artifacts.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_statistics_results_manifest(project_dir: Path) -> Path:
+        stats = MetaStatisticsEngineService(analysis_plan_service=AnalysisPlanService())
+        manifest_path = stats.manifest_path(project_dir)
+        results_dir = stats.results_dir(project_dir)
+        runs_dir = stats.runs_dir(project_dir)
+        result_files = tuple(sorted(results_dir.glob("*_result.json"))) if results_dir.exists() else ()
+        run_files = tuple(sorted(runs_dir.glob("*.json"))) if runs_dir.exists() else ()
+        output_path = project_dir / "analysis" / "statistics_results_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_statistics_results_manifest.v1",
+            "project_dir": str(project_dir),
+            "confirmed_analysis_plan_exists": (project_dir / "analysis" / "analysis_plan_confirmed_v1.json").exists(),
+            "analysis_manifest_exists": manifest_path.exists(),
+            "result_count": len(result_files),
+            "run_count": len(run_files),
+            "result_paths": [str(path.relative_to(project_dir)) for path in result_files],
+            "run_paths": [str(path.relative_to(project_dir)) for path in run_files],
+            "latest_result_path": str(result_files[-1].relative_to(project_dir)) if result_files else "",
+            "boundaries": [
+                "This manifest summarizes local statistics artifacts only.",
+                "It does not run statistics, approve results, generate clinical conclusions, or advance PRISMA.",
+                "All statistics outputs remain testing-level until separately reviewed.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_statistics_results_package(project_dir: Path) -> Path:
+        import zipfile
+
+        stats = MetaStatisticsEngineService(analysis_plan_service=AnalysisPlanService())
+        manifest = _write_statistics_results_manifest(project_dir)
+        result_paths = tuple(sorted(stats.results_dir(project_dir).glob("*_result.json"))) if stats.results_dir(project_dir).exists() else ()
+        run_paths = tuple(sorted(stats.runs_dir(project_dir).glob("*.json"))) if stats.runs_dir(project_dir).exists() else ()
+        candidate_paths = [
+            manifest,
+            stats.manifest_path(project_dir),
+            project_dir / "analysis" / "analysis_plan_draft_v1.json",
+            project_dir / "analysis" / "analysis_plan_confirmed_v1.json",
+            project_dir / "analysis" / "analysis_plan_manifest_v1.json",
+            project_dir / "analysis" / "pairwise_executor" / "latest_pairwise_meta_result_review.json",
+            *result_paths,
+            *run_paths,
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "statistics_results_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "statistics_results_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_statistics_results_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains existing local statistics artifacts only.",
+                            "It does not execute statistics or certify report readiness.",
+                            "Human statistical result review remains required.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_figure_results_manifest(project_dir: Path) -> Path:
+        service = FigureResultService()
+        artifacts = service.list_figure_artifacts(project_dir)
+        results_dir = project_dir / "analysis" / "results"
+        result_files = tuple(sorted(results_dir.glob("*_result.json"))) if results_dir.exists() else ()
+        output_path = project_dir / "figures" / "figure_results_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_figure_results_manifest.v1",
+            "project_dir": str(project_dir),
+            "figure_artifact_count": len(artifacts),
+            "statistics_result_count": len(result_files),
+            "figure_artifacts": [
+                {
+                    "figure_id": artifact.figure_id,
+                    "analysis_result_id": artifact.analysis_result_id,
+                    "figure_type": artifact.figure_type,
+                    "format": artifact.format,
+                    "path": artifact.file_path,
+                }
+                for artifact in artifacts
+            ],
+            "statistics_result_paths": [str(path.relative_to(project_dir)) for path in result_files],
+            "boundaries": [
+                "This manifest summarizes existing figure and result artifacts only.",
+                "It does not generate figures, rerun statistics, or create medical conclusions.",
+                "Figure artifacts remain tied to testing-level statistical results unless separately reviewed.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_figure_results_package(project_dir: Path) -> Path:
+        import zipfile
+
+        manifest = _write_figure_results_manifest(project_dir)
+        figure_dir = project_dir / "figures"
+        results_dir = project_dir / "analysis" / "results"
+        figure_paths = tuple(sorted(figure_dir.glob("*"))) if figure_dir.exists() else ()
+        result_paths = tuple(sorted(results_dir.glob("*_result.json"))) if results_dir.exists() else ()
+        candidate_paths = [
+            manifest,
+            figure_dir / "figure_artifacts.json",
+            *figure_paths,
+            *result_paths,
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "figure_results_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "figure_results_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_figure_results_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains existing local figure/result artifacts only.",
+                            "It does not generate new figures or rerun statistics.",
+                            "Review of testing-level result status remains required before external use.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_prisma_reporting_manifest(project_dir: Path) -> Path:
+        reports_dir = project_dir / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        output_path = reports_dir / "prisma_reporting_manifest.json"
+        candidate_paths = [
+            reports_dir / "prisma_flow_summary.json",
+            reports_dir / "prisma_flow_summary.md",
+            reports_dir / "prisma_summary.json",
+            reports_dir / "prisma_flow.md",
+            reports_dir / "prisma_flow.svg",
+        ]
+        payload = {
+            "schema_version": "meta_prisma_reporting_manifest.v1",
+            "project_dir": str(project_dir),
+            "artifacts": [
+                {
+                    "path": str(path.relative_to(project_dir)),
+                    "exists": path.exists(),
+                    "size_bytes": path.stat().st_size if path.exists() and path.is_file() else 0,
+                }
+                for path in candidate_paths
+            ],
+            "boundaries": [
+                "PRISMA numbers are derived from local import, deduplication, screening, full-text, extraction, and analysis artifacts.",
+                "This manifest does not invent counts or override reviewer decisions.",
+                "Full-text PRISMA counts remain constrained by currently available full-text workflow records.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_prisma_reporting_package(project_dir: Path) -> Path:
+        import zipfile
+
+        service = PRISMAService()
+        summary = service.load_prisma_flow_summary(project_dir) or service.collect_prisma_numbers(project_dir)
+        summary_json = service.save_prisma_flow_summary(project_dir, summary)
+        summary_md = service.export_prisma_flow_markdown(project_dir, summary)
+        simplified = service.export_simplified_prisma_flow(project_dir, summary)
+        manifest = _write_prisma_reporting_manifest(project_dir)
+        candidate_paths = [summary_json, summary_md, manifest, *simplified.values()]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "prisma_reporting_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "prisma_reporting_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_prisma_reporting_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains local PRISMA summary and diagram artifacts only.",
+                            "It does not alter import, deduplication, screening, full-text, extraction, or analysis records.",
+                            "Counts should be reviewed against source artifacts before external use.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_formal_report_delivery_manifest(project_dir: Path) -> Path:
+        reports_dir = project_dir / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        output_path = reports_dir / "formal_report_delivery_manifest.json"
+        candidate_paths = [
+            reports_dir / "formal_meta_report.md",
+            reports_dir / "formal_meta_report.html",
+            reports_dir / "formal_meta_report.docx",
+            reports_dir / "report_manifest.json",
+            reports_dir / "prisma_flow_summary.json",
+            reports_dir / "prisma_flow_summary.md",
+            reports_dir / "prisma_flow.svg",
+        ]
+        payload = {
+            "schema_version": "meta_formal_report_delivery_manifest.v1",
+            "project_dir": str(project_dir),
+            "artifacts": [
+                {
+                    "path": str(path.relative_to(project_dir)),
+                    "exists": path.exists(),
+                    "size_bytes": path.stat().st_size if path.exists() and path.is_file() else 0,
+                }
+                for path in candidate_paths
+            ],
+            "boundaries": [
+                "This manifest summarizes local draft/testing report artifacts only.",
+                "It does not certify publication readiness or generate clinical conclusions.",
+                "Missing content and testing-level caveats remain part of the generated report.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_formal_report_package(project_dir: Path) -> Path:
+        import zipfile
+
+        report_md = FormalMarkdownReportBuilder().build_draft_markdown_report(project_dir)
+        exporter = PublicationExportService()
+        html = Path(exporter.export_html_report(project_dir).output_path)
+        docx = Path(exporter.export_word_report(project_dir).output_path)
+        manifest = _write_formal_report_delivery_manifest(project_dir)
+        candidate_paths = [
+            report_md,
+            html,
+            docx,
+            manifest,
+            project_dir / "reports" / "report_manifest.json",
+            project_dir / "reports" / "prisma_flow_summary.json",
+            project_dir / "reports" / "prisma_flow_summary.md",
+            project_dir / "reports" / "prisma_flow.svg",
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "formal_report_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "formal_report_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_formal_report_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains local draft/testing report artifacts only.",
+                            "It is not a publication-ready submission package.",
+                            "Clinical interpretation and final manuscript review remain manual gates.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _write_screening_organization_manifest(project_dir: Path) -> Path:
+        dedup_dir = project_dir / "deduplication"
+        screening_dir = project_dir / "screening"
+        duplicate_groups_payload = _load_json_object(dedup_dir / "duplicate_groups_v2.json")
+        decisions_payload = _load_json_object(dedup_dir / "dedup_decisions_v2.json")
+        deduplicated_payload = _load_json_object(dedup_dir / "deduplicated_literature_v2.json")
+        queue_payload = _load_json_object(screening_dir / "title_abstract_queue_v2.json")
+        screening_decisions_payload = _load_json_object(screening_dir / "title_abstract_decisions_v2.json")
+        duplicate_groups = _items_from_payload(duplicate_groups_payload, "duplicate_groups", "groups")
+        dedup_decisions = _items_from_payload(decisions_payload, "decisions")
+        queue_records = _items_from_payload(queue_payload, "queue_records", "records", "screening_records")
+        screening_decisions = _items_from_payload(screening_decisions_payload, "screening_records", "decisions")
+        decision_counts: dict[str, int] = {}
+        for item in screening_decisions:
+            decision = str(item.get("decision") or item.get("screening_decision") or DECISION_NOT_SCREENED)
+            decision_counts[decision] = decision_counts.get(decision, 0) + 1
+        output_path = screening_dir / "screening_organization_manifest.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "meta_screening_organization_manifest.v1",
+            "project_dir": str(project_dir),
+            "deduplication": {
+                "duplicate_group_count": len(duplicate_groups),
+                "dedup_decision_count": len(dedup_decisions),
+                "deduplicated_literature_exists": bool(deduplicated_payload),
+                "active_record_count": deduplicated_payload.get("active_record_count", deduplicated_payload.get("deduplicated_count", 0)) if deduplicated_payload else 0,
+                "unresolved_group_count": len(deduplicated_payload.get("unresolved_group_ids", [])) if isinstance(deduplicated_payload.get("unresolved_group_ids"), list) else 0,
+            },
+            "title_abstract_screening": {
+                "queue_record_count": len(queue_records),
+                "decision_count": len(screening_decisions),
+                "decision_counts": decision_counts,
+                "needs_full_text_count": decision_counts.get(DECISION_NEED_FULL_TEXT, 0),
+                "included_count": decision_counts.get(DECISION_INCLUDE, 0),
+                "excluded_count": decision_counts.get(DECISION_EXCLUDE, 0),
+                "uncertain_count": decision_counts.get(DECISION_UNCERTAIN, 0),
+            },
+            "artifact_paths": {
+                "duplicate_groups": "deduplication/duplicate_groups_v2.json" if (dedup_dir / "duplicate_groups_v2.json").exists() else "",
+                "dedup_decisions": "deduplication/dedup_decisions_v2.json" if (dedup_dir / "dedup_decisions_v2.json").exists() else "",
+                "deduplicated_literature": "deduplication/deduplicated_literature_v2.json" if (dedup_dir / "deduplicated_literature_v2.json").exists() else "",
+                "screening_queue": "screening/title_abstract_queue_v2.json" if (screening_dir / "title_abstract_queue_v2.json").exists() else "",
+                "screening_decisions": "screening/title_abstract_decisions_v2.json" if (screening_dir / "title_abstract_decisions_v2.json").exists() else "",
+            },
+            "boundaries": [
+                "This manifest summarizes deduplication and title/abstract screening organization only.",
+                "It does not automatically create full-text retrieval, PRISMA final counts, extraction rows, or analysis-ready datasets.",
+                "Reviewer decisions remain the source of truth for inclusion and exclusion.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_title_abstract_screening_decisions_csv(project_dir: Path) -> Path:
+        import csv
+
+        service = TitleAbstractScreeningV2Service()
+        queue_payload = service.load_queue(project_dir)
+        decisions_payload = _load_json_object(service.decisions_path(project_dir))
+        queue_records = _items_from_payload(queue_payload, "queue_records", "records", "screening_records")
+        decisions = _items_from_payload(decisions_payload, "screening_records", "decisions")
+        decisions_by_id = {str(item.get("record_id", "")): item for item in decisions}
+        output_path = project_dir / "screening" / "title_abstract_screening_decisions.csv"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fields = ["record_id", "title", "year", "journal", "pmid", "doi", "decision", "exclusion_reason_code", "notes", "has_abstract"]
+        with output_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for record in queue_records:
+                record_id = str(record.get("record_id", ""))
+                decision = decisions_by_id.get(record_id, {})
+                writer.writerow(
+                    {
+                        "record_id": record_id,
+                        "title": str(record.get("title", "")),
+                        "year": str(record.get("year", "")),
+                        "journal": str(record.get("journal", "")),
+                        "pmid": str(record.get("pmid", "")),
+                        "doi": str(record.get("doi", "")),
+                        "decision": str(decision.get("decision", record.get("decision", ""))),
+                        "exclusion_reason_code": str(decision.get("exclusion_reason_code", "")),
+                        "notes": str(decision.get("notes", "")),
+                        "has_abstract": bool(str(record.get("abstract", "")).strip()),
+                    }
+                )
+        return output_path
+
+
+    def _write_search_execution_manifest(project_dir: Path) -> Path:
+        service = SearchStrategyBuilderService()
+        drafts = list(service.load_drafts(project_dir))
+        confirmed = list(service.load_confirmed(project_dir))
+        draft_by_database = {str(getattr(item, "database_id", getattr(item, "database", ""))): item for item in drafts}
+        confirmed_by_database = {str(getattr(item, "database_id", getattr(item, "database", ""))): item for item in confirmed}
+        databases: list[dict[str, object]] = []
+        for database in _search_database_order():
+            draft = draft_by_database.get(database)
+            confirmed_item = confirmed_by_database.get(database)
+            draft_query = str(getattr(draft, "query", getattr(draft, "draft_query", "")) or "")
+            confirmed_query = str(getattr(confirmed_item, "confirmed_query", getattr(confirmed_item, "query", "")) or "")
+            databases.append(
+                {
+                    "database": database,
+                    "label": _database_label(database),
+                    "manual_entry_url": _manual_database_entry_url(database),
+                    "has_draft": draft is not None,
+                    "has_confirmed_query": bool(confirmed_query.strip()),
+                    "query": confirmed_query or draft_query,
+                    "execution_mode": "testing_pubmed_client" if database == "pubmed" else "manual_external_database_search",
+                    "connected_action": "执行 PubMed testing-level 检索" if database == "pubmed" else "复制/导出检索式后到外部数据库人工执行",
+                }
+            )
+        output_dir = project_dir / "protocol" / "search_strategy_v2"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "search_execution_manifest.json"
+        payload = {
+            "schema_version": "meta_search_execution_manifest.v1",
+            "project_dir": str(project_dir),
+            "database_count": len(databases),
+            "confirmed_database_count": len([item for item in databases if item["has_confirmed_query"]]),
+            "pubmed_testing_execution_available": any(item["database"] == "pubmed" and item["has_confirmed_query"] for item in databases),
+            "databases": databases,
+            "boundaries": [
+                "PubMed has a reviewer-confirmed testing-level execution path in this preview.",
+                "Web of Science, Embase, Cochrane, CNKI, WanFang, and VIP use query generation/export plus manual external execution.",
+                "This manifest does not prove database access, subscription availability, or final search completeness.",
+            ],
+        }
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+
+    def _write_search_strategy_package(project_dir: Path) -> Path:
+        import zipfile
+
+        execution_manifest = _write_search_execution_manifest(project_dir)
+        strategy_dir = project_dir / "protocol" / "search_strategy_v2"
+        candidate_paths = [
+            strategy_dir / "search_strategy_drafts.json",
+            strategy_dir / "search_strategy_confirmed.json",
+            strategy_dir / "search_strategy_draft.md",
+            strategy_dir / "search_strategy_draft.txt",
+            execution_manifest,
+            project_dir / "protocol" / "pico_workspace_confirmed.json",
+        ]
+        output_dir = project_dir / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "search_strategy_package.zip"
+        included: list[str] = []
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
+            for path in candidate_paths:
+                if not path.exists() or not path.is_file():
+                    continue
+                archive_name = str(path.relative_to(project_dir))
+                if archive_name in included:
+                    continue
+                package.write(path, archive_name)
+                included.append(archive_name)
+            package.writestr(
+                "search_strategy_package_manifest.json",
+                json.dumps(
+                    {
+                        "schema_version": "meta_search_strategy_package.v1",
+                        "project_dir": str(project_dir),
+                        "included_count": len(included),
+                        "included_paths": included,
+                        "boundaries": [
+                            "This package contains local search strategy artifacts only.",
+                            "It does not execute PubMed or external database searches.",
+                            "WOS, Embase, Cochrane, CNKI, WanFang, and VIP remain manual external execution paths in this preview.",
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        return output_path
+
+
+    def _manual_database_entry_url(database: str) -> str:
+        return {
+            "pubmed": "https://pubmed.ncbi.nlm.nih.gov/",
+            "web_of_science": "https://www.webofscience.com/",
+            "embase": "https://www.embase.com/",
+            "cochrane": "https://www.cochranelibrary.com/",
+            "cnki": "https://www.cnki.net/",
+            "wanfang": "https://www.wanfangdata.com.cn/",
+            "vip": "https://www.cqvip.com/",
+        }.get(database, "")
 
 
     def _pico_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
@@ -1056,11 +3111,17 @@ if QWidget is not None:
         export.setObjectName("metaSecondaryButton")
         copy_query = QPushButton("复制检索式")
         copy_query.setObjectName("metaSecondaryButton")
+        copy_database_entry = QPushButton("复制数据库入口")
+        copy_database_entry.setObjectName("metaSecondaryButton")
+        export_execution_manifest = QPushButton("导出检索执行清单")
+        export_execution_manifest.setObjectName("metaSecondaryButton")
+        export_search_package = QPushButton("导出检索策略包")
+        export_search_package.setObjectName("metaSecondaryButton")
         pubmed_execute = QPushButton("执行 PubMed testing-level 检索")
         pubmed_execute.setObjectName("metaPubMedExecuteButton")
         next_button = QPushButton("下一步：文献库与导入")
         next_button.setObjectName("metaSecondaryButton")
-        for button in (generate, save_edit, confirm_one, confirm_all, export, copy_query, pubmed_execute, next_button):
+        for button in (generate, save_edit, confirm_one, confirm_all, export, copy_query, copy_database_entry, export_execution_manifest, export_search_package, pubmed_execute, next_button):
             actions.addWidget(button)
         actions.addStretch(1)
         workbench_layout.addLayout(actions)
@@ -1196,6 +3257,25 @@ if QWidget is not None:
             if clipboard is not None:
                 clipboard.setText(editor.toPlainText())
 
+        def do_copy_database_entry() -> None:
+            database = current_database()
+            url = _manual_database_entry_url(database)
+            if not url:
+                _show_message("当前数据库暂无入口 URL。")
+                return
+            _copy_text_to_clipboard(url)
+            _show_message(f"{_database_label(database)} 入口已复制。")
+
+        def do_export_execution_manifest() -> None:
+            path = _write_search_execution_manifest(project_dir)
+            _show_message(f"已导出检索执行清单：{path.name}")
+            on_refresh()
+
+        def do_export_search_package() -> None:
+            path = _write_search_strategy_package(project_dir)
+            _show_message(f"已导出检索策略包：{path.name}")
+            on_refresh()
+
         def do_pubmed_execute() -> None:
             confirmed_strategy = confirmed_by_database.get("pubmed")
             if confirmed_strategy is None or not confirmed_strategy.confirmed_query.strip():
@@ -1275,6 +3355,9 @@ if QWidget is not None:
         confirm_all.clicked.connect(do_confirm_all)
         export.clicked.connect(do_export)
         copy_query.clicked.connect(do_copy_query)
+        copy_database_entry.clicked.connect(do_copy_database_entry)
+        export_execution_manifest.clicked.connect(do_export_execution_manifest)
+        export_search_package.clicked.connect(do_export_search_package)
         pubmed_execute.clicked.connect(do_pubmed_execute)
         next_button.clicked.connect(on_next)
         select_all.clicked.connect(candidate_table.selectAll)
@@ -1363,10 +3446,13 @@ if QWidget is not None:
             missing_filter.addItem(label, value)
         export_summary = QPushButton("导出文献库摘要")
         export_summary.setObjectName("metaSecondaryButton")
+        export_acquisition_manifest = QPushButton("导出获取/整理清单")
+        export_acquisition_manifest.setObjectName("metaSecondaryButton")
         filter_row.addWidget(search_input, 2)
         filter_row.addWidget(source_filter)
         filter_row.addWidget(missing_filter)
         filter_row.addWidget(export_summary)
+        filter_row.addWidget(export_acquisition_manifest)
         library_layout.addLayout(filter_row)
         literature_table = QTableWidget()
         literature_table.setObjectName("metaLiteratureRecordsTable")
@@ -1384,9 +3470,42 @@ if QWidget is not None:
         note_input.setMaximumHeight(80)
         save_note = QPushButton("保存备注")
         save_note.setObjectName("metaSecondaryButton")
+        copy_pubmed_link = QPushButton("复制 PubMed 链接")
+        copy_pubmed_link.setObjectName("metaSecondaryButton")
+        copy_doi_link = QPushButton("复制 DOI 链接")
+        copy_doi_link.setObjectName("metaSecondaryButton")
+        copy_citation = QPushButton("复制引用信息")
+        copy_citation.setObjectName("metaSecondaryButton")
+        export_citation_manifest = QPushButton("导出引用整理清单")
+        export_citation_manifest.setObjectName("metaSecondaryButton")
+        export_ris = QPushButton("导出 RIS")
+        export_ris.setObjectName("metaSecondaryButton")
+        export_bibtex = QPushButton("导出 BibTeX")
+        export_bibtex.setObjectName("metaSecondaryButton")
+        export_csl_json = QPushButton("导出 CSL-JSON")
+        export_csl_json.setObjectName("metaSecondaryButton")
+        export_register_csv = QPushButton("导出文献台账 CSV")
+        export_register_csv.setObjectName("metaSecondaryButton")
+        export_literature_package = QPushButton("导出文献整理包")
+        export_literature_package.setObjectName("metaSecondaryButton")
+        generate_all_literature_artifacts = QPushButton("生成全部文献整理产物")
+        generate_all_literature_artifacts.setObjectName("metaPrimaryButton")
+        link_row = QHBoxLayout()
+        link_row.addWidget(save_note)
+        link_row.addWidget(copy_pubmed_link)
+        link_row.addWidget(copy_doi_link)
+        link_row.addWidget(copy_citation)
+        link_row.addWidget(export_citation_manifest)
+        link_row.addWidget(export_ris)
+        link_row.addWidget(export_bibtex)
+        link_row.addWidget(export_csl_json)
+        link_row.addWidget(export_register_csv)
+        link_row.addWidget(export_literature_package)
+        link_row.addWidget(generate_all_literature_artifacts)
+        link_row.addStretch(1)
         library_layout.addWidget(detail)
         library_layout.addWidget(note_input)
-        library_layout.addWidget(save_note)
+        library_layout.addLayout(link_row)
         layout.addWidget(library_card)
 
         next_button = QPushButton("下一步：去重与筛选")
@@ -1495,9 +3614,81 @@ if QWidget is not None:
             update_literature_detail(row)
             _show_message("备注已保存。")
 
+        def selected_literature_record() -> dict[str, object]:
+            row = literature_table.currentRow()
+            if row < 0 or row >= len(row_records):
+                return {}
+            return row_records[row]
+
+        def do_copy_pubmed_link() -> None:
+            record = selected_literature_record()
+            pmid = str(record.get("pmid", "")).strip()
+            if not pmid:
+                _show_message("当前文献没有 PMID，无法生成 PubMed 链接。")
+                return
+            _copy_text_to_clipboard(f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/")
+            _show_message("PubMed 链接已复制。")
+
+        def do_copy_doi_link() -> None:
+            record = selected_literature_record()
+            doi = str(record.get("doi", "")).strip()
+            if not doi:
+                _show_message("当前文献没有 DOI，无法生成 DOI 链接。")
+                return
+            _copy_text_to_clipboard(f"https://doi.org/{doi}")
+            _show_message("DOI 链接已复制。")
+
+        def do_copy_citation() -> None:
+            record = selected_literature_record()
+            if not record:
+                _show_message("请先选择文献")
+                return
+            _copy_text_to_clipboard(_literature_citation_text(record))
+            _show_message("引用信息已复制。")
+
+        def do_export_citation_manifest() -> None:
+            path = _write_literature_citation_manifest(project_dir)
+            _show_message(f"已导出引用整理清单：{path.name}")
+            on_refresh()
+
+        def do_export_ris() -> None:
+            path = _write_literature_ris_export(project_dir)
+            _show_message(f"已导出 RIS：{path.name}")
+            on_refresh()
+
+        def do_export_bibtex() -> None:
+            path = _write_literature_bibtex_export(project_dir)
+            _show_message(f"已导出 BibTeX：{path.name}")
+            on_refresh()
+
+        def do_export_csl_json() -> None:
+            path = _write_literature_csl_json_export(project_dir)
+            _show_message(f"已导出 CSL-JSON：{path.name}")
+            on_refresh()
+
+        def do_export_register_csv() -> None:
+            path = _write_literature_register_csv(project_dir)
+            _show_message(f"已导出文献台账 CSV：{path.name}")
+            on_refresh()
+
+        def do_export_literature_package() -> None:
+            path = _write_literature_organization_package(project_dir)
+            _show_message(f"已导出文献整理包：{path.name}")
+            on_refresh()
+
+        def do_generate_all_literature_artifacts() -> None:
+            path = _write_literature_capability_artifact_index(project_dir)
+            _show_message(f"已生成全部文献整理产物索引：{path.name}")
+            on_refresh()
+
         def do_export_summary() -> None:
             path = _export_literature_library_summary(project_dir, diagnostics=library_diagnostics, records=records)
             _show_message(f"已导出：{path}")
+
+        def do_export_acquisition_manifest() -> None:
+            path = _write_literature_acquisition_manifest(project_dir)
+            _show_message(f"已导出文献获取/整理清单：{path}")
+            on_refresh()
 
         preview_selector.currentIndexChanged.connect(load_preview)
         candidate_list.currentRowChanged.connect(lambda _row: update_detail())
@@ -1511,7 +3702,18 @@ if QWidget is not None:
         missing_filter.currentIndexChanged.connect(lambda _index: populate_literature_table())
         literature_table.cellClicked.connect(update_literature_detail)
         save_note.clicked.connect(do_save_note)
+        copy_pubmed_link.clicked.connect(do_copy_pubmed_link)
+        copy_doi_link.clicked.connect(do_copy_doi_link)
+        copy_citation.clicked.connect(do_copy_citation)
+        export_citation_manifest.clicked.connect(do_export_citation_manifest)
+        export_ris.clicked.connect(do_export_ris)
+        export_bibtex.clicked.connect(do_export_bibtex)
+        export_csl_json.clicked.connect(do_export_csl_json)
+        export_register_csv.clicked.connect(do_export_register_csv)
+        export_literature_package.clicked.connect(do_export_literature_package)
+        generate_all_literature_artifacts.clicked.connect(do_generate_all_literature_artifacts)
         export_summary.clicked.connect(do_export_summary)
+        export_acquisition_manifest.clicked.connect(do_export_acquisition_manifest)
         next_button.clicked.connect(on_next)
         load_preview(0)
         populate_literature_table()
@@ -1614,13 +3816,16 @@ if QWidget is not None:
         generate_deduped.setObjectName("metaPrimaryButton")
         build_screening_queue = QPushButton("创建标题摘要筛选队列")
         build_screening_queue.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：全文管理")
+        export_screening_manifest = QPushButton("导出筛选整理清单")
+        export_screening_manifest.setObjectName("metaSecondaryButton")
+        next_button = QPushButton("下一步：排除标准")
         next_button.setObjectName("metaSecondaryButton")
         action_row = QHBoxLayout()
         action_row.addWidget(build_queue)
         action_row.addWidget(save_decision)
         action_row.addWidget(generate_deduped)
         action_row.addWidget(build_screening_queue)
+        action_row.addWidget(export_screening_manifest)
         action_row.addWidget(next_button)
         action_row.addStretch(1)
         action_layout.addLayout(action_row)
@@ -1766,7 +3971,16 @@ if QWidget is not None:
         screening_layout.addLayout(screening_content)
         screening_layout.addWidget(QLabel("下一步：全文管理"))
         layout.addWidget(screening_card)
-        layout.addWidget(_fulltext_management_page(project_dir, on_refresh=on_refresh, on_next=on_next))
+        layout.addWidget(
+            _info_card(
+                "下一步页面",
+                [
+                    "全文管理已作为独立侧栏页面接入。",
+                    "完成去重与标题摘要筛选后，点击“下一步：全文管理”进入全文队列、PDF 上传、OCR 和全文筛选。",
+                ],
+                object_name="metaNextPageHint",
+            )
+        )
         layout.addWidget(_developer_details(f"queue_path={service.review_queue_path(project_dir)}\ndecisions_path={service.decisions_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -1836,6 +4050,11 @@ if QWidget is not None:
                 return
             result = screening_service.build_queue(project_dir, project_id=project_dir.name)
             _show_message(f"筛选队列已创建：{result.record_count} 篇。")
+            on_refresh()
+
+        def do_export_screening_manifest() -> None:
+            path = _write_screening_organization_manifest(project_dir)
+            _show_message(f"已导出筛选整理清单：{path.name}")
             on_refresh()
 
         screening_rows: list[dict[str, object]] = []
@@ -1923,6 +4142,7 @@ if QWidget is not None:
         save_decision.clicked.connect(do_save_decision)
         generate_deduped.clicked.connect(do_generate_deduped)
         build_screening_queue.clicked.connect(do_build_screening_queue)
+        export_screening_manifest.clicked.connect(do_export_screening_manifest)
         save_screening_decision.clicked.connect(do_save_screening_decision)
         include_button.clicked.connect(lambda: do_quick_screening(DECISION_INCLUDE))
         exclude_button.clicked.connect(lambda: do_quick_screening(DECISION_EXCLUDE))
@@ -2030,13 +4250,14 @@ if QWidget is not None:
         frame.setObjectName("metaTitleAbstractScreeningPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("去重与筛选", "从去重结果进入逐篇人工筛选；AI 只能作为 suggestion。", "人工决定"))
+        layout.addWidget(_page_header("标题摘要筛选", "从去重结果进入逐篇人工筛选；AI 只能作为 suggestion。", "人工决定"))
         layout.addWidget(_info_card("筛选摘要", [f"队列文献：{len(records)}", f"人工决定：{len(decisions)}", "PRISMA screened/excluded 只来自用户决定。"], object_name="metaScreeningSummary"))
         actions = QHBoxLayout()
         build_queue = QPushButton("生成筛选队列")
         save_decision = QPushButton("保存人工决定")
-        next_button = QPushButton("下一步：数据提取与质量评价")
-        for button in (build_queue, save_decision, next_button):
+        export_decisions_csv = QPushButton("导出筛选决定 CSV")
+        next_button = QPushButton("下一步：全文管理")
+        for button in (build_queue, save_decision, export_decisions_csv, next_button):
             button.setObjectName("metaPrimaryButton" if button is build_queue else "metaSecondaryButton")
             actions.addWidget(button)
         actions.addStretch(1)
@@ -2055,9 +4276,11 @@ if QWidget is not None:
         detail.setObjectName("metaScreeningRecordDetail")
         detail.setReadOnly(True)
         decision = QComboBox()
+        decision.setObjectName("metaTitleAbstractScreeningDecisionSelector")
         for label, value in (("纳入", "include"), ("排除", "exclude"), ("不确定", "uncertain"), ("需复核", "needs_review")):
             decision.addItem(label, value)
         reason = QComboBox()
+        reason.setObjectName("metaTitleAbstractScreeningReasonSelector")
         reason.addItem("选择排除理由", "")
         for item in reasons:
             reason.addItem(f"{item.chinese_label} / {item.english_label}", item.code)
@@ -2107,9 +4330,15 @@ if QWidget is not None:
             _show_message(result.message)
             on_refresh()
 
+        def do_export_decisions_csv() -> None:
+            path = _write_title_abstract_screening_decisions_csv(project_dir)
+            _show_message(f"已导出筛选决定 CSV：{path.name}")
+            on_refresh()
+
         record_list.currentRowChanged.connect(update_detail)
         build_queue.clicked.connect(do_build_queue)
         save_decision.clicked.connect(do_save_decision)
+        export_decisions_csv.clicked.connect(do_export_decisions_csv)
         next_button.clicked.connect(on_next)
         record_list.setCurrentRow(0 if records else -1)
         update_detail(record_list.currentRow())
@@ -2157,8 +4386,12 @@ if QWidget is not None:
         confirm_fulltext = QPushButton("全文确认")
         save_status = QPushButton("保存全文状态")
         save_eligibility = QPushButton("保存全文筛选")
+        copy_retrieval_links = QPushButton("复制获取链接")
+        export_retrieval_csv = QPushButton("导出全文获取 CSV")
+        export_retrieval_manifest = QPushButton("导出全文获取清单")
+        export_retrieval_package = QPushButton("导出全文获取包")
         next_button = QPushButton("下一步：数据提取")
-        for button in (build_registry, attach_pdf, ocr_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
+        for button in (build_registry, attach_pdf, ocr_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, copy_retrieval_links, export_retrieval_csv, export_retrieval_manifest, export_retrieval_package, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_registry.setObjectName("metaPrimaryButton")
@@ -2236,6 +4469,15 @@ if QWidget is not None:
             if row < 0 or row >= len(fulltext_rows):
                 return ""
             return str(getattr(fulltext_rows[row], "record_id", ""))
+
+        def selected_fulltext_record():
+            rows = _selected_table_rows(record_table)
+            if not rows:
+                return None
+            row = rows[0]
+            if row < 0 or row >= len(fulltext_rows):
+                return None
+            return fulltext_rows[row]
 
         def update_fulltext_detail(row: int = -1, _col: int = 0) -> None:
             if row < 0 or row >= len(fulltext_rows):
@@ -2323,6 +4565,34 @@ if QWidget is not None:
             _show_message(result.message)
             on_refresh()
 
+        def do_copy_retrieval_links() -> None:
+            record = selected_fulltext_record()
+            if record is None:
+                _show_message("请选择文献")
+                return
+            candidate = candidates_by_id.get(str(getattr(record, "record_id", "")))
+            link_text = _fulltext_retrieval_links_text(record, candidate=candidate)
+            if not link_text:
+                _show_message("当前文献缺少 DOI / PMID / PMCID，暂无可复制获取链接。")
+                return
+            _copy_text_to_clipboard(link_text)
+            _show_message("全文获取链接已复制。")
+
+        def do_export_retrieval_csv() -> None:
+            path = _write_fulltext_retrieval_csv(project_dir)
+            _show_message(f"已导出全文获取 CSV：{path.name}")
+            on_refresh()
+
+        def do_export_retrieval_manifest() -> None:
+            path = _write_fulltext_retrieval_manifest(project_dir)
+            _show_message(f"已导出全文获取清单：{path.name}")
+            on_refresh()
+
+        def do_export_retrieval_package() -> None:
+            path = _write_fulltext_retrieval_package(project_dir)
+            _show_message(f"已导出全文获取包：{path.name}")
+            on_refresh()
+
         build_registry.clicked.connect(do_build_registry)
         attach_pdf.clicked.connect(do_attach_pdf)
         ocr_pdf.clicked.connect(do_ocr_pdf)
@@ -2330,6 +4600,10 @@ if QWidget is not None:
         confirm_fulltext.clicked.connect(do_confirm_fulltext)
         save_status.clicked.connect(do_save_status)
         save_eligibility.clicked.connect(do_save_eligibility)
+        copy_retrieval_links.clicked.connect(do_copy_retrieval_links)
+        export_retrieval_csv.clicked.connect(do_export_retrieval_csv)
+        export_retrieval_manifest.clicked.connect(do_export_retrieval_manifest)
+        export_retrieval_package.clicked.connect(do_export_retrieval_package)
         next_button.clicked.connect(on_next)
         record_table.cellClicked.connect(update_fulltext_detail)
         populate_fulltext_table()
@@ -2372,8 +4646,10 @@ if QWidget is not None:
         export_template = QPushButton("导出空模板 CSV")
         export_current = QPushButton("导出当前 CSV")
         import_csv = QPushButton("导入 CSV 草稿")
-        next_button = QPushButton("下一步：质量评价")
-        for button in (create_unit, create_row, save_structured, complete_row, confirm_structured, mark_missing, export_template, export_current, import_csv, next_button):
+        export_extraction_manifest = QPushButton("导出提取整理清单")
+        export_extraction_package = QPushButton("导出提取整理包")
+        next_button = QPushButton("下一步：AI 辅助提取")
+        for button in (create_unit, create_row, save_structured, complete_row, confirm_structured, mark_missing, export_template, export_current, import_csv, export_extraction_manifest, export_extraction_package, next_button):
             button.setObjectName("metaSecondaryButton")
             action_row.addWidget(button)
         create_unit.setObjectName("metaPrimaryButton")
@@ -2503,7 +4779,16 @@ if QWidget is not None:
         structured_layout.addWidget(QLabel("提取状态"))
         structured_layout.addWidget(evidence_state)
         layout.addWidget(structured_card)
-        layout.addWidget(_quality_assessment_page(project_dir, on_refresh=on_refresh, on_next=on_next))
+        layout.addWidget(
+            _info_card(
+                "下一步页面",
+                [
+                    "质量评价已作为独立侧栏页面接入。",
+                    "完成结构化提取和 AI 建议审核后，点击“下一步：质量评价”进入人工质量评分。",
+                ],
+                object_name="metaNextPageHint",
+            )
+        )
         layout.addWidget(_developer_details(f"manifest={service.manifest_path(project_dir)}\nvalidation={service.validation_report_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -2615,6 +4900,16 @@ if QWidget is not None:
                 _show_message(result.message)
                 on_refresh()
 
+        def do_export_extraction_manifest() -> None:
+            path = _write_extraction_organization_manifest(project_dir)
+            _show_message(f"已导出提取整理清单：{path.name}")
+            on_refresh()
+
+        def do_export_extraction_package() -> None:
+            path = _write_extraction_organization_package(project_dir)
+            _show_message(f"已导出提取整理包：{path.name}")
+            on_refresh()
+
         create_unit.clicked.connect(do_create_unit)
         create_row.clicked.connect(do_create_row)
         save_structured.clicked.connect(do_save_structured)
@@ -2624,6 +4919,8 @@ if QWidget is not None:
         export_template.clicked.connect(lambda: _show_message(service.export_empty_template_csv(project_dir, actor="reviewer").message))
         export_current.clicked.connect(lambda: _show_message(service.export_current_csv(project_dir, actor="reviewer").message))
         import_csv.clicked.connect(do_import_csv)
+        export_extraction_manifest.clicked.connect(do_export_extraction_manifest)
+        export_extraction_package.clicked.connect(do_export_extraction_package)
         next_button.clicked.connect(on_next)
         return frame
 
@@ -2797,8 +5094,10 @@ if QWidget is not None:
         save_draft = QPushButton("保存评分草稿")
         complete = QPushButton("已确认")
         export_csv = QPushButton("导出 CSV")
+        export_json = QPushButton("导出 JSON")
+        export_quality_package = QPushButton("导出质量评价包")
         next_button = QPushButton("下一步：分析计划")
-        for button in (save_draft, complete, export_csv, next_button):
+        for button in (save_draft, complete, export_csv, export_json, export_quality_package, next_button):
             button.setObjectName("metaSecondaryButton")
             actions.addWidget(button)
         save_draft.setObjectName("metaPrimaryButton")
@@ -2851,6 +5150,8 @@ if QWidget is not None:
         save_draft.clicked.connect(do_save_draft)
         complete.clicked.connect(do_complete)
         export_csv.clicked.connect(lambda: _show_message(f"已导出：{service.export_quality_assessments_v1_csv(project_dir).name}"))
+        export_json.clicked.connect(lambda: _show_message(f"已导出：{service.export_quality_assessments_v1_json(project_dir).name}"))
+        export_quality_package.clicked.connect(lambda: (_show_message(f"已导出质量评价包：{_write_quality_assessment_package(project_dir).name}"), on_refresh()))
         next_button.clicked.connect(on_next)
         return frame
 
@@ -2967,7 +5268,7 @@ if QWidget is not None:
         generate = QPushButton("生成分析计划草稿")
         save_draft = QPushButton("保存计划编辑")
         confirm = QPushButton("确认分析计划")
-        next_button = QPushButton("下一步：结果与报告")
+        next_button = QPushButton("下一步：统计分析")
         for button in (generate, save_draft, confirm, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
@@ -3248,9 +5549,15 @@ if QWidget is not None:
         run = QPushButton("运行统计分析")
         run.setObjectName("metaPrimaryButton")
         run.setEnabled(bool(confirmed))
-        next_button = QPushButton("下一步：报告导出")
+        export_stats_manifest = QPushButton("导出统计结果清单")
+        export_stats_manifest.setObjectName("metaSecondaryButton")
+        export_stats_package = QPushButton("导出统计结果包")
+        export_stats_package.setObjectName("metaSecondaryButton")
+        next_button = QPushButton("下一步：图表结果")
         next_button.setObjectName("metaSecondaryButton")
         buttons.addWidget(run)
+        buttons.addWidget(export_stats_manifest)
+        buttons.addWidget(export_stats_package)
         buttons.addWidget(next_button)
         buttons.addStretch(1)
         layout.addLayout(buttons)
@@ -3265,12 +5572,24 @@ if QWidget is not None:
                 _show_message(str(exc))
             on_refresh()
 
+        def do_export_stats_manifest() -> None:
+            path = _write_statistics_results_manifest(project_dir)
+            _show_message(f"已导出统计结果清单：{path.name}")
+            on_refresh()
+
+        def do_export_stats_package() -> None:
+            path = _write_statistics_results_package(project_dir)
+            _show_message(f"已导出统计结果包：{path.name}")
+            on_refresh()
+
         run.clicked.connect(do_run)
+        export_stats_manifest.clicked.connect(do_export_stats_manifest)
+        export_stats_package.clicked.connect(do_export_stats_package)
         next_button.clicked.connect(on_next)
         return frame
 
 
-    def _figure_results_page(project_dir: Path, *, on_next: Callable[[], None]) -> QFrame:
+    def _figure_results_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         service = FigureResultService()
         artifacts = service.list_figure_artifacts(project_dir)
         results_dir = project_dir / "analysis" / "results"
@@ -3287,14 +5606,36 @@ if QWidget is not None:
         table.setHorizontalHeaderLabels(["figure_id", "type", "format", "path"])
         table.setRowCount(len(artifacts))
         for row, artifact in enumerate(artifacts):
-            values = [artifact.figure_id, artifact.figure_type, artifact.output_format, artifact.output_path]
+            values = [artifact.figure_id, artifact.figure_type, artifact.format, artifact.file_path]
             for col, value in enumerate(values):
                 table.setItem(row, col, QTableWidgetItem(str(value)))
         layout.addWidget(table)
+        actions = QHBoxLayout()
+        export_figure_manifest = QPushButton("导出图表结果清单")
+        export_figure_manifest.setObjectName("metaSecondaryButton")
+        export_figure_package = QPushButton("导出图表结果包")
+        export_figure_package.setObjectName("metaSecondaryButton")
         next_button = QPushButton("下一步：PRISMA")
         next_button.setObjectName("metaSecondaryButton")
+        actions.addWidget(export_figure_manifest)
+        actions.addWidget(export_figure_package)
+        actions.addWidget(next_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+
+        def do_export_figure_manifest() -> None:
+            path = _write_figure_results_manifest(project_dir)
+            _show_message(f"已导出图表结果清单：{path.name}")
+            on_refresh()
+
+        def do_export_figure_package() -> None:
+            path = _write_figure_results_package(project_dir)
+            _show_message(f"已导出图表结果包：{path.name}")
+            on_refresh()
+
+        export_figure_manifest.clicked.connect(do_export_figure_manifest)
+        export_figure_package.clicked.connect(do_export_figure_package)
         next_button.clicked.connect(on_next)
-        layout.addWidget(next_button)
         layout.addWidget(_developer_details(f"figure_manifest={project_dir / 'figures' / 'figure_artifacts.json'}\nresults_dir={results_dir}"))
         layout.addStretch(1)
         return frame
@@ -3322,8 +5663,9 @@ if QWidget is not None:
         buttons = QHBoxLayout()
         collect = QPushButton("生成 PRISMA summary")
         export_md = QPushButton("导出 Markdown")
+        export_prisma_package = QPushButton("导出 PRISMA 报告包")
         next_button = QPushButton("下一步：报告导出")
-        for button in (collect, export_md, next_button):
+        for button in (collect, export_md, export_prisma_package, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         collect.setObjectName("metaPrimaryButton")
@@ -3344,8 +5686,14 @@ if QWidget is not None:
             _show_message(f"已导出：{path.name}")
             on_refresh()
 
+        def do_export_prisma_package() -> None:
+            path = _write_prisma_reporting_package(project_dir)
+            _show_message(f"已导出 PRISMA 报告包：{path.name}")
+            on_refresh()
+
         collect.clicked.connect(do_collect)
         export_md.clicked.connect(do_export_md)
+        export_prisma_package.clicked.connect(do_export_prisma_package)
         next_button.clicked.connect(on_next)
         return frame
 
@@ -3380,8 +5728,9 @@ if QWidget is not None:
         show_location = QPushButton("打开报告位置")
         export_html = QPushButton("导出 HTML")
         export_docx = QPushButton("导出 DOCX")
-        next_button = QPushButton("返回项目首页")
-        for button in (build_md, show_location, export_html, export_docx, next_button):
+        export_report_package = QPushButton("导出报告交付包")
+        next_button = QPushButton("下一步：复现包")
+        for button in (build_md, show_location, export_html, export_docx, export_report_package, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_md.setObjectName("metaPrimaryButton")
@@ -3396,7 +5745,9 @@ if QWidget is not None:
             on_refresh()
 
         def do_show_location() -> None:
-            _show_message("报告位置：项目 reports 目录。未自动打开外部应用。")
+            reports_dir = project_dir / "reports"
+            _copy_text_to_clipboard(str(reports_dir))
+            _show_message(f"报告目录路径已复制：{reports_dir}")
 
         def do_export_html() -> None:
             result = PublicationExportService().export_html_report(project_dir)
@@ -3408,10 +5759,16 @@ if QWidget is not None:
             _show_message(result.message)
             on_refresh()
 
+        def do_export_report_package() -> None:
+            path = _write_formal_report_package(project_dir)
+            _show_message(f"已导出报告交付包：{path.name}")
+            on_refresh()
+
         build_md.clicked.connect(do_build_md)
         show_location.clicked.connect(do_show_location)
         export_html.clicked.connect(do_export_html)
         export_docx.clicked.connect(do_export_docx)
+        export_report_package.clicked.connect(do_export_report_package)
         next_button.clicked.connect(on_next)
         return frame
 
@@ -3524,11 +5881,24 @@ if QWidget is not None:
     def _progress_summary(state) -> QFrame:
         stage_labels = {
             "project_home": "项目首页",
+            "page_button_audit": "页面能力审计",
             "pico_workspace": "研究问题与 PICO",
             "search_strategy": "检索策略",
             "literature_import": "文献库与导入",
             "screening": "去重与筛选",
-            "extraction_quality": "数据提取与质量评价",
+            "exclusion_criteria": "排除标准",
+            "title_abstract_screening": "标题摘要筛选",
+            "fulltext_management": "全文管理",
+            "manual_extraction": "数据提取",
+            "extraction_quality": "数据提取",
+            "ai_extraction": "AI 辅助提取",
+            "quality_assessment": "质量评价",
+            "analysis_plan": "分析计划",
+            "statistics_analysis": "统计分析",
+            "figure_results": "图表结果",
+            "prisma": "PRISMA",
+            "report_export": "报告导出",
+            "reproducibility_package": "复现包",
             "analysis_results": "统计分析",
             "prisma_reporting": "报告导出",
         }

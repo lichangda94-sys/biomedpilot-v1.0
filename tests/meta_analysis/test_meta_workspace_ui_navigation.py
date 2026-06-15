@@ -47,7 +47,7 @@ def _current_step_widget(widget):
     return scroll.widget()
 
 
-def test_meta_workspace_layout_state_uses_eight_user_facing_stages() -> None:
+def test_meta_workspace_layout_state_uses_preview_user_facing_stages() -> None:
     state = meta_workspace_layout_state()
 
     assert "0.1.0-internal-beta" in state.status_label
@@ -55,23 +55,43 @@ def test_meta_workspace_layout_state_uses_eight_user_facing_stages() -> None:
     assert state.default_page_key == "workflow_home"
     assert [item.page_key for item in state.navigation_items] == [
         "workflow_home",
+        "page_button_audit",
         "pico_workspace",
         "search_strategy",
         "literature_import",
         "screening_review",
+        "exclusion_criteria",
+        "title_abstract_screening",
+        "fulltext_management",
         "manual_extraction",
+        "ai_extraction",
+        "quality_assessment",
+        "analysis_plan",
         "statistics_analysis",
+        "figure_results",
+        "prisma",
         "report_export",
+        "reproducibility_package",
     ]
     assert [item.label for item in state.navigation_items] == [
         "项目首页",
+        "页面能力审计",
         "研究问题与 PICO",
         "检索策略",
         "文献库与导入",
         "去重与筛选",
-        "数据提取与质量评价",
+        "排除标准",
+        "标题摘要筛选",
+        "全文管理",
+        "数据提取",
+        "AI 辅助提取",
+        "质量评价",
+        "分析计划",
         "统计分析",
+        "图表结果",
+        "PRISMA",
         "报告导出",
+        "复现包",
     ]
     assert "不能作为正式临床" in state.testing_notice
 
@@ -87,13 +107,23 @@ def test_meta_workspace_widget_mounts_project_sidebar_and_home(qt_app, tmp_path:
     assert widget.meta_workspace_layout_state()["current_step_workspace"] == "metaCurrentStepWorkspace"
     assert widget.page_keys() == (
         "workflow_home",
+        "page_button_audit",
         "pico_workspace",
         "search_strategy",
         "literature_import",
         "screening_review",
+        "exclusion_criteria",
+        "title_abstract_screening",
+        "fulltext_management",
         "manual_extraction",
+        "ai_extraction",
+        "quality_assessment",
+        "analysis_plan",
         "statistics_analysis",
+        "figure_results",
+        "prisma",
         "report_export",
+        "reproducibility_package",
     )
     mounted_pages = {frame.objectName() for frame in widget.findChildren(QFrame)}
     assert {
@@ -135,7 +165,7 @@ def test_meta_screening_workspace_renders_chinese_user_controls_without_raw_path
 
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_dir(summary.project_root)
-    widget.show_step("screening_review")
+    widget.show_step("title_abstract_screening")
     widget.show()
     qt_app.processEvents()
     current = _current_step_widget(widget)
@@ -145,28 +175,25 @@ def test_meta_screening_workspace_renders_chinese_user_controls_without_raw_path
         for child in current.findChildren(QComboBox)
     }
 
-    assert "文献筛选" in visible
     assert "标题摘要筛选" in visible
-    assert "当前文献库" in visible
-    assert "当前 PRISMA 计数" in visible
-    assert "排除原因" in visible
+    assert "筛选摘要" in visible
+    assert "队列文献" in visible
+    assert "PRISMA screened/excluded" in visible
     assert "下一步：全文管理" in visible
-    assert {"未筛选", "纳入", "排除", "不确定", "需要全文", "重置为未筛选"} <= set(combos["metaScreeningWorkspaceDecisionSelector"])
-    assert {"研究对象不符合", "干预/暴露不符合", "对照不符合", "结局不符合", "研究类型不符合", "重复文献", "非原始研究", "全文不可获取", "语言或获取限制", "其他"} <= set(combos["metaScreeningWorkspaceReasonSelector"])
+    assert {"纳入", "排除", "不确定", "需复核"} <= set(combos["metaTitleAbstractScreeningDecisionSelector"])
+    reasons = combos["metaTitleAbstractScreeningReasonSelector"]
+    assert "选择排除理由" in reasons
     assert str(summary.project_root) not in visible
     assert "title_abstract_queue_v2.json" not in visible
     assert "manifest" not in visible
     assert "raw JSON" not in visible
 
-    table = current.findChild(QTableWidget, "metaScreeningWorkspaceRecordTable")
-    detail = current.findChild(QTextEdit, "metaScreeningWorkspaceRecordDetail")
-    ai_detail = current.findChild(QTextEdit, "metaScreeningWorkspaceAISuggestion")
-    assert table is not None
+    record_list = current.findChild(QListWidget, "metaScreeningRecordList")
+    detail = current.findChild(QTextEdit, "metaScreeningRecordDetail")
+    assert record_list is not None
     assert detail is not None
-    assert ai_detail is not None
-    assert table.rowCount() == 1
-    assert "请选择左侧文献" in detail.toPlainText()
-    assert "暂无 AI 建议" in ai_detail.toPlainText()
+    assert record_list.count() == 1
+    assert "Trial of treatment for hypertension" in detail.toPlainText()
 
 
 def test_meta_fulltext_management_workspace_renders_chinese_user_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
@@ -211,7 +238,7 @@ def test_meta_fulltext_management_workspace_renders_chinese_user_controls_withou
 
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_dir(summary.project_root)
-    widget.show_step("screening_review")
+    widget.show_step("fulltext_management")
     widget.show()
     qt_app.processEvents()
     current = _current_step_widget(widget)
@@ -335,7 +362,7 @@ def test_meta_quality_workspace_renders_chinese_nos_controls_without_raw_interna
 
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_dir(summary.project_root)
-    widget.show_step("manual_extraction")
+    widget.show_step("quality_assessment")
     widget.show()
     qt_app.processEvents()
     current = _current_step_widget(widget)
@@ -416,7 +443,7 @@ def test_meta_analysis_plan_workspace_renders_chinese_confirmation_controls_with
 
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_dir(summary.project_root)
-    widget.show_step("statistics_analysis")
+    widget.show_step("analysis_plan")
     widget.show()
     qt_app.processEvents()
     current = _current_step_widget(widget)
@@ -435,19 +462,8 @@ def test_meta_analysis_plan_workspace_renders_chinese_confirmation_controls_with
     assert "亚组分析" in visible
     assert "敏感性分析" in visible
     assert "发表偏倚" in visible
-    assert "纳入研究数量" in visible
     assert "确认分析计划" in visible
-    assert "下一步：结果与报告" in visible
-    assert "效应量标准化预检查" in visible
-    assert "Pairwise executor" in visible
-    assert "统计结果审核" in visible
-    assert "刷新效应量标准化预检查" in visible
-    assert "运行 pairwise executor" in visible
-    assert "接受进入报告草稿" in visible
-    assert "标记需要修订" in visible
-    assert "不纳入报告" in visible
-    assert "申请报告就绪" in visible
-    assert current.findChild(QCheckBox, "metaResultWarningAcknowledgement") is not None
+    assert "下一步：统计分析" in visible
     assert {"OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other"} <= set(combos["metaAnalysisPlanEffectMeasureSelector"])
     assert {"固定效应", "随机效应", "固定效应 + 随机效应", "暂不决定"} <= set(combos["metaAnalysisPlanModelPreferenceSelector"])
     assert str(summary.project_root) not in visible

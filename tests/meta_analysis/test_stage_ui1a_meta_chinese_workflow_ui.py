@@ -79,7 +79,8 @@ def test_ui1a_meta_workspace_entry_is_chinese_friendly() -> None:
     assert labels[0] == "项目首页"
     assert "检索策略" in labels
     assert "文献库与导入" in labels
-    assert "数据提取与质量评价" in labels
+    assert "数据提取" in labels
+    assert "质量评价" in labels
     assert "统计分析" in labels
     assert "报告导出" in labels
     assert "不能作为正式临床" in state.testing_notice
