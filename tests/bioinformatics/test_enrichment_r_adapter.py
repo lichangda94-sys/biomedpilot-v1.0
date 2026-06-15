@@ -20,7 +20,7 @@ def test_controlled_ora_r_fixture_is_blocked_until_full_standard_worker_migratio
     assert result["legacy_execution_policy"] == "disabled_until_full_standard_worker_migration_evidence_passes"
     assert "controlled_enrichment_legacy_formal_execution_disabled" in result["blockers"]
     assert "enrichment_full_standard_worker_migration_required" in result["blockers"]
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in result["blockers"]
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" not in result["blockers"]
     assert "analysis_resource_not_locked:reactome_full" in result["blockers"]
     assert result["plot_artifacts"] == []
     assert result["report_artifacts"] == []

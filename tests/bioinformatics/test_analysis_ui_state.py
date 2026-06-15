@@ -42,6 +42,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["analysis_environment_gate_rows"]
     assert state["analysis_resource_gate_rows"]
     assert state["survival_clinical_rows"]
+    assert state["preview_readiness_rows"]
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
@@ -83,7 +84,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     environment_gate_text = "\n".join(str(row) for row in state["analysis_environment_gate_rows"])
     assert "Analysis environment registry" in environment_gate_text
     assert "Full R environment readiness" in environment_gate_text
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in environment_gate_text
+    assert "analysis_environment_renv_lock_not_restored:r-spatial-full:scaffold_only_not_restored" in environment_gate_text
     resource_gate_text = "\n".join(str(row) for row in state["analysis_resource_gate_rows"])
     assert "Analysis resource manifest" in resource_gate_text
     assert "Full analysis resource lock evidence registry" in resource_gate_text
@@ -124,9 +125,10 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "r-bio-core->r-chem-gpu" in module_interface_text
     mode_readiness_text = "\n".join(str(row) for row in state["module_mode_readiness_rows"])
     assert "Analysis module mode readiness matrix" in mode_readiness_text
-    assert "partial=10" in mode_readiness_text
+    assert "passed=1" in mode_readiness_text
+    assert "partial=9" in mode_readiness_text
     assert "blocked=0" in mode_readiness_text
-    assert "full_blocked_modules=deg；survival；univariate；multivariate；enrichment" in mode_readiness_text
+    assert "full_blocked_modules=deg；univariate；multivariate；enrichment" in mode_readiness_text
     assert "Mode readiness: deg" in mode_readiness_text
     assert "mock=passed" in mode_readiness_text
     assert "lite=passed" in mode_readiness_text
@@ -136,16 +138,17 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "module_full_mode_blocked:deg" in mode_readiness_text
     environment_artifact_text = "\n".join(str(row) for row in state["environment_artifact_rows"])
     assert "Analysis environment artifact matrix" in environment_artifact_text
-    assert "passed=2" in environment_artifact_text
-    assert "partial=4" in environment_artifact_text
+    assert "passed=3" in environment_artifact_text
+    assert "partial=3" in environment_artifact_text
+    assert "restored_full_envs=r-bio-full" in environment_artifact_text
     assert "blocked=0" in environment_artifact_text
     assert "full_envs=r-bio-full；r-spatial-full；r-chem-full；r-chem-gpu" in environment_artifact_text
     assert "Environment artifact: app-dev" in environment_artifact_text
     assert "Environment artifact: r-bio-full" in environment_artifact_text
     assert "docker=present:docker/Dockerfile.r-bio-full" in environment_artifact_text
     assert "renv=present:renv/renv.bio-full.lock" in environment_artifact_text
-    assert "renv_status=scaffold_only_not_restored" in environment_artifact_text
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in environment_artifact_text
+    assert "renv_status=restored" in environment_artifact_text
+    assert "analysis_environment_renv_lock_not_restored:r-spatial-full:scaffold_only_not_restored" in environment_artifact_text
     resource_artifact_text = "\n".join(str(row) for row in state["resource_artifact_rows"])
     assert "Analysis resource artifact matrix" in resource_artifact_text
     assert "locked=1" in resource_artifact_text
@@ -255,8 +258,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     full_activation_text = "\n".join(str(row) for row in state["full_activation_module_rows"])
     assert "Full analysis module activation matrix" in full_activation_text
     assert "Full activation: deg" in full_activation_text
+    assert "Full activation: survival" in full_activation_text
     assert "Full activation: enrichment" in full_activation_text
-    assert "analysis_full_environment_lock_not_restored:r-bio-full=7" in full_activation_text
+    assert "analysis_full_environment_lock_not_restored:r-spatial-full=1" in full_activation_text
     assert "analysis_resource_not_locked:reactome_full=1" in full_activation_text
     assert "resources=not_required" in full_activation_text
     assert "resources=blocked" in full_activation_text
@@ -267,10 +271,13 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "R worker migration adapter status summary" in worker_migration_text
     assert "adapter:existing_controlled_python_and_r_contracts_pending_standard_worker_migration=1" in worker_migration_text
     assert "adapter:r_native_lite_contract_exists_pending_full_environment_and_standard_worker_migration=2" in worker_migration_text
-    assert "next:declare_scoped_full_mode_only_after_environment_and_resource_locks=10" in worker_migration_text
-    assert "registry_evidence_entry_missing_or_blocked=10" in worker_migration_text
+    assert "adapter:survival_minimal_v1_formal_standard_worker_migrated=1" in worker_migration_text
+    assert "next:declare_scoped_full_mode_only_after_environment_and_resource_locks=9" in worker_migration_text
+    assert "next:no_action_migration_evidence_passed=1" in worker_migration_text
+    assert "registry_evidence_entry_missing_or_blocked=9" in worker_migration_text
     assert "missing_standard_worker_migration_evidence:deg" in worker_migration_text
     assert "missing_standard_worker_migration_evidence:molecular_dynamics" in worker_migration_text
+    assert "missing_standard_worker_migration_evidence:survival" not in worker_migration_text
     assert "R worker migration: deg" in worker_migration_text
     assert "pending_standard_worker_migration" in worker_migration_text
     assert "standard_worker_lite_ready" in worker_migration_text
@@ -279,14 +286,14 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     remediation_text = "\n".join(str(row) for row in state["analysis_architecture_remediation_rows"])
     assert "R architecture remediation queue" in remediation_text
     assert "R evidence template handoff preview" in remediation_text
-    assert "environment_actions=4" in remediation_text
+    assert "environment_actions=3" in remediation_text
     assert "resource_actions=11" in remediation_text
     assert "module_actions=10" in remediation_text
     assert "planning_only_not_readiness_evidence" in remediation_text
     assert "scripts/analysis_architecture_gate.py --evidence-template-output <path>" in remediation_text
     assert "restore_full_analysis_environment_locks" in remediation_text
-    assert "r-bio-full:register_schema_valid_restored_environment_evidence" in remediation_text
-    assert "register_schema_valid_restored_environment_evidence=4" in remediation_text
+    assert "r-spatial-full:register_schema_valid_restored_environment_evidence" in remediation_text
+    assert "register_schema_valid_restored_environment_evidence=3" in remediation_text
     assert "lock_full_analysis_resources" in remediation_text
     assert "reactome_full:register_schema_valid_prelocked_resource_evidence" in remediation_text
     assert "register_schema_valid_prelocked_resource_evidence=11" in remediation_text
@@ -294,7 +301,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "deg:declare_scoped_full_mode_only_after_environment_and_resource_locks" in remediation_text
     assert "univariate:declare_scoped_full_mode_only_after_environment_and_resource_locks" in remediation_text
     assert "implement_formal_runtime_contract_before_standard_worker_migration" not in remediation_text
-    assert "missing_modules=10" in remediation_text
+    assert "missing_modules=9" in remediation_text
     assert "missing_module:deg" in remediation_text
     assert "missing_module:enrichment" in remediation_text
     assert state["developer_diagnostics"]["analysis_architecture_status"]["p0_issues"] == []
@@ -317,10 +324,10 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["module_interface_matrix"]["passed_module_count"] == 10
     assert state["developer_diagnostics"]["module_interface_rows"] == state["module_interface_rows"]
     assert state["developer_diagnostics"]["module_mode_readiness_matrix"]["status"] == "partial"
-    assert state["developer_diagnostics"]["module_mode_readiness_matrix"]["partial_module_count"] == 10
+    assert state["developer_diagnostics"]["module_mode_readiness_matrix"]["partial_module_count"] == 9
     assert state["developer_diagnostics"]["module_mode_readiness_rows"] == state["module_mode_readiness_rows"]
     assert state["developer_diagnostics"]["environment_artifact_matrix"]["status"] == "partial"
-    assert state["developer_diagnostics"]["environment_artifact_matrix"]["partial_environment_count"] == 4
+    assert state["developer_diagnostics"]["environment_artifact_matrix"]["partial_environment_count"] == 3
     assert state["developer_diagnostics"]["environment_artifact_rows"] == state["environment_artifact_rows"]
     assert state["developer_diagnostics"]["resource_artifact_matrix"]["status"] == "partial"
     assert state["developer_diagnostics"]["resource_artifact_matrix"]["blocked_resource_count"] == 11
@@ -356,14 +363,30 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["developer_diagnostics"]["reproducibility_provenance_matrix"]["passed_row_count"] == 5
     assert state["developer_diagnostics"]["reproducibility_provenance_rows"] == state["reproducibility_provenance_rows"]
     assert state["developer_diagnostics"]["full_activation_module_matrix"]["status"] == "blocked"
-    assert state["developer_diagnostics"]["full_activation_module_matrix"]["blocked_module_count"] == 10
+    assert state["developer_diagnostics"]["full_activation_module_matrix"]["blocked_module_count"] == 9
+    assert state["developer_diagnostics"]["full_activation_module_matrix"]["eligible_module_count"] == 1
     assert state["developer_diagnostics"]["full_activation_module_rows"] == state["full_activation_module_rows"]
     migration_matrix = state["developer_diagnostics"]["standard_worker_migration_matrix"]
-    assert migration_matrix["formal_pending_count"] == migration_matrix["module_count"]
-    assert migration_matrix["passed_evidence_module_ids"] == []
+    assert migration_matrix["formal_pending_count"] == 9
+    assert migration_matrix["passed_evidence_module_ids"] == ["survival"]
     assert migration_matrix["blocked_evidence_module_ids"] == []
-    assert migration_matrix["missing_evidence_module_ids"] == migration_matrix["expected_evidence_module_ids"]
+    assert "survival" not in migration_matrix["missing_evidence_module_ids"]
+    assert len(migration_matrix["missing_evidence_module_ids"]) == 9
     assert state["developer_diagnostics"]["standard_worker_migration_rows"] == state["standard_worker_migration_rows"]
+    assert state["developer_diagnostics"]["preview_readiness_matrix"] == state["preview_readiness_matrix"]
+    assert state["developer_diagnostics"]["preview_readiness_rows"] == state["preview_readiness_rows"]
+    assert state["preview_readiness_matrix"]["status"] == "passed"
+    assert state["preview_readiness_matrix"]["global_activation_claim"] == "blocked"
+    preview_rows = {row["row_id"]: row for row in state["preview_readiness_rows"]}
+    assert preview_rows["standard_package_catalog"]["consumption_boundary"] == "result_index_registered_standard_package_only"
+    assert preview_rows["results_browser"]["current_status"] == "passed"
+    assert preview_rows["module_detail_views"]["consumption_boundary"] == "standard_package_detail_view_no_module_private_output_scan"
+    assert preview_rows["legacy_sidecar_detail_view"]["current_status"] == "review_only"
+    assert preview_rows["survival_preview"]["current_status"] == "scoped_survival_minimal_v1_review_only_global_activation_blocked"
+    assert preview_rows["r_bio_full_environment_evidence"]["current_status"] == "evidence_restored_review_only_global_activation_blocked"
+    assert preview_rows["blocked_full_modules"]["current_status"] == "blocked_modules_review_only"
+    assert all(row["ui_execution_eligible"] is False for row in state["preview_readiness_rows"])
+    assert all(row["global_full_ready_eligible"] is False for row in state["preview_readiness_rows"])
     assert state["developer_diagnostics"]["analysis_architecture_remediation_rows"] == state["analysis_architecture_remediation_rows"]
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["status"] == "passed"
     assert state["developer_diagnostics"]["analysis_environment_registry_validation"]["full_mode_ready"] is False
@@ -461,11 +484,15 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert row["input_manifest"]["schema"] == "analysis/schemas/input/module_input.schema.json"
     assert row["input_manifest_path_relative"] == "analysis_results/enrichment-mock-task/module_input.json"
     assert row["artifact_counts"]["tables"] == 1
-    assert row["artifact_counts"]["logs"] == 2
+    assert row["artifact_counts"]["logs"] == 4
     assert row["artifact_manifest"]["tables"][0]["package_relative_path"] == "tables/mock_summary.tsv"
     assert row["artifact_manifest"]["tables"][0]["exists"] is True
     assert row["artifact_manifest"]["reports"][0]["package_relative_path"] == "reports/README_mock.md"
-    assert {item["artifact_type"] for item in row["artifact_manifest"]["logs"]} == {"analysis_worker_log", "analysis_worker_invocation_manifest"}
+    assert {item["artifact_type"] for item in row["artifact_manifest"]["logs"]} >= {"analysis_worker_log", "analysis_worker_invocation_manifest"}
+    assert row["preview_display_status"] == "standard_package_preview_only"
+    assert row["preview_review_only"] is True
+    assert row["global_full_ready_eligible"] is False
+    assert row["preview_readiness"]["global_full_ready_eligible"] is False
     package_gate_text = "\n".join(str(item) for item in state["standard_package_gate_rows"])
     assert "Standard package catalog source" in package_gate_text
     assert "Standard package validation" in package_gate_text
@@ -480,7 +507,10 @@ def test_analysis_center_state_exposes_standard_analysis_package_catalog_without
     assert result_row["standard_package_status"] == "registered"
     assert result_row["standard_package_validation_status"] == "passed"
     assert result_row["standard_package_path"] == "analysis_results/enrichment-mock-task"
-    assert result_row["standard_package_artifacts"] == "tables=1; plots=0; reports=1; logs=2"
+    assert result_row["standard_package_artifacts"] == "tables=1; plots=0; reports=1; logs=4"
+    assert state["preview_readiness_matrix"]["status"] == "passed"
+    assert state["preview_readiness_matrix"]["global_activation_claim"] == "blocked"
+    assert all(row["global_full_ready_eligible"] is False for row in state["preview_readiness_rows"])
     assert _action(state, "report_ready_export")["enabled"] is False
     assert _file_set(tmp_path) == before
 

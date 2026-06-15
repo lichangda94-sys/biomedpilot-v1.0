@@ -26,6 +26,7 @@ The architecture gate reports `passed` for the default safety gate because there
 - Full environments are declared as separate Docker/renv surfaces: `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`.
 - Runtime installs and runtime full-resource downloads are forbidden by scan and policy.
 - Frontend/result browsing is routed through result-index registered standard packages rather than raw R package internals.
+- UI preview integration is audited in `docs/UI_PREVIEW_INTEGRATION_AUDIT.md`; preview exposes review-only readiness metadata and must not display scoped survival evidence or r-bio-full evidence as global full-ready.
 - Legacy DEG and survival sidecars are labeled transitional and cannot count as isolated standard-worker migration evidence.
 
 ## Remaining Priority Issues

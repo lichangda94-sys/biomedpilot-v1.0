@@ -232,6 +232,8 @@ Current policy distinguishes:
 
 Legacy sidecars are review-only and cannot count as full migration evidence.
 
+UI preview integration was audited in `docs/UI_PREVIEW_INTEGRATION_AUDIT.md`. The analysis center state exposes a `preview_readiness_matrix` so mock/lite packages, blocked full packages, scoped survival evidence, r-bio-full environment evidence, and legacy sidecar detail views remain review-only and cannot be shown as global full-ready.
+
 ## Completed Environment Split
 
 Completed as architecture scaffolding.

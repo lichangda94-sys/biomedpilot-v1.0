@@ -238,6 +238,8 @@ Current interpretation: the architecture gate proves the current source has no P
 | results_browser_tables | passed | BioinformaticsResultsBrowserWidget | app/bioinformatics/workflow_pages.py | consume_result_index_registered_standard_result_packages_only |
 | detailed_result_views_migration | passed | module_specific_detailed_result_views | app/bioinformatics/workflow_pages.py and module-specific detail builders | transitional_legacy_detail_views_must_not_be_formal_readiness_evidence |
 
+UI/preview integration was re-audited in `docs/UI_PREVIEW_INTEGRATION_AUDIT.md`. Preview state now exposes a `preview_readiness_matrix` and keeps catalog rows, legacy sidecars, scoped survival evidence, r-bio-full evidence, and blocked full modules as review-only display state rather than global full-ready or production-runnable state.
+
 ### Reproducibility Provenance Matrix
 
 | Metric | Count | Detail |
@@ -415,6 +417,7 @@ No rows reported.
 - Full analysis activation remains explicitly blocked rather than silently enabled.
 - Legacy sidecar producer inventory verifies default execution gates for 3/3 remaining sidecar producers; transitional sidecars remain non-migration evidence.
 - Survival has scoped survival_minimal_v1 full/formal standard-worker migration evidence; global full-ready remains blocked.
+- UI preview integration has explicit readiness metadata; no preview row is UI-execution eligible or global full-ready eligible while full activation remains blocked.
 - Full/formal result package validation now rejects missing worker invocation, missing R session info, missing Docker/renv hashes, unregistered packages, and non-standard-worker or legacy sidecar evidence.
 - Survival resource profile is documented as clinical_fixture_only; enrichment, spatial, docking, and molecular-dynamics resources remain global full-ready blockers.
 - r-bio-full external evidence collection workflow is scaffolded as explicit manual tooling; default app-dev and default gate do not build Docker, restore renv, install R packages, or download resources.

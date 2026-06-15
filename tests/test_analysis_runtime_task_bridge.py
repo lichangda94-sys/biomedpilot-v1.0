@@ -2008,6 +2008,12 @@ def test_survival_full_formal_task_bridge_runs_standard_worker_and_registers_pac
     assert catalog["package_count"] == 1
     assert catalog["rows"][0]["validation_status"] == "passed"
     assert catalog["rows"][0]["result_semantics"] == "formal_computed_result"
+    assert catalog["rows"][0]["ui_execution_eligible"] is False
+    assert catalog["rows"][0]["migration_evidence_eligible"] is True
+    assert catalog["rows"][0]["preview_review_only"] is True
+    assert catalog["rows"][0]["global_full_ready_eligible"] is False
+    assert catalog["rows"][0]["preview_display_status"] == "formal_standard_worker_evidence_review_only_global_full_blocked"
+    assert "catalog_row_is_scoped_evidence_not_global_full_ready" in catalog["rows"][0]["preview_readiness"]["blockers"]
     assert any(
         entry["result_id"] == "analysis-package-survival-full-formal-test"
         for entry in result_index["results"]

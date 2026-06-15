@@ -489,6 +489,9 @@ def _is_full_formal_package(result: dict[str, Any], provenance: dict[str, Any], 
     status = str(result.get("status") or "")
     mode = str(result.get("mode") or provenance.get("mode") or expected_mode or "")
     semantics = str(result.get("result_semantics") or "")
+    worker_boundary = provenance.get("worker_boundary") if isinstance(provenance.get("worker_boundary"), dict) else {}
+    if worker_boundary.get("boundary_type") == "legacy_service_adapter_sidecar":
+        return False
     return status == "passed" and (mode == "full" or semantics == "formal_computed_result")
 
 
