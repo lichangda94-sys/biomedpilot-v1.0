@@ -73,6 +73,16 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                 mode=mode,
                 result_semantics=result_semantics,
             )
+            row_status = str(result_payload.get("status") or validation.get("result_status") or "")
+            validation_status = str(validation.get("status") or "blocked")
+            preview_readiness = _catalog_preview_readiness(
+                catalog_policy,
+                status=row_status,
+                validation_status=validation_status,
+                worker_boundary_type=worker_boundary_type,
+                mode=mode,
+                result_semantics=result_semantics,
+            )
             package_manifest = detail["package_manifest"]
             input_manifest = detail["input_manifest"]
             rows.append(
@@ -86,8 +96,8 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "package_path_relative": _relative_or_absolute(root, package_dir),
                     "module_id": str(result_payload.get("module_id") or _module_id_from_entry(entry)),
                     "mode": mode,
-                    "status": str(result_payload.get("status") or validation.get("result_status") or ""),
-                    "validation_status": str(validation.get("status") or "blocked"),
+                    "status": row_status,
+                    "validation_status": validation_status,
                     "result_package_schema": str(validation.get("result_package_schema") or ""),
                     "package_manifest": package_manifest,
                     "package_manifest_validation_status": str(package_manifest.get("validation_status") or ""),
@@ -112,6 +122,10 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                     "execution_readiness_policy": str(catalog_policy["execution_readiness_policy"]),
                     "migration_evidence_policy": str(catalog_policy["migration_evidence_policy"]),
                     "policy_blockers": list(catalog_policy["policy_blockers"]),
+                    "preview_readiness": preview_readiness,
+                    "preview_display_status": str(preview_readiness["current_status"]),
+                    "preview_review_only": bool(preview_readiness["review_only"]),
+                    "global_full_ready_eligible": bool(preview_readiness["global_full_ready_eligible"]),
                     "command": str(provenance_payload.get("command") or ""),
                     "input_hash": str(provenance_payload.get("input_hash") or ""),
                     "parameter_hash": str(provenance_payload.get("parameter_hash") or ""),
@@ -167,6 +181,20 @@ def _blocked_catalog_row(
     payload_schemas: dict[str, str],
     blockers: list[str],
 ) -> dict[str, Any]:
+    preview_readiness = {
+        "schema_version": "biomedpilot.analysis.preview_readiness.v1",
+        "current_status": "blocked_standard_package",
+        "required_before_ready": [
+            "valid_result_index_registered_standard_package",
+            "passed_standard_package_validation",
+            "global_full_activation_gate_passed",
+        ],
+        "review_only": True,
+        "global_full_ready_eligible": False,
+        "ui_execution_eligible": False,
+        "blockers": ["standard_result_package_not_read", *list(dict.fromkeys(blockers))],
+        "warnings": [],
+    }
     return {
         "schema_version": "biomedpilot.analysis.standard_package_catalog_row.v1",
         "result_id": str(entry.get("result_id") or ""),
@@ -213,6 +241,10 @@ def _blocked_catalog_row(
         "execution_readiness_policy": "blocked_standard_result_package_not_read",
         "migration_evidence_policy": "blocked_standard_result_package_not_read",
         "policy_blockers": ["standard_result_package_not_read"],
+        "preview_readiness": preview_readiness,
+        "preview_display_status": str(preview_readiness["current_status"]),
+        "preview_review_only": True,
+        "global_full_ready_eligible": False,
         "command": "",
         "input_hash": "",
         "parameter_hash": "",
@@ -399,6 +431,51 @@ def _catalog_consumption_policy(worker_boundary_type: str, *, mode: str, result_
         "migration_evidence_policy": "not_standard_worker_migration_evidence",
         "policy_blockers": ["standard_package_catalog_row_is_not_ui_execution_readiness"],
         "warnings": [],
+    }
+
+
+def _catalog_preview_readiness(
+    catalog_policy: dict[str, Any],
+    *,
+    status: str,
+    validation_status: str,
+    worker_boundary_type: str,
+    mode: str,
+    result_semantics: str,
+) -> dict[str, Any]:
+    """Return UI preview wording that cannot be confused with full readiness."""
+
+    blockers = list(catalog_policy.get("policy_blockers", []))
+    warnings = list(catalog_policy.get("warnings", []))
+    if validation_status != "passed":
+        current_status = "blocked_standard_package"
+        blockers.append(f"standard_package_validation_not_passed:{validation_status or 'missing'}")
+    elif status == "blocked":
+        current_status = "blocked_full_or_unavailable_result"
+        blockers.append("standard_package_result_status_blocked")
+    elif worker_boundary_type == "legacy_service_adapter_sidecar":
+        current_status = "legacy_sidecar_review_only"
+    elif worker_boundary_type == "standard_r_worker" and mode == "full" and result_semantics == "formal_computed_result":
+        current_status = "formal_standard_worker_evidence_review_only_global_full_blocked"
+        blockers.append("catalog_row_is_scoped_evidence_not_global_full_ready")
+    elif worker_boundary_type == "standard_r_worker":
+        current_status = "mock_or_lite_standard_worker_preview_only"
+    else:
+        current_status = "standard_package_preview_only"
+    return {
+        "schema_version": "biomedpilot.analysis.preview_readiness.v1",
+        "current_status": current_status,
+        "required_before_ready": [
+            "global_full_activation_gate_passed",
+            "module_full_activation_status_passed",
+            "registry_owned_standard_worker_migration_evidence_passed",
+            "full_environment_and_resource_evidence_passed",
+        ],
+        "review_only": True,
+        "global_full_ready_eligible": False,
+        "ui_execution_eligible": bool(catalog_policy.get("ui_execution_eligible", False)),
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": warnings,
     }
 
 

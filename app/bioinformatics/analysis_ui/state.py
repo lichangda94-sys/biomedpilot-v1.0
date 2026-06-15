@@ -98,6 +98,16 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     analysis_architecture_remediation_queue = build_analysis_remediation_queue(analysis_architecture_status)
     analysis_architecture_remediation_rows = build_analysis_architecture_remediation_rows(analysis_architecture_remediation_queue)
     standard_package_catalog = build_standard_analysis_package_catalog(root)
+    preview_readiness_matrix = build_preview_readiness_matrix(
+        standard_package_catalog=standard_package_catalog,
+        analysis_architecture_status=analysis_architecture_status,
+        frontend_consumption_matrix=frontend_consumption_matrix,
+        legacy_sidecar_transition_matrix=legacy_sidecar_transition_matrix,
+        full_activation_module_matrix=full_activation_module_matrix,
+        standard_worker_migration_matrix=standard_worker_migration_matrix,
+        environment_artifact_matrix=environment_artifact_matrix,
+    )
+    preview_readiness_rows = preview_readiness_matrix["rows"]
     analysis_environment_validation = validate_analysis_environment_registry()
     analysis_environment_gate_rows = build_analysis_environment_gate_rows(analysis_environment_validation)
     analysis_resource_validation = validate_analysis_resource_manifest()
@@ -193,6 +203,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "full_activation_module_rows": full_activation_module_rows,
         "standard_worker_migration_matrix": standard_worker_migration_matrix,
         "standard_worker_migration_rows": standard_worker_migration_rows,
+        "preview_readiness_matrix": preview_readiness_matrix,
+        "preview_readiness_rows": preview_readiness_rows,
         "analysis_architecture_remediation_queue": analysis_architecture_remediation_queue,
         "analysis_architecture_remediation_rows": analysis_architecture_remediation_rows,
         "standard_package_gate_rows": standard_package_gate_rows,
@@ -235,6 +247,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "full_activation_module_rows": full_activation_module_rows,
             "standard_worker_migration_matrix": standard_worker_migration_matrix,
             "standard_worker_migration_rows": standard_worker_migration_rows,
+            "preview_readiness_matrix": preview_readiness_matrix,
+            "preview_readiness_rows": preview_readiness_rows,
             "analysis_architecture_remediation_queue": analysis_architecture_remediation_queue,
             "analysis_architecture_remediation_rows": analysis_architecture_remediation_rows,
             "standard_analysis_package_catalog": standard_package_catalog,
@@ -1100,6 +1114,179 @@ def _standard_package_artifact_count_text(counts: dict[str, Any]) -> str:
     if not counts:
         return "None"
     return "; ".join(f"{key}={counts.get(key, 0)}" for key in ("tables", "plots", "reports", "logs"))
+
+
+def build_preview_readiness_matrix(
+    *,
+    standard_package_catalog: dict[str, Any],
+    analysis_architecture_status: dict[str, Any],
+    frontend_consumption_matrix: dict[str, Any],
+    legacy_sidecar_transition_matrix: dict[str, Any],
+    full_activation_module_matrix: dict[str, Any],
+    standard_worker_migration_matrix: dict[str, Any],
+    environment_artifact_matrix: dict[str, Any],
+) -> dict[str, Any]:
+    full_gate = analysis_architecture_status.get("full_analysis_activation_gate") if isinstance(analysis_architecture_status.get("full_analysis_activation_gate"), dict) else {}
+    full_gate_status = str(full_gate.get("status") or "blocked")
+    catalog_rows = [row for row in standard_package_catalog.get("rows", []) or [] if isinstance(row, dict)]
+    frontend_rows = [row for row in frontend_consumption_matrix.get("rows", []) or [] if isinstance(row, dict)]
+    legacy_sidecar_count = int(legacy_sidecar_transition_matrix.get("sidecar_producer_count") or 0)
+    full_rows = [row for row in full_activation_module_matrix.get("rows", []) or [] if isinstance(row, dict)]
+    migration_rows = [row for row in standard_worker_migration_matrix.get("rows", []) or [] if isinstance(row, dict)]
+    environment_rows = [row for row in environment_artifact_matrix.get("rows", []) or [] if isinstance(row, dict)]
+    survival_activation = next((row for row in full_rows if row.get("module_id") == "survival"), {})
+    survival_migration = next((row for row in migration_rows if row.get("module_id") == "survival"), {})
+    r_bio_full = next((row for row in environment_rows if row.get("environment_id") == "r-bio-full"), {})
+    results_browser = next((row for row in frontend_rows if row.get("row_id") == "results_browser_tables"), {})
+    detail_views = next((row for row in frontend_rows if row.get("row_id") == "detailed_result_views_migration"), {})
+    catalog_source = next((row for row in frontend_rows if row.get("row_id") == "catalog_source_policy"), {})
+    catalog_policy_blockers = []
+    if standard_package_catalog.get("source_policy") != "result_index_standard_result_package_artifacts_only":
+        catalog_policy_blockers.append("catalog_source_policy_not_result_index_standard_package_only")
+    if any(row.get("ui_execution_eligible") is True for row in catalog_rows):
+        catalog_policy_blockers.append("catalog_row_marked_ui_execution_eligible")
+    if any(row.get("global_full_ready_eligible") is True for row in catalog_rows):
+        catalog_policy_blockers.append("catalog_row_marked_global_full_ready_eligible")
+
+    rows = [
+        _preview_readiness_row(
+            "standard_package_catalog",
+            "Standard package catalog",
+            "passed" if not catalog_policy_blockers else "blocked",
+            "result_index_registered_standard_package_only",
+            catalog_policy_blockers,
+            [
+                f"packages={standard_package_catalog.get('package_count', len(catalog_rows))}",
+                f"catalog_source={catalog_source.get('status', 'unknown')}",
+            ],
+            evidence_path="app/analysis_runtime/package_catalog.py",
+        ),
+        _preview_readiness_row(
+            "results_browser",
+            "Results browser",
+            "passed" if results_browser.get("status") == "passed" else "blocked",
+            "standard_package_catalog_rows_only",
+            _list(results_browser.get("blockers")),
+            [f"consumer={results_browser.get('consumer_surface', 'unknown')}"],
+            evidence_path=str(results_browser.get("file_path") or "app/bioinformatics/workflow_pages.py"),
+        ),
+        _preview_readiness_row(
+            "module_detail_views",
+            "Module-specific detail views",
+            "passed" if detail_views.get("status") == "passed" else "blocked",
+            "standard_package_detail_view_no_module_private_output_scan",
+            _list(detail_views.get("blockers")),
+            [f"pending_detail_views={frontend_consumption_matrix.get('pending_detail_view_count', 0)}"],
+            evidence_path=str(detail_views.get("file_path") or "app/analysis_runtime/package_catalog.py"),
+        ),
+        _preview_readiness_row(
+            "legacy_sidecar_detail_view",
+            "Legacy sidecar detail view",
+            "review_only" if legacy_sidecar_count else "not_present",
+            "legacy_sidecar_review_only_not_migration_or_ui_execution_evidence",
+            [],
+            [
+                f"sidecar_producer_count={legacy_sidecar_count}",
+                f"transition_status={legacy_sidecar_transition_matrix.get('status', 'unknown')}",
+            ],
+            evidence_path="app/analysis_runtime/package_catalog.py",
+        ),
+        _preview_readiness_row(
+            "survival_preview",
+            "Survival preview",
+            _survival_preview_status(survival_activation, survival_migration, full_gate_status),
+            "scoped_survival_minimal_v1_or_candidate_display_only_global_activation_blocked",
+            [] if full_gate_status == "blocked" else ["global_full_activation_gate_not_blocked_for_preview_audit"],
+            [
+                f"module_activation={survival_activation.get('status', 'missing')}",
+                f"migration={survival_migration.get('formal_worker_status', 'missing')}",
+                f"current_adapter={survival_migration.get('current_adapter_status', 'missing')}",
+            ],
+            evidence_path="analysis/registry/standard_worker_migration_evidence.json",
+        ),
+        _preview_readiness_row(
+            "r_bio_full_environment_evidence",
+            "r-bio-full environment evidence",
+            "evidence_restored_review_only_global_activation_blocked" if r_bio_full.get("status") == "passed" else "pending_environment_evidence",
+            "environment_evidence_does_not_equal_global_full_activation",
+            [] if full_gate_status == "blocked" else ["global_full_activation_gate_not_blocked_for_preview_audit"],
+            [
+                f"environment_status={r_bio_full.get('status', 'missing')}",
+                f"renv={r_bio_full.get('renv_policy_status', 'missing')}",
+                f"packages={r_bio_full.get('renv_package_count', 0)}",
+            ],
+            evidence_path="analysis/registry/environment_lock_evidence.json",
+        ),
+        _preview_readiness_row(
+            "blocked_full_modules",
+            "Blocked full modules",
+            "blocked_modules_review_only",
+            "blocked_modules_must_not_be_displayed_as_production_runnable",
+            [] if int(full_activation_module_matrix.get("blocked_module_count") or 0) else [],
+            [
+                f"eligible={full_activation_module_matrix.get('eligible_module_count', 0)}",
+                f"blocked={full_activation_module_matrix.get('blocked_module_count', 0)}",
+                f"global_gate={full_gate_status}",
+            ],
+            evidence_path="analysis/registry/analysis_modules.json",
+        ),
+    ]
+    blockers = [item for row in rows for item in row["blockers"]]
+    return {
+        "schema_version": "biomedpilot.analysis.preview_readiness_matrix.v1",
+        "status": "blocked" if blockers else "passed",
+        "global_activation_claim": full_gate_status,
+        "source_policy": "ui_preview_reads_catalog_and_gate_state_no_module_private_r_outputs",
+        "row_count": len(rows),
+        "rows": rows,
+        "blockers": blockers,
+        "warnings": [
+            "preview_rows_are_display_readiness_only_not_full_execution_readiness",
+            "r_bio_full_evidence_and_scoped_survival_evidence_do_not_unlock_global_full_activation",
+        ],
+    }
+
+
+def _preview_readiness_row(
+    row_id: str,
+    label: str,
+    current_status: str,
+    consumption_boundary: str,
+    blockers: list[str],
+    warnings: list[str],
+    *,
+    evidence_path: str,
+) -> dict[str, Any]:
+    return {
+        "row_id": row_id,
+        "label": label,
+        "current_status": current_status,
+        "consumption_boundary": consumption_boundary,
+        "ui_execution_eligible": False,
+        "global_full_ready_eligible": False,
+        "review_only": True,
+        "required_before_ready": compact_list(
+            [
+                "global_full_activation_gate_passed",
+                "module_full_activation_passed",
+                "standard_worker_migration_evidence_passed",
+                "full_environment_and_resource_locks_passed",
+            ]
+        ),
+        "evidence_path": evidence_path,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": compact_list(warnings),
+    }
+
+
+def _survival_preview_status(survival_activation: dict[str, Any], survival_migration: dict[str, Any], full_gate_status: str) -> str:
+    if full_gate_status != "blocked":
+        return "preview_audit_requires_blocked_global_activation"
+    if survival_migration.get("formal_worker_status") == "migrated_to_isolated_standard_worker":
+        return "scoped_survival_minimal_v1_review_only_global_activation_blocked"
+    if survival_activation.get("status") == "eligible":
+        return "candidate_review_only_global_activation_blocked"
+    return "candidate_or_pending_global_activation_blocked"
 
 
 def build_standard_package_gate_rows(catalog: dict[str, Any]) -> list[dict[str, Any]]:
