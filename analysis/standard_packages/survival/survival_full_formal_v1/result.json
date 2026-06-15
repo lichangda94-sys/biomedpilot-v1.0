@@ -1,0 +1,25 @@
+{
+  "schema_version": "biomedpilot.analysis.result.v1",
+  "module_id": "survival",
+  "mode": "full",
+  "task_id": "survival-full-formal-v1",
+  "status": "passed",
+  "result_semantics": "formal_computed_result",
+  "summary": {"message": "Survival full/formal analysis completed with KM/log-rank, univariate Cox, and multivariate Cox.", "clinical_conclusion_status": "not_generated"},
+  "tables": [
+    {"artifact_type": "formal_survival_multivariate_cox_table", "path": "tables/cox_multivariate.tsv"},
+    {"artifact_type": "formal_survival_univariate_cox_table", "path": "tables/cox_univariate.tsv"},
+    {"artifact_type": "formal_survival_km_logrank_table", "path": "tables/km_logrank.tsv"},
+    {"artifact_type": "formal_survival_summary_table", "path": "tables/survival_summary.tsv"}
+  ],
+  "plots": [
+    {"artifact_type": "formal_survival_cox_forest_svg", "path": "plots/cox_forest.svg"},
+    {"artifact_type": "formal_survival_km_curve_svg", "path": "plots/km_curve.svg"}
+  ],
+  "reports": [
+    {"artifact_type": "lite_analysis_limitations_report", "path": "reports/survival_full_formal_report.md"}
+  ],
+  "blockers": [],
+  "warnings": ["clinical_conclusion_not_generated", "survival_minimal_v1_scope_excludes_roc_nomogram_calibration_competing_risk"],
+  "created_at": "2026-06-15T02:41:44Z"
+}

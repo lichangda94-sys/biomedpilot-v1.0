@@ -3,6 +3,21 @@
   "policy": "large_resources_are_versioned_external_references_not_user_request_downloads",
   "runtime_download_policy": "forbidden",
   "full_mode_policy": "all_required_resources_must_be_locked_before_full_mode",
+  "module_resource_profiles": {
+    "survival": {
+      "full_formal_profile": "clinical_fixture_only",
+      "reactome": "not_required",
+      "msigdb": "not_required",
+      "go": "not_required",
+      "kegg": "not_required",
+      "orgdb": "not_required",
+      "cellchatdb": "not_required",
+      "autodock_vina": "not_required",
+      "gromacs": "not_required",
+      "runtime_download_allowed": false,
+      "notes": "Survival full/formal preflight uses clinical survival and expression/signature acceptance data only; enrichment, spatial, docking, and MD resources remain global full-ready blockers outside this module profile."
+    }
+  },
   "resources": [
     {
       "resource_id": "mock_fixture_builtin_v1",

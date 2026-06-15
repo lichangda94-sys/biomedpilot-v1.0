@@ -1,0 +1,17 @@
+{
+  "schema_version": "biomedpilot.analysis.survival_full_formal_forbidden_sources.v1",
+  "module_id": "survival",
+  "mode": "full",
+  "forbidden_sources": [
+    "mock_fixture",
+    "lite_fixture",
+    "blocked_full_package",
+    "legacy_sidecar",
+    "module_private_output",
+    "manually_copied_artifact",
+    "result_without_worker_invocation",
+    "result_without_provenance",
+    "result_without_task_bridge"
+  ],
+  "policy": "any_matching_source_is_invalid_full_evidence_source"
+}

@@ -14,11 +14,15 @@ from app.analysis_runtime import (
     full_mode_resource_blockers,
     run_analysis_module_task,
     run_external_r_command,
+    validate_standard_worker_migration_evidence,
     validate_standard_result_package,
 )
 from app.analysis_runtime.registry import load_analysis_module_registry
 from app.bioinformatics.results.registry import load_registry, save_registry
 from app.shared.task_center.service import TaskCenter, TaskStatus
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def read_json(path: Path) -> dict[str, object]:
@@ -179,6 +183,136 @@ def module_input(tmp_path: Path, *, mode: str = "mock", module_id: str = "enrich
     return payload
 
 
+def write_full_formal_survival_package(tmp_path: Path, *, package_name: str = "survival-full-formal-package") -> Path:
+    package_dir = tmp_path / package_name
+    for dirname in ("tables", "plots", "reports", "logs"):
+        (package_dir / dirname).mkdir(parents=True, exist_ok=True)
+    task_id = "survival-full-formal-task"
+    now = "2026-06-11T00:00:00Z"
+    (package_dir / "tables" / "survival_summary.tsv").write_text("metric\tvalue\nn\t4\n", encoding="utf-8")
+    (package_dir / "plots" / "km_curve.svg").write_text("<svg></svg>\n", encoding="utf-8")
+    (package_dir / "reports" / "report.html").write_text("<html></html>\n", encoding="utf-8")
+    (package_dir / "logs" / "stdout.log").write_text("", encoding="utf-8")
+    (package_dir / "logs" / "stderr.log").write_text("", encoding="utf-8")
+    (package_dir / "logs" / "r_session_info.txt").write_text("R version 4.4.2\n", encoding="utf-8")
+    result = {
+        "schema_version": "biomedpilot.analysis.result.v1",
+        "module_id": "survival",
+        "mode": "full",
+        "task_id": task_id,
+        "status": "passed",
+        "result_semantics": "formal_computed_result",
+        "created_at": now,
+        "summary": {},
+        "tables": [{"artifact_type": "survival_summary", "path": "tables/survival_summary.tsv"}],
+        "plots": [{"artifact_type": "km_curve", "path": "plots/km_curve.svg"}],
+        "reports": [{"artifact_type": "html_report", "path": "reports/report.html"}],
+        "blockers": [],
+        "warnings": [],
+    }
+    provenance = {
+        "schema_version": "biomedpilot.analysis.provenance.v1",
+        "module_id": "survival",
+        "mode": "full",
+        "task_id": task_id,
+        "created_at": now,
+        "input_hash": "sha256:" + "1" * 64,
+        "parameter_hash": "sha256:" + "2" * 64,
+        "random_seed": 7,
+        "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},
+        "runtime": {
+            "r_version": "R 4.4.2",
+            "bioconductor_version": "3.20",
+            "package_versions": {"survival": "3.7-0"},
+            "external_tool_versions": {},
+            "docker_image_digest": "sha256:" + "3" * 64,
+            "renv_lock_hash": "sha256:" + "4" * 64,
+        },
+        "command": "Rscript analysis/runners/run_module.R module_input.json output full",
+        "worker_boundary": {
+            "boundary_type": "standard_r_worker",
+            "task_system_invocation": "task_center_registered",
+            "migration_status": "standard_worker_contract",
+        },
+        "analysis_environment": {
+            "schema_version": "biomedpilot.analysis_environment_snapshot.v1",
+            "status": "passed",
+            "mode": "full",
+            "module_id": "survival",
+            "environment_id": "r-bio-full",
+            "dockerfile": "docker/Dockerfile.r-bio-full",
+            "docker_image_digest": "sha256:" + "3" * 64,
+            "renv_lock": "renv/renv.bio-full.lock",
+            "renv_lock_hash": "sha256:" + "4" * 64,
+            "allows_heavy_analysis_dependencies": True,
+            "resource_lock_required": True,
+            "external_tool_lock_required": False,
+            "full_mode_requires_isolated_environment": True,
+            "environment_registry_is_authoritative": True,
+            "runtime_package_install": "forbidden",
+            "runtime_resource_download": "forbidden",
+            "module_manifest": "analysis/modules/survival/module.json",
+            "environment_lock_status": {"ready": True, "blockers": []},
+            "resource_lock_status": {
+                "full_mode_ready": True,
+                "required_resource_ids": [],
+                "blocked_resource_ids": [],
+                "blockers": [],
+                "warnings": [],
+            },
+        },
+    }
+    invocation = {
+        "schema_version": "biomedpilot.analysis.worker_invocation.v1",
+        "created_at": now,
+        "started_at": now,
+        "finished_at": now,
+        "module_id": "survival",
+        "mode": "full",
+        "task_id": task_id,
+        "worker_backend": "rscript",
+        "invocation_status": "completed",
+        "standard_worker_entrypoint": "analysis/runners/run_module.R",
+        "worker_entrypoint": "analysis/runners/run_module.R",
+        "input_manifest": "module_input.json",
+        "working_directory": str(tmp_path),
+        "output_dir": str(package_dir),
+        "environment_id": "r-bio-full",
+        "output_contract": "standard_result_package",
+        "runtime_install_policy": "forbidden",
+        "resource_download_policy": "forbidden",
+        "returncode": 0,
+        "exit_code": 0,
+        "command": ["Rscript", "analysis/runners/run_module.R", "module_input.json", str(package_dir), "full"],
+        "stdout": "",
+        "stderr": "",
+        "stdout_log": "logs/stdout.log",
+        "stderr_log": "logs/stderr.log",
+        "blockers": [],
+        "boundary": "standard_r_worker",
+        "worker_boundary": {
+            "boundary_type": "standard_r_worker",
+            "task_system_invocation": "task_center_registered",
+            "migration_status": "standard_worker_contract",
+        },
+    }
+    module_payload = {
+        "schema_version": "biomedpilot.analysis.module_input.v1",
+        "module_id": "survival",
+        "mode": "full",
+        "task_id": task_id,
+        "project_id": tmp_path.name,
+        "inputs": {"input_package_id": "survival-full-input", "source_dataset_id": "survival-full-dataset"},
+        "parameters": {"analysis_family": "survival"},
+        "runtime": {"random_seed": 7, "requested_environment": "r-bio-full"},
+    }
+    (package_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    (package_dir / "provenance.json").write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+    (package_dir / "logs" / "worker_invocation.json").write_text(json.dumps(invocation, indent=2), encoding="utf-8")
+    (package_dir / "module_input.json").write_text(json.dumps(module_payload, indent=2), encoding="utf-8")
+    return package_dir
+
+
 def test_mock_analysis_task_bridge_writes_standard_package_task_and_result_index(tmp_path: Path) -> None:
     task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
     result = run_analysis_module_task(tmp_path, module_input(tmp_path), task_center=task_center)
@@ -280,14 +414,18 @@ def test_standard_analysis_package_catalog_reads_result_index_packages(tmp_path:
     assert row["random_seed"] == "7"
     assert row["worker_invocation"]["runtime_install_policy"] == "forbidden"
     assert row["worker_invocation"]["resource_download_policy"] == "forbidden"
-    assert row["artifact_counts"] == {"tables": 1, "plots": 0, "reports": 1, "logs": 2}
+    assert row["artifact_counts"] == {"tables": 1, "plots": 0, "reports": 1, "logs": 4}
     manifest = row["artifact_manifest"]
     assert manifest["source_policy"] == "standard_result_package_declared_artifacts_and_logs_only"
     assert manifest["tables"][0]["package_relative_path"] == "tables/mock_summary.tsv"
     assert manifest["tables"][0]["exists"] is True
     assert manifest["tables"][0]["within_standard_package"] is True
     assert manifest["reports"][0]["package_relative_path"] == "reports/README_mock.md"
-    assert {item["artifact_type"] for item in manifest["logs"]} == {"analysis_worker_log", "analysis_worker_invocation_manifest"}
+    assert {item["artifact_type"] for item in manifest["logs"]} == {
+        "analysis_log",
+        "analysis_worker_log",
+        "analysis_worker_invocation_manifest",
+    }
     assert all(item["source_policy"] == "standard_result_package_only" for group in ("tables", "reports", "logs") for item in manifest[group])
     assert "mock_result_not_scientific_output" in row["warnings"]
 
@@ -428,7 +566,7 @@ def test_standard_analysis_package_detail_reads_only_standard_package_artifacts(
     assert detail["artifact_manifest"]["tables"][0]["path_relative"] == "analysis_results/enrichment-mock-task/tables/mock_summary.tsv"
     assert detail["artifact_manifest"]["tables"][0]["size_bytes"] > 0
     assert detail["artifact_manifest"]["plots"] == []
-    assert len(detail["artifact_manifest"]["logs"]) == 2
+    assert len(detail["artifact_manifest"]["logs"]) == 4
 
 
 def test_standard_package_validation_blocks_missing_or_outside_declared_artifacts(tmp_path: Path) -> None:
@@ -736,6 +874,213 @@ def test_formal_standard_package_validation_blocks_missing_worker_boundary(tmp_p
     assert validation["status"] == "blocked"
     assert "formal_provenance_worker_boundary_missing" in validation["blockers"]
     assert "analysis_environment_snapshot_missing_or_invalid" in validation["blockers"]
+
+
+def test_result_package_full_formal_requires_worker_invocation(tmp_path: Path) -> None:
+    package_dir = write_full_formal_survival_package(tmp_path)
+    (package_dir / "logs" / "worker_invocation.json").unlink()
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="survival",
+        expected_task_id="survival-full-formal-task",
+        expected_mode="full",
+        result_index_registered=True,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "full_formal_worker_invocation_manifest_missing" in validation["blockers"]
+
+
+def test_result_package_full_formal_requires_r_session_info(tmp_path: Path) -> None:
+    package_dir = write_full_formal_survival_package(tmp_path)
+    (package_dir / "logs" / "r_session_info.txt").unlink()
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="survival",
+        expected_task_id="survival-full-formal-task",
+        expected_mode="full",
+        result_index_registered=True,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "full_formal_r_session_info_missing" in validation["blockers"]
+
+
+def test_result_package_full_formal_requires_environment_digest(tmp_path: Path) -> None:
+    package_dir = write_full_formal_survival_package(tmp_path)
+    provenance_path = package_dir / "provenance.json"
+    provenance = read_json(provenance_path)
+    provenance["runtime"].pop("docker_image_digest")  # type: ignore[index]
+    provenance["runtime"].pop("renv_lock_hash")  # type: ignore[index]
+    provenance["analysis_environment"].pop("docker_image_digest")  # type: ignore[index]
+    provenance["analysis_environment"].pop("renv_lock_hash")  # type: ignore[index]
+    provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="survival",
+        expected_task_id="survival-full-formal-task",
+        expected_mode="full",
+        result_index_registered=True,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "full_formal_docker_image_digest_missing" in validation["blockers"]
+    assert "full_formal_renv_lock_hash_missing" in validation["blockers"]
+
+
+def test_result_package_full_formal_requires_input_and_parameter_hash(tmp_path: Path) -> None:
+    package_dir = write_full_formal_survival_package(tmp_path)
+    provenance_path = package_dir / "provenance.json"
+    provenance = read_json(provenance_path)
+    provenance.pop("input_hash")
+    provenance.pop("parameter_hash")
+    provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="survival",
+        expected_task_id="survival-full-formal-task",
+        expected_mode="full",
+        result_index_registered=True,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "full_formal_input_hash_missing" in validation["blockers"]
+    assert "full_formal_parameter_hash_missing" in validation["blockers"]
+
+
+def test_result_package_full_formal_requires_standard_worker_boundary(tmp_path: Path) -> None:
+    package_dir = write_full_formal_survival_package(tmp_path)
+    invocation_path = package_dir / "logs" / "worker_invocation.json"
+    invocation = read_json(invocation_path)
+    invocation["boundary"] = "legacy_service_adapter_sidecar"
+    invocation["worker_boundary"]["boundary_type"] = "legacy_service_adapter_sidecar"  # type: ignore[index]
+    invocation["worker_backend"] = "legacy_service_adapter"
+    invocation_path.write_text(json.dumps(invocation, indent=2), encoding="utf-8")
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="survival",
+        expected_task_id="survival-full-formal-task",
+        expected_mode="full",
+        result_index_registered=True,
+    )
+
+    assert validation["status"] == "blocked"
+    assert "full_formal_worker_boundary_not_standard_r_worker" in validation["blockers"]
+    assert "invalid_full_evidence_source:legacy_sidecar" in validation["blockers"]
+
+
+def test_result_package_full_formal_requires_result_index_registration(tmp_path: Path) -> None:
+    package_dir = write_full_formal_survival_package(tmp_path)
+
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="survival",
+        expected_task_id="survival-full-formal-task",
+        expected_mode="full",
+    )
+
+    assert validation["status"] == "blocked"
+    assert "full_formal_result_index_registration_missing" in validation["blockers"]
+
+
+def test_mock_and_lite_packages_are_not_full_formal_packages(tmp_path: Path) -> None:
+    mock_result = run_analysis_module_task(tmp_path / "mock-project", module_input(tmp_path, mode="mock", module_id="enrichment"))
+    lite_project = tmp_path / "lite-project"
+    lite_result = run_analysis_module_task(
+        lite_project,
+        module_input(lite_project, mode="lite", module_id="survival"),
+        worker_backend="rscript",
+    )
+
+    mock_validation = validate_standard_result_package(
+        mock_result["result_package_dir"],
+        expected_module_id="enrichment",
+        expected_task_id="enrichment-mock-task",
+        expected_mode="mock",
+    )
+    lite_validation = validate_standard_result_package(
+        lite_result["result_package_dir"],
+        expected_module_id="survival",
+        expected_task_id="survival-lite-task",
+        expected_mode="lite",
+    )
+
+    assert "full_formal_result_index_registration_missing" not in mock_validation["blockers"]
+    assert "full_formal_result_index_registration_missing" not in lite_validation["blockers"]
+    assert "full_formal_r_session_info_missing" not in mock_validation["blockers"]
+    assert "full_formal_r_session_info_missing" not in lite_validation["blockers"]
+
+
+def test_standard_worker_migration_schema_forbids_sidecar_source(tmp_path: Path) -> None:
+    package_dir = write_full_formal_survival_package(tmp_path)
+    invocation_path = package_dir / "logs" / "worker_invocation.json"
+    invocation = read_json(invocation_path)
+    invocation["worker_backend"] = "legacy_service_adapter"
+    invocation["boundary"] = "legacy_service_adapter_sidecar"
+    invocation["worker_boundary"]["boundary_type"] = "legacy_service_adapter_sidecar"  # type: ignore[index]
+    invocation_path.write_text(json.dumps(invocation, indent=2), encoding="utf-8")
+    evidence = {
+        "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
+        "module_id": "survival",
+        "mode": "full",
+        "task_id": "survival-full-formal-task",
+        "result_package_dir": str(package_dir),
+        "frontend_consumes_standard_package": True,
+        "result_index_registered": True,
+        "formal_result_semantics_preserved": True,
+        "required_result_status": "passed",
+        "required_result_semantics": "formal_computed_result",
+        "required_engine_name": "biomedpilot_standard_r_worker",
+        "required_analysis_environment_status": "passed",
+        "required_worker_boundary": "standard_r_worker",
+        "required_task_system_invocation": "task_center_registered",
+        "required_worker_migration_status": "standard_worker_contract",
+        "forbidden_evidence_sources": [
+            "mock_fixture_package",
+            "lite_testing_level_package",
+            "legacy_service_adapter_sidecar",
+            "module_private_output_path",
+            "mock_fixture",
+            "lite_fixture",
+            "blocked_full_package",
+            "legacy_sidecar",
+            "module_private_output",
+            "manually_copied_artifact",
+            "result_without_worker_invocation",
+            "result_without_provenance",
+            "result_without_task_bridge",
+        ],
+        "migration_status": "candidate_not_ready",
+        "evidence_level": "full_formal",
+        "execution_boundary": "standard_r_worker",
+        "task_bridge_execution": True,
+        "legacy_sidecar_used": False,
+        "mock_used": False,
+        "lite_used": False,
+        "output_package_path": str(package_dir),
+        "output_package_hash": "sha256:" + "5" * 64,
+        "worker_invocation_path": str(invocation_path),
+        "provenance_path": str(package_dir / "provenance.json"),
+        "input_manifest_path": str(package_dir / "module_input.json"),
+        "environment_id": "r-bio-full",
+        "environment_evidence_path": "external_analysis_environments/r-bio-full/environment_lock_evidence.json",
+        "result_package_validation_status": "passed",
+        "provenance_validation_status": "passed",
+        "frontend_catalog_validation_status": "passed",
+        "reviewed_by": "test",
+        "reviewed_at": "2026-06-11T00:00:00Z",
+        "validation_errors": [],
+    }
+
+    validation = validate_standard_worker_migration_evidence("survival", evidence)
+
+    assert validation["status"] == "blocked"
+    assert "invalid_full_evidence_source:legacy_sidecar" in validation["blockers"]
 
 
 def test_legacy_sidecar_standard_package_validation_requires_worker_invocation_manifest(tmp_path: Path) -> None:
@@ -1526,7 +1871,11 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert result_json["module_id"] == module_id
         assert result_json["mode"] == "full"
         assert result_json["status"] == "blocked"
-        assert full_mode_blocker in result_json["blockers"]
+        if module_id == "survival":
+            assert "survival_full_survival_table_missing" in result_json["blockers"]
+            assert full_mode_blocker not in result_json["blockers"]
+        else:
+            assert full_mode_blocker in result_json["blockers"]
         for blocker in expected_environment_blockers:
             assert blocker in result_json["blockers"]
         for blocker in expected_resource_blockers:
@@ -1534,7 +1883,12 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert result_json["tables"] == []
         assert result_json["plots"] == []
         assert result_json["reports"] == []
-        assert provenance["engine"]["name"] == "biomedpilot_analysis_task_bridge"  # type: ignore[index]
+        expected_engine_name = (
+            "biomedpilot_standard_r_worker"
+            if module_id == "survival"
+            else "biomedpilot_analysis_task_bridge"
+        )
+        assert provenance["engine"]["name"] == expected_engine_name  # type: ignore[index]
         assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
         assert provenance["runtime"]["bioconductor_version"] == "not_executed"  # type: ignore[index]
         assert provenance["runtime"]["package_versions"] == {}  # type: ignore[index]
@@ -1546,21 +1900,42 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert environment["environment_id"] == module["full_environment"]  # type: ignore[index]
         assert environment["dockerfile"] == module_manifest["dockerfile"]  # type: ignore[index]
         assert environment["renv_lock"] == module_manifest["environment_lock"]  # type: ignore[index]
-        assert environment["status"] == "blocked_full_mode_environment_lock"  # type: ignore[index]
+        expected_environment_status = (
+            "passed"
+            if module_id == "survival"
+            else "blocked_full_mode_environment_lock"
+            if expected_environment_blockers
+            else "blocked_full_mode_resource_or_tool_lock"
+            if expected_resource_blockers
+            else "blocked_full_mode_worker_not_enabled"
+        )
+        assert environment["status"] == expected_environment_status  # type: ignore[index]
         assert environment["full_mode_requires_isolated_environment"] is True  # type: ignore[index]
         assert environment["runtime_package_install"] == "forbidden"  # type: ignore[index]
         assert environment["runtime_resource_download"] == "forbidden"  # type: ignore[index]
         assert environment["environment_lock_status"]["blockers"] == expected_environment_blockers  # type: ignore[index]
         assert environment["resource_lock_status"]["blockers"] == expected_resource_blockers  # type: ignore[index]
-        assert provenance["command"] == "analysis_task_bridge_mode_gate"
+        expected_command = (
+            "analysis_task_bridge_mode_gate"
+            if module_id != "survival"
+            else provenance["command"]
+        )
+        assert provenance["command"] == expected_command
         assert invocation["module_id"] == module_id
         assert invocation["mode"] == "full"
         assert invocation["worker_backend"] == "rscript"
-        assert invocation["invocation_status"] == "not_invoked_mode_gate"
-        assert invocation["returncode"] is None
-        assert invocation["command"] == []
-        assert invocation["worker_boundary"]["boundary_type"] == "analysis_task_bridge_gate"  # type: ignore[index]
-        assert invocation["worker_boundary"]["migration_status"] == "blocked_before_worker_execution"  # type: ignore[index]
+        if module_id == "survival":
+            assert invocation["invocation_status"] == "completed"
+            assert invocation["returncode"] == 2
+            assert invocation["command"]
+            assert invocation["worker_boundary"]["boundary_type"] == "standard_r_worker"  # type: ignore[index]
+            assert invocation["worker_boundary"]["migration_status"] == "standard_worker_contract"  # type: ignore[index]
+        else:
+            assert invocation["invocation_status"] == "not_invoked_mode_gate"
+            assert invocation["returncode"] is None
+            assert invocation["command"] == []
+            assert invocation["worker_boundary"]["boundary_type"] == "analysis_task_bridge_gate"  # type: ignore[index]
+            assert invocation["worker_boundary"]["migration_status"] == "blocked_before_worker_execution"  # type: ignore[index]
         assert task_center.list_tasks()[0].status == TaskStatus.FAILED
         assert result_index["results"][0]["result_semantics"] == "blocked"
         assert result_index["results"][0]["validation_status"] == "blocked"
@@ -1574,7 +1949,69 @@ def test_all_registered_full_modules_are_blocked_by_task_bridge_with_standard_pa
         assert catalog["rows"][0]["module_id"] == module_id
         assert catalog["rows"][0]["mode"] == "full"
         assert catalog["rows"][0]["analysis_environment"]["environment_id"] == module["full_environment"]
-        assert full_mode_blocker in catalog["rows"][0]["blockers"]
+        if module_id == "survival":
+            assert "survival_full_survival_table_missing" in catalog["rows"][0]["blockers"]
+        else:
+            assert full_mode_blocker in catalog["rows"][0]["blockers"]
+
+
+def test_survival_full_formal_task_bridge_runs_standard_worker_and_registers_package(tmp_path: Path) -> None:
+    project_root = tmp_path / "survival-full-formal"
+    task_center = TaskCenter(project_root / "tasks" / "tasks.json")
+    payload = read_json(ROOT / "analysis" / "fixtures" / "inputs" / "survival" / "module_input_full_formal.json")
+    payload["task_id"] = "survival-full-formal-test"
+    payload["project_id"] = "survival-full-formal"
+
+    result = run_analysis_module_task(
+        project_root,
+        payload,
+        task_center=task_center,
+        worker_backend="rscript",
+    )
+
+    package_dir = Path(result["result_package_dir"])
+    result_json = read_json(package_dir / "result.json")
+    provenance = read_json(package_dir / "provenance.json")
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id="survival",
+        expected_task_id="survival-full-formal-test",
+        expected_mode="full",
+        result_index_registered=True,
+    )
+    catalog = build_standard_analysis_package_catalog(project_root)
+    result_index = load_registry(project_root)
+
+    assert result["status"] == "passed"
+    assert validation["status"] == "passed"
+    assert result_json["status"] == "passed"
+    assert result_json["result_semantics"] == "formal_computed_result"
+    assert result_json["summary"]["method_scope"] == "survival_minimal_v1"
+    assert {artifact["artifact_type"] for artifact in result_json["tables"]} >= {
+        "formal_survival_summary_table",
+        "formal_survival_km_logrank_table",
+        "formal_survival_univariate_cox_table",
+        "formal_survival_multivariate_cox_table",
+    }
+    assert {artifact["artifact_type"] for artifact in result_json["plots"]} >= {
+        "formal_survival_km_curve_svg",
+        "formal_survival_cox_forest_svg",
+    }
+    assert provenance["engine"]["name"] == "biomedpilot_standard_r_worker"  # type: ignore[index]
+    assert provenance["analysis_environment"]["environment_id"] == "r-bio-full"  # type: ignore[index]
+    assert provenance["analysis_environment"]["status"] == "passed"  # type: ignore[index]
+    assert provenance["worker_boundary"]["boundary_type"] == "standard_r_worker"  # type: ignore[index]
+    assert provenance["worker_boundary"]["task_system_invocation"] == "task_center_registered"  # type: ignore[index]
+    assert provenance["runtime"]["docker_image_digest"]  # type: ignore[index]
+    assert provenance["runtime"]["renv_lock_hash"]  # type: ignore[index]
+    assert catalog["status"] == "passed"
+    assert catalog["package_count"] == 1
+    assert catalog["rows"][0]["validation_status"] == "passed"
+    assert catalog["rows"][0]["result_semantics"] == "formal_computed_result"
+    assert any(
+        entry["result_id"] == "analysis-package-survival-full-formal-test"
+        for entry in result_index["results"]
+    )
 
 
 def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execution(tmp_path: Path) -> None:
@@ -1589,17 +2026,15 @@ def test_lite_or_full_mode_returns_blocked_standard_package_without_worker_execu
     assert result_json["status"] == "blocked"
     assert result_json["result_semantics"] == "blocked"
     assert "full_resource_manifest_and_container_not_available" in result_json["blockers"]
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in result_json["blockers"]
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" not in result_json["blockers"]
     assert "analysis_resource_not_locked:reactome_full" in result_json["blockers"]
     assert "analysis_resource_not_locked:msigdb_full" in result_json["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
     assert provenance["analysis_environment"]["environment_id"] == "r-bio-full"  # type: ignore[index]
     assert provenance["analysis_environment"]["dockerfile"] == "docker/Dockerfile.r-bio-full"  # type: ignore[index]
     assert provenance["analysis_environment"]["renv_lock"] == "renv/renv.bio-full.lock"  # type: ignore[index]
-    assert provenance["analysis_environment"]["status"] == "blocked_full_mode_environment_lock"  # type: ignore[index]
-    assert provenance["analysis_environment"]["environment_lock_status"]["blockers"] == [  # type: ignore[index]
-        "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored"
-    ]
+    assert provenance["analysis_environment"]["status"] == "blocked_full_mode_resource_or_tool_lock"  # type: ignore[index]
+    assert provenance["analysis_environment"]["environment_lock_status"]["blockers"] == []  # type: ignore[index]
     assert "analysis_resource_not_locked:reactome_full" in provenance["analysis_environment"]["resource_lock_status"]["blockers"]  # type: ignore[index]
     assert task_center.list_tasks()[0].status == TaskStatus.FAILED
     assert registry["results"][0]["result_semantics"] == "blocked"

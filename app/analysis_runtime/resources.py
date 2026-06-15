@@ -55,7 +55,7 @@ BLOCKED_RESOURCE_STATUSES = {
     "blocked_until_tool_lock",
     "blocked_until_reference_lock",
 }
-RESTORED_LOCK_STATUSES = {"restored", "locked", "active"}
+RESTORED_LOCK_STATUSES = {"restored", "locked", "active", "restored_candidate", "evidence_passed"}
 
 
 def load_analysis_resource_manifest(path: str | Path | None = None) -> dict[str, Any]:
@@ -960,10 +960,35 @@ def _environment_lock_evidence_templates(environments: list[Any]) -> list[dict[s
         environment_id = str(item.get("environment_id") or "")
         if environment_id in {"", "app-dev", "r-bio-core"}:
             continue
+        evidence_root = str(item.get("evidence_root") or f"external_analysis_environments/{environment_id}")
+        required_evidence_files = [
+            str(path)
+            for path in item.get("required_evidence_files", [])
+            if path is not None
+        ]
+        if not required_evidence_files:
+            required_evidence_files = [
+                f"{evidence_root}/docker_build.log",
+                f"{evidence_root}/docker_image_digest.txt",
+                f"{evidence_root}/docker_inspect.json",
+                f"{evidence_root}/renv_lock_generate.log",
+                f"{evidence_root}/renv_lock_generate_metadata.json",
+                f"{evidence_root}/renv_bootstrap_version.txt",
+                f"{evidence_root}/renv_bootstrap_source.txt",
+                f"{evidence_root}/renv_restore.log",
+                f"{evidence_root}/renv_status.json",
+                f"{evidence_root}/r_session_info.txt",
+                f"{evidence_root}/installed_packages.tsv",
+                f"{evidence_root}/environment_lock_evidence.json",
+                f"{evidence_root}/evidence_manifest.json",
+            ]
+        dockerfile = str(item.get("dockerfile") or "docker/Dockerfile.<environment>")
+        renv_lock = str(item.get("renv_lock") or "renv/renv.<environment>.lock")
         templates.append(
             {
                 "schema_version": "biomedpilot.analysis.environment_lock_evidence.v1",
                 "environment_id": environment_id,
+                "environment_class": "full",
                 "status": "restored",
                 "r_version": str(item.get("r_runtime") or "<R version>"),
                 "bioconductor_version": "<Bioconductor version>",
@@ -985,18 +1010,52 @@ def _environment_lock_evidence_templates(environments: list[Any]) -> list[dict[s
                     "build_status": "built",
                     "build_log": "external_analysis_environments/logs/<environment_id>.docker-build.log",
                 },
-                "dockerfile": str(item.get("dockerfile") or "docker/Dockerfile.<environment>"),
-                "renv_lock": str(item.get("renv_lock") or "renv/renv.<environment>.lock"),
+                "docker_image_digest": "<docker image sha256 digest>",
+                "docker_build_log_path": f"{evidence_root}/docker_build.log",
+                "docker_inspect_path": f"{evidence_root}/docker_inspect.json",
+                "dockerfile": dockerfile,
+                "dockerfile_path": dockerfile,
+                "renv_lock": renv_lock,
+                "renv_lock_path": renv_lock,
+                "renv_lock_hash": "<renv lock sha256>",
+                "lock_profile": "survival_minimal_v1" if environment_id == "r-bio-full" else "<lock profile>",
+                "lock_profile_version": "v1" if environment_id == "r-bio-full" else "<lock profile version>",
+                "renv_lock_package_count": "<renv lock package count>",
+                "required_package_set": [
+                    "renv",
+                    "survival",
+                    "jsonlite",
+                    "data.table",
+                    "digest",
+                    "ggplot2",
+                    "broom",
+                    "htmltools",
+                ] if environment_id == "r-bio-full" else ["<required packages>"],
+                "missing_required_packages": [],
+                "renv_lock_generate_log_path": f"{evidence_root}/renv_lock_generate.log",
+                "renv_lock_generate_metadata_path": f"{evidence_root}/renv_lock_generate_metadata.json",
+                "renv_bootstrap_status": "available",
+                "renv_bootstrap_version": "<renv package version>",
+                "renv_bootstrap_source": "<CRAN/RSPM/internal source or offline tarball>",
+                "renv_bootstrap_version_path": f"{evidence_root}/renv_bootstrap_version.txt",
+                "renv_bootstrap_source_path": f"{evidence_root}/renv_bootstrap_source.txt",
+                "renv_restore_status": "restored",
+                "renv_restore_log_path": f"{evidence_root}/renv_restore.log",
+                "renv_status_path": f"{evidence_root}/renv_status.json",
+                "r_session_info_path": f"{evidence_root}/r_session_info.txt",
                 "runtime_package_install": "forbidden",
                 "runtime_resource_download": "forbidden",
                 "allowed_module_ids": [str(value) for value in item.get("allowed_module_ids", []) if value is not None],
-                "evidence_files": [
-                    "external_analysis_environments/evidence/<environment_id>.json",
-                    "external_analysis_environments/logs/<environment_id>.log",
-                ],
+                "evidence_files": required_evidence_files,
+                "package_inventory_path": f"{evidence_root}/installed_packages.tsv",
+                "created_at": "<created at>",
+                "created_by": "<reviewer or automation>",
+                "validation_status": "passed",
+                "validation_errors": [],
+                "evidence_hash": "<evidence bundle sha256>",
                 "registry_entry": {
                     "environment_id": environment_id,
-                    "evidence_path": "external_analysis_environments/evidence/<environment_id>.json",
+                    "evidence_path": f"{evidence_root}/environment_lock_evidence.json",
                 },
                 "forbidden_evidence_sources": [
                     "default_app_dev_environment",

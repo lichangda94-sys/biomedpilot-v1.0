@@ -1,688 +1,214 @@
 # R Analysis Remediation Plan
 
-Date: 2026-06-04
+Generated: `2026-06-11`
 
-## Goal
+Source of truth: `scripts/analysis_architecture_gate.py --json-output /tmp/analysis_architecture_gate.json --markdown-output docs/ARCHITECTURE_AUDIT_R_ANALYSIS.md`
 
-Move BioMedPilot analysis capabilities toward:
+## Current Position
+
+BioMedPilot is now partially aligned with the target pattern:
 
 ```text
-main app + task system + isolated analysis worker/service + standard result package
+main app + task system + isolated R analysis worker/service + standard result package
 ```
 
-Do not install full R/Bioconductor/spatial/chem dependencies in the default development environment. Do not download large databases during user requests.
+The architecture gate reports `passed` for the default safety gate because there are no P0 blockers, no runtime R package install hits, no runtime resource-download hits, and no heavy full-analysis dependencies in the default app-dev surface. The real state is still `partial_with_p1_gaps`: full analysis activation is intentionally `blocked`.
 
-## Phase R0: Boundary Contract
+## Completed Boundary Work
 
-Status: started.
+- Top-level `analysis/` structure exists with registry, schemas, modules, fixtures, runner, resources, and tests.
+- `analysis/registry/analysis_modules.json` declares the registered modules and their standard worker contract.
+- `analysis/runners/run_module.R` provides the shared `<input_json> <output_dir> <mode>` entrypoint.
+- All target modules have mock fixtures and standard result package fixtures.
+- All target modules have lite coverage through the task bridge and standard R worker contract.
+- Standard packages require `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, and `logs/`.
+- App-dev and r-bio-core are separated from full environments.
+- Full environments are declared as separate Docker/renv surfaces: `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`.
+- Runtime installs and runtime full-resource downloads are forbidden by scan and policy.
+- Frontend/result browsing is routed through result-index registered standard packages rather than raw R package internals.
+- Legacy DEG and survival sidecars are labeled transitional and cannot count as isolated standard-worker migration evidence.
 
-Completed in this audit:
+## Remaining Priority Issues
 
-- `analysis/registry/analysis_modules.json`
-- `analysis/registry/analysis_environments.json`
-- `analysis/registry/resource_lock_evidence.json`
-- `analysis/registry/environment_lock_evidence.json`
-- `analysis/registry/standard_worker_migration_evidence.json`
-- `analysis/schemas/input/module_input.schema.json`
-- `analysis/schemas/output/result.schema.json`
-- `analysis/schemas/output/provenance.schema.json`
-- `analysis/schemas/output/result_package.schema.json`
-- `analysis/schemas/output/worker_invocation.schema.json`
-- `analysis/schemas/output/resource_lock_evidence.schema.json`
-- `analysis/schemas/output/resource_lock_evidence_registry.schema.json`
-- `analysis/schemas/output/environment_lock_evidence.schema.json`
-- `analysis/schemas/output/environment_lock_evidence_registry.schema.json`
-- `analysis/schemas/output/full_analysis_activation_gate.schema.json`
-- `analysis/schemas/output/architecture_gate_report.schema.json`
-- `analysis/schemas/output/remediation_queue.schema.json`
-- `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`
-- `analysis/runners/run_module.R`
-- `scripts/analysis_architecture_gate.py`
-- `analysis/fixtures/inputs/mock_analysis_input.json`
-- `analysis/fixtures/outputs/mock_result_package/**`
-- `analysis/fixtures/inputs/<module_id>/module_input.json`
-- `analysis/fixtures/outputs/<module_id>/mock_result_package/**`
-- `analysis/resources/manifest.json`
-- `analysis/resources/locks/mock_fixture_builtin_v1.lock.json`
-- `external_analysis_environments/README.md`
-- `external_analysis_resources/README.md`
-- `app/analysis_runtime/package_catalog.py`
-- `app/analysis_runtime/registry.py`
-- `app/analysis_runtime/r_worker.py`
-- `app/analysis_runtime/resources.py`
-- `app/analysis_runtime/standard_package.py`
-- `app/analysis_runtime/task_bridge.py`
-- `analysis/modules/<module_id>/module.json`
-- `docker/Dockerfile.app-dev`
-- `docker/Dockerfile.r-bio-core`
-- `docker/Dockerfile.r-bio-full`
-- `docker/Dockerfile.r-spatial-full`
-- `docker/Dockerfile.r-chem-full`
-- `docker/Dockerfile.r-chem-gpu`
-- `renv/renv.app.lock`
-- `renv/renv.bio-core.lock`
-- `renv/renv.bio-full.lock`
-- `renv/renv.spatial-full.lock`
-- `renv/renv.chem-full.lock`
+### P0
 
-Remaining:
+None in the current gate output.
 
-- Add richer per-module mock tables/plots only where the UI needs them, while preserving mock labeling.
-- Migrate existing formal/full algorithms behind the isolated standard worker instead of sidecar or service-adapter execution.
+### P1
 
-Update: the first result package validator and mock-mode backend adapter now exist under `app/analysis_runtime/`. All registered modules now have fixed mock input and standard result package fixtures.
+- `full_analysis_environment_locks_not_restored`: `r-bio-full` now has schema-valid Docker build, renv bootstrap, renv restore, R session, package inventory, and `survival_minimal_v1` lock evidence. `r-spatial-full`, `r-chem-full`, and `r-chem-gpu` remain scaffold-only with no restored Docker image / renv evidence.
+- `full_analysis_resource_locks_not_complete`: Reactome, MSigDB, GO, KEGG, OrgDb, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD force-field resources lack complete version/source/hash/license/cache evidence.
+- `formal_algorithms_not_universally_migrated_to_isolated_standard_worker`: all 10 formal modules still need registry-owned full standard-worker migration evidence.
 
-Update: DEG is now registered as a standard analysis module with a mock input, mock standard result package, and base R lite worker fixture. DEG full/formal standard worker execution remains blocked until the existing controlled DEG runners are migrated behind the standard worker.
+### P2
 
-Update: the R-side standard runner now accepts `<input_json> <output_dir> <mode>`, copies module-specific mock packages in `mock` mode, writes blocked standard packages for `lite` and `full`, and blocks CLI/input mode mismatches. It remains a contract runner only; no real R algorithms are activated.
+- DEG and survival still have transitional legacy sidecar producers, guarded by default execution gates.
+- DEG and survival sidecar provenance remains transitional and cannot be used as full isolated-worker evidence.
 
-Update: standard R worker provenance now computes `input_hash` from the full input manifest and `parameter_hash` from the `parameters` object separately, without adding an R package dependency.
+### P3
 
-Update: the main-backend task bridge now materializes `module_input.json` for every standard bridge outcome before validation or worker execution. This covers Python fixture mock packages, validation-blocked packages, mode-blocked packages, and the explicit `worker_backend="rscript"` path. Missing `Rscript` is still a graceful blocked package.
+- Full mode remains declared as blocked for all modules until full environments and resources are restored.
+- Documentation and naming should keep distinguishing mock/lite/testing outputs from full/formal outputs.
 
-Update: transitional controlled adapters now route external R commands through `app/analysis_runtime/r_worker.py::run_external_r_command()` where they still use a transition boundary. This centralizes subprocess behavior and worker-boundary metadata for multi-factor DEG adapters, but still leaves full isolated standard-worker migration pending. Controlled enrichment legacy formal execution is now blocked instead of invoking this transition boundary.
+## Minimum Viable Remediation Path
 
-Update: transitional R adapters no longer import `subprocess` or set `subprocess.run` as their own default runner. Optional test runners are still injectable where external R execution remains transitional, but the default subprocess owner is now only `app/analysis_runtime/r_worker.py`; an architecture test guards this boundary for multi-factor DEG adapters and confirms controlled enrichment is disabled until standard-worker evidence exists.
+1. Restore full analysis environment locks outside the default development environment.
+2. Lock full analysis resources and external tools with real version, source, hash, license, cache path, and evidence files.
+3. Migrate one formal module at a time into task-center registered standard R-worker execution.
 
-Update: the resource manifest now declares required full-mode resources for enrichment, immune infiltration, spatial transcriptomics, docking, and molecular dynamics. `app/analysis_runtime/resources.py` validates the manifest and adds module-specific full-mode blockers until real locks exist.
+Do not install heavy R packages, Bioconductor databases, spatial packages, AutoDock Vina, GROMACS, or large references in app-dev. Do not download large resources during user requests.
 
-Update: resource validation now rejects any resource marked `locked` while version, source, hash, license, or cache path still contains placeholder values such as `required_before_full_mode`. Partially prepared blocked resources may carry warnings, but full mode remains blocked until the lock is complete.
+## Recommended Module Order
 
-Update: locked resources now require schema-valid lock evidence. `analysis/schemas/output/resource_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_resource_lock_evidence()` blocks missing evidence, placeholder fields, missing cache paths, missing evidence files, manifest/evidence mismatch, approved-module mismatch, or any runtime-download allowance. The repository-local mock fixture resource has evidence under `analysis/resources/locks/`; full Reactome/MSigDB/spatial/chem resources remain blocked until real external lock evidence exists.
+1. `survival`: first scoped full/formal migration completed for `survival_minimal_v1`; it is not global full-ready and does not cover expanded survival methods.
+2. `univariate`: base statistical contract is simple and useful for clinical association.
+3. `multivariate`: follows univariate and extends the same clinical schema.
+4. `enrichment`: requires resource lock discipline for Reactome/MSigDB/GO/KEGG/OrgDb.
+5. `immune_infiltration`: depends on signature/resource governance and heatmap/report packaging.
+6. `deg`: broader legacy sidecar surface; migrate after the smaller R-native contracts are proven.
+7. `spatial_transcriptomics`, `docking`, `molecular_dynamics`: keep planned until spatial/chem full images and external tool locks are ready.
 
-Update: full resource lock evidence now requires SHA-256 hash evidence with a 64-character hex value that matches the referenced `cache_path` content and an explicit `cache_content.non_empty=true` declaration. File cache paths are hashed directly, and directory cache paths use a deterministic hash over sorted relative file paths and contents. Empty cache directories are blocked as `analysis_resource_lock_evidence_cache_path_empty`, because a lock must prove actual prepared resource content. If `cache_content.file_count` is provided, it must match the actual file count under `cache_path`. The `repository_fixture` hash marker remains allowed only for the built-in mock fixture and cannot be used to lock Reactome, MSigDB, spatial, chemistry, or external tool resources.
+## Survival Formal Migration Evidence Checklist
 
-Update: resource artifact diagnostics now emit `resource_artifact_matrix`, covering per-resource version/hash/license/cache/evidence status, runtime-download policy, and required modules. The matrix keeps the built-in mock fixture locked while showing full Reactome/MSigDB/GO/KEGG/OrgDb, spatial, CellChatDB, AutoDock Vina, docking template, GROMACS, and MD force-field resources as partial until schema-valid prelocked evidence exists.
+Survival was selected as the first full/formal migration because its R-native scope is narrower than enrichment, spatial, docking, or molecular dynamics. The `survival_minimal_v1` migration evidence now passes for KM/log-rank, univariate Cox, and multivariate Cox through the standard R worker. This does not make global full production activation ready.
 
-Update: the Bioinformatics gene-set resource manager now blocks Reactome/GO/KEGG runtime downloads by default. Common resources remain visible as guidance, but user/UI flows must import GMT files or use externally prepared prelocked resources; parser/download code requires an explicit developer/test override and is not a normal runtime acquisition path.
+The detailed survival full/formal migration specification is maintained in `docs/SURVIVAL_FULL_FORMAL_MIGRATION_SPEC.md`. Template-only evidence files live under `analysis/evidence_specs/survival_full_formal/`; they remain templates and are not counted as readiness evidence.
 
-Update: the standard package catalog now reads result-index `standard_result_package` artifacts and is exposed in Analysis Center state as `standard_analysis_packages`. This is a read-only UI bridge; detailed module result views still need migration.
+The scoped survival evidence that now exists includes:
 
-Update: the standard package catalog now exposes worker-boundary metadata. Packages generated by the standard R worker are identifiable as `standard_r_worker`; compatibility sidecars generated by existing multi-factor DEG service adapters are explicitly labeled `legacy_service_adapter_sidecar` with `migration_status=sidecar_only_not_isolated_standard_worker`. Controlled enrichment legacy formal execution is disabled and no longer contributes a sidecar catalog source.
+- Standard worker evidence: `analysis/registry/standard_worker_migration_evidence.json` has a schema-valid survival entry proving task-center registered standard R-worker execution.
+- Result package evidence: `analysis/standard_packages/survival/survival_full_formal_v1` validates with `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`, `logs/worker_invocation.json`, and `logs/r_session_info.txt`.
+- Provenance evidence: the package records R version, Bioconductor version, R package versions, external tool versions if any, input hash, parameter hash, random seed, execution command, worker boundary metadata, Docker image digest, and renv lock hash.
+- Task bridge evidence: survival full/formal execution goes through `app/analysis_runtime/task_bridge.py` and not through a direct legacy sidecar path.
+- Frontend catalog evidence: the result index registers the standard package and the package catalog/detail views consume that package instead of module-private survival outputs.
+- Environment evidence: `r-bio-full` has restored renv lock evidence and Docker image build evidence.
+- Gate evidence: default gate remains passed, `--require-full-ready` remains blocked until all full evidence exists globally, while survival is reported as `migrated_to_isolated_standard_worker` only for the scoped `survival_minimal_v1` migration.
+- Forbidden source guard: mock fixtures, lite fixtures, blocked-full packages, legacy sidecars, module-private outputs, manually copied artifacts, and packages without worker invocation/provenance/task bridge are invalid full evidence sources.
 
-Update: standard package catalog rows now include consumption-policy fields for UI and release gates. A legacy service-adapter sidecar can still be browsed as a review artifact, but it is marked `ui_execution_eligible=false`, `migration_evidence_eligible=false`, `legacy_sidecar_review_only_not_ui_execution_readiness`, and `forbidden_legacy_sidecar_not_standard_worker_migration_evidence`. Lite/testing standard-worker rows are also non-eligible for migration evidence; only a future full formal standard-worker package can become a migration-evidence candidate, and it must still pass registry-owned evidence validation.
+The full/formal result package validator is stricter than mock/lite validation. A future full/formal package fails if it lacks `logs/worker_invocation.json`, `logs/r_session_info.txt`, Docker image digest, renv lock hash, input hash, parameter hash, a `standard_r_worker` boundary, or result-index registration. Mock and lite packages are not treated as full/formal evidence.
 
-Update: direct legacy sidecar execution is now blocked by default for controlled DEG, multi-factor DEG, KM/log-rank, and Cox univariate executors. Focused tests and runtime-validation tools may opt into `allow_legacy_sidecar_execution=True` to audit the old sidecar contract, but normal callers receive `legacy_service_adapter_sidecar_execution_disabled` and `standard_worker_migration_required:<module>` until task-center registered standard-worker migration evidence exists.
+Survival's current full/formal resource profile is `clinical_fixture_only`: Reactome, MSigDB, GO, KEGG, OrgDb, CellChatDB, AutoDock Vina, and GROMACS are `not_required` for the survival preflight. Global `--require-full-ready` still remains blocked until enrichment, spatial, docking, and molecular-dynamics resources/tools are locked.
 
-Update: the architecture gate now includes a static `legacy_sidecar_override_allowlist` row. It scans `allow_legacy_sidecar_execution=True` usage and blocks any occurrence outside tests, `app/bioinformatics/deg_engine/runtime_validation.py`, and `scripts/releasebuild_formal_deg_gate.py`.
+## r-bio-full Environment Evidence Specification
 
-Update: `source_sidecar_producer_inventory` now checks default execution-gate coverage for every remaining sidecar producer. The row remains partial while sidecars exist, but it blocks if any producer can write a legacy sidecar without an entrypoint guarded by `legacy_sidecar_execution_gate()`.
+`r-bio-full` environment evidence now passes for the scoped `survival_minimal_v1` lock profile. Together with the survival standard-worker evidence, it supports the scoped survival migration only; it does not unblock global full production activation.
 
-Update: module interface, entrypoint, and migration matrices now require every lite-supported module manifest to explicitly declare `runner=analysis/runners/run_module.R` and `worker_backend=rscript`. The correlation module manifest is now aligned with the registry, and registry-only mode drift can no longer prove lite/full worker readiness without the module manifest carrying the same contract.
+The registry documents the expected evidence root and required files:
 
-Update: RARCH-17 is now driven by target-module presence plus `module_interface_matrix` evidence instead of reusing formal standard-worker migration state. The current target modules pass the shared module interface contract; formal/full worker migration remains tracked separately by the standard-worker entrypoint, task boundary, provenance boundary, and P1 migration matrices.
+- `external_analysis_environments/r-bio-full/docker_build.log`
+- `external_analysis_environments/r-bio-full/docker_image_digest.txt`
+- `external_analysis_environments/r-bio-full/docker_inspect.json`
+- `external_analysis_environments/r-bio-full/renv_lock_generate.log`
+- `external_analysis_environments/r-bio-full/renv_lock_generate_metadata.json`
+- `external_analysis_environments/r-bio-full/renv_bootstrap_version.txt`
+- `external_analysis_environments/r-bio-full/renv_bootstrap_source.txt`
+- `external_analysis_environments/r-bio-full/renv_restore.log`
+- `external_analysis_environments/r-bio-full/renv_status.json`
+- `external_analysis_environments/r-bio-full/r_session_info.txt`
+- `external_analysis_environments/r-bio-full/installed_packages.tsv`
+- `external_analysis_environments/r-bio-full/environment_lock_evidence.json`
+- `external_analysis_environments/r-bio-full/evidence_manifest.json`
 
-Update: standard package validation now applies a stricter gate to passed full/formal packages. Such packages must include input/parameter hashes, command, random seed field, engine name/version, runtime version containers, package/external-tool version containers, and worker-boundary metadata when not produced by the standard R worker.
+Current `environment_lock_evidence.json` includes environment id/class, evidence source, expected/base image, source digest, Docker build/load status, Docker image digest, Docker inspect path, equivalence claim/status, lock profile, required package set, renv lock path/hash, renv bootstrap status/version/source, renv restore status/log path, renv status path, R/Bioconductor versions, R session info path, package inventory path, creator/review metadata, validation status/errors, and evidence hash.
 
-Update: DEG now has a `lite` standard worker path. `run_module.R` can execute base R two-group Welch t-tests on fixed local count/metadata fixtures and write a testing-level standard result package. It does not use limma, DESeq2, edgeR, scipy, statsmodels, report-ready output, or clinical interpretation.
+## r-bio-full Evidence Collection Workflow
 
-Update: enrichment now has a `lite` standard worker path. `run_module.R` can execute a base R hypergeometric ORA fixture with local TERM2GENE files and write a testing-level standard result package. It does not use Reactome/MSigDB/full resources and does not enable report-ready output.
+This stage adds explicit manual tooling only. Manual `--execute` may build the isolated `r-bio-full` Docker image, generate the scoped `survival_minimal_v1` lock, bootstrap `renv`, and restore the lock inside that image. It does not build full Docker images, restore renv locks, install R/Bioconductor packages, or download resources during default app-dev, default tests, default gate execution, or user request flows.
 
-Update: controlled ORA/GSEA legacy formal execution is now blocked until full standard-worker migration evidence, restored full R environment locks, and prelocked enrichment resources pass. The compatibility adapter returns an explicit blocked payload and does not run Rscript, register result-index entries, or write legacy standard-package sidecars.
+Evidence root:
 
-Update: controlled DEG executors now mirror successful formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This covers two-group Python controlled formal DEG plus multi-factor limma/DESeq2/edgeR fixture-proven formal results. It preserves result table, task log, parameter manifest, dependency snapshot, hashes, command provenance, and sidecar-only worker-boundary metadata; multi-factor sidecars also preserve formula/contrast provenance and R package versions. This does not enable new DEG execution, plot/report-ready output, clinical interpretation, or complete isolated worker migration.
+- `external_analysis_environments/r-bio-full/`
 
-Update: Analysis UI two-group controlled DEG and multi-factor DEG execution actions now require DEG standard-worker migration evidence in addition to DEG domain gates. The current `standard_worker_migration_matrix` marks DEG full/formal migration as pending, so normal-user DEG execution stays disabled until a task-center registered standard-worker full package can be proven.
+Manual dry-run:
 
-Update: controlled KM/log-rank and Cox univariate executors now mirror successful controlled formal results into standard result package sidecars and register them in result index v2 as `standard_result_package` artifacts. This preserves result tables, task logs, parameter manifests, dependency snapshots, hashes, engine metadata, and sidecar-only worker-boundary metadata. This does not enable clinical conclusions, risk grouping, plot artifacts, report-ready survival/clinical output, or complete isolated worker migration.
-
-Update: Analysis UI KM/log-rank and Cox univariate execution actions now require survival standard-worker migration evidence in addition to B12/B13/B14 domain gates. The current `standard_worker_migration_matrix` marks survival full/formal migration as pending, so normal-user execution stays disabled until a task-center registered standard-worker full package can be proven.
-
-Update: exploratory immune / TME scoring now routes through `run_analysis_module_task(..., worker_backend="rscript")`, writes a standard R-worker lite package with score matrix, signature coverage, sample summary, scoring manifest, receipt, heatmap SVG, and worker invocation artifacts, and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable GSVA/CellChat/Seurat, report-ready output, clinical interpretation, or full-mode migration.
-
-Update: local expression correlation now routes through `run_analysis_module_task(..., worker_backend="rscript")`, writes a task-bridge standard R-worker package, and registers it in result index v2 as a `standard_result_package` artifact. It remains `mode=lite` and `result_semantics=testing_level`; it does not enable report-ready output, causal interpretation, clinical interpretation, or full/formal isolated worker migration.
-
-Update: correlation is now registered as a standard analysis module with fixed mock and lite input/output contracts plus full-mode blocking. The existing lite runtime now uses the standard R-worker task bridge; full/formal migration remains blocked until full environment/resource locks and registry-owned migration evidence pass.
-
-Update: the correlation lite registry now declares the standard R runner, so architecture status reports it as `standard_worker_lite_ready` while still blocking formal/full migration.
-
-Update: `scripts/analysis_architecture_gate.py` now provides a read-only architecture gate for CI/ReleaseBuild preflight. Its output contract is declared in `analysis/schemas/output/architecture_gate_report.schema.json`, and the script self-reports schema validation status. The report includes the 20 architecture requirement rows, PASS/WARN/FAIL counts, P0/P1/P2/P3 issue lists, top architecture risks, blocked environment IDs, blocked resource IDs, per-module standard-worker migration rows, full remediation queue items, involved files, minimal remediation path, and manual decision points, so external release gates can audit the current P1 gaps without scanning internal implementation files. The default mode proves P0 absence and contract payload validity without pretending full mode is ready; `--require-full-ready` blocks until full environment locks, resource locks, and standard-worker migration evidence pass.
-
-Update: `scripts/analysis_architecture_gate.py --markdown-output <path>` now renders the same architecture gate payload into the required nine-section human report. This keeps the status report aligned with the machine gate for current fit, PASS/WARN/FAIL counts, top risks, P0/P1/P2/P3 issues, involved files, minimal remediation path, priority files, completed changes, and human decision points. It is still read-only and does not activate full analysis.
-
-Update: result-index task type aliases are now declared in `analysis/registry/analysis_modules.json` as `result_index_task_types`. The standard package catalog uses that registry-owned mapping when validating whether a result-index entry belongs to a package module, instead of carrying a separate hard-coded task-type map. `analysis:<module_id>` result-index entries are also blocked if the module id is not registered.
-
-Update: survival now has a `lite` standard worker path. `run_module.R` can execute base R KM/log-rank calculations on fixed local survival fixture data and write a testing-level standard result package. It does not generate prognosis, treatment guidance, report-ready survival output, or clinical interpretation.
-
-Update: univariate clinical association now has a `lite` standard worker path. `run_module.R` can execute base R Welch t-test and Pearson correlation calculations on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
-
-Update: multivariate clinical association now has a `lite` standard worker path. `run_module.R` can execute a base R linear model fixture on fixed local clinical fixture data and write a testing-level standard result package. It does not generate clinical conclusions, model selection recommendations, risk scores, report-ready clinical output, diagnosis, prognosis, or treatment guidance.
-
-Update: immune infiltration now has a `lite` standard worker path. `run_module.R` can execute base R signature mean scoring on fixed local expression/signature fixture data and write a testing-level standard result package with a real SVG heatmap fixture. It does not use GSVA, CellChat, Seurat, large signature databases, report-ready immune interpretation, diagnosis, prognosis, or treatment guidance.
-
-Update: expression correlation now has a `lite` standard worker path. `run_module.R` can execute base R Pearson correlation on fixed local expression fixture data and write a testing-level standard result package with `tables/lite_correlation_result.tsv`. It does not generate causal interpretation, clinical interpretation, report-ready output, or formal result semantics.
-
-Update: spatial transcriptomics, docking, and molecular dynamics lite fixtures now use `r-bio-core` rather than their full spatial/chem environments. Their lite paths remain base R or command-manifest contract fixtures; full execution still requires `r-spatial-full`, `r-chem-full`, or `r-chem-gpu` locks plus resource/tool evidence.
-
-Update: spatial transcriptomics now has a `lite` standard worker path. `run_module.R` can execute base R spot QC and coordinate SVG preview on fixed local expression/coordinate fixture data and write a testing-level standard result package. It does not use Seurat, CellChat, spacexr, spatial references, clustering, deconvolution, spatial domain calling, cell-cell communication, or report-ready spatial interpretation.
-
-Update: docking now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local receptor/ligand/config fixtures and write `tables/lite_docking_command_manifest.tsv` plus provenance and limitations. It does not execute AutoDock Vina, does not generate docking poses/scores/affinities, and does not enable full molecular docking.
-
-Update: molecular dynamics now has a `lite` standard worker adapter-contract path. `run_module.R` can validate fixed local topology/coordinate/mdp fixtures and write `tables/lite_md_command_manifest.tsv` plus provenance and limitations. It does not execute GROMACS, does not generate trajectory/energy/RMSD/simulation outputs, and does not enable full molecular dynamics.
-
-Update: lite-mode coverage is now enforced by a registry-driven bridge test. Every module that declares `modes.lite.supported=true` in `analysis/registry/analysis_modules.json` must run through `run_analysis_module_task(..., worker_backend="rscript")`, produce a passed standard result package, register a result-index entry, appear in the standard package catalog, preserve `result_semantics=testing_level`, and keep `report_ready_eligible=false`.
-
-Update: full-mode blocking is now enforced by a registry-driven bridge test. Every module that declares a `full` mode must return a blocked standard result package through `run_analysis_module_task(..., worker_backend="rscript")` before worker execution, preserve empty table/plot/report artifacts, register a blocked result-index entry, expose the blocked package through the standard catalog, and record `r_version=not_executed`, `bioconductor_version=not_executed`, empty package/tool version maps, and `command=analysis_task_bridge_mode_gate`.
-
-Update: blocked full-mode standard packages now include an `analysis_environment` snapshot in `provenance.json` and in the result-index dependency snapshot. The snapshot records the target isolated environment id, Dockerfile, renv lock, heavy-dependency allowance, resource-lock requirement, external-tool-lock requirement, no runtime-install/resource-download policies, module manifest path, required resource ids, and current resource/tool lock blockers. This makes a blocked full request auditable without enabling full execution.
-
-Update: full-mode blocking now includes both resource locks and isolated environment locks. `full_mode_environment_blockers()` requires the registered full environment to have an existing Dockerfile, forbidden runtime installs, and a restored renv/tool lock. Current `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu` locks remain `scaffold_only_not_restored`, so full execution remains blocked even if resource metadata is partially prepared.
-
-Update: `validate_standard_result_package()` now validates the `analysis_environment` snapshot for `full` packages and any package that declares one. Missing snapshots, schema-version drift, mode/module mismatch, missing Dockerfile/renv/module manifest fields, invalid full-mode isolation policy, invalid runtime-install/resource-download policy, malformed environment-lock status, or malformed resource-lock status block the standard package. `build_standard_analysis_package_catalog()` and `build_standard_analysis_package_detail()` expose this snapshot for UI diagnostics.
-
-Update: environment boundaries are now centralized in `analysis/registry/analysis_environments.json`. The registry declares `app-dev`, `r-bio-core`, `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`, including Dockerfile, renv lock, allowed modules, heavy-dependency policy, resource/tool lock policy, and no runtime-install policy. Tests verify module manifests match this registry and cannot point analysis execution at `app-dev` or unregistered worker environments.
-
-Update: `validate_analysis_environment_registry()` now turns the environment registry into a runtime-consumable contract. It checks required fields, unique environment ids, app-dev isolation, allowed-module references, Dockerfile labels, lockfile policy, and full-environment readiness separately. The current registry is structurally valid but still reports `full_mode_ready=false` because full environment locks are scaffold-only.
-
-Update: environment artifact diagnostics now emit `environment_artifact_matrix`, covering per-environment Dockerfile presence, renv lock presence, renv policy status, package count, heavy-dependency policy, allowed modules, and readiness blockers. The matrix keeps `app-dev` and `r-bio-core` passed while showing full environments as partial until Docker build evidence and restored lock evidence exist.
-
-Update: restored full environment locks now require schema-valid evidence. `analysis/schemas/output/environment_lock_evidence.schema.json` defines the evidence contract, and `validate_analysis_environment_lock_evidence()` blocks missing evidence, non-restored status, placeholder R/Bioconductor/package-lock data, missing Docker image build proof, missing Dockerfile/renv/evidence files, registry mismatch, allowed-module mismatch, or runtime install/download allowance. Current full locks remain `scaffold_only_not_restored`, so this does not activate full mode.
-
-Update: restored full environment evidence now requires `package_lock_hash.algorithm=sha256` and a 64-character hex package-lock hash value. The hash must match the referenced `renv_lock` file content. Arbitrary non-empty hash algorithm labels or mismatched lock hashes are blocked before an environment can contribute to full-mode readiness.
-
-Update: restored full environment evidence now also validates the referenced renv lock content and requires an explicit `renv_lock_content` declaration. A matching SHA-256 is not sufficient if `BioMedPilotPolicy.status` is still `scaffold_only_not_restored`, if `renv_lock_content.policy_status` is not restored/locked/active, if `renv_lock_content.packages_non_empty` is not true, if `renv_lock_content.package_count` disagrees with the actual `Packages` count, or if `Packages` is empty/missing. Full environment handoff must prove an actual restored package lock, not only a placeholder file.
-
-Update: Analysis Center state now exposes `analysis_environment_gate_rows` and developer diagnostics for `validate_analysis_environment_registry()`. The current UI gate table can show registry structural status and full R environment readiness blockers without reading Dockerfiles, renv locks, or module-private R outputs directly.
-
-Update: `build_analysis_architecture_status()` now provides a read-only, machine-consumable snapshot of the 20 R analysis architecture requirements. It reports current status as `partial_with_p1_gaps`: no P0 failure is present, but full environment locks, full resource locks, and universal isolated-worker migration remain incomplete.
-
-Update: `build_analysis_architecture_status()` now also exposes `requirement_summary`, `priority_issue_lists`, `p2_issues`, `p3_issues`, and `top_architecture_risks`. The architecture gate script reuses these fields, so UI, script, and handoff consumers share the same P0/P1/P2/P3 classification instead of duplicating priority logic.
-
-Update: Analysis Center state now exposes `analysis_architecture_status` and `analysis_architecture_gate_rows`. The visible gate table shows the architecture snapshot summary and P0 guard status, while P1 gaps remain warnings instead of being mislabeled as completed full-mode readiness.
-
-Update: formal standard-worker migration evidence is now centralized in `analysis/registry/standard_worker_migration_evidence.json`. `build_standard_worker_migration_matrix()` reads this registry and will not mark any module `migrated_to_isolated_standard_worker` unless a registry-owned evidence entry passes `validate_standard_worker_migration_evidence()`. The registry now declares the authoritative expected module scope, while `evidence_entries` is intentionally empty, so all formal modules remain pending.
-
-Update: the formal standard-worker migration evidence registry is now schema-managed by `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`. The schema and validator require `expected_module_ids` plus an authoritative expected-module policy, so registry scope drift is blocked. The current registry is structurally valid and declares the expected modules, but it still contains no migration evidence entries and does not activate any formal module.
-
-Update: standard-worker migration rows now include a module-specific `migration_evidence_template` and `migration_blockers`. The template spells out the future registry entry shape required for a real migration claim and names forbidden evidence sources such as mock fixture packages, lite testing-level packages, legacy service-adapter sidecars, and module-private output paths. This gives the next scoped migration a concrete checklist while keeping current formal modules pending.
-
-Update: migration rows now also include `migration_prerequisite_status` and `migration_next_action`. This keeps P1 remediation executable by separating full-mode registry gaps, missing schema-valid migration evidence, formal runtime contract gaps, required full environment/resource locks, and legacy sidecar boundaries. Analysis UI rows show these next actions, but they do not register migration evidence or activate full mode.
-
-Update: the `migrate_formal_algorithms_to_isolated_standard_worker` remediation queue item now includes `module_next_actions` and `module_action_summary` derived from the standard-worker migration matrix. Each module-level action records the next safe step, prerequisite status, blockers, and recommended files while keeping the queue read-only and full mode blocked.
-
-Update: univariate and multivariate clinical association are no longer classified as missing the lite/formal contract scaffold. Their registry status now reflects existing base R lite standard-worker execution and standard package output; remaining migration actions are scoped full-mode declaration, full environment/resource locks, and registry-owned standard-worker evidence.
-
-Update: the `lock_full_analysis_resources` remediation queue item now includes `resource_next_actions` and `resource_action_summary` derived from resource lock evidence templates. This gives external resource preparation a resource-by-resource ledger for Reactome, MSigDB, GO, KEGG, OrgDb, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD force-field bundles without allowing runtime downloads or marking full mode ready.
-
-Update: Analysis Center now exposes `analysis_resource_gate_rows` as a dedicated read-only resource gate. It shows the resource manifest, evidence registry, missing resource evidence ids, locked fixture resources, and blocked full resources separately from environment gates and remediation rows. This is visibility only and does not register locks or enable full mode.
-
-Update: standard-worker migration evidence now validates the candidate package's actual result and provenance payloads. A migration entry is blocked unless the package result is passed, formal, blocker-free, produced by `biomedpilot_standard_r_worker`, invoked through the task center with `standard_r_worker` boundary metadata, and backed by ready full environment/resource lock snapshots. This keeps blocked full diagnostic packages and testing-level lite outputs from becoming migration-completion evidence.
-
-Update: `build_full_analysis_activation_gate()` now combines full environment readiness, full resource readiness, and standard-worker migration evidence into one read-only full-mode activation decision. It is currently blocked by unrestored full environment locks, incomplete full resource locks, and pending standard-worker migration; it does not execute workers, install packages, download resources, or change full-mode availability. The gate payload is covered by `analysis/schemas/output/full_analysis_activation_gate.schema.json` and reports schema validation status.
-
-Update: Analysis Center now renders the full-mode decision as a dedicated `Full analysis activation gate` row inside `analysis_architecture_gate_rows`, so UI users can see the exact disabled reasons without reading developer diagnostics.
-
-Update: `build_analysis_remediation_queue()` now validates its payload against `analysis/schemas/output/remediation_queue.schema.json` and exposes `schema_validation_status` plus `schema_blockers`. This keeps manual P1 remediation queues stable for UI, reports, and handoff consumers.
-
-Update: restored full environment evidence is now routed through `analysis/registry/environment_lock_evidence.json` and validated by `validate_analysis_environment_lock_evidence_registry()`. The registry now declares the authoritative expected full environment scope and blocks scope drift or unregistered evidence entries. Its `evidence_entries` list is intentionally empty; it establishes the audited handoff point for external environment build evidence without marking any full analysis environment as ready.
-
-Update: externally prepared full resource evidence is now routed through `analysis/registry/resource_lock_evidence.json` and validated by `validate_analysis_resource_lock_evidence_registry()`. The registry now declares the authoritative expected full resource/tool scope and blocks scope drift or unregistered evidence entries. Its `evidence_entries` list is intentionally empty; it establishes the audited handoff point for Reactome/MSigDB/spatial/chem resource locks without allowing runtime downloads or marking any full resource ready.
-
-Update: environment and resource validators now emit machine-readable evidence templates. `environment_lock_evidence_templates` and `resource_lock_evidence_templates` are included in the architecture gate payload so external engine/resource work can fill the exact future evidence shape without relying on prose. Environment templates include non-empty renv content and Docker image build evidence; resource templates include cache content evidence. These templates keep runtime package installation, runtime resource download, placeholder hashes, unlicensed caches, mock/lite evidence, and app-dev environments forbidden as readiness proof.
-
-Update: the `restore_full_analysis_environment_locks` remediation queue item now includes `environment_next_actions` and `environment_action_summary` derived from environment lock evidence templates. This gives external environment preparation a per-environment ledger for `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`, including Dockerfile, renv lock, allowed modules, evidence files, Docker build proof, package-lock hash requirements, and no-install/no-download policy.
-
-Update: `scripts/analysis_architecture_gate.py --evidence-template-output <path>` now exports a standalone external evidence template package. The package includes full environment templates, full resource/tool templates, standard-worker migration templates, registry paths, blockers, expected evidence scope, and counts, and validates against `analysis/schemas/output/evidence_template_package.schema.json`. The package checker now also verifies that environment templates include `renv_lock_content`, resource templates include `cache_content`, and expected full environment/resource/module scope lists are explicit, so exported handoff templates cannot drift away from the full lock evidence validators or silently omit part of the required scope. It is intended for handoff to external environment/resource preparation work and is not accepted as readiness evidence by itself.
-
-Update: the external evidence template package now also carries `remediation_actions`, including environment, resource, and module next-action ledgers plus action summaries. This lets external preparation work consume the same action ids as the architecture remediation queue without parsing the full gate report. These actions remain planning-only and are not accepted as environment, resource, or standard-worker readiness evidence.
-
-Update: the architecture status, gate JSON, Markdown gate report, and Analysis Center now expose a module-level `full_activation_module_matrix`. The matrix combines target full environment, module-specific full resource requirements, and standard-worker migration blockers for each analysis module. It is a diagnostic and planning surface only; full mode remains blocked until real environment/resource locks and standard-worker migration evidence pass.
-
-Update: the external evidence template package now includes that same module-level full activation matrix and rows. This keeps handoff packages self-contained for external environment/resource preparation and scoped worker migration planning while preserving the policy that the package is not readiness evidence.
-
-Update: runtime acquisition and default dependency P0 guards now emit machine-readable scan summaries. `runtime_acquisition_scan` records active source roots, forbidden install/download patterns, skipped non-text files, and hits; `default_dependency_scan` records default app-dev dependency files, heavy dependency names, and hits. Analysis Center shows both summaries so reviewers can verify the default development boundary without relying on prose.
-
-Update: module interface compliance now emits `module_interface_matrix`, covering module manifests, standard entrypoints, input/output schemas, mock/lite/full declarations, and mock fixture standard package validation. This matrix is visible in the gate JSON, Markdown report, and Analysis Center, giving future remediation a module-by-module contract baseline before formal worker migration.
-
-Update: module mode readiness now emits `module_mode_readiness_matrix`, covering per-module mock status, lite status, full status, lite environment, full environment, declared full blocker, full activation blockers, and migration next action. It remains `partial` because full mode is still blocked, but the RARCH-04 gap is now module-readable instead of a single generic warning.
-
-Update: standard worker entrypoint diagnostics now emit `standard_worker_entrypoint_matrix`, covering the shared `analysis/runners/run_module.R` CLI contract, standard package output contract, lite module dispatch coverage, main-backend invocation through `run_standard_r_worker()`, and runtime install/download absence. The matrix is `passed` for the entrypoint contract: shared lite entrypoint contracts pass, while formal module migration remains visible as pending module ids and is tracked by the standard-worker migration matrix plus P1 remediation until registry-owned full-mode standard-worker evidence exists.
-
-Update: chemistry external-tool adapter isolation now emits `external_tool_adapter_matrix`, covering docking and molecular dynamics. The matrix verifies that lite adapters stay in `r-bio-core`, do not execute AutoDock Vina or GROMACS, keep runtime installs forbidden, avoid default app dependencies, and point full execution at `r-chem-full` or `r-chem-gpu` with external resource/tool locks. It is a diagnostic and remediation surface only; full tool execution remains blocked until environment locks, tool/resource locks, and standard-worker migration evidence pass.
-
-Update: task-system boundary diagnostics now emit `task_system_boundary_matrix`, covering every target module. The matrix verifies registry-owned result-index task types, `run_analysis_module_task()`, TaskCenter, input schema, standard package schema, result registry, and worker invocation schema. It also records that task-bridge packages require `task_center_registered`, direct CLI standard-worker artifacts are not UI task results, and legacy sidecars remain transitional diagnostics rather than migration evidence.
-
-Update: lite task-bridge coverage diagnostics now emit `lite_task_bridge_coverage_matrix`, covering every lite-supported target module. The matrix verifies static coverage by the registry-driven task-bridge test that runs lite modules through `run_analysis_module_task(..., worker_backend="rscript")`, validates standard packages, checks result-index registration/catalog discovery, and preserves `testing_level` plus `report_ready_eligible=false`. This closes the lite coverage visibility gap without executing workers in the architecture snapshot or relaxing the remaining full/formal migration blockers.
-
-Update: legacy sidecar transition diagnostics now emit `legacy_sidecar_transition_matrix`. The matrix verifies the legacy sidecar writer contract, catalog task-center guard, migration-evidence sidecar prohibition, registry adapter inventory scope, actual source-level sidecar producers, and sidecar test coverage. It remains `partial` for the modules that still write legacy service-adapter sidecars: DEG and survival/clinical. Controlled enrichment legacy formal execution is disabled until full standard-worker evidence exists. Registry `pending` or `planned` statuses are no longer treated as sidecar evidence by themselves; remediation must replace actual sidecar producers with task-center registered standard-worker evidence after full environment/resource locks are ready, not promote sidecar packages.
-
-Update: the sidecar source inventory now distinguishes lite replacement candidates from formal sidecars. There are currently no remaining lite replacement candidates: immune infiltration and correlation have both moved to the task-bridge standard R-worker lite path, and controlled enrichment legacy formal execution is blocked instead of inventoried as a live sidecar producer. DEG and survival sidecars expose that a lite path exists, but they are not marked as candidates because lite output is not equivalent to formal/controlled result migration; those remain blocked on full standard-worker migration evidence.
-
-Update: frontend standard-package consumption diagnostics now emit `frontend_consumption_matrix`. The matrix verifies catalog source policy, package detail artifact policy, Analysis Center state exposure, Results Browser standard package tables, formal DEG review, DEG plot/report controls, and immune/TME scoring previews. The current matrix passes, and future detailed result views must continue consuming result-index registered standard package artifacts rather than module-private output paths.
-
-Update: the RARCH-08 frontend matrix now carries `pending_detail_view_count`, `pending_detail_view_ids`, `pending_detail_views`, `migrated_detail_view_count`, and `migrated_detail_view_ids`. Formal DEG review, formal DEG plot/report controls, and immune/TME scoring have been migrated to require result-index registered `standard_result_package` artifacts and package-local tables/manifests. The current pending detail-view list is empty; future detailed views must keep the same source policy before they can count as frontend boundary evidence.
-
-Update: reproducibility provenance diagnostics now emit `reproducibility_provenance_matrix`. The matrix verifies the provenance schema fields, standard package validator blockers, Python task-bridge writer, standard R-worker writer, worker invocation manifest contract, and source-level legacy sidecar provenance inventory. It remains `partial` for the modules whose standard packages still come from transitional sidecar producers: DEG and survival/clinical. These provenance payloads remain useful diagnostics but cannot be used as isolated standard-worker migration evidence.
-
-Update: standard package catalog consumption is now constrained to the active project root. `build_standard_analysis_package_catalog()` still reads only result-index `standard_result_package` artifacts, but if an artifact path resolves outside the project root, the catalog emits a blocked row and does not read that external directory. This prevents legacy or module-private output paths from being surfaced through Analysis Center as UI-readable standard packages.
-
-Update: standard package catalog rows now distinguish worker-level direct CLI diagnostics from task-center managed results. A `standard_r_worker` package with `worker_boundary.task_system_invocation=standard_worker_direct_cli` is blocked if it appears in the UI catalog, preserving direct `analysis/runners/run_module.R` output as a developer/worker contract artifact rather than a main-backend task-system result. Task-bridge packages must keep `task_center_registered` to be accepted as UI task results.
-
-Update: `external_analysis_environments/` and `external_analysis_resources/` now exist as lightweight handoff directories for small evidence manifests and logs. Their `.gitignore` policies prevent heavy R package libraries, Docker image layers, scientific resource caches, and user-request downloads from becoming part of the default development tree. These directories do not mark any full environment or resource as ready.
-
-Update: all standard task-bridge outcomes now write `logs/worker_invocation.json` and register it in result-index log artifacts. The manifest records backend, invocation status, standard entrypoint, command, return code, stdout/stderr, blockers, worker-boundary migration status, and explicit no runtime-install/resource-download policies. Mock fixture copies, validation gates, R worker attempts, and full-mode bridge gates all use this audit record.
-
-Update: standard-worker migration registry validation now reports expected, passed, blocked, and missing evidence module IDs. This keeps the P1 migration gap auditable at module granularity and prevents a broad `partial` status from hiding which formal analysis lines still need full-mode worker evidence.
-
-Update: Analysis Center now displays a standard-worker migration evidence coverage row. Missing module-level evidence is visible in UI state as disabled reasons, and lite worker readiness is not presented as full/formal migration completion.
-
-Update: the architecture gate Markdown report now includes standard-worker migration evidence coverage, so human-readable audit artifacts show the same expected/passed/blocked/missing module evidence counts as the JSON gate and Analysis Center.
-
-Update: the isolated standard-worker remediation item now includes module-level scope. The queue records expected, passed, blocked, and missing migration evidence module IDs, so remediation can proceed one formal analysis line at a time while full activation remains blocked.
-
-Update: the architecture gate Markdown report now carries that remediation scope into the manual-decision table. Reviewers can see which modules are missing isolated-worker migration evidence without opening the JSON payload.
-
-Update: the external evidence template package now carries the same remediation scope and minimal remediation path. This keeps external environment/resource preparation and future scoped module migration aligned with the architecture gate report.
-
-Update: direct `analysis/runners/run_module.R` outputs now copy the submitted input payload into package-local `module_input.json` and write `logs/worker_invocation.json` with `input_manifest=module_input.json` and `worker_boundary.task_system_invocation=standard_worker_direct_cli`. Focused tests validate direct mock and blocked full runner packages through the same Python standard package validator. The blocked full direct-runner package records target environment/resource-lock snapshots and remains non-executing.
-
-Update: transitional service-adapter sidecar packages now write `logs/worker_invocation.json` with `worker_backend=legacy_service_adapter`, `invocation_status=sidecar_recorded`, and `task_system_invocation=legacy_service_adapter_direct_call`. This covers current formal DEG, multifactor DEG, and controlled survival/KM/Cox sidecar packages while preserving the explicit `sidecar_only_not_isolated_standard_worker` migration status. Controlled enrichment legacy formal execution is blocked and does not emit sidecars. Immune scoring and correlation lite execution now use the standard R-worker task bridge instead.
-
-Update: standard package validation now requires `logs/worker_invocation.json` for legacy service-adapter sidecar packages as well as task-bridge and standard-worker packages. A sidecar without the invocation manifest is blocked instead of being accepted as a valid standard package.
-
-Update: passed standard result packages now require reproducibility provenance. `validate_standard_result_package()` blocks passed packages missing input hash, parameter hash, random seed field, command, engine name/version, R version, Bioconductor version, R package-version container, or external-tool-version container.
-
-Update: content-level schemas now exist for `result.json` and `provenance.json` under `analysis/schemas/output/result.schema.json` and `analysis/schemas/output/provenance.schema.json`. These schemas mirror the core validator contract for result semantics, artifact declarations, reproducibility hashes, runtime version containers, engine metadata, seed, and command provenance.
-
-Update: standard package validation now blocks `result.json` and `provenance.json` schema-version drift. Packages must use `biomedpilot.analysis.result.v1` and `biomedpilot.analysis.provenance.v1`.
-
-Update: result/provenance payload schema discovery is now explicit. `analysis/registry/analysis_modules.json` declares `standard_result_package.payload_schemas`, every registry module entry declares `result_payload_schema` and `provenance_payload_schema`, and every `analysis/modules/<module_id>/module.json` manifest declares the same payload schema files. Architecture tests guard consistency and file existence.
-
-Update: standard package catalog and detail payloads now expose the result/provenance payload schema paths from the module registry. UI and report consumers can discover the correct schema through `build_standard_analysis_package_catalog()` or `build_standard_analysis_package_detail()` instead of inferring it from validator internals or module-private output conventions.
-
-Update: standard package validation now enforces required fields from the declared result/provenance payload schema files. Packages missing schema-required result fields such as `result_semantics` or `created_at`, or schema-required provenance fields such as `engine` or `command`, are blocked. Main-backend task-bridge blocked packages now write `result_semantics=blocked`, keeping blocked outputs schema-complete.
-
-Update: standard package validation now also enforces basic schema shape from the declared result/provenance payload schemas. It blocks enum/type/minLength drift, array item type drift, and one-level nested object shape drift for fields such as `mode`, `tables`, `warnings`, `engine.version`, and `runtime.package_versions`.
-
-Update: standard package validation now enforces the package-level schema too. `validate_standard_result_package()` synthesizes a package manifest from the package filesystem and `result.json`, validates it against `analysis/schemas/output/result_package.schema.json`, exposes `result_package_schema` plus `package_manifest` in the validation payload, and blocks directory contract drift such as a missing `logs/` directory.
-
-Update: the package-level schema now requires every standard output directory (`tables`, `plots`, `reports`, `logs`) with unique directory entries. This aligns the machine-readable schema with the existing validator requirement that every result package carry the complete standard directory surface, even when a given directory has no generated artifacts.
-
-Update: standard package catalog and detail payloads now expose the synthesized package-level manifest and `result_package_schema`. Results Browser renders this as a standard package manifest table showing validation status, schema path, module/mode/task/status, required directories, and result/provenance payload files.
-
-Update: task submission now enforces the module input payload schema before worker execution. `run_analysis_module_task()` reads `analysis/schemas/input/module_input.schema.json`, blocks missing required fields, enum/type/minLength drift, and nested `runtime` field shape drift, then returns a diagnostic standard package and `logs/worker_invocation.json` instead of invoking mock fixtures or R workers with malformed input.
-
-Update: `logs/worker_invocation.json` now points to `module_input.json` for current task-bridge packages instead of `not_materialized`. Malformed input submissions preserve the raw submitted payload in the package for audit while still blocking before worker execution.
-
-Update: standard package validation now follows `logs/worker_invocation.json -> input_manifest` for task-center packages. Current task-bridge packages must use `input_manifest=module_input.json`, the file must exist inside the standard package, and its content must satisfy `analysis/schemas/input/module_input.schema.json` plus expected module/task/mode matching.
-
-Update: standard package catalog and detail payloads now expose an `input_manifest` summary from `worker_invocation.input_manifest`. For package-local `module_input.json`, UI/report consumers can read relative path, validation status, schema path, module/mode/task, project id, input keys, and parameter keys without inspecting module-private output folders.
-
-Update: Analysis Center standard package gate rows now include a dedicated input-manifest gate. Missing, malformed, or mismatched package-local `module_input.json` appears as a UI-visible blocker rather than staying hidden in developer diagnostics.
-
-Update: Results Browser now renders a standard package input-manifest table from catalog metadata. It shows result id, validation status, package-local path, schema, module/mode/task, input keys, and parameter keys alongside the existing provenance/worker and artifact manifest tables.
-
-Update: the standard package catalog now maps known Bioinformatics result-index `task_type` values such as `deg`, `ora`, `gsea_preranked`, `survival_km_logrank`, `cox_univariate`, `analysis:immune_infiltration`, and `analysis:correlation` to their expected standard package `module_id`. A mismatched `result.json` or `provenance.json` module id now blocks catalog validation instead of silently passing.
-
-Update: `analysis/schemas/output/worker_invocation.schema.json` now defines the worker invocation manifest contract. `validate_standard_result_package()` requires this manifest for packages produced by `biomedpilot_analysis_task_bridge` or `biomedpilot_standard_r_worker`, and blocks missing or invalid schema version, runtime-install/resource-download policy, backend/status, command/blocker shape, and task-system boundary fields.
-
-Update: the standard package catalog now exposes `worker_invocation`, `worker_backend`, and `worker_invocation_status` from `logs/worker_invocation.json`. Analysis Center can display these diagnostics from the standard package catalog instead of reading module-private R outputs.
-
-Update: `build_standard_analysis_package_detail()` now exposes a UI-safe `artifact_manifest` for declared standard-package tables, plots, reports, and package logs. Catalog rows include this manifest so Analysis Center can discover artifact paths from the standard package contract instead of module-private output conventions.
-
-Update: standard package validation now blocks malformed, missing, absolute, package-external, or wrong-group `tables`/`plots`/`reports` artifact declarations. This turns artifact manifest drift into a contract blocker instead of leaving UI consumers to discover missing files later.
-
-Update: Analysis Center state now exposes `standard_package_gate_rows` for standard package catalog source, package validation, and artifact-manifest validity. The UI can display package-contract blockers without reading module-private R outputs.
-
-Update: Analysis Center result rows now join current result-index entries with the standard package catalog by `result_id`, showing standard package registration status, validation status, package path, and artifact counts. Missing standard packages remain visible as `missing_standard_result_package` instead of being silently treated as valid result output.
-
-Update: the current Bioinformatics Results Browser table now displays standard package contract status for each result row, including registration, validation state, relative package path, and artifact counts. This is a UI consumption step only; it does not change result semantics or make testing/imported/preflight outputs formal.
-
-Update: standard package catalog rows now expose `input_hash`, `parameter_hash`, and `random_seed` from `provenance.json`. The current Bioinformatics Results Browser displays these alongside runtime, engine, command, worker backend, invocation status, worker boundary, and migration status.
-
-Update: the current Bioinformatics Results Browser now displays a standard package artifact manifest table for declared `tables`, `plots`, `reports`, and package `logs`. The table is derived from the standard package catalog and uses package-relative paths only.
-
-Update: `config/bioinformatics/package_requirements.yaml` now records R/Bioconductor packages as a detect-first capability inventory only. It explicitly forbids runtime install/download and default app dependency use, and an architecture test guards it against becoming an install manifest.
-
-Update: Bioinformatics analysis default configs that mention heavy R packages now carry the same no-install boundary. `analysis_defaults.yaml`, `enrichment_defaults.yaml`, and `survival_defaults.yaml` are parameter/capability defaults only; they explicitly forbid runtime install/download and default app dependency use, and an architecture test guards those files.
-
-Update: RARCH-10 now treats runtime acquisition as a single machine guard. The architecture status scan blocks both active non-legacy R package install commands and explicit runtime resource download commands, so the no-install/no-download boundary no longer relies only on prose and gene-set UI behavior.
-
-## Phase R1: Task-System Bridge
-
-Scope:
-
-- Add a Python bridge that submits module jobs by writing `module_input.json`.
-- The bridge calls the standard worker only through task execution, not directly from UI.
-- The UI consumes `result.json`, `provenance.json`, and artifact manifest metadata.
-
-Acceptance:
-
-- Every registered module can run `mock` mode through the task system using its fixed fixture package. **Completed for mock mode.**
-- The R-side runner can generate a mock standard package from a module fixture and a blocked standard package for disabled modes. **Completed for runner contract.**
-- The task bridge can explicitly call the R-side standard runner for mock packages without enabling lite/full real analysis. **Completed for worker-boundary contract.**
-- Transitional controlled R adapters route Rscript commands through the shared analysis runtime boundary instead of owning direct R subprocess calls. **Completed for enrichment and multi-factor DEG adapters.**
-- Transitional controlled R adapters do not own subprocess imports or `subprocess.run` defaults. **Completed for enrichment and multi-factor DEG adapters.**
-- Analysis Center can discover standard result packages from the result index without scanning module-specific output folders. **Completed for state-level preview.**
-- Analysis Center can read worker invocation diagnostics from the standard package catalog. **Completed for task-bridge standard packages.**
-- Analysis Center can read declared standard-package artifact paths for tables, plots, reports, and logs without module-private output coupling. **Completed for catalog artifact manifest.**
-- Standard package validation blocks declared table/plot/report artifacts that are missing or outside their standard package directories. **Completed for artifact declaration gate.**
-- Analysis Center exposes standard package validation/artifact blockers as gate rows. **Completed for UI gate preview.**
-- Analysis Center result rows expose per-result standard package registration, validation, path, and artifact-count status. **Completed for result-row package preview.**
-- Results Browser displays per-result standard package registration, validation, path, and artifact-count status in the user-visible result table. **Completed for current results table preview.**
-- Results Browser displays standard package provenance and worker-boundary rows including runtime, engine, command, hashes, seed, worker backend, invocation status, boundary type, and migration status. **Completed for current provenance/worker preview.**
-- Results Browser displays standard package artifact manifest rows for declared tables, plots, reports, and logs without scanning module-private output folders. **Completed for current artifact manifest preview.**
-- Standard package catalog/detail payloads expose result/provenance payload schema paths for UI/report consumers. **Completed for UI-safe schema discovery.**
-- Standard package validation blocks result/provenance payloads that omit schema-required fields, and task-bridge blocked packages now include `result_semantics=blocked`. **Completed for schema-required payload gate.**
-- Standard package validation blocks result/provenance payload type, enum, minLength, array item, and one-level nested object shape drift. **Completed for schema-shape payload gate.**
-- Bioinformatics R package requirement config remains a detect-first capability inventory, not a runtime install manifest or default app dependency source. **Completed for dependency policy guard.**
-- DEG can run `lite` mode through the standard R worker using fixed local count/metadata fixture data. **Completed for DEG lite worker.**
-- Enrichment can run `lite` mode through the standard R worker using fixed local fixture resources. **Completed for enrichment lite worker.**
-- Survival can run `lite` mode through the standard R worker using fixed local fixture data. **Completed for second lite worker.**
-- Univariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for third lite worker.**
-- Multivariate can run `lite` mode through the standard R worker using fixed local clinical fixture data. **Completed for fourth lite worker.**
-- Immune infiltration can run `lite` mode through the standard R worker using fixed local expression/signature fixture data and generate a real SVG heatmap fixture. **Completed for fifth lite worker.**
-- Spatial transcriptomics can run `lite` mode through the standard R worker using fixed local expression/coordinate fixture data and generate a real SVG spot QC preview. **Completed for sixth lite worker.**
-- Docking can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing AutoDock Vina. **Completed for docking adapter boundary fixture.**
-- Molecular dynamics can run `lite` mode through the standard R worker as an external-tool command-manifest contract without executing GROMACS. **Completed for MD adapter boundary fixture.**
-- Every registered `lite` module can run through the same main-backend task bridge and standard R worker package contract. **Completed with registry-driven focused test.**
-- Every registered `full` module is blocked through the same main-backend task bridge with a standard result package, result-index entry, catalog row, and non-executed provenance. **Completed with registry-driven focused test.**
-- Every registered `full` module records target isolated environment and resource/tool lock status in the blocked standard package and result-index dependency snapshot. **Completed for full-mode bridge gate.**
-- Full-mode standard packages are blocked by validation if target environment/resource-lock snapshots are missing or malformed. **Completed for validator/catalog gate.**
-- All standard task-bridge outcomes write a worker invocation manifest and register it in result-index log artifacts. **Completed for task-bridge paths.**
-- Task-bridge and standard-worker packages are blocked if their worker invocation manifest is missing or violates the schema/policy contract. **Completed for validator gate.**
-- Direct standard R runner mock and blocked full outputs validate as standard packages without requiring heavy R packages or enabling full execution. **Completed for direct runner contract.**
-- Current service-adapter sidecar standard packages expose worker invocation diagnostics without claiming isolated standard-worker execution. **Completed for sidecar diagnostics.**
-- The shared R worker entrypoint, lite dispatch coverage, main-backend invocation path, standard package output contract, and no-runtime-acquisition rule are exposed as `standard_worker_entrypoint_matrix`. **Completed for read-only entrypoint diagnostics.**
-- Full resource manifest, evidence registry, locked fixture resources, missing full-resource evidence, and blocked full-resource ids are exposed as `analysis_resource_gate_rows`. **Completed for read-only resource gate diagnostics.**
-- Output package includes `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`.
-- Passed full/formal standard packages block if provenance or worker-boundary metadata is incomplete. **Completed for validator gate.**
-- No R installation is required.
-
-## Phase R2: Enrichment Lite Worker
-
-Recommended first module for standard-worker hardening because the base R ORA lite path exists and legacy controlled ORA/GSEA formal execution is now blocked until it is reintroduced through the standard worker.
-
-Scope:
-
-- Keep the existing enrichment lite path behind the standard worker.
-- Reintroduce formal ORA/GSEA only after full standard-worker migration evidence, full environment locks, and full resource locks pass.
-- Use lightweight local TERM2GENE fixtures.
-- No ReactomePA/msigdbr full resources in lite mode.
-
-Acceptance:
-
-- `mock` and base R ORA `lite` pass through the standard worker. **Completed for fixture ORA.**
-- Controlled ORA/GSEA legacy formal execution returns a blocked payload until standard-worker migration evidence, full environment locks, and full resource locks pass. **Completed for safety boundary.**
-- Controlled ORA/GSEA no longer writes legacy sidecar packages or indexes `standard_result_package` artifacts from the compatibility adapter. **Completed for sidecar disablement.**
-- `full` remains blocked until resource locks and full env exist. **Still required.**
-- Provenance records R version, input hash, parameter hash, seed, and command. **Completed for fixture ORA.**
-- Package-version capture for non-base R lite/full workers remains pending.
-- Controlled enrichment still needs full task-worker isolation before formal/full ORA or GSEA execution can be restored.
-
-## Phase R3: Survival / Clinical R-Native Worker
-
-Scope:
-
-- Migrate survival, univariate, and multivariate clinical association behind the same worker interface.
-- Keep clinical conclusion disabled.
-- Require standard result package outputs.
-
-Status: started with base R lite fixture.
-
-Completed:
-
-- Survival `mock` remains available without R.
-- Survival `lite` can run a fixed KM/log-rank fixture through `analysis/runners/run_module.R`.
-- Standard result package includes `result.json`, `provenance.json`, `tables/lite_km_curve.tsv`, `tables/lite_logrank_result.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
-- Controlled KM/log-rank formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
-- Controlled Cox univariate formal results are mirrored into standard package sidecars with `legacy_service_adapter_sidecar` boundary metadata.
-- Controlled KM/log-rank and Cox univariate sidecars now write `logs/worker_invocation.json` and register it in result index v2 as `analysis_worker_invocation_manifest`.
-- Analysis UI execution buttons for KM/log-rank and Cox univariate are blocked until survival standard-worker migration evidence passes, even when B12/B13/B14 domain gates pass.
-- Univariate `mock` remains available without R.
-- Univariate `lite` can run a fixed base R clinical association fixture through `analysis/runners/run_module.R`.
-- Univariate standard result package includes `result.json`, `provenance.json`, `tables/lite_univariate_association.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
-- Multivariate `mock` remains available without R.
-- Multivariate `lite` can run a fixed base R linear model fixture through `analysis/runners/run_module.R`.
-- Multivariate standard result package includes `result.json`, `provenance.json`, `tables/lite_multivariate_association.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
-- Clinical conclusion remains disabled for survival, univariate, and multivariate lite packages.
-
-Remaining:
-
-- Migrate existing controlled KM/Cox runtime behind the standard worker.
-- Keep full clinical analysis blocked until environment/resource locks are approved.
-
-Acceptance:
-
-- `mock` passes without R.
-- `lite` passes with lightweight R packages/data. **Completed for survival, univariate, and multivariate base R fixtures.**
-- `full` blocked until container/renv is approved.
-
-## Phase R4: DEG R Worker Alignment
-
-Scope:
-
-- Wrap limma/DESeq2/edgeR multi-factor code behind the same standard worker.
-- Preserve existing result index v2 and DEG audit package, but emit standard result package too.
-
-Acceptance:
-
-- No Python service embeds long-running R execution as a UI request side effect.
-- All outputs have standard package metadata.
-
-Status: started with result-package sidecar alignment.
-
-Completed:
-
-- Successful two-group Python formal DEG results write a standard result package sidecar and result-index `standard_result_package` artifact.
-- Successful controlled limma multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
-- Successful controlled DESeq2 multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
-- Successful controlled edgeR multi-factor fixture results write a standard result package sidecar and result-index `standard_result_package` artifact.
-- Multi-factor DEG standard package sidecars record `legacy_service_adapter_sidecar` worker-boundary metadata.
-- Blocked incompatible non-count DESeq2/edgeR requests still stop before result index registration.
-- Analysis UI execution buttons for two-group and multi-factor DEG are blocked until DEG standard-worker migration evidence passes, even when DEG domain gates pass.
-
-Remaining:
-
-- Move long-running limma/DESeq2/edgeR Rscript execution behind the standard task worker instead of service-level subprocess calls.
-- Replace the remaining transitional `run_external_r_command()` sidecar boundary with isolated standard-worker task execution.
-- Add isolated full worker environment proof before claiming complete DEG R worker migration.
-- Keep plot/report-ready output and clinical interpretation disabled unless their existing gates pass.
-
-## Phase R5: Environment Split
-
-Required environment artifacts:
-
-```text
-docker/Dockerfile.app-dev
-docker/Dockerfile.r-bio-core
-docker/Dockerfile.r-bio-full
-docker/Dockerfile.r-spatial-full
-docker/Dockerfile.r-chem-full
-docker/Dockerfile.r-chem-gpu
-renv/renv.app.lock
-renv/renv.bio-core.lock
-renv/renv.bio-full.lock
-renv/renv.spatial-full.lock
-renv/renv.chem-full.lock
-analysis/registry/analysis_environments.json
+```bash
+bash scripts/full_env/collect_r_bio_full_evidence.sh \
+  --evidence-root external_analysis_environments/r-bio-full \
+  --image-tag biomedpilot/r-bio-full:local-YYYYMMDD \
+  --dry-run
 ```
 
-Status: scaffolded, not restored.
+Manual real collection, only when an operator is ready to create full evidence:
 
-Completed:
+```bash
+bash scripts/full_env/generate_r_bio_full_lock.sh \
+  --image-tag biomedpilot/r-bio-full:local-YYYYMMDD \
+  --profile survival_minimal_v1 \
+  --cran-repo https://cloud.r-project.org \
+  --execute
+```
 
-- Added Dockerfile scaffolds for app-dev, bio-core, bio-full, spatial-full, chem-full, and chem-gpu.
-- Added empty policy lockfiles for app, bio-core, bio-full, spatial-full, and chem-full.
-- Added the central environment registry that maps modules to allowed worker environments and locks app-dev out of analysis execution.
-- Added contract tests proving app-dev excludes known heavy analysis dependency names and that Dockerfiles do not contain runtime package installer entrypoints.
+```bash
+bash scripts/full_env/collect_r_bio_full_evidence.sh \
+  --evidence-root external_analysis_environments/r-bio-full \
+  --image-tag biomedpilot/r-bio-full:local-YYYYMMDD \
+  --source docker_hub \
+  --execute
+```
 
-Remaining:
+If Docker Hub remains unavailable, use one of the explicit offline/controlled sources instead:
 
-- Build real images in a controlled environment.
-- Replace empty policy locks with approved package-version locks.
-- Add resource lock validation for full mode.
-- Add package/open-W checks only after real worker runtime exists.
+```bash
+bash scripts/full_env/collect_r_bio_full_evidence.sh \
+  --evidence-root external_analysis_environments/r-bio-full \
+  --image-tag biomedpilot/r-bio-full:internal-YYYYMMDD \
+  --source internal_registry \
+  --internal-image registry.example/biomedpilot/r-bio-full:YYYYMMDD \
+  --source-digest sha256:<digest> \
+  --source-url https://registry.example/biomedpilot/r-bio-full \
+  --source-attestation external_analysis_environments/r-bio-full/source_attestation.md \
+  --execute
+```
 
-Acceptance:
+```bash
+bash scripts/full_env/collect_r_bio_full_evidence.sh \
+  --evidence-root external_analysis_environments/r-bio-full \
+  --image-tag biomedpilot/r-bio-full:local-YYYYMMDD \
+  --source local_image_tar \
+  --image-tar /path/to/r-bio-full.tar \
+  --source-digest sha256:<digest> \
+  --source-attestation external_analysis_environments/r-bio-full/source_attestation.md \
+  --execute
+```
 
-- App-dev image starts and tests UI without full analysis dependencies.
-- Full image contains full R/Bioconductor dependencies and resource locks.
-- Chem/spatial dependencies are separated from bio-core.
+Current Docker Hub access is available through the operator-provided proxy path. `r-bio-full` Docker build, `survival_minimal_v1` lock generation, renv bootstrap/restore, R session, and package inventory evidence have been collected and validate as passed. Internal registry and local image tar evidence paths remain available and must pass digest/hash, source attestation, Docker inspect, renv bootstrap, renv restore, R session, package inventory, and lock-profile validation before they can replace the current Docker Hub evidence.
 
-## Phase R5a: Docking External Tool Adapter Boundary
+Read-only validation:
 
-Scope:
+```bash
+python3 scripts/full_env/validate_r_bio_full_evidence.py \
+  --evidence-root external_analysis_environments/r-bio-full
+```
 
-- Keep AutoDock Vina outside app-dev and ordinary R bio-core environments.
-- Prove a standard result package can describe the external-tool command boundary before full tool execution exists.
-- Do not generate scientific docking results in lite mode.
+Report rendering:
 
-Status: started with command-manifest contract fixture.
+```bash
+python3 scripts/full_env/render_r_bio_full_evidence_report.py \
+  --evidence-root external_analysis_environments/r-bio-full \
+  --markdown-output docs/R_BIO_FULL_ENVIRONMENT_EVIDENCE.md
+```
 
-Completed:
+Current expected state is `passed` for `r-bio-full` environment evidence and `passed` for scoped survival `survival_minimal_v1` migration evidence. It must not be described as global full-ready or production-ready because full resources/tools and remaining formal module migrations are incomplete.
 
-- Docking `mock` remains available without R.
-- Docking `lite` can run through `analysis/runners/run_module.R` using fixed receptor, ligand, and config fixture files.
-- The lite package includes `result.json`, `provenance.json`, `tables/lite_docking_command_manifest.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
-- Provenance records `external_tool_versions.AutoDock Vina=not_executed_lite_contract`.
-- The result warnings explicitly state that the external tool was not executed and no scientific docking result was generated.
+## Files to Change First
 
-Remaining:
+- Environment locks: `analysis/registry/environment_lock_evidence.json`, `analysis/registry/analysis_environments.json`, `renv/renv.bio-full.lock`, `renv/renv.spatial-full.lock`, `renv/renv.chem-full.lock`, `external_analysis_environments/`.
+- Resource locks: `analysis/resources/manifest.json`, `analysis/registry/resource_lock_evidence.json`, `analysis/resources/locks/`, `external_analysis_resources/`.
+- Module migration: `analysis/runners/run_module.R`, `analysis/modules/<module_id>/module.json`, `analysis/registry/standard_worker_migration_evidence.json`, `app/bioinformatics/`.
+- Validation: `scripts/analysis_architecture_gate.py`, `tests/test_analysis_architecture_gate_script.py`, `tests/test_analysis_runtime_task_bridge.py`.
 
-- Full AutoDock Vina execution remains blocked until `r-chem-full` image/tool/resource locks are approved.
+## Acceptance Gates
 
-Acceptance:
+- Default app-dev starts without full R, Bioconductor, spatial, docking, or MD dependencies.
+- `python3 scripts/analysis_architecture_gate.py --pretty` exits 0 and reports no P0 issues.
+- `python3 scripts/analysis_architecture_gate.py --require-full-ready` remains blocked until all full environment locks, resource locks, and formal migration evidence are real.
+- A migrated formal module must produce a passed full standard package through the task bridge, with `result.json`, `provenance.json`, `tables/`, `plots/`, `reports/`, `logs/`, `logs/worker_invocation.json`, and `logs/r_session_info.txt`.
+- The package provenance must include R version, Bioconductor version, R package versions, external tool versions, input hash, parameter hash, random seed, command, worker boundary metadata, Docker image digest, and renv lock hash.
+- Survival may be labeled `scoped survival_minimal_v1 migrated`; it must not be labeled global full-ready or production-ready.
 
-- Lite command-manifest package is testing-level only.
-- No AutoDock Vina binary is required in app-dev.
-- No runtime tool install/download is performed.
+## Manual Decisions Needed
 
-## Phase R5b: Molecular Dynamics External Tool Adapter Boundary
-
-Scope:
-
-- Keep GROMACS outside app-dev, ordinary R bio-core, and ordinary chem-full environments.
-- Prove a standard result package can describe the external-tool command boundary before full GPU/tool execution exists.
-- Do not generate scientific molecular dynamics results in lite mode.
-
-Status: started with command-manifest contract fixture.
-
-Completed:
-
-- Molecular dynamics `mock` remains available without R.
-- Molecular dynamics `lite` can run through `analysis/runners/run_module.R` using fixed topology, coordinate, and mdp fixture files.
-- The lite package includes `result.json`, `provenance.json`, `tables/lite_md_command_manifest.tsv`, `reports/README_lite.md`, and `logs/worker.log`.
-- Provenance records `external_tool_versions.GROMACS=not_executed_lite_contract`.
-- The result warnings explicitly state that the external tool was not executed and no scientific molecular dynamics result was generated.
-
-Remaining:
-
-- Full GROMACS execution remains blocked until `r-chem-gpu` image/tool/resource locks are approved.
-- Trajectory, energy, RMSD, simulation metrics, and scientific MD outputs remain unavailable in lite mode.
-
-Acceptance:
-
-- Lite command-manifest package is testing-level only.
-- No GROMACS binary is required in app-dev.
-- No runtime tool install/download is performed.
-
-## Phase R6: Resource Governance
-
-Scope:
-
-- Lock Reactome, MSigDB, GO, KEGG, org dbs, spatial references, docking resources, and MD templates.
-- Record version, source, hash, license, and cache path.
-
-Status: contract gate present; real locks pending.
-
-Completed:
-
-- Declared blocked full-mode resources for Reactome, MSigDB, GO, KEGG, human org db, spatial references, CellChatDB, AutoDock Vina, docking templates, GROMACS, and MD templates.
-- Added resource manifest validation and module-specific full-mode resource blockers.
-- Kept runtime downloads forbidden for every resource entry.
-- Blocked Reactome/GO/KEGG runtime downloads in the Bioinformatics gene-set resource manager and enrichment resource catalog; UI/user flows now require GMT import or prelocked resources.
-- Added negative validation for fake `locked` resources whose version/source/hash/license/cache fields still contain placeholder values.
-
-Remaining:
-
-- Replace `required_before_full_mode` placeholders with approved versions, source metadata, hashes, licenses, and cache paths.
-- Add controlled environment checks proving resources are present in the isolated full worker.
-
-Acceptance:
-
-- Full mode refuses to run if required resource lock is missing.
-- No user request downloads a large database ad hoc.
-
-## Phase R7: Advanced Analysis Lines
-
-Order:
-
-1. Immune infiltration heatmap.
-2. Spatial transcriptomics.
-3. Molecular docking.
-4. Molecular dynamics.
-
-Status:
-
-- Immune infiltration `mock` remains available without R.
-- Immune infiltration `lite` can run fixed base R signature mean scoring through `analysis/runners/run_module.R`.
-- Immune infiltration standard result package includes `result.json`, `provenance.json`, `tables/immune_score_matrix.tsv`, `tables/signature_gene_coverage.tsv`, `tables/sample_score_summary.tsv`, `plots/lite_immune_heatmap.svg`, `reports/README_lite.md`, and `logs/worker.log`.
-- Existing exploratory immune/TME scoring service now routes through the task bridge standard R-worker lite path and writes a standard package with score matrix, coverage, sample summary, manifest, receipt, heatmap SVG, worker invocation, and limitations artifacts.
-- Full immune analysis remains blocked until GSVA/CellChat/Seurat/signature resource locks and isolated worker environments are approved.
-- Spatial transcriptomics `lite` can run fixed base R spot QC and coordinate SVG preview through `analysis/runners/run_module.R`.
-- Spatial transcriptomics standard result package includes `result.json`, `provenance.json`, `tables/lite_spatial_spot_metrics.tsv`, `tables/lite_spatial_qc_summary.tsv`, `plots/lite_spatial_spot_qc.svg`, `reports/README_lite.md`, and `logs/worker.log`.
-- Full spatial analysis remains blocked until Seurat/CellChat/spacexr/spatial reference locks and isolated worker environments are approved.
-- Docking `lite` can run a command-manifest adapter contract through `analysis/runners/run_module.R` without executing AutoDock Vina or generating scientific docking results.
-- Molecular dynamics `lite` can run a command-manifest adapter contract through `analysis/runners/run_module.R` without executing GROMACS or generating trajectory, energy, RMSD, simulation metrics, or scientific MD results.
-
-Rules:
-
-- Spatial goes to `r-spatial-full`.
-- Docking/MD use R adapters to external tools only.
-- Docking/MD never share the normal bio-core environment.
-
-## Phase R8: Architecture Remediation Queue
-
-Scope:
-
-- Make the remaining P1 architecture gaps machine-readable for UI, report, and handoff consumers.
-- Make formal algorithm migration auditable module by module instead of one coarse status string.
-- Require hard migration evidence before any module can be marked `migrated_to_isolated_standard_worker`.
-- Keep the queue advisory and manual; it must not execute workers, install dependencies, download resources, or mutate project storage.
-
-Status: present.
-
-Completed:
-
-- Added `build_standard_worker_migration_matrix()` with one row per registered module.
-- The matrix records `mock_status`, `lite_status`, `full_status`, `formal_worker_status`, analysis/full environments, task types, and current adapter status.
-- Added `module_mode_readiness_matrix` to expose RARCH-04 mock/lite/full mode status per module while keeping full mode blocked.
-- Added `environment_artifact_matrix` to expose RARCH-12/RARCH-13/RARCH-14 Dockerfile and renv lock artifact status per environment while keeping full mode blocked.
-- Added `resource_artifact_matrix` to expose RARCH-15 full resource lock artifact status per resource while keeping full resource locks blocked.
-- Hardened module manifest validation and worker matrices so lite-supported modules must name the shared R worker runner explicitly; `correlation` now declares the same runner as the registry, and registry-only mode drift cannot mark worker readiness.
-- Added `standard_worker_entrypoint_matrix` to audit `analysis/runners/run_module.R`, standard package output, lite dispatch coverage, main-backend standard-worker invocation, and runtime install/download absence separately from formal migration evidence.
-- Added Analysis Center `analysis_resource_gate_rows` so full resource lock blockers are visible independently from environment readiness and remediation queue rows.
-- Added `requirement_summary`, `priority_issue_lists`, `p2_issues`, `p3_issues`, and `top_architecture_risks` directly to `build_analysis_architecture_status()` and made the gate script reuse them.
-- Added pending detailed result view inventory to `frontend_consumption_matrix`; formal DEG review has since moved to migrated standard-package consumption, while formal DEG plot/report controls and immune/TME scoring remain pending.
-- Added `analysis/registry/standard_worker_migration_evidence.json` as the authoritative migration evidence registry; an empty registry means no formal module is migrated.
-- Added `analysis/schemas/output/standard_worker_migration_evidence.schema.json` and `validate_standard_worker_migration_evidence()` so malformed, mock, lite, missing-package, and legacy-sidecar evidence cannot complete formal worker migration.
-- Standard-worker migration evidence now requires schema-level declarations for `required_worker_boundary=standard_r_worker`, `required_task_system_invocation=task_center_registered`, `required_worker_migration_status=standard_worker_contract`, and forbidden evidence sources. This keeps external registry entries from relying on sidecar, mock, lite, or module-private output evidence even before package inspection.
-- Added a deterministic remediation queue derived from `build_analysis_architecture_status()`.
-- Added lightweight external evidence handoff directories for full environment and full resource evidence; these directories are guarded by README/.gitignore policy and do not contain or enable full dependencies/resources.
-- The formal-worker migration queue item now explicitly recommends `analysis/registry/standard_worker_migration_evidence.json`, `analysis/schemas/output/standard_worker_migration_evidence_registry.schema.json`, and `analysis/schemas/output/standard_worker_migration_evidence.schema.json`, and requires registry-owned migration evidence before completion.
-- Exposed the queue through Analysis Center state and the existing formal gate table.
-- Current queue items:
-  - `restore_full_analysis_environment_locks`
-  - `lock_full_analysis_resources`
-  - `migrate_formal_algorithms_to_isolated_standard_worker`
-- Each item records source issue, priority, blocked status, recommended files, required evidence, and architecture boundary.
-- Environment/resource queue items explicitly name their lock-evidence schemas. Restored full environment locks must pass `validate_analysis_environment_lock_evidence()`, and locked full resources must pass `validate_analysis_resource_lock_evidence()` before either can contribute to full-mode readiness.
-
-Remaining:
-
-- Restore approved full `renv` locks and Docker image evidence outside default `app-dev`, including image ref, SHA-256 digest, architecture, and build log.
-- Replace resource placeholders with approved version/source/hash/license/cache metadata.
-- Migrate formal algorithms one module at a time from transitional sidecar outputs to the isolated standard worker boundary.
-
-Acceptance:
-
-- Lite standard worker readiness must not be displayed as full/formal migration completion.
-- A module can only leave pending migration after a registry-owned, schema-valid evidence payload passes `validate_standard_worker_migration_evidence()` for its full-mode standard package and current UI/result-index evidence.
-- Queue remains read-only.
-- Full mode remains blocked until environment and resource validators pass.
-- Current UI can show disabled reasons without implying formal/full analysis completion.
-
-## Current Stop Rule
-
-Do not migrate algorithms until the standard package validator and one mock-mode task-system bridge are in place.
+- Which full Docker image and renv build process is authoritative for `r-bio-full`, `r-spatial-full`, `r-chem-full`, and `r-chem-gpu`.
+- Which resource cache location and license policy will be used for Reactome/MSigDB/GO/KEGG/OrgDb/spatial/CellChat resources.
+- Whether chemistry execution should support CPU-only `r-chem-full`, GPU `r-chem-gpu`, or both for the first production milestone.
+- Which module should be migrated next after scoped survival. Recommended order: `univariate`, then `multivariate`, then `enrichment`, then `immune_infiltration`.

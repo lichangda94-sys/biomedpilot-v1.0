@@ -1,0 +1,18 @@
+{
+  "tasks": [
+    {
+      "task_id": "survival-full-formal-v1",
+      "task_type": "analysis",
+      "status": "completed",
+      "module": "analysis_runtime",
+      "title": "Analysis module survival",
+      "created_at": "2026-06-15T02:41:43.824343+00:00",
+      "updated_at": "2026-06-15T02:41:45+00:00",
+      "project_id": "analysis-formal-fixture",
+      "started_at": "2026-06-15T02:41:43+00:00",
+      "finished_at": "2026-06-15T02:41:45+00:00",
+      "summary": "Mock analysis task completed.",
+      "error_message": ""
+    }
+  ]
+}

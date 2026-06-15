@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 .venv-meta/
+renv/library/
 dist/
 build/
 .DS_Store

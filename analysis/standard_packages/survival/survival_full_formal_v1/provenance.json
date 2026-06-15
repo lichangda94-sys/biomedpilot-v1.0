@@ -1,0 +1,47 @@
+{
+  "schema_version": "biomedpilot.analysis.provenance.v1",
+  "module_id": "survival",
+  "mode": "full",
+  "task_id": "survival-full-formal-v1",
+  "created_at": "2026-06-15T02:41:44Z",
+  "input_path": "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/standard_packages/survival/survival_full_formal_v1/module_input.json",
+  "input_hash": "1c817b98af30298fd06160be94298817",
+  "parameter_hash": "55551e0cdc1e35cc270650620fb2c0e1",
+  "random_seed": 7,
+  "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},
+  "runtime": {"r_version": "R version 4.4.2 (2024-10-31)", "bioconductor_version": "not_required_for_survival_minimal_v1", "package_versions": {"renv": "1.1.4", "survival": "3.8.3", "jsonlite": "2.0.0", "data.table": "1.17.2", "digest": "0.6.37", "ggplot2": "3.5.2", "broom": "1.0.8", "htmltools": "0.5.8.1"}, "external_tool_versions": {}, "docker_image_digest": "biomedpilot/r-bio-full@sha256:727167df40a7f1800aea800e8bbb89d7ffd4d9f11c74db5bd2e5f3f30811d2a3", "renv_lock_hash": "sha256:dccdfecb3a9bad653040877b388dec189aa2bbf990c1e6f06083b694dd7117d7"},
+  "worker_boundary": {"boundary_type": "standard_r_worker", "task_system_invocation": "task_center_registered", "migration_status": "standard_worker_contract"},
+  "analysis_environment": {
+    "schema_version": "biomedpilot.analysis_environment_snapshot.v1",
+    "status": "passed",
+    "mode": "full",
+    "module_id": "survival",
+    "environment_id": "r-bio-full",
+    "dockerfile": "docker/Dockerfile.r-bio-full",
+    "renv_lock": "renv/renv.bio-full.lock",
+    "docker_image_digest": "biomedpilot/r-bio-full@sha256:727167df40a7f1800aea800e8bbb89d7ffd4d9f11c74db5bd2e5f3f30811d2a3",
+    "renv_lock_hash": "sha256:dccdfecb3a9bad653040877b388dec189aa2bbf990c1e6f06083b694dd7117d7",
+    "r_runtime": "R 4.4.2",
+    "allows_heavy_analysis_dependencies": true,
+    "resource_lock_required": true,
+    "external_tool_lock_required": false,
+    "allowed_module_ids": ["survival"],
+    "full_mode_requires_isolated_environment": true,
+    "environment_registry_is_authoritative": true,
+    "runtime_package_install": "forbidden",
+    "runtime_resource_download": "forbidden",
+    "module_manifest": "analysis/modules/survival/module.json",
+    "environment_lock_status": {
+      "ready": true,
+      "blockers": []
+    },
+    "resource_lock_status": {
+      "full_mode_ready": true,
+      "required_resource_ids": [],
+      "blocked_resource_ids": [],
+      "blockers": [],
+      "warnings": []
+    }
+  },
+  "command": "Rscript analysis/runners/run_module.R /Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/standard_packages/survival/survival_full_formal_v1/module_input.json /Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/standard_packages/survival/survival_full_formal_v1 full"
+}

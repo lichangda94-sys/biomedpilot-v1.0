@@ -1,10 +1,28 @@
 FROM rocker/r-ver:4.4.2
 
+ARG CRAN_REPO=https://cloud.r-project.org
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
+
 LABEL org.biomedpilot.environment="r-bio-full"
 LABEL org.biomedpilot.analysis-boundary="full-r-worker"
 LABEL org.biomedpilot.resource-lock-required="true"
 LABEL org.biomedpilot.runtime-package-install="forbidden"
+LABEL org.biomedpilot.renv-bootstrap-source="${CRAN_REPO}"
 
 WORKDIR /analysis
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        libicu-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN Rscript -e 'cran <- Sys.getenv("CRAN_REPO", "https://cloud.r-project.org"); options(repos = c(CRAN = cran)); if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv"); cat(as.character(packageVersion("renv")), "\n", file = "/opt/renv_bootstrap_version.txt"); cat(cran, "\n", file = "/opt/renv_bootstrap_source.txt")'
 
 CMD ["Rscript", "/analysis/runners/run_module.R"]

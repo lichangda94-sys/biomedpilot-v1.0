@@ -20,6 +20,105 @@ def _load_gate_module():
     return module
 
 
+def test_survival_full_formal_preflight_spec_files_are_template_only() -> None:
+    spec_doc = ROOT / "docs" / "SURVIVAL_FULL_FORMAL_MIGRATION_SPEC.md"
+    evidence_dir = ROOT / "analysis" / "evidence_specs" / "survival_full_formal"
+    required_files = {
+        "README.md",
+        "input_manifest.template.json",
+        "result_package_manifest.template.json",
+        "provenance_requirements.json",
+        "forbidden_sources.json",
+    }
+
+    assert spec_doc.is_file()
+    assert required_files.issubset({path.name for path in evidence_dir.iterdir() if path.is_file()})
+    text = spec_doc.read_text(encoding="utf-8")
+    assert "Survival has scoped survival_minimal_v1 full/formal migration evidence" in text
+    assert "Survival is not globally full-ready" in text
+    assert "full activation gate remains blocked" in text
+
+    forbidden = json.loads((evidence_dir / "forbidden_sources.json").read_text(encoding="utf-8"))
+    assert forbidden["policy"] == "any_matching_source_is_invalid_full_evidence_source"
+    for source in [
+        "mock_fixture",
+        "lite_fixture",
+        "blocked_full_package",
+        "legacy_sidecar",
+        "module_private_output",
+        "manually_copied_artifact",
+        "result_without_worker_invocation",
+        "result_without_provenance",
+        "result_without_task_bridge",
+    ]:
+        assert source in forbidden["forbidden_sources"]
+
+    migration_schema = json.loads((ROOT / "analysis" / "schemas" / "output" / "standard_worker_migration_evidence.schema.json").read_text(encoding="utf-8"))
+    for field in [
+        "migration_status",
+        "evidence_level",
+        "execution_boundary",
+        "task_bridge_execution",
+        "legacy_sidecar_used",
+        "mock_used",
+        "lite_used",
+        "output_package_path",
+        "output_package_hash",
+        "worker_invocation_path",
+        "provenance_path",
+        "input_manifest_path",
+        "environment_id",
+        "environment_evidence_path",
+        "result_package_validation_status",
+        "provenance_validation_status",
+        "frontend_catalog_validation_status",
+        "reviewed_by",
+        "reviewed_at",
+        "validation_errors",
+    ]:
+        assert field in migration_schema["properties"]
+
+    environments = json.loads((ROOT / "analysis" / "registry" / "analysis_environments.json").read_text(encoding="utf-8"))
+    r_bio_full = next(item for item in environments["environments"] if item["environment_id"] == "r-bio-full")
+    assert r_bio_full["evidence_root"] == "external_analysis_environments/r-bio-full"
+    assert "external_analysis_environments/r-bio-full/environment_lock_evidence.json" in r_bio_full["required_evidence_files"]
+
+    resource_manifest = json.loads((ROOT / "analysis" / "resources" / "manifest.json").read_text(encoding="utf-8"))
+    survival_profile = resource_manifest["module_resource_profiles"]["survival"]
+    assert survival_profile["full_formal_profile"] == "clinical_fixture_only"
+    assert survival_profile["reactome"] == "not_required"
+    assert survival_profile["msigdb"] == "not_required"
+    assert survival_profile["go"] == "not_required"
+    assert survival_profile["kegg"] == "not_required"
+    assert survival_profile["orgdb"] == "not_required"
+    assert survival_profile["cellchatdb"] == "not_required"
+    assert survival_profile["autodock_vina"] == "not_required"
+    assert survival_profile["gromacs"] == "not_required"
+    assert survival_profile["runtime_download_allowed"] is False
+
+
+def test_survival_full_formal_spec_exists() -> None:
+    assert (ROOT / "docs" / "SURVIVAL_FULL_FORMAL_MIGRATION_SPEC.md").is_file()
+
+
+def test_survival_full_formal_spec_declares_scoped_migration_not_global_ready() -> None:
+    text = (ROOT / "docs" / "SURVIVAL_FULL_FORMAL_MIGRATION_SPEC.md").read_text(encoding="utf-8")
+    assert "Survival has scoped survival_minimal_v1 full/formal migration evidence" in text
+    assert "Survival is not globally full-ready" in text
+    assert "Survival is not production-ready for expanded survival methods" in text
+
+
+def test_survival_full_formal_evidence_template_is_non_ready() -> None:
+    readme = (ROOT / "analysis" / "evidence_specs" / "survival_full_formal" / "README.md").read_text(encoding="utf-8")
+    result_template = json.loads(
+        (ROOT / "analysis" / "evidence_specs" / "survival_full_formal" / "result_package_manifest.template.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert "not a full evidence bundle" in readme
+    assert result_template["template_status"] == "template_only_not_evidence"
+
+
 def test_analysis_architecture_gate_script_allows_current_partial_state_without_full_ready(tmp_path: Path) -> None:
     output = tmp_path / "analysis_architecture_gate.json"
     completed = subprocess.run(
@@ -73,6 +172,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["runtime_acquisition_scan"]["status"] == "passed"
     assert payload["runtime_acquisition_scan"]["hit_count"] == 0
     assert payload["runtime_acquisition_scan"]["scanned_roots"] == ["app", "analysis", "scripts", "config"]
+    assert "scripts/full_env" in payload["runtime_acquisition_scan"]["excluded_path_parts"]
     assert payload["runtime_acquisition_scan"]["install_scan"]["scanned_file_count"] > 0
     assert payload["default_dependency_scan"]["schema_version"] == "biomedpilot.analysis.default_dependency_scan.v1"
     assert payload["default_dependency_scan"]["status"] == "passed"
@@ -88,9 +188,11 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert module_interface_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert payload["module_mode_readiness_matrix"]["schema_version"] == "biomedpilot.analysis.module_mode_readiness_matrix.v1"
     assert payload["module_mode_readiness_matrix"]["status"] == "partial"
-    assert payload["module_mode_readiness_matrix"]["partial_module_count"] == 10
+    assert payload["module_mode_readiness_matrix"]["passed_module_count"] == 1
+    assert payload["module_mode_readiness_matrix"]["partial_module_count"] == 9
     assert payload["module_mode_readiness_matrix"]["blocked_module_count"] == 0
     assert "deg" in payload["module_mode_readiness_matrix"]["full_blocked_module_ids"]
+    assert "survival" not in payload["module_mode_readiness_matrix"]["full_blocked_module_ids"]
     module_mode_rows = {row["module_id"]: row for row in payload["module_mode_readiness_rows"]}
     assert module_mode_rows["deg"]["mock_status"] == "passed"
     assert module_mode_rows["deg"]["lite_status"] == "passed"
@@ -98,17 +200,17 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert module_mode_rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
     assert payload["environment_artifact_matrix"]["schema_version"] == "biomedpilot.analysis.environment_artifact_matrix.v1"
     assert payload["environment_artifact_matrix"]["status"] == "partial"
-    assert payload["environment_artifact_matrix"]["passed_environment_count"] == 2
-    assert payload["environment_artifact_matrix"]["partial_environment_count"] == 4
+    assert payload["environment_artifact_matrix"]["passed_environment_count"] == 3
+    assert payload["environment_artifact_matrix"]["partial_environment_count"] == 3
     assert payload["environment_artifact_matrix"]["blocked_environment_count"] == 0
-    assert payload["environment_artifact_matrix"]["restored_full_environment_ids"] == []
+    assert payload["environment_artifact_matrix"]["restored_full_environment_ids"] == ["r-bio-full"]
     assert "r-bio-full" in payload["environment_artifact_matrix"]["full_environment_ids"]
     environment_artifact_rows = {row["environment_id"]: row for row in payload["environment_artifact_rows"]}
     assert environment_artifact_rows["app-dev"]["status"] == "passed"
     assert environment_artifact_rows["app-dev"]["allowed_module_ids"] == []
     assert environment_artifact_rows["r-bio-core"]["status"] == "passed"
-    assert environment_artifact_rows["r-bio-full"]["status"] == "partial"
-    assert environment_artifact_rows["r-bio-full"]["renv_policy_status"] == "scaffold_only_not_restored"
+    assert environment_artifact_rows["r-bio-full"]["status"] == "passed"
+    assert environment_artifact_rows["r-bio-full"]["renv_policy_status"] == "restored"
     assert environment_artifact_rows["r-chem-gpu"]["renv_policy_environment"] == "r-chem-full"
     assert payload["resource_artifact_matrix"]["schema_version"] == "biomedpilot.analysis.resource_artifact_matrix.v1"
     assert payload["resource_artifact_matrix"]["status"] == "partial"
@@ -129,7 +231,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["standard_worker_entrypoint_matrix"]["blocked_row_count"] == 0
     assert payload["standard_worker_entrypoint_matrix"]["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert "deg" in payload["standard_worker_entrypoint_matrix"]["lite_module_ids"]
-    assert "survival" in payload["standard_worker_entrypoint_matrix"]["formal_pending_module_ids"]
+    assert "survival" not in payload["standard_worker_entrypoint_matrix"]["formal_pending_module_ids"]
     entrypoint_rows = {row["row_id"]: row for row in payload["standard_worker_entrypoint_rows"]}
     assert entrypoint_rows["standard_r_worker_cli_contract"]["status"] == "passed"
     assert entrypoint_rows["standard_r_worker_package_output_contract"]["status"] == "passed"
@@ -243,7 +345,6 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert payload["environment_readiness"]["status"] == "passed"
     assert payload["environment_readiness"]["full_mode_ready"] is False
     assert set(payload["environment_readiness"]["blocked_environment_ids"]) == {
-        "r-bio-full",
         "r-spatial-full",
         "r-chem-full",
         "r-chem-gpu",
@@ -262,10 +363,14 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert resource_templates["reactome_full"]["hash"]["algorithm"] == "sha256"
     assert payload["standard_worker_migration_matrix"]["status"] == "partial"
     assert payload["standard_worker_migration_matrix"]["evidence_registry_status"] == "passed"
-    assert payload["standard_worker_migration_matrix"]["evidence_entry_count"] == 0
-    assert payload["standard_worker_migration_matrix"]["passed_evidence_module_ids"] == []
+    assert payload["standard_worker_migration_matrix"]["evidence_entry_count"] == 1
+    assert payload["standard_worker_migration_matrix"]["passed_evidence_module_ids"] == ["survival"]
     assert payload["standard_worker_migration_matrix"]["blocked_evidence_module_ids"] == []
-    assert payload["standard_worker_migration_matrix"]["missing_evidence_module_ids"] == payload["standard_worker_migration_matrix"]["expected_evidence_module_ids"]
+    assert payload["standard_worker_migration_matrix"]["missing_evidence_module_ids"] == [
+        module_id
+        for module_id in payload["standard_worker_migration_matrix"]["expected_evidence_module_ids"]
+        if module_id != "survival"
+    ]
     assert payload["remediation_queue"]["item_count"] == 3
     assert len(payload["remediation_queue"]["items"]) == 3
     assert payload["remediation_queue"]["automation_policy"] == "manual_scoped_changes_only"
@@ -274,7 +379,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     environment_remediation = remediation_items["restore_full_analysis_environment_locks"]
     environment_actions = {item["environment_id"]: item for item in environment_remediation["environment_next_actions"]}
     assert environment_remediation["environment_action_summary"]["blocked_environment_count"] == len(environment_actions)
-    assert environment_actions["r-bio-full"]["next_action"] == "register_schema_valid_restored_environment_evidence"
+    assert "r-bio-full" not in environment_actions
     assert environment_actions["r-chem-gpu"]["allowed_module_ids"] == ["molecular_dynamics"]
     resource_remediation = remediation_items["lock_full_analysis_resources"]
     resource_actions = {item["resource_id"]: item for item in resource_remediation["resource_next_actions"]}
@@ -283,7 +388,7 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     assert resource_actions["gromacs_tool"]["required_for_modules"] == ["molecular_dynamics"]
     migration_remediation = remediation_items["migrate_formal_algorithms_to_isolated_standard_worker"]
     migration_actions = {item["module_id"]: item for item in migration_remediation["module_next_actions"]}
-    assert migration_remediation["module_action_summary"]["blocked_module_count"] == len(migration_actions)
+    assert migration_remediation["module_action_summary"]["blocked_module_count"] == len(migration_actions) - 1
     assert migration_actions["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert migration_actions["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert migration_actions["univariate"]["prerequisite_status"]["formal_runtime_contract"] == "available_or_not_required"
@@ -293,8 +398,8 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
         "migrate_formal_algorithms_to_isolated_standard_worker",
     ]
     decisions = {item["item_id"]: item for item in payload["remediation_summary"]["manual_decision_points"]}
-    assert decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=10; passed=0; blocked=0")
-    assert "modules=deg, survival, univariate, multivariate, enrichment" in decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
+    assert decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=9; passed=1; blocked=0")
+    assert "modules=deg, univariate, multivariate, enrichment" in decisions["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
     assert (
         decisions["restore_full_analysis_environment_locks"]["environment_action_summary"]["next_action_counts"][
             "register_schema_valid_restored_environment_evidence"
@@ -332,13 +437,17 @@ def test_analysis_architecture_gate_script_allows_current_partial_state_without_
     ] == 1
     assert payload["standard_worker_migration_matrix"]["migration_next_action_counts"][
         "declare_scoped_full_mode_only_after_environment_and_resource_locks"
-    ] == payload["standard_worker_migration_matrix"]["module_count"]
+    ] == payload["standard_worker_migration_matrix"]["module_count"] - 1
+    assert payload["standard_worker_migration_matrix"]["migration_next_action_counts"][
+        "no_action_migration_evidence_passed"
+    ] == 1
     assert payload["standard_worker_migration_matrix"]["migration_blocker_counts"][
         "registry_evidence_entry_missing_or_blocked"
-    ] == payload["standard_worker_migration_matrix"]["module_count"]
+    ] == payload["standard_worker_migration_matrix"]["module_count"] - 1
     assert payload["full_activation_module_matrix"]["status"] == "blocked"
-    assert payload["full_activation_module_matrix"]["blocked_module_count"] == 10
-    assert payload["full_activation_module_matrix"]["blocker_counts"]["full_mode_not_supported_in_registry"] == 10
+    assert payload["full_activation_module_matrix"]["eligible_module_count"] == 1
+    assert payload["full_activation_module_matrix"]["blocked_module_count"] == 9
+    assert payload["full_activation_module_matrix"]["blocker_counts"]["full_mode_not_supported_in_registry"] == 9
     full_rows = {row["module_id"]: row for row in payload["full_activation_module_rows"]}
     assert full_rows["deg"]["resource_status"] == "not_required"
     assert full_rows["enrichment"]["resource_status"] == "blocked"
@@ -432,6 +541,24 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "Task System Boundary Matrix" in text
     assert "Lite Task Bridge Coverage Matrix" in text
     assert "Legacy Sidecar Transition Matrix" in text
+    assert "Legacy sidecar producer inventory verifies default execution gates for 3/3 remaining sidecar producers" in text
+    assert "Survival Formal Migration Preflight" in text
+    assert "Survival now has scoped full/formal migration evidence for survival_minimal_v1. Global full-ready remains blocked" in text
+    assert "standard_worker_evidence" in text
+    assert "result_package_evidence" in text
+    assert "provenance_evidence" in text
+    assert "task_bridge_evidence" in text
+    assert "frontend_package_catalog_evidence" in text
+    assert "environment_evidence" in text
+    assert "forbidden_source_guard" in text
+    assert "gate_evidence" in text
+    assert "survival_full_formal_standard_package_passed_scope_survival_minimal_v1" in text
+    assert "survival_full_formal_provenance_passed_scope_survival_minimal_v1" in text
+    assert "catalog_contract_exists_and_survival_full_package_registered_scope_survival_minimal_v1" in text
+    assert "r_bio_full_environment_evidence_passed_scope_survival_minimal_v1_full_activation_still_blocked" in text
+    assert "analysis_full_environment_lock_not_restored:r-spatial-full" in text
+    assert "blocked_mock_lite_blocked_full_legacy_sidecar_forbidden" in text
+    assert "require_full_ready_expected_exit_code_1" in text
     assert "Frontend Standard Package Consumption Matrix" in text
     assert "Reproducibility Provenance Matrix" in text
     assert "mock=True; lite=True; full=False" in text
@@ -446,6 +573,7 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "standard_result_package validation passed" in text
     assert "report_ready_eligible false" in text
     assert "pending_standard_worker_migration" in text
+    assert "survival_minimal_v1_formal_standard_worker_migrated" in text
     assert "legacy_sidecar_writer_contract" in text
     assert "legacy_sidecar_producer_transitional:correlation" not in text
     assert "Frontend Standard Package Consumption Matrix" in text
@@ -464,8 +592,8 @@ def test_analysis_architecture_gate_script_writes_markdown_report(tmp_path: Path
     assert "full_analysis_environment_locks_not_restored" in text
     assert "Standard Worker Migration Evidence Coverage" in text
     assert "Missing evidence modules" in text
-    assert "deg, survival, univariate, multivariate, enrichment, immune_infiltration, correlation, spatial_transcriptomics, docking, molecular_dynamics" in text
-    assert "missing=10; passed=0; blocked=0; modules=deg, survival, univariate, multivariate, enrichment" in text
+    assert "deg, univariate, multivariate, enrichment, immune_infiltration, correlation, spatial_transcriptomics, docking, molecular_dynamics" in text
+    assert "missing=9; passed=1; blocked=0; modules=deg, univariate, multivariate, enrichment" in text
     assert "restore_full_analysis_environment_locks" in text
     assert "analysis/registry/analysis_environments.json" in text
     assert "Architecture gate report schema validation is currently `passed`" in text
@@ -513,7 +641,8 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     assert template_package["template_counts"]["standard_worker_migration_evidence_templates"] == len(payload["standard_worker_migration_rows"])
     assert template_package["full_activation_module_matrix"]["schema_version"] == "biomedpilot.analysis.full_activation_module_matrix.v1"
     assert template_package["full_activation_module_matrix"]["status"] == "blocked"
-    assert template_package["full_activation_module_matrix"]["blocked_module_count"] == 10
+    assert template_package["full_activation_module_matrix"]["eligible_module_count"] == 1
+    assert template_package["full_activation_module_matrix"]["blocked_module_count"] == 9
     assert template_package["full_activation_module_matrix"]["boundary"] == "read_only_module_level_full_activation_diagnostics"
     full_activation_rows = {
         item["module_id"]: item
@@ -526,15 +655,16 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
     remediation_actions = template_package["remediation_actions"]
     assert remediation_actions["schema_version"] == "biomedpilot.analysis.evidence_template_remediation_actions.v1"
     assert remediation_actions["action_policy"] == "planning_only_not_readiness_evidence"
-    assert remediation_actions["environment_action_summary"]["blocked_environment_count"] == 4
+    assert remediation_actions["environment_action_summary"]["blocked_environment_count"] == 3
     assert remediation_actions["resource_action_summary"]["blocked_resource_count"] == 11
-    assert remediation_actions["module_action_summary"]["blocked_module_count"] == 10
+    assert remediation_actions["module_action_summary"]["blocked_module_count"] == 9
     environment_actions = {item["environment_id"]: item for item in remediation_actions["environment_next_actions"]}
     resource_actions = {item["resource_id"]: item for item in remediation_actions["resource_next_actions"]}
     module_actions = {item["module_id"]: item for item in remediation_actions["module_next_actions"]}
-    assert environment_actions["r-bio-full"]["next_action"] == "register_schema_valid_restored_environment_evidence"
+    assert "r-bio-full" not in environment_actions
     assert resource_actions["reactome_full"]["next_action"] == "register_schema_valid_prelocked_resource_evidence"
     assert module_actions["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
+    assert module_actions["survival"]["migration_next_action"] == "no_action_migration_evidence_passed"
     assert template_package["expected_evidence_scope"] == {
         "scope_policy": "authoritative_registry_scope",
         "expected_environment_ids": payload["environment_readiness"]["expected_environment_ids"],
@@ -558,8 +688,8 @@ def test_analysis_architecture_gate_script_writes_evidence_template_package(tmp_
         item["item_id"]: item
         for item in template_package["remediation_scope"]["manual_decision_points"]
     }
-    assert remediation_scope["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=10; passed=0; blocked=0")
-    assert "modules=deg, survival, univariate, multivariate, enrichment" in remediation_scope["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
+    assert remediation_scope["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"].startswith("missing=9; passed=1; blocked=0")
+    assert "modules=deg, univariate, multivariate, enrichment" in remediation_scope["migrate_formal_algorithms_to_isolated_standard_worker"]["scope"]
     assert template_package["remediation_scope"]["minimal_remediation_path"] == payload["remediation_summary"]["minimal_remediation_path"]
     environment_templates = {item["environment_id"]: item for item in template_package["environment_lock_evidence_templates"]}
     resource_templates = {item["resource_id"]: item for item in template_package["resource_lock_evidence_templates"]}

@@ -1,0 +1,62 @@
+{
+  "schema_version": "biomedpilot.analysis.survival_full_formal_input_manifest.template.v1",
+  "template_status": "template_only_not_evidence",
+  "module_id": "survival",
+  "mode": "full",
+  "expected_environment": "r-bio-full",
+  "required_files": [
+    "clinical_survival.tsv",
+    "expression_or_signature.tsv",
+    "input.json",
+    "expected_result_manifest.json",
+    "README.md"
+  ],
+  "clinical_survival_tsv": {
+    "required_columns": [
+      "sample_id",
+      "survival_time",
+      "survival_event"
+    ],
+    "one_of_required_columns": [
+      "group",
+      "candidate_variable"
+    ],
+    "optional_columns": [
+      "age",
+      "sex",
+      "stage",
+      "additional_covariates"
+    ]
+  },
+  "expression_or_signature_tsv": {
+    "required_columns": [
+      "sample_id",
+      "value"
+    ],
+    "one_of_required_columns": [
+      "feature_id",
+      "signature_score"
+    ]
+  },
+  "input_json_required_fields": [
+    "module_id",
+    "mode",
+    "analysis_scope",
+    "survival_time_column",
+    "survival_event_column",
+    "covariates",
+    "cutoff_policy",
+    "random_seed",
+    "output_format",
+    "expected_environment"
+  ],
+  "input_json_one_of_required_fields": [
+    "grouping_column",
+    "expression_feature"
+  ],
+  "required_values": {
+    "module_id": "survival",
+    "mode": "full",
+    "expected_environment": "r-bio-full"
+  }
+}

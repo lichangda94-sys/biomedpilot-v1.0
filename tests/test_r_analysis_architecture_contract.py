@@ -149,6 +149,8 @@ def _write_candidate_standard_worker_package(
                 "bioconductor_version": "3.20",
                 "package_versions": {"limma": "3.62.2"},
                 "external_tool_versions": {},
+                "docker_image_digest": "sha256:" + "a" * 64,
+                "renv_lock_hash": "sha256:" + "b" * 64,
             },
             "command": "task-center -> analysis/runners/run_module.R",
             "analysis_environment": {
@@ -158,7 +160,9 @@ def _write_candidate_standard_worker_package(
                 "module_id": "deg",
                 "environment_id": "r-bio-full",
                 "dockerfile": "docker/Dockerfile.r-bio-full",
+                "docker_image_digest": "sha256:" + "a" * 64,
                 "renv_lock": "renv/renv.bio-full.lock",
+                "renv_lock_hash": "sha256:" + "b" * 64,
                 "allows_heavy_analysis_dependencies": True,
                 "resource_lock_required": True,
                 "external_tool_lock_required": False,
@@ -204,21 +208,31 @@ def _write_candidate_standard_worker_package(
         {
             "schema_version": "biomedpilot.analysis.worker_invocation.v1",
             "created_at": now,
+            "started_at": now,
+            "finished_at": now,
             "module_id": "deg",
             "mode": "full",
             "task_id": task_id,
             "worker_backend": "rscript",
             "invocation_status": "completed",
             "standard_worker_entrypoint": "analysis/runners/run_module.R",
+            "worker_entrypoint": "analysis/runners/run_module.R",
             "input_manifest": "module_input.json",
+            "working_directory": str(tmp_path),
+            "output_dir": str(package_dir),
+            "environment_id": "r-bio-full",
             "output_contract": "standard_result_package",
             "runtime_install_policy": "forbidden",
             "resource_download_policy": "forbidden",
             "returncode": 0,
+            "exit_code": 0,
             "command": ["Rscript", "analysis/runners/run_module.R"],
             "stdout": "",
             "stderr": "",
+            "stdout_log": "logs/stdout.log",
+            "stderr_log": "logs/stderr.log",
             "blockers": [],
+            "boundary": "standard_r_worker",
             "worker_boundary": {
                 "boundary_type": "standard_r_worker",
                 "task_system_invocation": "task_center_registered",
@@ -226,6 +240,9 @@ def _write_candidate_standard_worker_package(
             },
         },
     )
+    (package_dir / "logs" / "stdout.log").write_text("", encoding="utf-8")
+    (package_dir / "logs" / "stderr.log").write_text("", encoding="utf-8")
+    (package_dir / "logs" / "r_session_info.txt").write_text("R version 4.4.2\n", encoding="utf-8")
     (package_dir / "logs" / "worker.log").write_text(f"{now} status={result_status}\n", encoding="utf-8")
     return package_dir
 
@@ -351,7 +368,22 @@ def test_registered_module_manifests_declare_worker_environment_and_package_cont
             assert (ROOT / modes["lite"]["fixture_input"]).is_file()
         else:
             assert modes["lite"]["supported"] is False
-        assert modes["full"]["supported"] is False
+        if module_id == "survival":
+            assert modes["full"]["supported"] is True
+            assert modes["full"]["runner"] == registry["standard_entrypoint"]
+            assert modes["full"]["worker_backend"] == "rscript"
+            assert modes["full"]["environment"] == "r-bio-full"
+            assert modes["full"]["result_semantics"] == "formal_computed_result"
+            assert modes["full"]["resource_profile"] == "clinical_fixture_only"
+            assert modes["full"].get("blocker", "") == ""
+            assert set(modes["full"]["excluded_methods"]) == {
+                "time_dependent_roc",
+                "nomogram",
+                "calibration",
+                "competing_risk",
+            }
+        else:
+            assert modes["full"]["supported"] is False
         assert environment["app_dev"] == "docker/Dockerfile.app-dev"
         assert (ROOT / manifest["dockerfile"]).exists()
         assert (ROOT / manifest["environment_lock"]).exists()
@@ -419,8 +451,13 @@ def test_analysis_environment_split_scaffold_exists_without_claiming_full_readin
         assert (ROOT / relative).exists()
     for relative in locks:
         lock = read_json(ROOT / relative)
-        assert lock["Packages"] == {}
-        assert lock["BioMedPilotPolicy"]["status"] == "scaffold_only_not_restored"  # type: ignore[index]
+        if relative == "renv/renv.bio-full.lock":
+            assert lock["Packages"] != {}
+            assert lock["BioMedPilotPolicy"]["status"] == "restored"  # type: ignore[index]
+            assert lock["BioMedPilotPolicy"]["lock_profile"] == "survival_minimal_v1"  # type: ignore[index]
+        else:
+            assert lock["Packages"] == {}
+            assert lock["BioMedPilotPolicy"]["status"] == "scaffold_only_not_restored"  # type: ignore[index]
         assert lock["BioMedPilotPolicy"]["runtime_package_install"] == "forbidden"  # type: ignore[index]
 
 
@@ -865,9 +902,8 @@ def test_analysis_environment_registry_validator_separates_structure_from_full_r
     assert validation["status"] == "passed"
     assert validation["full_mode_ready"] is False
     assert validation["evidence_registry_status"] == "passed"
-    assert validation["evidence_registry_entry_count"] == 0
+    assert validation["evidence_registry_entry_count"] == 1
     assert set(validation["blocked_environment_ids"]) == {
-        "r-bio-full",
         "r-spatial-full",
         "r-chem-full",
         "r-chem-gpu",
@@ -887,11 +923,11 @@ def test_analysis_environment_registry_validator_separates_structure_from_full_r
     assert templates["r-bio-full"]["renv_lock_content"]["packages_non_empty"] is True
     assert templates["r-bio-full"]["renv_lock_content"]["policy_status"] == "restored"
     assert "scaffold_only_lockfile" in templates["r-bio-full"]["forbidden_evidence_sources"]
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in validation["readiness_blockers"]
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" not in validation["readiness_blockers"]
     assert validation["blockers"] == []
 
 
-def test_analysis_environment_lock_evidence_registry_is_authoritative_and_empty_by_default() -> None:
+def test_analysis_environment_lock_evidence_registry_is_authoritative_with_r_bio_full_entry() -> None:
     registry = load_analysis_environment_lock_evidence_registry()
     validation = validate_analysis_environment_lock_evidence_registry(registry)
 
@@ -899,13 +935,13 @@ def test_analysis_environment_lock_evidence_registry_is_authoritative_and_empty_
     assert registry["policy"]["registry_is_authoritative"] is True
     assert registry["policy"]["expected_environment_ids_are_authoritative"] is True
     assert registry["expected_environment_ids"] == REQUIRED_FULL_ENVIRONMENT_IDS
-    assert registry["evidence_entries"] == []
+    assert [entry["environment_id"] for entry in registry["evidence_entries"]] == ["r-bio-full"]
     assert validation["schema_version"] == "biomedpilot.analysis.environment_lock_evidence_registry_validation.v1"
     assert validation["status"] == "passed"
-    assert validation["entry_count"] == 0
+    assert validation["entry_count"] == 1
     assert validation["expected_environment_ids"] == REQUIRED_FULL_ENVIRONMENT_IDS
-    assert validation["missing_environment_ids"] == REQUIRED_FULL_ENVIRONMENT_IDS
-    assert validation["missing_count"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
+    assert validation["missing_environment_ids"] == ["r-spatial-full", "r-chem-full", "r-chem-gpu"]
+    assert validation["missing_count"] == 3
 
 
 def test_analysis_environment_lock_evidence_registry_blocks_expected_scope_drift() -> None:
@@ -958,7 +994,12 @@ def test_restored_full_environment_lock_requires_schema_valid_evidence(tmp_path:
         encoding="utf-8",
     )
     environments["r-bio-full"]["renv_lock"] = str(restored_lock)
-    validation = validate_analysis_environment_registry(environment_registry)
+    empty_evidence_registry = deepcopy(load_analysis_environment_lock_evidence_registry())
+    empty_evidence_registry["evidence_entries"] = []
+    validation = validate_analysis_environment_registry(
+        environment_registry,
+        environment_lock_evidence_registry=empty_evidence_registry,
+    )
 
     assert validation["status"] == "blocked"
     assert "analysis_environment_lock_evidence_missing:r-bio-full" in validation["blockers"]
@@ -992,13 +1033,36 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
     evidence_note.write_text("controlled external environment build evidence\n", encoding="utf-8")
     docker_build_log = tmp_path / "r-bio-full.docker-build.log"
     docker_build_log.write_text("docker buildx build --platform linux/arm64\n", encoding="utf-8")
+    docker_inspect = tmp_path / "r-bio-full.docker-inspect.json"
+    docker_inspect.write_text(json.dumps([{"Id": "sha256:" + "a" * 64}]), encoding="utf-8")
+    renv_restore_log = tmp_path / "r-bio-full.renv-restore.log"
+    renv_restore_log.write_text("renv::restore(lockfile = 'renv.bio-full.lock')\n", encoding="utf-8")
+    renv_status = tmp_path / "r-bio-full.renv-status.json"
+    renv_status.write_text("{}", encoding="utf-8")
+    renv_lock_generate_log = tmp_path / "r-bio-full.renv-lock-generate.log"
+    renv_lock_generate_log.write_text("generated_package_count=1\n", encoding="utf-8")
+    renv_lock_generate_metadata = tmp_path / "r-bio-full.renv-lock-generate-metadata.json"
+    renv_lock_generate_metadata.write_text(
+        json.dumps({"lock_profile": "survival_minimal_v1", "lock_profile_version": "v1"}),
+        encoding="utf-8",
+    )
+    renv_bootstrap_version = tmp_path / "r-bio-full.renv-bootstrap-version.txt"
+    renv_bootstrap_version.write_text("1.2.3\n", encoding="utf-8")
+    renv_bootstrap_source = tmp_path / "r-bio-full.renv-bootstrap-source.txt"
+    renv_bootstrap_source.write_text("https://cloud.r-project.org\n", encoding="utf-8")
+    r_session_info = tmp_path / "r-bio-full.r-session-info.txt"
+    r_session_info.write_text("R version 4.4.2\n", encoding="utf-8")
+    package_inventory = tmp_path / "r-bio-full.installed-packages.tsv"
+    package_inventory.write_text("Package\tVersion\nlimma\t3.62.2\n", encoding="utf-8")
     restored_lock_hash = hashlib.sha256(restored_lock.read_bytes()).hexdigest()
+    docker_digest = "sha256:" + "a" * 64
     evidence_path = tmp_path / "r-bio-full.environment_lock_evidence.json"
     evidence_path.write_text(
         json.dumps(
             {
                 "schema_version": "biomedpilot.analysis.environment_lock_evidence.v1",
                 "environment_id": "r-bio-full",
+                "environment_class": "full",
                 "status": "restored",
                 "r_version": "R 4.4.2",
                 "bioconductor_version": "3.20",
@@ -1011,12 +1075,61 @@ def test_restored_full_environment_lock_can_be_proven_by_registry_evidence(tmp_p
                     "build_status": "built",
                     "build_log": str(docker_build_log),
                 },
+                "evidence_source": "docker_hub",
+                "base_image": "rocker/r-ver:4.4.2",
+                "base_image_expected": "rocker/r-ver:4.4.2",
+                "source_digest": docker_digest,
+                "registry_preflight_status": "passed",
+                "docker_build_status": "built",
+                "docker_load_status": "",
+                "equivalence_claim": "source image digest and Dockerfile base image are traceable for contract testing",
+                "equivalence_validation_status": "passed",
+                "docker_image_digest": docker_digest,
+                "docker_build_log_path": str(docker_build_log),
+                "docker_inspect_path": str(docker_inspect),
                 "dockerfile": "docker/Dockerfile.r-bio-full",
+                "dockerfile_path": "docker/Dockerfile.r-bio-full",
                 "renv_lock": str(restored_lock),
+                "renv_lock_path": str(restored_lock),
+                "renv_lock_hash": restored_lock_hash,
+                "lock_profile": "survival_minimal_v1",
+                "lock_profile_version": "v1",
+                "renv_lock_package_count": 1,
+                "required_package_set": ["renv", "survival", "jsonlite", "data.table", "digest", "ggplot2", "broom", "htmltools"],
+                "missing_required_packages": [],
+                "renv_lock_generate_log_path": str(renv_lock_generate_log),
+                "renv_lock_generate_metadata_path": str(renv_lock_generate_metadata),
+                "renv_bootstrap_status": "available",
+                "renv_bootstrap_version": "1.2.3",
+                "renv_bootstrap_source": "https://cloud.r-project.org",
+                "renv_bootstrap_version_path": str(renv_bootstrap_version),
+                "renv_bootstrap_source_path": str(renv_bootstrap_source),
+                "renv_restore_status": "restored",
+                "renv_restore_log_path": str(renv_restore_log),
+                "renv_status_path": str(renv_status),
+                "r_session_info_path": str(r_session_info),
                 "runtime_package_install": "forbidden",
                 "runtime_resource_download": "forbidden",
                 "allowed_module_ids": environments["r-bio-full"]["allowed_module_ids"],
-                "evidence_files": [str(evidence_note)],
+                "evidence_files": [
+                    str(evidence_note),
+                    str(docker_build_log),
+                    str(docker_inspect),
+                    str(renv_lock_generate_log),
+                    str(renv_lock_generate_metadata),
+                    str(renv_restore_log),
+                    str(renv_status),
+                    str(renv_bootstrap_version),
+                    str(renv_bootstrap_source),
+                    str(r_session_info),
+                    str(package_inventory),
+                ],
+                "package_inventory_path": str(package_inventory),
+                "created_at": "2026-06-11T00:00:00Z",
+                "created_by": "architecture-contract-test",
+                "validation_status": "passed",
+                "validation_errors": [],
+                "evidence_hash": "b" * 64,
             }
         ),
         encoding="utf-8",
@@ -1230,8 +1343,8 @@ def test_environment_lock_evidence_blocks_scaffold_only_renv_lock_even_with_matc
     )
 
     assert validation["status"] == "blocked"
-    assert "analysis_environment_lock_evidence_renv_lock_not_restored:scaffold_only_not_restored" in validation["blockers"]
-    assert "analysis_environment_lock_evidence_renv_lock_packages_empty" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_required_field_missing:environment_class" in validation["blockers"]
+    assert "analysis_environment_lock_evidence_docker_image_invalid" in validation["blockers"]
 
 
 def test_environment_lock_evidence_blocks_placeholder_or_mismatched_payloads() -> None:
@@ -1435,16 +1548,20 @@ def test_analysis_architecture_status_summarizes_twenty_required_gates_without_p
     assert status["module_interface_matrix"]["passed_module_count"] == 10
     assert status["module_interface_matrix"]["blocked_module_count"] == 0
     assert status["module_mode_readiness_matrix"]["status"] == "partial"
-    assert status["module_mode_readiness_matrix"]["passed_module_count"] == 0
-    assert status["module_mode_readiness_matrix"]["partial_module_count"] == 10
+    assert status["module_mode_readiness_matrix"]["passed_module_count"] == 1
+    assert status["module_mode_readiness_matrix"]["partial_module_count"] == 9
     assert status["module_mode_readiness_matrix"]["blocked_module_count"] == 0
-    assert set(status["module_mode_readiness_matrix"]["full_blocked_module_ids"]) == REQUIRED_MODULES
+    assert set(status["module_mode_readiness_matrix"]["full_blocked_module_ids"]) == (REQUIRED_MODULES - {"survival"})
     assert status["module_mode_readiness_matrix"]["warning_counts"]["module_full_mode_blocked:deg"] == 1
+    mode_rows = {row["module_id"]: row for row in status["module_mode_readiness_matrix"]["rows"]}
+    assert mode_rows["survival"]["status"] == "passed"
+    assert mode_rows["survival"]["full_status"] == "passed"
+    assert mode_rows["survival"]["full_activation_status"] == "eligible"
     assert status["environment_artifact_matrix"]["status"] == "partial"
-    assert status["environment_artifact_matrix"]["passed_environment_count"] == 2
-    assert status["environment_artifact_matrix"]["partial_environment_count"] == 4
+    assert status["environment_artifact_matrix"]["passed_environment_count"] == 3
+    assert status["environment_artifact_matrix"]["partial_environment_count"] == 3
     assert status["environment_artifact_matrix"]["blocked_environment_count"] == 0
-    assert status["environment_artifact_matrix"]["warning_counts"]["environment_renv_lock_scaffold_only_not_restored:r-bio-full"] == 1
+    assert "environment_renv_lock_scaffold_only_not_restored:r-bio-full" not in status["environment_artifact_matrix"]["warning_counts"]
     assert status["resource_artifact_matrix"]["status"] == "partial"
     assert status["resource_artifact_matrix"]["locked_resource_count"] == 1
     assert status["resource_artifact_matrix"]["blocked_resource_count"] == 11
@@ -1574,18 +1691,11 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert "each restored full environment lock has schema-valid environment_lock_evidence" in items["restore_full_analysis_environment_locks"]["required_evidence"]
     environment_actions = {item["environment_id"]: item for item in items["restore_full_analysis_environment_locks"]["environment_next_actions"]}
     environment_summary = items["restore_full_analysis_environment_locks"]["environment_action_summary"]
-    assert environment_summary["environment_count"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
-    assert environment_summary["blocked_environment_count"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
-    assert environment_summary["next_action_counts"]["register_schema_valid_restored_environment_evidence"] == len(REQUIRED_FULL_ENVIRONMENT_IDS)
-    assert set(environment_actions) == set(REQUIRED_FULL_ENVIRONMENT_IDS)
-    assert environment_actions["r-bio-full"]["next_action"] == "register_schema_valid_restored_environment_evidence"
-    assert environment_actions["r-bio-full"]["runtime_package_install"] == "forbidden"
-    assert environment_actions["r-bio-full"]["runtime_resource_download"] == "forbidden"
-    assert environment_actions["r-bio-full"]["required_package_lock_hash_algorithm"] == "sha256"
-    assert environment_actions["r-bio-full"]["required_docker_image_status"] == "built"
-    assert "deg" in environment_actions["r-bio-full"]["allowed_module_ids"]
-    assert "runtime_package_install" in environment_actions["r-bio-full"]["forbidden_evidence_sources"]
-    assert environment_summary["module_environments"]["deg"] == ["r-bio-full"]
+    assert environment_summary["environment_count"] == 3
+    assert environment_summary["blocked_environment_count"] == 3
+    assert environment_summary["next_action_counts"]["register_schema_valid_restored_environment_evidence"] == 3
+    assert set(environment_actions) == {"r-spatial-full", "r-chem-full", "r-chem-gpu"}
+    assert "deg" not in environment_summary["module_environments"]
     assert environment_summary["module_environments"]["spatial_transcriptomics"] == ["r-spatial-full"]
     assert environment_summary["module_environments"]["docking"] == ["r-chem-full"]
     assert environment_summary["module_environments"]["molecular_dynamics"] == ["r-chem-gpu"]
@@ -1638,14 +1748,16 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     }
     action_summary = items["migrate_formal_algorithms_to_isolated_standard_worker"]["module_action_summary"]
     assert migration_scope["scope_policy"] == "module_by_module_standard_worker_migration_required"
-    assert migration_scope["passed_module_ids"] == []
+    assert migration_scope["passed_module_ids"] == ["survival"]
     assert migration_scope["blocked_module_ids"] == []
-    assert migration_scope["missing_module_ids"] == migration_scope["expected_module_ids"]
-    assert migration_scope["missing_count"] == len(migration_scope["expected_module_ids"])
+    assert migration_scope["missing_module_ids"] == [
+        module_id for module_id in migration_scope["expected_module_ids"] if module_id != "survival"
+    ]
+    assert migration_scope["missing_count"] == len(migration_scope["expected_module_ids"]) - 1
     assert "deg" in migration_scope["missing_module_ids"]
     assert "molecular_dynamics" in migration_scope["missing_module_ids"]
     assert action_summary["module_count"] == len(migration_actions)
-    assert action_summary["blocked_module_count"] == len(migration_actions)
+    assert action_summary["blocked_module_count"] == len(migration_actions) - 1
     assert action_summary["next_action_counts"]["declare_scoped_full_mode_only_after_environment_and_resource_locks"] >= 1
     assert migration_actions["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert migration_actions["deg"]["prerequisite_status"]["required_environment_lock"] == "required_before_migration_evidence"
@@ -1654,6 +1766,9 @@ def test_analysis_remediation_queue_turns_p1_gaps_into_manual_scoped_items() -> 
     assert migration_actions["univariate"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
     assert migration_actions["univariate"]["prerequisite_status"]["formal_runtime_contract"] == "available_or_not_required"
     assert "analysis/registry/analysis_environments.json" in migration_actions["univariate"]["recommended_files"]
+    assert migration_actions["survival"]["migration_next_action"] == "no_action_migration_evidence_passed"
+    assert migration_actions["survival"]["prerequisite_status"]["required_environment_lock"] == "passed"
+    assert migration_actions["survival"]["prerequisite_status"]["required_task_boundary"] == "task_center_registered_standard_r_worker"
     assert migration_actions["correlation"]["prerequisite_status"]["legacy_sidecar_boundary"] == "not_present"
     assert migration_actions["correlation"]["prerequisite_status"]["lite_standard_worker_path"] == "passed"
     assert all(item["status"] == "blocked" for item in items.values())
@@ -1698,7 +1813,7 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
     assert matrix["status"] == "partial"
     assert matrix["boundary"] == "matrix_is_read_only_no_worker_execution"
     assert matrix["evidence_registry_status"] == "passed"
-    assert matrix["evidence_entry_count"] == 0
+    assert matrix["evidence_entry_count"] == 1
     assert matrix["evidence_registry_blockers"] == []
     assert matrix["expected_evidence_module_ids"] == [
         "deg",
@@ -1712,26 +1827,33 @@ def test_standard_worker_migration_matrix_is_module_level_and_read_only() -> Non
         "docking",
         "molecular_dynamics",
     ]
-    assert matrix["passed_evidence_module_ids"] == []
+    assert matrix["passed_evidence_module_ids"] == ["survival"]
     assert matrix["blocked_evidence_module_ids"] == []
-    assert matrix["formal_pending_count"] == 10
-    assert matrix["full_blocked_count"] == 10
-    assert matrix["missing_evidence_module_ids"] == matrix["expected_evidence_module_ids"]
+    assert matrix["formal_pending_count"] == 9
+    assert matrix["full_blocked_count"] == 9
+    assert matrix["missing_evidence_module_ids"] == [
+        module_id for module_id in matrix["expected_evidence_module_ids"] if module_id != "survival"
+    ]
     assert matrix["module_count"] >= 10
-    assert matrix["formal_pending_count"] == matrix["module_count"]
-    assert matrix["full_blocked_count"] == matrix["module_count"]
+    assert matrix["formal_pending_count"] == matrix["module_count"] - 1
+    assert matrix["full_blocked_count"] == matrix["module_count"] - 1
     assert matrix["adapter_status_counts"]["existing_controlled_python_and_r_contracts_pending_standard_worker_migration"] == 1
     assert matrix["adapter_status_counts"]["r_native_lite_contract_exists_pending_full_environment_and_standard_worker_migration"] == 2
     assert matrix["adapter_status_counts"]["planned_external_tool_adapter_only"] == 2
-    assert matrix["migration_next_action_counts"]["declare_scoped_full_mode_only_after_environment_and_resource_locks"] == matrix["module_count"]
-    assert matrix["migration_blocker_counts"]["full_mode_not_supported_in_registry"] == matrix["module_count"]
-    assert matrix["migration_blocker_counts"]["registry_evidence_entry_missing_or_blocked"] == matrix["module_count"]
+    assert matrix["migration_next_action_counts"]["declare_scoped_full_mode_only_after_environment_and_resource_locks"] == matrix["module_count"] - 1
+    assert matrix["migration_next_action_counts"]["no_action_migration_evidence_passed"] == 1
+    assert matrix["migration_blocker_counts"]["full_mode_not_supported_in_registry"] == matrix["module_count"] - 1
+    assert matrix["migration_blocker_counts"]["registry_evidence_entry_missing_or_blocked"] == matrix["module_count"] - 1
     assert "legacy_sidecar_output_is_not_migration_evidence" not in matrix["migration_blocker_counts"]
     assert {"deg", "survival", "univariate", "multivariate", "enrichment", "immune_infiltration", "spatial_transcriptomics", "docking", "molecular_dynamics"} <= set(rows)
     assert rows["deg"]["mock_status"] == "passed"
     assert rows["deg"]["lite_status"] == "standard_worker_lite_ready"
     assert rows["deg"]["full_status"] == "blocked"
     assert rows["deg"]["formal_worker_status"] == "pending_standard_worker_migration"
+    assert rows["survival"]["full_status"] == "ready_unverified"
+    assert rows["survival"]["formal_worker_status"] == "migrated_to_isolated_standard_worker"
+    assert rows["survival"]["migration_evidence_status"] == "passed"
+    assert rows["survival"]["migration_next_action"] == "no_action_migration_evidence_passed"
     assert rows["deg"]["migration_evidence_status"] == "missing"
     assert rows["deg"]["migration_readiness_status"] == "blocked"
     assert rows["deg"]["migration_prerequisite_status"]["overall"] == "blocked"
@@ -1769,17 +1891,22 @@ def test_full_activation_module_matrix_is_module_level_and_read_only() -> None:
     assert matrix["status"] == "blocked"
     assert matrix["boundary"] == "read_only_module_level_full_activation_diagnostics"
     assert matrix["module_count"] == 10
-    assert matrix["eligible_module_count"] == 0
-    assert matrix["blocked_module_count"] == 10
-    assert matrix["status_counts"]["blocked"] == 10
-    assert matrix["blocker_counts"]["full_mode_not_supported_in_registry"] == 10
-    assert matrix["blocker_counts"]["registry_evidence_entry_missing_or_blocked"] == 10
-    assert matrix["blocker_counts"]["analysis_full_environment_lock_not_restored:r-bio-full"] == 7
+    assert matrix["eligible_module_count"] == 1
+    assert matrix["blocked_module_count"] == 9
+    assert matrix["status_counts"]["blocked"] == 9
+    assert matrix["status_counts"]["eligible"] == 1
+    assert matrix["blocker_counts"]["full_mode_not_supported_in_registry"] == 9
+    assert matrix["blocker_counts"]["registry_evidence_entry_missing_or_blocked"] == 9
+    assert "analysis_full_environment_lock_not_restored:r-bio-full" not in matrix["blocker_counts"]
     assert matrix["blocker_counts"]["analysis_resource_not_locked:reactome_full"] == 1
     assert matrix["blocker_counts"]["analysis_resource_not_locked:gromacs_tool"] == 1
     assert rows["deg"]["resource_status"] == "not_required"
-    assert rows["deg"]["environment_status"] == "blocked"
+    assert rows["deg"]["environment_status"] == "passed"
     assert rows["deg"]["standard_worker_migration_status"] == "pending_standard_worker_migration"
+    assert rows["survival"]["status"] == "eligible"
+    assert rows["survival"]["environment_status"] == "passed"
+    assert rows["survival"]["resource_status"] == "not_required"
+    assert rows["survival"]["standard_worker_migration_status"] == "migrated_to_isolated_standard_worker"
     assert rows["enrichment"]["required_resource_ids"] == [
         "reactome_full",
         "msigdb_full",
@@ -2073,10 +2200,10 @@ def test_module_mode_readiness_matrix_tracks_mock_lite_full_layering_without_ena
     assert matrix["schema_version"] == "biomedpilot.analysis.module_mode_readiness_matrix.v1"
     assert matrix["status"] == "partial"
     assert matrix["module_count"] == 10
-    assert matrix["passed_module_count"] == 0
-    assert matrix["partial_module_count"] == 10
+    assert matrix["passed_module_count"] == 1
+    assert matrix["partial_module_count"] == 9
     assert matrix["blocked_module_count"] == 0
-    assert set(matrix["full_blocked_module_ids"]) == REQUIRED_MODULES
+    assert set(matrix["full_blocked_module_ids"]) == (REQUIRED_MODULES - {"survival"})
     assert matrix["blocker_counts"] == {}
     assert matrix["warning_counts"]["module_full_mode_blocked:deg"] == 1
     assert matrix["boundary"] == "read_only_mock_lite_full_mode_layering_diagnostics"
@@ -2089,6 +2216,10 @@ def test_module_mode_readiness_matrix_tracks_mock_lite_full_layering_without_ena
     assert rows["deg"]["full_environment"] == "r-bio-full"
     assert rows["deg"]["full_blocker"] == "full_r_worker_container_not_available"
     assert "module_full_mode_blocked:deg" in rows["deg"]["warnings"]
+    assert rows["survival"]["status"] == "passed"
+    assert rows["survival"]["full_supported"] is True
+    assert rows["survival"]["full_status"] == "passed"
+    assert rows["survival"]["full_activation_status"] == "eligible"
     assert rows["docking"]["full_environment"] == "r-chem-full"
     assert rows["docking"]["lite_result_semantics"] == "testing_level"
     assert rows["molecular_dynamics"]["full_environment"] == "r-chem-gpu"
@@ -2102,13 +2233,13 @@ def test_environment_artifact_matrix_tracks_docker_renv_split_without_restoring_
     assert matrix["schema_version"] == "biomedpilot.analysis.environment_artifact_matrix.v1"
     assert matrix["status"] == "partial"
     assert matrix["environment_count"] == 6
-    assert matrix["passed_environment_count"] == 2
-    assert matrix["partial_environment_count"] == 4
+    assert matrix["passed_environment_count"] == 3
+    assert matrix["partial_environment_count"] == 3
     assert matrix["blocked_environment_count"] == 0
     assert matrix["blocker_counts"] == {}
     assert matrix["full_environment_ids"] == ["r-bio-full", "r-spatial-full", "r-chem-full", "r-chem-gpu"]
-    assert matrix["restored_full_environment_ids"] == []
-    assert matrix["warning_counts"]["environment_renv_lock_scaffold_only_not_restored:r-bio-full"] == 1
+    assert matrix["restored_full_environment_ids"] == ["r-bio-full"]
+    assert "environment_renv_lock_scaffold_only_not_restored:r-bio-full" not in matrix["warning_counts"]
     assert matrix["warning_counts"]["environment_docker_image_build_not_proven:r-chem-gpu"] == 1
     assert matrix["boundary"] == "read_only_environment_artifact_split_diagnostics"
     assert rows["app-dev"]["status"] == "passed"
@@ -2121,12 +2252,12 @@ def test_environment_artifact_matrix_tracks_docker_renv_split_without_restoring_
     assert rows["r-bio-core"]["environment_class"] == "lite"
     assert rows["r-bio-core"]["allows_heavy_analysis_dependencies"] is False
     assert "deg" in rows["r-bio-core"]["allowed_module_ids"]
-    assert rows["r-bio-full"]["status"] == "partial"
+    assert rows["r-bio-full"]["status"] == "passed"
     assert rows["r-bio-full"]["environment_class"] == "full"
-    assert rows["r-bio-full"]["renv_policy_status"] == "scaffold_only_not_restored"
-    assert rows["r-bio-full"]["renv_package_count"] == 0
+    assert rows["r-bio-full"]["renv_policy_status"] == "restored"
+    assert rows["r-bio-full"]["renv_package_count"] == 39
     assert rows["r-bio-full"]["resource_lock_required"] is True
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in rows["r-bio-full"]["warnings"]
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" not in rows["r-bio-full"]["warnings"]
     assert rows["r-chem-gpu"]["renv_policy_environment"] == "r-chem-full"
     assert rows["r-chem-gpu"]["external_tool_lock_required"] is True
     assert rows["r-chem-gpu"]["status"] == "partial"
@@ -2174,7 +2305,7 @@ def test_standard_worker_entrypoint_matrix_tracks_runner_contract_without_owning
     assert matrix["boundary"] == "read_only_standard_r_worker_entrypoint_contract_diagnostics"
     assert matrix["standard_entrypoint"] == "analysis/runners/run_module.R"
     assert set(matrix["lite_module_ids"]) == REQUIRED_MODULES
-    assert set(matrix["formal_pending_module_ids"]) == REQUIRED_MODULES
+    assert set(matrix["formal_pending_module_ids"]) == (REQUIRED_MODULES - {"survival"})
     assert matrix["row_count"] == 6
     assert matrix["passed_row_count"] == 6
     assert matrix["partial_row_count"] == 0
@@ -2193,7 +2324,7 @@ def test_standard_worker_entrypoint_matrix_tracks_runner_contract_without_owning
     assert rows["standard_r_worker_formal_migration_boundary"]["warnings"] == []
     assert rows["standard_r_worker_formal_migration_boundary"]["migration_tracking_matrix"] == "standard_worker_migration_matrix"
     assert rows["standard_r_worker_formal_migration_boundary"]["migration_status"] == "not_entrypoint_readiness_evidence"
-    assert "survival" in rows["standard_r_worker_formal_migration_boundary"]["formal_pending_module_ids"]
+    assert "survival" not in rows["standard_r_worker_formal_migration_boundary"]["formal_pending_module_ids"]
 
 
 def test_standard_worker_matrices_use_module_manifest_when_registry_lite_runner_drifts() -> None:
@@ -2212,7 +2343,7 @@ def test_standard_worker_matrices_use_module_manifest_when_registry_lite_runner_
     assert migration_rows["correlation"]["standard_entrypoint"] == "analysis/runners/run_module.R"
 
 
-def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_by_default() -> None:
+def test_standard_worker_migration_evidence_registry_is_authoritative_with_survival_scoped_evidence() -> None:
     registry = load_standard_worker_migration_evidence_registry()
     validation = validate_standard_worker_migration_evidence_registry(registry)
 
@@ -2233,11 +2364,19 @@ def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_
         "docking",
         "molecular_dynamics",
     ]
-    assert registry["evidence_entries"] == []
+    assert [entry["module_id"] for entry in registry["evidence_entries"]] == ["survival"]
+    survival_evidence = registry["evidence_entries"][0]["evidence"]
+    assert survival_evidence["migration_status"] == "migrated_to_isolated_standard_worker"
+    assert survival_evidence["evidence_level"] == "full_formal"
+    assert survival_evidence["execution_boundary"] == "standard_r_worker"
+    assert survival_evidence["task_bridge_execution"] is True
+    assert survival_evidence["legacy_sidecar_used"] is False
+    assert survival_evidence["mock_used"] is False
+    assert survival_evidence["lite_used"] is False
     assert validation["schema_version"] == "biomedpilot.analysis.standard_worker_migration_evidence_registry_validation.v1"
     assert validation["status"] == "passed"
     assert validation["schema_validation_status"] == "passed"
-    assert validation["entry_count"] == 0
+    assert validation["entry_count"] == 1
     assert validation["expected_module_ids"] == [
         "deg",
         "survival",
@@ -2250,10 +2389,12 @@ def test_standard_worker_migration_evidence_registry_is_authoritative_and_empty_
         "docking",
         "molecular_dynamics",
     ]
-    assert validation["passed_module_ids"] == []
+    assert validation["passed_module_ids"] == ["survival"]
     assert validation["blocked_module_ids"] == []
-    assert validation["missing_module_ids"] == validation["expected_module_ids"]
-    assert validation["missing_count"] == len(validation["expected_module_ids"])
+    assert validation["missing_module_ids"] == [
+        module_id for module_id in validation["expected_module_ids"] if module_id != "survival"
+    ]
+    assert validation["missing_count"] == len(validation["expected_module_ids"]) - 1
     assert validation["blockers"] == []
 
 
@@ -2312,7 +2453,7 @@ def test_standard_worker_migration_matrix_does_not_accept_registry_only_full_sup
     assert "full_mode_not_supported_in_registry" in rows["deg"]["migration_blockers"]
     assert rows["deg"]["migration_prerequisite_status"]["full_mode_registry"] == "blocked"
     assert rows["deg"]["migration_next_action"] == "declare_scoped_full_mode_only_after_environment_and_resource_locks"
-    assert matrix["formal_pending_count"] == matrix["module_count"]
+    assert matrix["formal_pending_count"] == matrix["module_count"] - 1
 
 
 def test_standard_worker_migration_evidence_registry_blocks_bad_entries() -> None:
@@ -2630,10 +2771,15 @@ def test_default_source_tree_does_not_install_r_packages_or_download_resources_i
                 continue
             if "__pycache__" in path.parts or "legacy" in path.parts:
                 continue
+            relative_path = path.relative_to(ROOT)
+            if relative_path.parts[:2] == ("scripts", "full_env"):
+                continue
+            if relative_path == Path("docker/Dockerfile.r-bio-full"):
+                continue
             text = path.read_text(encoding="utf-8", errors="ignore")
             for needle in forbidden:
                 if needle in text:
-                    offenders.append(f"{path.relative_to(ROOT)}:{needle}")
+                    offenders.append(f"{relative_path}:{needle}")
     assert offenders == []
 
 
@@ -2752,17 +2898,15 @@ def test_standard_r_runner_lite_full_modes_write_blocked_standard_package(tmp_pa
     assert result["mode"] == "full"
     assert result["status"] == "blocked"
     assert "standard_worker_mode_not_enabled:full" in result["blockers"]
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in result["blockers"]
+    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" not in result["blockers"]
     assert "analysis_resource_not_locked:reactome_full" in result["blockers"]
     assert "analysis_resource_not_locked:msigdb_full" in result["blockers"]
     assert provenance["runtime"]["r_version"] == "not_executed"  # type: ignore[index]
-    assert provenance["analysis_environment"]["status"] == "blocked_full_mode_environment_lock"  # type: ignore[index]
+    assert provenance["analysis_environment"]["status"] == "blocked_full_mode_resource_or_tool_lock"  # type: ignore[index]
     assert provenance["analysis_environment"]["environment_id"] == "r-bio-full"  # type: ignore[index]
     assert provenance["analysis_environment"]["dockerfile"] == "docker/Dockerfile.r-bio-full"  # type: ignore[index]
     assert provenance["analysis_environment"]["renv_lock"] == "renv/renv.bio-full.lock"  # type: ignore[index]
-    assert provenance["analysis_environment"]["environment_lock_status"]["blockers"] == [  # type: ignore[index]
-        "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored"
-    ]
+    assert provenance["analysis_environment"]["environment_lock_status"]["blockers"] == []  # type: ignore[index]
     assert provenance["analysis_environment"]["resource_lock_status"]["blockers"]  # type: ignore[index]
     assert provenance["parameter_hash"] != provenance["input_hash"]
     assert read_json(output_dir / "module_input.json") == payload
@@ -2986,11 +3130,20 @@ def test_analysis_resource_manifest_declares_full_mode_resource_locks_without_do
 
 
 def test_full_mode_resource_blockers_are_module_specific() -> None:
+    survival_blockers = full_mode_resource_blockers("survival")
     enrichment_blockers = full_mode_resource_blockers("enrichment")
     spatial_blockers = full_mode_resource_blockers("spatial_transcriptomics")
     docking_blockers = full_mode_resource_blockers("docking")
     md_blockers = full_mode_resource_blockers("molecular_dynamics")
 
+    assert not any("reactome_full" in blocker for blocker in survival_blockers)
+    assert not any("msigdb_full" in blocker for blocker in survival_blockers)
+    assert not any("go_full" in blocker for blocker in survival_blockers)
+    assert not any("kegg_full" in blocker for blocker in survival_blockers)
+    assert not any("orgdb_human_full" in blocker for blocker in survival_blockers)
+    assert not any("cellchatdb_full" in blocker for blocker in survival_blockers)
+    assert not any("autodock_vina_tool" in blocker for blocker in survival_blockers)
+    assert not any("gromacs_tool" in blocker for blocker in survival_blockers)
     assert "analysis_resource_not_locked:reactome_full" in enrichment_blockers
     assert "analysis_resource_not_locked:msigdb_full" in enrichment_blockers
     assert "analysis_resource_not_locked:spatial_reference_full" in spatial_blockers
@@ -3005,7 +3158,7 @@ def test_full_mode_environment_blockers_require_restored_isolated_locks() -> Non
     docking_blockers = full_mode_environment_blockers("docking")
     md_blockers = full_mode_environment_blockers("molecular_dynamics")
 
-    assert "analysis_environment_renv_lock_not_restored:r-bio-full:scaffold_only_not_restored" in enrichment_blockers
+    assert enrichment_blockers == []
     assert "analysis_environment_renv_lock_not_restored:r-spatial-full:scaffold_only_not_restored" in spatial_blockers
     assert "analysis_environment_renv_lock_not_restored:r-chem-full:scaffold_only_not_restored" in docking_blockers
     assert "analysis_environment_renv_lock_not_restored:r-chem-gpu:scaffold_only_not_restored" in md_blockers

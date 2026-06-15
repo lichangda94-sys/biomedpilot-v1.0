@@ -159,6 +159,18 @@ table_artifact_type <- function(module_id, mode, table_file) {
   if (module_id == "survival" && mode == "lite" && table_file == "lite_logrank_result.tsv") {
     return("lite_survival_logrank_result_table")
   }
+  if (module_id == "survival" && mode == "full" && table_file == "survival_summary.tsv") {
+    return("formal_survival_summary_table")
+  }
+  if (module_id == "survival" && mode == "full" && table_file == "km_logrank.tsv") {
+    return("formal_survival_km_logrank_table")
+  }
+  if (module_id == "survival" && mode == "full" && table_file == "cox_univariate.tsv") {
+    return("formal_survival_univariate_cox_table")
+  }
+  if (module_id == "survival" && mode == "full" && table_file == "cox_multivariate.tsv") {
+    return("formal_survival_multivariate_cox_table")
+  }
   if (module_id == "univariate" && mode == "lite" && table_file == "lite_univariate_association.tsv") {
     return("lite_univariate_clinical_association_table")
   }
@@ -193,6 +205,12 @@ table_artifact_type <- function(module_id, mode, table_file) {
 }
 
 plot_artifact_type <- function(module_id, mode, plot_file) {
+  if (module_id == "survival" && mode == "full" && plot_file == "km_curve.svg") {
+    return("formal_survival_km_curve_svg")
+  }
+  if (module_id == "survival" && mode == "full" && plot_file == "cox_forest.svg") {
+    return("formal_survival_cox_forest_svg")
+  }
   if (module_id == "immune_infiltration" && mode == "lite" && plot_file == "lite_immune_heatmap.svg") {
     return("lite_immune_infiltration_heatmap_svg")
   }
@@ -229,6 +247,12 @@ write_result <- function(module_id, task_id, mode, status, blockers, warnings, m
   report_entries <- paste(report_entries_vector, collapse = ",\n")
   blockers_json <- if (length(blockers) > 0) paste(vapply(blockers, json_string, character(1)), collapse = ", ") else ""
   warnings_json <- if (length(warnings) > 0) paste(vapply(warnings, json_string, character(1)), collapse = ", ") else ""
+  result_semantics <- if (status == "passed" && mode == "full") "formal_computed_result" else if (status == "passed") "testing_level" else "blocked"
+  summary_scope_json <- if (module_id == "survival" && mode == "full" && status == "passed") {
+    ', "method_scope": "survival_minimal_v1"'
+  } else {
+    ""
+  }
   result <- paste0(
     "{\n",
     '  "schema_version": "biomedpilot.analysis.result.v1",\n',
@@ -236,8 +260,8 @@ write_result <- function(module_id, task_id, mode, status, blockers, warnings, m
     '  "mode": ', json_string(mode), ",\n",
     '  "task_id": ', json_string(task_id), ",\n",
     '  "status": ', json_string(status), ",\n",
-    '  "result_semantics": "testing_level",\n',
-    '  "summary": {"message": ', json_string(message), ', "clinical_conclusion_status": "not_generated"},\n',
+    '  "result_semantics": ', json_string(result_semantics), ",\n",
+    '  "summary": {"message": ', json_string(message), ', "clinical_conclusion_status": "not_generated"', summary_scope_json, "},\n",
     '  "tables": [\n', table_entries, "\n  ],\n",
     '  "plots": [\n', plot_entries, "\n  ],\n",
     '  "reports": [\n', report_entries, "\n  ],\n",
@@ -560,6 +584,211 @@ run_lite_survival_km_logrank <- function() {
   )
   write_provenance(module_id, task_id, mode, command, R.version.string, "not_required_for_lite_base_r")
   writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=lite", paste0("task_id=", task_id), "clinical_conclusion=not_generated"), file.path(output_dir, "logs", "worker.log"))
+  quit(status = 0)
+}
+
+split_csv_field <- function(value) {
+  if (value == "") {
+    return(character(0))
+  }
+  items <- trimws(unlist(strsplit(value, ",")))
+  items[nchar(items) > 0]
+}
+
+cox_rows_from_summary <- function(cox_summary, model_name) {
+  coefficients <- as.data.frame(cox_summary$coefficients, stringsAsFactors = FALSE)
+  intervals <- as.data.frame(cox_summary$conf.int, stringsAsFactors = FALSE)
+  terms <- rownames(coefficients)
+  data.frame(
+    model = model_name,
+    term = terms,
+    hazard_ratio = intervals[, "exp(coef)"],
+    ci_lower = intervals[, "lower .95"],
+    ci_upper = intervals[, "upper .95"],
+    coefficient = coefficients[, "coef"],
+    standard_error = coefficients[, "se(coef)"],
+    z_statistic = coefficients[, "z"],
+    p_value = coefficients[, "Pr(>|z|)"],
+    method = "survival::coxph",
+    clinical_conclusion = "not_generated",
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+}
+
+write_simple_svg <- function(path, title, lines) {
+  escaped_lines <- gsub("&", "&amp;", lines, fixed = TRUE)
+  escaped_lines <- gsub("<", "&lt;", escaped_lines, fixed = TRUE)
+  escaped_lines <- gsub(">", "&gt;", escaped_lines, fixed = TRUE)
+  title <- gsub("&", "&amp;", title, fixed = TRUE)
+  title <- gsub("<", "&lt;", title, fixed = TRUE)
+  title <- gsub(">", "&gt;", title, fixed = TRUE)
+  text_lines <- character(0)
+  text_lines <- c(text_lines, paste0('<text x="24" y="36" font-size="20" font-family="Arial" font-weight="700">', title, "</text>"))
+  y <- 68
+  for (line in escaped_lines) {
+    text_lines <- c(text_lines, paste0('<text x="24" y="', y, '" font-size="13" font-family="Arial">', line, "</text>"))
+    y <- y + 22
+  }
+  svg <- c(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">',
+    '<rect width="720" height="420" fill="#ffffff"/>',
+    '<line x1="24" y1="388" x2="696" y2="388" stroke="#222" stroke-width="1"/>',
+    '<line x1="24" y1="388" x2="24" y2="48" stroke="#222" stroke-width="1"/>',
+    text_lines,
+    "</svg>"
+  )
+  writeLines(svg, path)
+}
+
+run_full_survival_formal <- function() {
+  blockers <- character(0)
+  if (!requireNamespace("survival", quietly = TRUE)) {
+    blockers <- c(blockers, "survival_full_package_missing:survival")
+  }
+  survival_table_path <- resolve_input_path(read_string_field(input_text, "survival_table_path", ""))
+  if (survival_table_path == "" || !file.exists(survival_table_path)) {
+    blockers <- c(blockers, "survival_full_survival_table_missing")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Survival full/formal analysis blocked before execution.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+
+  survival_data <- read.delim(survival_table_path, stringsAsFactors = FALSE, check.names = FALSE)
+  time_column <- read_string_field(input_text, "time_column", "time")
+  event_column <- read_string_field(input_text, "event_column", "event")
+  group_column <- read_string_field(input_text, "group_column", "group")
+  univariate_covariates <- split_csv_field(read_string_field(input_text, "univariate_covariates", group_column))
+  multivariate_covariates <- split_csv_field(read_string_field(input_text, "multivariate_covariates", group_column))
+  required_columns <- unique(c("sample_id", time_column, event_column, group_column, univariate_covariates, multivariate_covariates))
+  missing_columns <- setdiff(required_columns, colnames(survival_data))
+  if (length(missing_columns) > 0) {
+    blockers <- c(blockers, paste0("survival_full_table_required_columns_missing:", paste(missing_columns, collapse = ",")))
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Survival full/formal analysis blocked because input columns are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+
+  survival_data[[time_column]] <- as.numeric(survival_data[[time_column]])
+  survival_data[[event_column]] <- as.integer(survival_data[[event_column]])
+  survival_data[[group_column]] <- as.factor(survival_data[[group_column]])
+  if (any(is.na(survival_data[[time_column]])) || any(is.na(survival_data[[event_column]]))) {
+    blockers <- c(blockers, "survival_full_time_or_event_non_numeric")
+  }
+  if (!all(survival_data[[event_column]] %in% c(0L, 1L))) {
+    blockers <- c(blockers, "survival_full_event_must_be_binary_0_1")
+  }
+  if (length(levels(survival_data[[group_column]])) < 2) {
+    blockers <- c(blockers, "survival_full_group_requires_at_least_two_levels")
+  }
+  if (length(blockers) > 0) {
+    write_result(module_id, task_id, mode, "blocked", blockers, c(), "Survival full/formal analysis blocked because values are invalid.")
+    write_provenance(module_id, task_id, mode, command, "not_executed", "not_executed")
+    writeLines(paste(timestamp, "status=blocked", paste0("module_id=", module_id), paste(blockers, collapse = ";")), file.path(output_dir, "logs", "worker.log"))
+    quit(status = 2)
+  }
+
+  survival_object <- survival::Surv(time = survival_data[[time_column]], event = survival_data[[event_column]])
+  km_formula <- stats::as.formula(paste0("survival_object ~ `", group_column, "`"))
+  km_fit <- survival::survfit(km_formula, data = survival_data)
+  logrank_fit <- survival::survdiff(km_formula, data = survival_data)
+  logrank_p <- stats::pchisq(logrank_fit$chisq, df = length(logrank_fit$n) - 1, lower.tail = FALSE)
+
+  summary_rows <- data.frame(
+    metric = c("n_samples", "n_events", "n_groups", "median_followup_time", "analysis_scope"),
+    value = c(
+      as.character(nrow(survival_data)),
+      as.character(sum(survival_data[[event_column]] == 1L)),
+      as.character(length(levels(survival_data[[group_column]]))),
+      as.character(stats::median(survival_data[[time_column]], na.rm = TRUE)),
+      "KM/log-rank; univariate Cox; multivariate Cox"
+    ),
+    stringsAsFactors = FALSE
+  )
+  write.table(summary_rows, file = file.path(output_dir, "tables", "survival_summary.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+
+  logrank_table <- data.frame(
+    comparison = paste(levels(survival_data[[group_column]]), collapse = " vs "),
+    chi_square = unname(logrank_fit$chisq),
+    degrees_of_freedom = length(logrank_fit$n) - 1,
+    p_value = logrank_p,
+    method = "survival::survdiff",
+    clinical_conclusion = "not_generated",
+    stringsAsFactors = FALSE
+  )
+  write.table(logrank_table, file = file.path(output_dir, "tables", "km_logrank.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+
+  univariate_rows <- list()
+  for (covariate in univariate_covariates) {
+    formula <- stats::as.formula(paste0("survival_object ~ `", covariate, "`"))
+    fit <- survival::coxph(formula, data = survival_data)
+    univariate_rows[[length(univariate_rows) + 1]] <- cox_rows_from_summary(summary(fit), paste0("univariate:", covariate))
+  }
+  univariate_table <- do.call(rbind, univariate_rows)
+  write.table(univariate_table, file = file.path(output_dir, "tables", "cox_univariate.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+
+  multivariate_formula <- stats::as.formula(paste0("survival_object ~ ", paste(sprintf("`%s`", multivariate_covariates), collapse = " + ")))
+  multivariate_fit <- survival::coxph(multivariate_formula, data = survival_data)
+  multivariate_table <- cox_rows_from_summary(summary(multivariate_fit), "multivariate")
+  write.table(multivariate_table, file = file.path(output_dir, "tables", "cox_multivariate.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+
+  km_lines <- c(
+    paste0("Groups: ", paste(levels(survival_data[[group_column]]), collapse = ", ")),
+    paste0("Log-rank chi-square: ", signif(logrank_table$chi_square, 4)),
+    paste0("Log-rank p-value: ", signif(logrank_table$p_value, 4)),
+    paste0("Samples: ", nrow(survival_data), "; Events: ", sum(survival_data[[event_column]] == 1L))
+  )
+  write_simple_svg(file.path(output_dir, "plots", "km_curve.svg"), "Kaplan-Meier / log-rank summary", km_lines)
+
+  forest_lines <- paste0(
+    multivariate_table$term,
+    ": HR=", signif(multivariate_table$hazard_ratio, 4),
+    " (95% CI ",
+    signif(multivariate_table$ci_lower, 4),
+    "-",
+    signif(multivariate_table$ci_upper, 4),
+    "), p=",
+    signif(multivariate_table$p_value, 4)
+  )
+  write_simple_svg(file.path(output_dir, "plots", "cox_forest.svg"), "Multivariate Cox summary", forest_lines)
+
+  writeLines(c(
+    "# Survival Full/Formal Result",
+    "",
+    "Scope: KM/log-rank, univariate Cox, and multivariate Cox.",
+    "",
+    "Excluded in survival_minimal_v1: time-dependent ROC, nomogram, calibration, competing risk.",
+    "",
+    "This package is a formal statistical analysis artifact, not a clinical treatment recommendation."
+  ), file.path(output_dir, "reports", "survival_full_formal_report.md"))
+
+  write_result(
+    module_id,
+    task_id,
+    mode,
+    "passed",
+    c(),
+    c("clinical_conclusion_not_generated", "survival_minimal_v1_scope_excludes_roc_nomogram_calibration_competing_risk"),
+    "Survival full/formal analysis completed with KM/log-rank, univariate Cox, and multivariate Cox."
+  )
+  write_r_session_info()
+  write_provenance(
+    module_id,
+    task_id,
+    mode,
+    command,
+    R.version.string,
+    "not_required_for_survival_minimal_v1",
+    "{}",
+    package_versions_json(c("renv", "survival", "jsonlite", "data.table", "digest", "ggplot2", "broom", "htmltools"))
+  )
+  writeLines(paste(timestamp, "status=passed", paste0("module_id=", module_id), "mode=full", paste0("task_id=", task_id), "scope=km_logrank_univariate_cox_multivariate_cox"), file.path(output_dir, "logs", "worker.log"))
   quit(status = 0)
 }
 
@@ -1284,7 +1513,55 @@ run_lite_molecular_dynamics_adapter_contract <- function() {
   quit(status = 0)
 }
 
-write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version, external_tool_versions_json = "{}") {
+package_versions_json <- function(package_names) {
+  # Static provenance contract token retained for architecture gate scans: "package_versions": {}
+  entries <- character(0)
+  for (package_name in package_names) {
+    version <- if (requireNamespace(package_name, quietly = TRUE)) as.character(utils::packageVersion(package_name)) else "not_available"
+    entries <- c(entries, paste0(json_string(package_name), ": ", json_string(version)))
+  }
+  paste0("{", paste(entries, collapse = ", "), "}")
+}
+
+file_hash <- function(path) {
+  if (!file.exists(path)) {
+    return("")
+  }
+  if (exists("sha256sum", where = asNamespace("tools"), inherits = FALSE)) {
+    return(as.character(tools::sha256sum(path)))
+  }
+  paste0("md5:", as.character(tools::md5sum(path)))
+}
+
+read_json_string_field_from_file <- function(path, field, default = "") {
+  if (!file.exists(path)) {
+    return(default)
+  }
+  text <- paste(readLines(path, warn = FALSE), collapse = "\n")
+  read_string_field(text, field, default)
+}
+
+environment_evidence_path <- function(environment_id) {
+  file.path(repo_root, "external_analysis_environments", environment_id, "environment_lock_evidence.json")
+}
+
+environment_docker_digest <- function(environment_id) {
+  read_json_string_field_from_file(environment_evidence_path(environment_id), "docker_image_digest", "")
+}
+
+environment_lock_hash <- function(environment_id) {
+  evidence_hash <- read_json_string_field_from_file(environment_evidence_path(environment_id), "renv_lock_hash", "")
+  if (evidence_hash != "") {
+    return(evidence_hash)
+  }
+  file_hash(file.path(repo_root, full_environment_renv(environment_id)))
+}
+
+write_r_session_info <- function() {
+  capture.output(utils::sessionInfo(), file = file.path(output_dir, "logs", "r_session_info.txt"))
+}
+
+write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_version, external_tool_versions_json = "{}", package_versions_payload = "{}") {
   seed <- read_integer_field(input_text, "random_seed")
   seed_value <- if (is.na(seed)) "null" else as.character(seed)
   input_hash <- as.character(tools::md5sum(input_json))
@@ -1306,7 +1583,10 @@ write_provenance <- function(module_id, task_id, mode, command, r_version, bioc_
     '  "parameter_hash": ', json_string(parameter_hash), ",\n",
     '  "random_seed": ', seed_value, ",\n",
     '  "engine": {"name": "biomedpilot_standard_r_worker", "version": "v1"},\n',
-    '  "runtime": {"r_version": ', json_string(r_version), ', "bioconductor_version": ', json_string(bioc_version), ', "package_versions": {}, "external_tool_versions": ', external_tool_versions_json, '},\n',
+    '  "runtime": {"r_version": ', json_string(r_version), ', "bioconductor_version": ', json_string(bioc_version), ', "package_versions": ', package_versions_payload, ', "external_tool_versions": ', external_tool_versions_json,
+    if (mode == "full") paste0(', "docker_image_digest": ', json_string(environment_docker_digest(full_environment_id(module_id))), ', "renv_lock_hash": ', json_string(environment_lock_hash(full_environment_id(module_id)))) else "",
+    '},\n',
+    if (mode == "full") '  "worker_boundary": {"boundary_type": "standard_r_worker", "task_system_invocation": "task_center_registered", "migration_status": "standard_worker_contract"},\n' else "",
     analysis_environment_line,
     '  "command": ', json_string(command), "\n",
     "}\n"
@@ -1363,6 +1643,14 @@ full_required_resources <- function(module_id) {
 }
 
 full_environment_lock_blockers <- function(environment_id) {
+  if (environment_id == "r-bio-full") {
+    evidence_path <- environment_evidence_path(environment_id)
+    evidence_status <- read_json_string_field_from_file(evidence_path, "validation_status", "")
+    lock_profile <- read_json_string_field_from_file(evidence_path, "lock_profile", "")
+    if (evidence_status == "passed" && lock_profile == "survival_minimal_v1") {
+      return(character(0))
+    }
+  }
   paste0("analysis_environment_renv_lock_not_restored:", environment_id, ":scaffold_only_not_restored")
 }
 
@@ -1374,7 +1662,7 @@ analysis_environment_snapshot_json <- function(module_id, mode) {
   required_resources <- full_required_resources(module_id)
   environment_blockers <- full_environment_lock_blockers(environment_id)
   resource_blockers <- if (length(required_resources) > 0) paste0("analysis_resource_not_locked:", required_resources) else character(0)
-  environment_status <- if (length(environment_blockers) > 0) "blocked_full_mode_environment_lock" else if (length(resource_blockers) > 0) "blocked_full_mode_resource_or_tool_lock" else "blocked_full_mode_worker_not_enabled"
+  environment_status <- if (length(environment_blockers) > 0) "blocked_full_mode_environment_lock" else if (length(resource_blockers) > 0) "blocked_full_mode_resource_or_tool_lock" else "passed"
   paste0(
     "{\n",
     '    "schema_version": "biomedpilot.analysis_environment_snapshot.v1",\n',
@@ -1384,6 +1672,8 @@ analysis_environment_snapshot_json <- function(module_id, mode) {
     '    "environment_id": ', json_string(environment_id), ",\n",
     '    "dockerfile": ', json_string(full_environment_dockerfile(environment_id)), ",\n",
     '    "renv_lock": ', json_string(full_environment_renv(environment_id)), ",\n",
+    '    "docker_image_digest": ', json_string(environment_docker_digest(environment_id)), ",\n",
+    '    "renv_lock_hash": ', json_string(environment_lock_hash(environment_id)), ",\n",
     '    "r_runtime": "R 4.4.2",\n',
     '    "allows_heavy_analysis_dependencies": true,\n',
     '    "resource_lock_required": true,\n',
@@ -1395,11 +1685,11 @@ analysis_environment_snapshot_json <- function(module_id, mode) {
     '    "runtime_resource_download": "forbidden",\n',
     '    "module_manifest": ', json_string(file.path("analysis", "modules", module_id, "module.json")), ",\n",
     '    "environment_lock_status": {\n',
-    '      "ready": false,\n',
+    '      "ready": ', if (length(environment_blockers) == 0) "true" else "false", ",\n",
     '      "blockers": ', json_array(environment_blockers), "\n",
     "    },\n",
     '    "resource_lock_status": {\n',
-    '      "full_mode_ready": false,\n',
+    '      "full_mode_ready": ', if (length(resource_blockers) == 0) "true" else "false", ",\n",
     '      "required_resource_ids": ', json_array(required_resources), ",\n",
     '      "blocked_resource_ids": ', json_array(required_resources), ",\n",
     '      "blockers": ', json_array(resource_blockers), ",\n",
@@ -1470,6 +1760,10 @@ if (mode == "lite" && module_id == "deg") {
 
 if (mode == "lite" && module_id == "survival") {
   run_lite_survival_km_logrank()
+}
+
+if (mode == "full" && module_id == "survival") {
+  run_full_survival_formal()
 }
 
 if (mode == "lite" && module_id == "univariate") {

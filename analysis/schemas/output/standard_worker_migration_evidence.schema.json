@@ -38,9 +38,67 @@
       "minItems": 4,
       "items": {"type": "string", "minLength": 1}
     },
+    "migration_status": {"type": "string", "minLength": 1},
+    "evidence_level": {"const": "full_formal"},
+    "execution_boundary": {"const": "standard_r_worker"},
+    "task_bridge_execution": {"const": true},
+    "legacy_sidecar_used": {"const": false},
+    "mock_used": {"const": false},
+    "lite_used": {"const": false},
+    "output_package_path": {"type": "string", "minLength": 1},
+    "output_package_hash": {"type": "string", "minLength": 1},
+    "worker_invocation_path": {"type": "string", "minLength": 1},
+    "provenance_path": {"type": "string", "minLength": 1},
+    "input_manifest_path": {"type": "string", "minLength": 1},
+    "environment_id": {"type": "string", "minLength": 1},
+    "environment_evidence_path": {"type": "string", "minLength": 1},
+    "result_package_validation_status": {"type": "string", "minLength": 1},
+    "provenance_validation_status": {"type": "string", "minLength": 1},
+    "frontend_catalog_validation_status": {"type": "string", "minLength": 1},
+    "reviewed_by": {"type": "string", "minLength": 1},
+    "reviewed_at": {"type": "string", "minLength": 1},
+    "validation_errors": {"type": "array"},
     "current_adapter_status": {"type": "string"},
     "created_at": {"type": "string"},
     "notes": {"type": "string"}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "module_id": {"const": "survival"}
+        },
+        "required": ["module_id"]
+      },
+      "then": {
+        "required": [
+          "migration_status",
+          "evidence_level",
+          "execution_boundary",
+          "task_bridge_execution",
+          "legacy_sidecar_used",
+          "mock_used",
+          "lite_used",
+          "output_package_path",
+          "output_package_hash",
+          "worker_invocation_path",
+          "provenance_path",
+          "input_manifest_path",
+          "environment_id",
+          "environment_evidence_path",
+          "result_package_validation_status",
+          "provenance_validation_status",
+          "frontend_catalog_validation_status",
+          "reviewed_by",
+          "reviewed_at",
+          "validation_errors"
+        ],
+        "properties": {
+          "module_id": {"const": "survival"},
+          "environment_id": {"const": "r-bio-full"}
+        }
+      }
+    }
+  ],
   "additionalProperties": true
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from datetime import datetime, timezone
@@ -82,6 +83,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
     default_dependency_scan = architecture_status.get("default_dependency_scan") if isinstance(architecture_status.get("default_dependency_scan"), dict) else {}
     environment_validation = architecture_status.get("environment_validation") if isinstance(architecture_status.get("environment_validation"), dict) else {}
     resource_validation = architecture_status.get("resource_validation") if isinstance(architecture_status.get("resource_validation"), dict) else {}
+    r_bio_full_evidence = _r_bio_full_environment_evidence_summary(root)
     migration_rows = [dict(row) for row in migration_matrix.get("rows", []) if isinstance(row, dict)]
     requirement_rows = [dict(row) for row in architecture_status.get("requirement_rows", []) if isinstance(row, dict)]
     remediation_items = [dict(item) for item in remediation_queue.get("items", []) if isinstance(item, dict)]
@@ -314,6 +316,7 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         ],
         "runtime_acquisition_scan": runtime_acquisition_scan,
         "default_dependency_scan": default_dependency_scan,
+        "r_bio_full_environment_evidence": r_bio_full_evidence,
         "environment_readiness": {
             "schema_version": environment_validation.get("schema_version"),
             "status": environment_validation.get("status"),
@@ -409,6 +412,34 @@ def build_gate_report(*, root: Path, require_full_ready: bool) -> dict[str, Any]
         payload["status"] = "blocked"
         payload["blockers"] = [*blockers, "analysis_architecture_gate_report_schema_invalid"]
     return payload
+
+
+def _r_bio_full_environment_evidence_summary(root: Path) -> dict[str, Any]:
+    validator_path = root / "scripts" / "full_env" / "validate_r_bio_full_evidence.py"
+    if not validator_path.is_file():
+        return {
+            "schema_version": "biomedpilot.analysis.r_bio_full_environment_evidence_validation.v1",
+            "environment_id": "r-bio-full",
+            "status": "missing",
+            "validation_status": "missing",
+            "evidence_root": str(root / "external_analysis_environments" / "r-bio-full"),
+            "blockers": ["r_bio_full_evidence_validator_missing"],
+            "full_gate_next_stage_allowed": False,
+        }
+    spec = importlib.util.spec_from_file_location("validate_r_bio_full_evidence", validator_path)
+    if spec is None or spec.loader is None:
+        return {
+            "schema_version": "biomedpilot.analysis.r_bio_full_environment_evidence_validation.v1",
+            "environment_id": "r-bio-full",
+            "status": "invalid",
+            "validation_status": "invalid",
+            "evidence_root": str(root / "external_analysis_environments" / "r-bio-full"),
+            "blockers": ["r_bio_full_evidence_validator_import_failed"],
+            "full_gate_next_stage_allowed": False,
+        }
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.validate_evidence_root(root / "external_analysis_environments" / "r-bio-full")
 
 
 def _gate_blockers(
@@ -668,6 +699,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     full_activation_module_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
     runtime_acquisition_scan = payload.get("runtime_acquisition_scan") if isinstance(payload.get("runtime_acquisition_scan"), dict) else {}
     default_dependency_scan = payload.get("default_dependency_scan") if isinstance(payload.get("default_dependency_scan"), dict) else {}
+    r_bio_full_evidence = payload.get("r_bio_full_environment_evidence") if isinstance(payload.get("r_bio_full_environment_evidence"), dict) else {}
     remediation_summary = payload.get("remediation_summary") if isinstance(payload.get("remediation_summary"), dict) else {}
     remediation_queue = payload.get("remediation_queue") if isinstance(payload.get("remediation_queue"), dict) else {}
     remediation_items = [item for item in remediation_queue.get("items", []) if isinstance(item, dict)]
@@ -731,6 +763,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_environment_artifact_summary_table(environment_artifact_matrix, environment_artifact_rows))
+    lines.extend(
+        [
+            "",
+            "### r-bio-full External Evidence Validation",
+            "",
+        ]
+    )
+    lines.extend(_r_bio_full_evidence_summary_table(r_bio_full_evidence))
     lines.extend(
         [
             "",
@@ -820,6 +860,14 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_full_activation_module_summary_table(full_activation_module_matrix, full_activation_module_rows))
+    lines.extend(
+        [
+            "",
+            "### Survival Formal Migration Preflight",
+            "",
+        ]
+    )
+    lines.extend(_survival_formal_migration_preflight_lines(payload))
     lines.extend(
         [
             "",
@@ -1646,7 +1694,320 @@ def _completed_change_lines(payload: dict[str, Any]) -> list[str]:
     full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
     if full_gate.get("status") == "blocked":
         lines.append("- Full analysis activation remains explicitly blocked rather than silently enabled.")
+    sidecar_matrix = payload.get("legacy_sidecar_transition_matrix") if isinstance(payload.get("legacy_sidecar_transition_matrix"), dict) else {}
+    sidecar_rows = [row for row in sidecar_matrix.get("rows", []) or [] if isinstance(row, dict)]
+    if not sidecar_rows:
+        sidecar_rows = [row for row in payload.get("legacy_sidecar_transition_rows", []) or [] if isinstance(row, dict)]
+    source_inventory = next((row for row in sidecar_rows if row.get("row_id") == "source_sidecar_producer_inventory"), {})
+    sidecar_producers = [row for row in source_inventory.get("sidecar_producers", []) or [] if isinstance(row, dict)]
+    if sidecar_producers:
+        passed_gate_count = sum(1 for row in sidecar_producers if row.get("default_execution_gate_status") == "passed")
+        lines.append(
+            f"- Legacy sidecar producer inventory verifies default execution gates for {passed_gate_count}/{len(sidecar_producers)} remaining sidecar producers; transitional sidecars remain non-migration evidence."
+        )
+    lines.append("- Survival has scoped survival_minimal_v1 full/formal standard-worker migration evidence; global full-ready remains blocked.")
+    lines.append("- Full/formal result package validation now rejects missing worker invocation, missing R session info, missing Docker/renv hashes, unregistered packages, and non-standard-worker or legacy sidecar evidence.")
+    lines.append("- Survival resource profile is documented as clinical_fixture_only; enrichment, spatial, docking, and molecular-dynamics resources remain global full-ready blockers.")
+    lines.append("- r-bio-full external evidence collection workflow is scaffolded as explicit manual tooling; default app-dev and default gate do not build Docker, restore renv, install R packages, or download resources.")
     return lines
+
+
+def _r_bio_full_evidence_summary_table(summary: dict[str, Any]) -> list[str]:
+    lines = [
+        "| Field | Value |",
+        "| --- | --- |",
+        f"| environment_id | {_markdown_text(summary.get('environment_id') or 'r-bio-full')} |",
+        f"| validation_status | {_markdown_text(summary.get('validation_status') or summary.get('status') or 'missing')} |",
+        f"| evidence_source | {_markdown_text(summary.get('evidence_source') or 'docker_hub')} |",
+        f"| evidence_root | {_markdown_text(summary.get('evidence_root') or 'external_analysis_environments/r-bio-full')} |",
+        f"| registry_preflight_status | {_markdown_text(summary.get('registry_preflight_status') or '')} |",
+        f"| docker_build_status | {_markdown_text(summary.get('docker_build_status') or '')} |",
+        f"| docker_evidence_status | {_markdown_text(summary.get('docker_evidence_status') or 'missing')} |",
+        f"| renv_evidence_status | {_markdown_text(summary.get('renv_evidence_status') or 'missing')} |",
+        f"| r_session_info_status | {_markdown_text(summary.get('r_session_info_status') or 'missing')} |",
+        f"| package_inventory_status | {_markdown_text(summary.get('package_inventory_status') or 'missing')} |",
+        f"| hash_validation_status | {_markdown_text(summary.get('hash_validation_status') or 'missing')} |",
+        f"| full_gate_next_stage_allowed | {_markdown_text(summary.get('full_gate_next_stage_allowed') is True)} |",
+    ]
+    blockers = [str(item) for item in summary.get("blockers", []) if item] if isinstance(summary.get("blockers"), list) else []
+    lines.extend(
+        [
+            "",
+            "| Blockers |",
+            "| --- |",
+            f"| {_markdown_text(', '.join(blockers) if blockers else 'none')} |",
+        ]
+    )
+    if summary.get("status") != "passed":
+        lines.extend(
+            [
+                "",
+                "- r-bio-full is not restored.",
+                "- r-bio-full is not ready.",
+                "- full activation remains blocked.",
+                "- Docker Hub registry timeout is treated as a P1 external environment blocker, not a P0 application architecture failure.",
+            ]
+        )
+    return lines
+
+
+def _survival_formal_migration_preflight_lines(payload: dict[str, Any]) -> list[str]:
+    migration_rows = [row for row in payload.get("standard_worker_migration_rows", []) if isinstance(row, dict)]
+    full_rows = [row for row in payload.get("full_activation_module_rows", []) if isinstance(row, dict)]
+    task_rows = [row for row in payload.get("task_system_boundary_rows", []) if isinstance(row, dict)]
+    full_gate = payload.get("full_analysis_activation_gate") if isinstance(payload.get("full_analysis_activation_gate"), dict) else {}
+    registry = _read_json_file(Path("analysis") / "registry" / "standard_worker_migration_evidence.json")
+    environment_registry = _read_json_file(Path("analysis") / "registry" / "environment_lock_evidence.json")
+    forbidden_spec = _read_json_file(Path("analysis") / "evidence_specs" / "survival_full_formal" / "forbidden_sources.json")
+    result_manifest_template = _read_json_file(Path("analysis") / "evidence_specs" / "survival_full_formal" / "result_package_manifest.template.json")
+    provenance_template = _read_json_file(Path("analysis") / "evidence_specs" / "survival_full_formal" / "provenance_requirements.json")
+    survival_migration = next((row for row in migration_rows if row.get("module_id") == "survival"), {})
+    survival_full = next((row for row in full_rows if row.get("module_id") == "survival"), {})
+    survival_task = next((row for row in task_rows if row.get("module_id") == "survival"), {})
+    survival_entry = _survival_migration_evidence_entry(registry)
+    survival_evidence = survival_entry.get("evidence") if isinstance(survival_entry.get("evidence"), dict) else {}
+    result_package_status = _survival_result_package_preflight_status(survival_evidence, result_manifest_template)
+    provenance_status = _survival_provenance_preflight_status(survival_evidence, provenance_template, result_package_status)
+    forbidden_source_status = _survival_forbidden_source_guard_status(survival_evidence, forbidden_spec, result_package_status)
+    environment_status = _survival_environment_evidence_status(environment_registry, survival_full)
+    rows = [
+        {
+            "evidence_area": "standard_worker_evidence",
+            "required_before_ready": "registry-owned standard worker migration evidence entry for survival",
+            "current_status": _survival_standard_worker_evidence_status(survival_entry, survival_evidence, survival_migration, survival_full),
+        },
+        {
+            "evidence_area": "result_package_evidence",
+            "required_before_ready": "passed full/formal package with result.json, provenance.json, tables, plots, reports, logs, and no result blockers",
+            "current_status": result_package_status,
+        },
+        {
+            "evidence_area": "provenance_evidence",
+            "required_before_ready": "R/Bioconductor/package versions, input hash, parameter hash, random seed, command, and worker boundary metadata",
+            "current_status": provenance_status,
+        },
+        {
+            "evidence_area": "task_bridge_evidence",
+            "required_before_ready": "task-center registered full execution through the standard R worker boundary",
+            "current_status": survival_task.get("formal_worker_status") or "pending_standard_worker_migration",
+        },
+        {
+            "evidence_area": "frontend_package_catalog_evidence",
+            "required_before_ready": "result-index registered standard package consumed by package catalog/detail views, not module-private output",
+            "current_status": _survival_frontend_catalog_preflight_status(survival_evidence, result_package_status),
+        },
+        {
+            "evidence_area": "environment_evidence",
+            "required_before_ready": "r-bio-full restored renv lock and Docker build evidence",
+            "current_status": environment_status,
+        },
+        {
+            "evidence_area": "forbidden_source_guard",
+            "required_before_ready": "mock, lite, blocked-full, legacy sidecar, module-private, copied, no-provenance, no-worker-invocation, and no-task-bridge sources are rejected",
+            "current_status": forbidden_source_status,
+        },
+        {
+            "evidence_area": "gate_evidence",
+            "required_before_ready": "default gate stays passed; require-full-ready remains blocked until every full environment/resource/module is ready",
+            "current_status": f"full_analysis_activation_{full_gate.get('status') or 'blocked'}; require_full_ready_expected_exit_code_1; survival_scoped_migration_evidence_passed_global_full_ready_blocked",
+        },
+    ]
+    lines = [
+        "Survival now has scoped full/formal migration evidence for survival_minimal_v1. Global full-ready remains blocked while other environments, resources, and modules are incomplete.",
+        "",
+    ]
+    lines.extend(_markdown_table(["Evidence Area", "Required Before Ready", "Current Status"], rows, ["evidence_area", "required_before_ready", "current_status"]))
+    return lines
+
+
+def _survival_migration_evidence_entry(registry: dict[str, Any]) -> dict[str, Any]:
+    entries = registry.get("evidence_entries") if isinstance(registry.get("evidence_entries"), list) else []
+    return next((entry for entry in entries if isinstance(entry, dict) and entry.get("module_id") == "survival"), {})
+
+
+def _survival_standard_worker_evidence_status(
+    survival_entry: dict[str, Any],
+    survival_evidence: dict[str, Any],
+    survival_migration: dict[str, Any],
+    survival_full: dict[str, Any],
+) -> str:
+    if not survival_entry:
+        return str(survival_migration.get("formal_worker_status") or survival_full.get("standard_worker_migration_status") or "pending_standard_worker_migration")
+    required_fields = [
+        "migration_status",
+        "evidence_level",
+        "execution_boundary",
+        "task_bridge_execution",
+        "legacy_sidecar_used",
+        "mock_used",
+        "lite_used",
+        "output_package_path",
+        "output_package_hash",
+        "worker_invocation_path",
+        "provenance_path",
+        "input_manifest_path",
+        "environment_id",
+        "environment_evidence_path",
+        "result_package_validation_status",
+        "provenance_validation_status",
+        "frontend_catalog_validation_status",
+        "reviewed_by",
+        "reviewed_at",
+        "validation_errors",
+    ]
+    missing = [field for field in required_fields if field not in survival_evidence]
+    if missing:
+        return "partial_survival_standard_worker_evidence_missing_fields:" + ",".join(missing)
+    if survival_evidence.get("execution_boundary") != "standard_r_worker" or survival_evidence.get("environment_id") != "r-bio-full":
+        return "invalid_full_evidence_source"
+    if survival_evidence.get("legacy_sidecar_used") is not False or survival_evidence.get("mock_used") is not False or survival_evidence.get("lite_used") is not False:
+        return "invalid_full_evidence_source"
+    return "survival_standard_worker_evidence_passed_scope_survival_minimal_v1_full_activation_still_blocked"
+
+
+def _survival_result_package_preflight_status(evidence: dict[str, Any], template: dict[str, Any]) -> str:
+    package_path = str(evidence.get("output_package_path") or evidence.get("result_package_dir") or "")
+    if not package_path:
+        return "missing_full_formal_standard_package"
+    package_dir = Path(package_path)
+    if not package_dir.is_absolute():
+        package_dir = Path.cwd() / package_dir
+    if not package_dir.is_dir():
+        return "missing_full_formal_standard_package"
+    required_files = [str(item) for item in template.get("required_files", []) if item]
+    missing = [item for item in required_files if not (package_dir / item).exists()]
+    if missing:
+        return "partial_full_formal_standard_package_missing:" + ",".join(missing)
+    result = _read_json_file(package_dir / "result.json")
+    provenance = _read_json_file(package_dir / "provenance.json")
+    if result.get("mode") != "full" or result.get("result_semantics") != "formal_computed_result":
+        return "invalid_full_evidence_source"
+    worker_boundary = (provenance.get("worker_boundary") if isinstance(provenance.get("worker_boundary"), dict) else {})
+    if worker_boundary.get("boundary_type") != "standard_r_worker":
+        return "invalid_full_evidence_source"
+    return "survival_full_formal_standard_package_passed_scope_survival_minimal_v1"
+
+
+def _survival_provenance_preflight_status(
+    evidence: dict[str, Any],
+    template: dict[str, Any],
+    result_package_status: str,
+) -> str:
+    package_path = str(evidence.get("output_package_path") or evidence.get("result_package_dir") or "")
+    if not package_path or result_package_status == "missing_full_formal_standard_package":
+        return "lite_and_sidecar_provenance_only_not_full_evidence"
+    package_dir = Path(package_path)
+    if not package_dir.is_absolute():
+        package_dir = Path.cwd() / package_dir
+    provenance = _read_json_file(package_dir / "provenance.json")
+    if not provenance:
+        return "missing_full_formal_provenance"
+    runtime = provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {}
+    environment = provenance.get("analysis_environment") if isinstance(provenance.get("analysis_environment"), dict) else {}
+    evidence_hash = str(evidence.get("output_package_hash") or "")
+    flattened = dict(provenance)
+    for field in ("r_version", "bioconductor_version", "package_versions", "external_tool_versions", "docker_image_digest", "renv_lock_hash"):
+        if field in runtime:
+            flattened[field] = runtime[field]
+    if "environment_id" in environment:
+        flattened["environment_id"] = environment["environment_id"]
+    if evidence_hash:
+        flattened["result_package_hash"] = evidence_hash
+    missing = [field for field in template.get("required_fields", []) if isinstance(field, str) and field not in flattened]
+    if missing:
+        return "partial_full_formal_provenance_missing:" + ",".join(missing)
+    return "survival_full_formal_provenance_passed_scope_survival_minimal_v1"
+
+
+def _survival_frontend_catalog_preflight_status(evidence: dict[str, Any], result_package_status: str) -> str:
+    if result_package_status == "missing_full_formal_standard_package" or not evidence:
+        return "catalog_contract_exists_but_survival_full_package_missing"
+    if result_package_status != "survival_full_formal_standard_package_passed_scope_survival_minimal_v1":
+        return "catalog_contract_exists_but_survival_full_package_not_validated"
+    if evidence.get("frontend_catalog_validation_status") != "passed":
+        return "catalog_contract_exists_but_survival_full_package_missing"
+    if evidence.get("result_index_registered") is not True or evidence.get("frontend_consumes_standard_package") is not True:
+        return "catalog_contract_exists_but_survival_full_package_missing"
+    return "catalog_contract_exists_and_survival_full_package_registered_scope_survival_minimal_v1"
+
+
+def _survival_forbidden_source_guard_status(
+    evidence: dict[str, Any],
+    forbidden_spec: dict[str, Any],
+    result_package_status: str,
+) -> str:
+    required_sources = {str(item) for item in forbidden_spec.get("forbidden_sources", []) if item}
+    evidence_forbidden = {str(item) for item in evidence.get("forbidden_evidence_sources", []) if item} if isinstance(evidence.get("forbidden_evidence_sources"), list) else set()
+    if evidence:
+        if evidence.get("legacy_sidecar_used") is not False or evidence.get("mock_used") is not False or evidence.get("lite_used") is not False:
+            return "invalid_full_evidence_source"
+        missing_sources = sorted(required_sources - evidence_forbidden)
+        if missing_sources:
+            return "partial_forbidden_source_guard_missing:" + ",".join(missing_sources)
+    if result_package_status == "invalid_full_evidence_source":
+        return "invalid_full_evidence_source"
+    return "blocked_mock_lite_blocked_full_legacy_sidecar_forbidden"
+
+
+def _survival_environment_evidence_status(environment_registry: dict[str, Any], survival_full: dict[str, Any]) -> str:
+    entries = environment_registry.get("evidence_entries") if isinstance(environment_registry.get("evidence_entries"), list) else []
+    r_bio_full_entry = next((entry for entry in entries if isinstance(entry, dict) and entry.get("environment_id") == "r-bio-full"), {})
+    if not r_bio_full_entry:
+        return "analysis_full_environment_lock_not_restored:r-bio-full"
+    evidence_path = str(r_bio_full_entry.get("evidence_path") or "")
+    if not evidence_path:
+        return "partial_r_bio_full_environment_evidence_missing_path"
+    path = Path(evidence_path)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    evidence = _read_json_file(path)
+    required = [
+        "environment_id",
+        "environment_class",
+        "dockerfile_path",
+        "docker_image",
+        "docker_image_digest",
+        "docker_build_log_path",
+        "renv_lock_path",
+        "renv_lock_hash",
+        "lock_profile",
+        "lock_profile_version",
+        "renv_lock_package_count",
+        "required_package_set",
+        "missing_required_packages",
+        "renv_restore_log_path",
+        "r_version",
+        "bioconductor_version",
+        "package_inventory_path",
+        "created_at",
+        "created_by",
+        "validation_status",
+        "validation_errors",
+        "evidence_hash",
+    ]
+    missing = [field for field in required if field not in evidence]
+    if missing:
+        return "partial_r_bio_full_environment_evidence_missing:" + ",".join(missing)
+    if evidence.get("validation_status") != "passed":
+        return "partial_r_bio_full_environment_evidence_not_validated"
+    if evidence.get("lock_profile") != "survival_minimal_v1":
+        return "partial_r_bio_full_environment_evidence_wrong_lock_profile"
+    if evidence.get("missing_required_packages"):
+        return "partial_r_bio_full_environment_evidence_missing_required_packages"
+    blockers = [str(item) for item in survival_full.get("blockers", []) if "environment" in str(item)]
+    return ", ".join(blockers) or "r_bio_full_environment_evidence_passed_scope_survival_minimal_v1_full_activation_still_blocked"
+
+
+def _read_json_file(path: Path) -> dict[str, Any]:
+    try:
+        if not path.is_absolute():
+            path = Path.cwd() / path
+        if not path.is_file():
+            return {}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
 def _remediation_scope_summary(item: dict[str, Any]) -> str:

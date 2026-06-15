@@ -47,6 +47,7 @@ def build_standard_analysis_package_catalog(project_root: str | Path) -> dict[st
                 expected_module_id=expected_module_id,
                 expected_task_id=str(entry.get("task_run_id") or ""),
                 expected_mode=str((entry.get("dependency_snapshot") or {}).get("mode") or ""),
+                result_index_registered=True,
             )
             result_payload = _read_json(package_dir / "result.json")
             provenance_payload = _read_json(package_dir / "provenance.json")

@@ -1,0 +1,27 @@
+{
+  "inputs": {
+    "input_package_id": "fixture-survival-full-formal-input",
+    "source_dataset_id": "fixture-survival-full-formal-dataset",
+    "survival_table_path": "analysis/fixtures/inputs/survival/full_formal_survival.tsv"
+  },
+  "mode": "full",
+  "module_id": "survival",
+  "parameters": {
+    "analysis_family": "survival",
+    "clinical_conclusion_policy": "not_generated",
+    "event_column": "event",
+    "excluded_methods": "time_dependent_roc,nomogram,calibration,competing_risk",
+    "group_column": "group",
+    "method": "survival_minimal_v1",
+    "multivariate_covariates": "group,age",
+    "time_column": "time",
+    "univariate_covariates": "group,age,stage,biomarker"
+  },
+  "project_id": "analysis-formal-fixture",
+  "runtime": {
+    "random_seed": 7,
+    "requested_environment": "r-bio-full"
+  },
+  "schema_version": "biomedpilot.analysis.module_input.v1",
+  "task_id": "survival-full-formal-v1"
+}

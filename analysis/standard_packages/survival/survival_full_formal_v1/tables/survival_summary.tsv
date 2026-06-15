@@ -1,0 +1,6 @@
+metric	value
+n_samples	12
+n_events	6
+n_groups	2
+median_followup_time	13
+analysis_scope	KM/log-rank; univariate Cox; multivariate Cox

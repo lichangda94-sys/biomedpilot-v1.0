@@ -1,0 +1,13 @@
+sample_id	time	event	group	age	stage	biomarker
+S01	5	1	high	68	III	7.8
+S02	8	1	high	71	III	8.1
+S03	10	0	high	66	II	6.9
+S04	12	1	high	74	IV	8.7
+S05	14	1	high	69	III	7.9
+S06	18	0	high	63	II	7.2
+S07	7	1	low	54	I	3.1
+S08	11	0	low	58	II	3.8
+S09	16	0	low	52	I	2.9
+S10	19	1	low	61	II	4.2
+S11	22	0	low	57	I	3.4
+S12	25	0	low	59	II	3.7

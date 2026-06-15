@@ -1,0 +1,2 @@
+comparison	chi_square	degrees_of_freedom	p_value	method	clinical_conclusion
+high vs low	2.61803151002907	1	0.105655438054554	survival::survdiff	not_generated

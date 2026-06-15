@@ -1,0 +1,40 @@
+{
+  "blockers": [],
+  "boundary": "standard_r_worker",
+  "command": [
+    "/usr/local/bin/Rscript",
+    "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/runners/run_module.R",
+    "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/standard_packages/survival/survival_full_formal_v1/module_input.json",
+    "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/standard_packages/survival/survival_full_formal_v1",
+    "full"
+  ],
+  "created_at": "2026-06-15T02:41:45+00:00",
+  "environment_id": "r-bio-full",
+  "exit_code": 0,
+  "finished_at": "2026-06-15T02:41:45+00:00",
+  "input_manifest": "module_input.json",
+  "invocation_status": "completed",
+  "mode": "full",
+  "module_id": "survival",
+  "output_contract": "standard_result_package",
+  "output_dir": "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/standard_packages/survival/survival_full_formal_v1",
+  "resource_download_policy": "forbidden",
+  "returncode": 0,
+  "runtime_install_policy": "forbidden",
+  "schema_version": "biomedpilot.analysis.worker_invocation.v1",
+  "standard_worker_entrypoint": "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/runners/run_module.R",
+  "started_at": "2026-06-15T02:41:45+00:00",
+  "stderr": "",
+  "stderr_log": "logs/stderr.log",
+  "stdout": "",
+  "stdout_log": "logs/stdout.log",
+  "task_id": "survival-full-formal-v1",
+  "worker_backend": "rscript",
+  "worker_boundary": {
+    "boundary_type": "standard_r_worker",
+    "migration_status": "standard_worker_contract",
+    "task_system_invocation": "task_center_registered"
+  },
+  "worker_entrypoint": "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics/analysis/runners/run_module.R",
+  "working_directory": "/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics"
+}

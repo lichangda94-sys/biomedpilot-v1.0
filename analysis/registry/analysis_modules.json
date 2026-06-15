@@ -72,7 +72,7 @@
         {
             "module_id": "survival",
             "title": "Survival analysis",
-            "current_adapter_status": "existing_python_contracts_pending_r_worker_migration",
+            "current_adapter_status": "survival_minimal_v1_formal_standard_worker_migrated",
             "modes": {
                 "mock": {
                     "supported": true,
@@ -90,8 +90,20 @@
                     "clinical_conclusion_policy": "not_generated"
                 },
                 "full": {
-                    "supported": false,
-                    "blocker": "full_r_worker_container_not_available"
+                    "supported": true,
+                    "runner": "analysis/runners/run_module.R",
+                    "worker_backend": "rscript",
+                    "environment": "r-bio-full",
+                    "result_semantics": "formal_computed_result",
+                    "capability": "survival_minimal_v1_km_logrank_univariate_cox_multivariate_cox",
+                    "resource_profile": "clinical_fixture_only",
+                    "excluded_methods": [
+                        "time_dependent_roc",
+                        "nomogram",
+                        "calibration",
+                        "competing_risk"
+                    ],
+                    "clinical_conclusion_policy": "not_generated"
                 }
             },
             "analysis_environment": "r-bio-core",
@@ -100,7 +112,8 @@
             "result_index_task_types": [
                 "survival",
                 "survival_km_logrank",
-                "cox_univariate"
+                "cox_univariate",
+                "cox_multivariate"
             ],
             "heavy_dependencies": [
                 "survival",

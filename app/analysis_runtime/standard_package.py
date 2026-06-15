@@ -50,25 +50,37 @@ def write_legacy_service_adapter_invocation_manifest(
     root = Path(package_dir)
     logs_dir = root / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
+    (logs_dir / "stdout.log").write_text(stdout, encoding="utf-8")
+    (logs_dir / "stderr.log").write_text(stderr, encoding="utf-8")
     command_vector = command if isinstance(command, list) else [command]
     manifest = {
         "schema_version": "biomedpilot.analysis.worker_invocation.v1",
         "created_at": created_at,
+        "started_at": created_at,
+        "finished_at": created_at,
         "module_id": module_id,
         "mode": mode,
         "task_id": task_id,
         "worker_backend": "legacy_service_adapter",
         "invocation_status": "sidecar_recorded",
         "standard_worker_entrypoint": "not_used",
+        "worker_entrypoint": "not_used",
         "input_manifest": "service_adapter_payload",
+        "working_directory": str(REPO_ROOT),
+        "output_dir": str(root),
+        "environment_id": "legacy_service_adapter",
         "output_contract": "standard_result_package",
         "runtime_install_policy": "forbidden",
         "resource_download_policy": "forbidden",
         "returncode": returncode,
+        "exit_code": returncode,
         "command": [str(item) for item in command_vector],
         "stdout": stdout,
         "stderr": stderr,
+        "stdout_log": "logs/stdout.log",
+        "stderr_log": "logs/stderr.log",
         "blockers": list(blockers or []),
+        "boundary": "legacy_service_adapter_sidecar",
         "worker_boundary": {
             "boundary_type": "legacy_service_adapter_sidecar",
             "task_system_invocation": "legacy_service_adapter_direct_call",
@@ -87,6 +99,7 @@ def validate_standard_result_package(
     expected_module_id: str = "",
     expected_task_id: str = "",
     expected_mode: str = "",
+    result_index_registered: bool | None = None,
 ) -> dict[str, Any]:
     root = Path(package_dir).expanduser().resolve()
     blockers: list[str] = []
@@ -134,6 +147,16 @@ def validate_standard_result_package(
     blockers.extend(_passed_package_provenance_blockers(result, provenance))
     formal_blockers = _formal_package_provenance_blockers(result, provenance, expected_mode=expected_mode)
     blockers.extend(formal_blockers)
+    blockers.extend(
+        _full_formal_package_blockers(
+            root,
+            result,
+            provenance,
+            invocation,
+            expected_mode=expected_mode,
+            result_index_registered=result_index_registered,
+        )
+    )
     blockers.extend(_analysis_environment_blockers(result, provenance, expected_mode=expected_mode))
     blockers.extend(
         _worker_invocation_blockers(
@@ -172,6 +195,8 @@ def _standard_result_package_manifest(root: Path, result: dict[str, Any]) -> dic
     }
     if (root / "logs" / "worker_invocation.json").is_file():
         artifacts["logs"].append({"artifact_type": "analysis_worker_invocation_manifest", "path": "logs/worker_invocation.json"})
+    if (root / "logs" / "r_session_info.txt").is_file():
+        artifacts["logs"].append({"artifact_type": "analysis_r_session_info", "path": "logs/r_session_info.txt"})
     return {
         "schema_version": "biomedpilot.analysis.result_package.v1",
         "module_id": str(result.get("module_id") or ""),
@@ -386,6 +411,85 @@ def _formal_package_provenance_blockers(result: dict[str, Any], provenance: dict
     if engine_name != "biomedpilot_standard_r_worker" and not worker_boundary.get("boundary_type"):
         blockers.append("formal_provenance_worker_boundary_missing")
     return blockers
+
+
+def _full_formal_package_blockers(
+    root: Path,
+    result: dict[str, Any],
+    provenance: dict[str, Any],
+    invocation: dict[str, Any],
+    *,
+    expected_mode: str,
+    result_index_registered: bool | None,
+) -> list[str]:
+    if not _is_full_formal_package(result, provenance, expected_mode=expected_mode):
+        return []
+
+    blockers: list[str] = []
+    if not (root / "logs" / "worker_invocation.json").is_file():
+        blockers.append("full_formal_worker_invocation_manifest_missing")
+    if not (root / "logs" / "r_session_info.txt").is_file():
+        blockers.append("full_formal_r_session_info_missing")
+    if result_index_registered is not True:
+        blockers.append("full_formal_result_index_registration_missing")
+
+    if not provenance.get("input_hash"):
+        blockers.append("full_formal_input_hash_missing")
+    if not provenance.get("parameter_hash"):
+        blockers.append("full_formal_parameter_hash_missing")
+
+    runtime = provenance.get("runtime") if isinstance(provenance.get("runtime"), dict) else {}
+    environment = provenance.get("analysis_environment") if isinstance(provenance.get("analysis_environment"), dict) else {}
+    docker_digest = runtime.get("docker_image_digest") or environment.get("docker_image_digest")
+    renv_lock_hash = runtime.get("renv_lock_hash") or environment.get("renv_lock_hash")
+    if not docker_digest:
+        blockers.append("full_formal_docker_image_digest_missing")
+    if not renv_lock_hash:
+        blockers.append("full_formal_renv_lock_hash_missing")
+
+    invocation_boundary = invocation.get("worker_boundary") if isinstance(invocation.get("worker_boundary"), dict) else {}
+    provenance_boundary = provenance.get("worker_boundary") if isinstance(provenance.get("worker_boundary"), dict) else {}
+    boundary_type = str(invocation_boundary.get("boundary_type") or provenance_boundary.get("boundary_type") or "")
+    if boundary_type != "standard_r_worker":
+        blockers.append("full_formal_worker_boundary_not_standard_r_worker")
+    if boundary_type == "legacy_service_adapter_sidecar" or invocation.get("worker_backend") == "legacy_service_adapter":
+        blockers.append("invalid_full_evidence_source:legacy_sidecar")
+    if invocation.get("boundary") and invocation.get("boundary") != "standard_r_worker":
+        blockers.append("full_formal_worker_boundary_alias_not_standard_r_worker")
+    required_invocation_fields = (
+        "task_id",
+        "module_id",
+        "mode",
+        "worker_entrypoint",
+        "command",
+        "working_directory",
+        "input_manifest",
+        "output_dir",
+        "environment_id",
+        "started_at",
+        "finished_at",
+        "exit_code",
+        "stdout_log",
+        "stderr_log",
+        "boundary",
+    )
+    missing_invocation = [field for field in required_invocation_fields if field not in invocation]
+    if missing_invocation:
+        blockers.append(f"full_formal_worker_invocation_required_fields_missing:{','.join(missing_invocation)}")
+    for field in ("stdout_log", "stderr_log"):
+        log_value = invocation.get(field)
+        if not isinstance(log_value, str) or not log_value:
+            continue
+        if Path(log_value).is_absolute() or not (root / log_value).is_file():
+            blockers.append(f"full_formal_worker_invocation_log_missing:{field}")
+    return blockers
+
+
+def _is_full_formal_package(result: dict[str, Any], provenance: dict[str, Any], *, expected_mode: str) -> bool:
+    status = str(result.get("status") or "")
+    mode = str(result.get("mode") or provenance.get("mode") or expected_mode or "")
+    semantics = str(result.get("result_semantics") or "")
+    return status == "passed" and (mode == "full" or semantics == "formal_computed_result")
 
 
 def _declared_artifact_blockers(root: Path, result: dict[str, Any]) -> list[str]:

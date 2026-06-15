@@ -46,7 +46,9 @@
         "r_version": {"type": "string"},
         "bioconductor_version": {"type": "string"},
         "package_versions": {"type": "object"},
-        "external_tool_versions": {"type": "object"}
+        "external_tool_versions": {"type": "object"},
+        "docker_image_digest": {"type": "string"},
+        "renv_lock_hash": {"type": "string"}
       },
       "additionalProperties": true
     },

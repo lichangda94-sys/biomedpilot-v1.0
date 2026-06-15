@@ -456,6 +456,7 @@ def _environment_artifact_row(environment: dict[str, Any], *, readiness_blocker:
     is_default = environment_id == "app-dev"
     is_lite = environment_id == "r-bio-core"
     is_full = not is_default and not is_lite
+    full_environment_restored = str(policy.get("status") or "") in {"restored", "locked", "active"} and not readiness_blocker
     if not dockerfile:
         blockers.append(f"environment_dockerfile_missing:{environment_id}")
     elif not dockerfile_path.is_file():
@@ -487,12 +488,12 @@ def _environment_artifact_row(environment: dict[str, Any], *, readiness_blocker:
     if is_full:
         if environment.get("allows_heavy_analysis_dependencies") is not True:
             blockers.append(f"environment_full_heavy_dependency_policy_invalid:{environment_id}")
-        if str(policy.get("status") or "") not in {"restored", "locked", "active"}:
+        if not full_environment_restored:
             warnings.append(f"environment_renv_lock_scaffold_only_not_restored:{environment_id}")
-        warnings.append(f"environment_docker_image_build_not_proven:{environment_id}")
+            warnings.append(f"environment_docker_image_build_not_proven:{environment_id}")
         if readiness_blocker:
             warnings.append(readiness_blocker)
-    if is_full and not blockers:
+    if is_full and not blockers and not full_environment_restored:
         warnings.append("full_environment_locks_are_scaffold_only_not_restored")
         warnings.append("dockerfiles_exist_but_full_image_builds_not_proven")
     return {
@@ -2926,7 +2927,13 @@ def validate_standard_worker_migration_evidence(
     elif not package_dir.is_dir():
         blockers.append("standard_worker_migration_result_package_dir_not_found")
     else:
-        validation = validate_standard_result_package(package_dir, expected_module_id=module_key, expected_task_id=task_id, expected_mode=mode)
+        validation = validate_standard_result_package(
+            package_dir,
+            expected_module_id=module_key,
+            expected_task_id=task_id,
+            expected_mode=mode,
+            result_index_registered=evidence.get("result_index_registered") is True,
+        )
         if validation.get("status") != "passed":
             blockers.extend(f"standard_worker_migration_package_validation:{item}" for item in validation.get("blockers", []) or [])
         warnings.extend(f"standard_worker_migration_package_warning:{item}" for item in validation.get("warnings", []) or [])
@@ -2935,6 +2942,8 @@ def validate_standard_worker_migration_evidence(
         blockers.extend(_standard_worker_migration_result_blockers(result, provenance))
         invocation = _read_json(package_dir / "logs" / "worker_invocation.json")
         boundary = invocation.get("worker_boundary") if isinstance(invocation.get("worker_boundary"), dict) else {}
+        if boundary.get("boundary_type") == "legacy_service_adapter_sidecar" or invocation.get("worker_backend") == "legacy_service_adapter":
+            blockers.append("invalid_full_evidence_source:legacy_sidecar")
         if boundary.get("boundary_type") != "standard_r_worker":
             blockers.append("standard_worker_migration_requires_standard_r_worker_boundary")
         if boundary.get("task_system_invocation") != "task_center_registered":
@@ -2952,6 +2961,27 @@ def validate_standard_worker_migration_evidence(
         blockers.append("standard_worker_migration_result_index_registration_missing")
     if evidence.get("formal_result_semantics_preserved") is not True:
         blockers.append("standard_worker_migration_formal_result_semantics_not_preserved")
+    if evidence.get("legacy_sidecar_used") is True:
+        blockers.append("invalid_full_evidence_source:legacy_sidecar")
+    if evidence.get("mock_used") is True:
+        blockers.append("invalid_full_evidence_source:mock_fixture")
+    if evidence.get("lite_used") is True:
+        blockers.append("invalid_full_evidence_source:lite_fixture")
+    evidence_source = str(evidence.get("evidence_source") or evidence.get("source_type") or "")
+    if evidence_source in {
+        "legacy_sidecar",
+        "legacy_service_adapter_sidecar",
+        "mock_fixture",
+        "lite_fixture",
+        "blocked_full_package",
+        "module_private_output",
+    }:
+        blockers.append(f"invalid_full_evidence_source:{evidence_source}")
+    result_package_dir_value = str(evidence.get("result_package_dir") or evidence.get("output_package_path") or "")
+    if "/analysis/fixtures/" in result_package_dir_value or result_package_dir_value.startswith("analysis/fixtures/"):
+        blockers.append("invalid_full_evidence_source:fixture_package")
+    if "sidecar" in result_package_dir_value:
+        blockers.append("invalid_full_evidence_source:legacy_sidecar")
     if evidence.get("required_worker_boundary") != "standard_r_worker":
         blockers.append("standard_worker_migration_required_worker_boundary_invalid")
     if evidence.get("required_task_system_invocation") != "task_center_registered":
@@ -2975,6 +3005,8 @@ def validate_standard_worker_migration_evidence(
         f"standard_worker_migration_forbidden_evidence_source_missing:{item}"
         for item in missing_forbidden_sources
     )
+    if module_key == "survival":
+        blockers.extend(_survival_standard_worker_migration_evidence_blockers(evidence, forbidden_source_values))
 
     return {
         "schema_version": "biomedpilot.analysis.standard_worker_migration_evidence.v1",
@@ -2988,6 +3020,72 @@ def validate_standard_worker_migration_evidence(
         "required_invocation": "task_center_registered",
         "required_migration_status": "standard_worker_contract",
     }
+
+
+def _survival_standard_worker_migration_evidence_blockers(
+    evidence: dict[str, Any],
+    forbidden_source_values: set[str],
+) -> list[str]:
+    blockers: list[str] = []
+    required_fields = [
+        "migration_status",
+        "evidence_level",
+        "execution_boundary",
+        "task_bridge_execution",
+        "legacy_sidecar_used",
+        "mock_used",
+        "lite_used",
+        "output_package_path",
+        "output_package_hash",
+        "worker_invocation_path",
+        "provenance_path",
+        "input_manifest_path",
+        "environment_id",
+        "environment_evidence_path",
+        "result_package_validation_status",
+        "provenance_validation_status",
+        "frontend_catalog_validation_status",
+        "reviewed_by",
+        "reviewed_at",
+        "validation_errors",
+    ]
+    for field in required_fields:
+        if field not in evidence:
+            blockers.append(f"standard_worker_migration_survival_required_field_missing:{field}")
+    expected_values = {
+        "module_id": "survival",
+        "evidence_level": "full_formal",
+        "execution_boundary": "standard_r_worker",
+        "environment_id": "r-bio-full",
+    }
+    for field, expected in expected_values.items():
+        if evidence.get(field) != expected:
+            blockers.append(f"standard_worker_migration_survival_field_invalid:{field}")
+    expected_booleans = {
+        "task_bridge_execution": True,
+        "legacy_sidecar_used": False,
+        "mock_used": False,
+        "lite_used": False,
+    }
+    for field, expected in expected_booleans.items():
+        if evidence.get(field) is not expected:
+            blockers.append(f"standard_worker_migration_survival_boolean_invalid:{field}")
+    if not isinstance(evidence.get("validation_errors"), list):
+        blockers.append("standard_worker_migration_survival_validation_errors_invalid")
+    required_forbidden_sources = {
+        "mock_fixture",
+        "lite_fixture",
+        "blocked_full_package",
+        "legacy_sidecar",
+        "module_private_output",
+        "manually_copied_artifact",
+        "result_without_worker_invocation",
+        "result_without_provenance",
+        "result_without_task_bridge",
+    }
+    for source in sorted(required_forbidden_sources - forbidden_source_values):
+        blockers.append(f"standard_worker_migration_survival_forbidden_source_missing:{source}")
+    return blockers
 
 
 def _standard_worker_migration_result_blockers(result: dict[str, Any], provenance: dict[str, Any]) -> list[str]:
@@ -3443,7 +3541,7 @@ def _active_runtime_command_scan(patterns: tuple[str, ...], *, scan_id: str) -> 
         "scan_id": scan_id,
         "status": "passed" if not hits else "blocked",
         "scanned_roots": [str(root.relative_to(REPO_ROOT)) for root in roots if root.exists()],
-        "excluded_path_parts": ["legacy", "__pycache__", ".git"],
+        "excluded_path_parts": ["legacy", "__pycache__", ".git", "scripts/full_env"],
         "patterns": list(patterns),
         "scanned_file_count": len(scanned_files),
         "skipped_non_text_file_count": len(skipped_non_text_files),
@@ -3458,8 +3556,11 @@ def _default_dependency_hits() -> list[str]:
 
 
 def _is_excluded_source(path: Path) -> bool:
-    parts = set(path.relative_to(REPO_ROOT).parts)
-    return bool(parts & {"legacy", "__pycache__", ".git"})
+    relative_parts = path.relative_to(REPO_ROOT).parts
+    parts = set(relative_parts)
+    if parts & {"legacy", "__pycache__", ".git"}:
+        return True
+    return relative_parts[:2] == ("scripts", "full_env")
 
 
 def _p0_issues(rows: list[dict[str, Any]]) -> list[str]:

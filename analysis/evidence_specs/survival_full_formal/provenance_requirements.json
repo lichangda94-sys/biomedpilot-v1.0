@@ -1,0 +1,33 @@
+{
+  "schema_version": "biomedpilot.analysis.survival_full_formal_provenance_requirements.v1",
+  "template_status": "requirements_only_not_evidence",
+  "module_id": "survival",
+  "mode": "full",
+  "required_fields": [
+    "r_version",
+    "bioconductor_version",
+    "package_versions",
+    "external_tool_versions",
+    "input_hash",
+    "parameter_hash",
+    "random_seed",
+    "command",
+    "worker_boundary",
+    "environment_id",
+    "docker_image_digest",
+    "renv_lock_hash",
+    "result_package_hash"
+  ],
+  "required_values": {
+    "environment_id": "r-bio-full",
+    "worker_boundary.boundary_type": "standard_r_worker",
+    "worker_boundary.task_system_invocation": "task_center_registered"
+  },
+  "external_tool_versions_policy": "required_even_if_empty",
+  "forbidden_provenance_sources": [
+    "lite_and_sidecar_provenance_only",
+    "missing_worker_invocation",
+    "missing_task_bridge",
+    "missing_environment_lock"
+  ]
+}

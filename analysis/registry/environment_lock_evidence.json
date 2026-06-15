@@ -14,5 +14,31 @@
     "r-chem-full",
     "r-chem-gpu"
   ],
-  "evidence_entries": []
+  "evidence_entries": [
+    {
+      "environment_id": "r-bio-full",
+      "evidence_path": "external_analysis_environments/r-bio-full/environment_lock_evidence.json",
+      "external_evidence_path": "external_analysis_environments/r-bio-full/environment_lock_evidence.json",
+      "evidence_source": "docker_hub",
+      "source_digest": "biomedpilot/r-bio-full@sha256:727167df40a7f1800aea800e8bbb89d7ffd4d9f11c74db5bd2e5f3f30811d2a3",
+      "lock_profile": "survival_minimal_v1",
+      "lock_profile_version": "v1",
+      "renv_lock_package_count": 39,
+      "required_package_set": [
+        "renv",
+        "survival",
+        "jsonlite",
+        "data.table",
+        "digest",
+        "ggplot2",
+        "broom",
+        "htmltools"
+      ],
+      "missing_required_packages": [],
+      "renv_bootstrap_version": "1.2.3",
+      "renv_bootstrap_source": "https://cloud.r-project.org",
+      "validation_status": "passed",
+      "notes": "r-bio-full environment evidence passed for survival_minimal_v1 only; full activation remains blocked by resource locks and standard worker migration evidence."
+    }
+  ]
 }

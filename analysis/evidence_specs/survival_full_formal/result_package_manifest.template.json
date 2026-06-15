@@ -1,0 +1,34 @@
+{
+  "schema_version": "biomedpilot.analysis.survival_full_formal_result_package_manifest.template.v1",
+  "template_status": "template_only_not_evidence",
+  "module_id": "survival",
+  "mode": "full",
+  "result_semantics": "formal_computed_result",
+  "required_files": [
+    "result.json",
+    "provenance.json",
+    "tables/survival_summary.tsv",
+    "tables/km_logrank.tsv",
+    "tables/cox_univariate.tsv",
+    "tables/cox_multivariate.tsv",
+    "plots/km_curve.svg",
+    "plots/cox_forest.svg",
+    "reports/survival_full_formal_report.md",
+    "logs/stdout.log",
+    "logs/stderr.log",
+    "logs/worker_invocation.json",
+    "logs/r_session_info.txt"
+  ],
+  "required_status": "passed",
+  "required_engine_name": "biomedpilot_standard_r_worker",
+  "required_task_system_invocation": "task_center_registered",
+  "required_worker_boundary": "standard_r_worker",
+  "forbidden_result_sources": [
+    "mock_fixture",
+    "lite_fixture",
+    "blocked_full_package",
+    "legacy_sidecar",
+    "module_private_output",
+    "manually_copied_artifact"
+  ]
+}

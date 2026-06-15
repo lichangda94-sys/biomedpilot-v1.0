@@ -70,14 +70,19 @@ def run_analysis_module_task(
     mode_supported = bool(mode_policy.get("supported"))
     worker_required = str(mode_policy.get("worker_backend") or "") == "rscript"
     mode_worker_blocked = mode_supported and worker_required and worker_backend != "rscript"
-    if not mode_supported or mode_worker_blocked or mode == "full":
+    full_environment_blockers = full_mode_environment_blockers(module_id) if mode == "full" else []
+    full_resource_blockers = full_mode_resource_blockers(module_id) if mode == "full" else []
+    full_mode_blocked = mode == "full" and bool(full_environment_blockers or full_resource_blockers)
+    if not mode_supported or mode_worker_blocked or full_mode_blocked:
         blocker = str(mode_policy.get("blocker") or f"analysis_mode_not_enabled:{mode}")
         if mode_worker_blocked:
             blocker = f"analysis_mode_requires_rscript_worker:{mode}"
+        if full_mode_blocked and not blocker:
+            blocker = "full_mode_environment_or_resource_gate_blocked"
         mode_blockers = [blocker]
         if mode == "full":
-            mode_blockers.extend(full_mode_environment_blockers(module_id))
-            mode_blockers.extend(full_mode_resource_blockers(module_id))
+            mode_blockers.extend(full_environment_blockers)
+            mode_blockers.extend(full_resource_blockers)
             mode_blockers = list(dict.fromkeys(mode_blockers))
         _write_standard_package(package_dir, module_input, module=module, status="blocked", blockers=mode_blockers, command="analysis_task_bridge_mode_gate")
         _write_worker_invocation_manifest(
@@ -138,7 +143,13 @@ def run_analysis_module_task(
             worker_result={},
             blockers=fixture_blockers,
         )
-    validation = validate_standard_result_package(package_dir, expected_module_id=module_id, expected_task_id=task_id, expected_mode=mode)
+    validation = validate_standard_result_package(
+        package_dir,
+        expected_module_id=module_id,
+        expected_task_id=task_id,
+        expected_mode=mode,
+        result_index_registered=True if mode == "full" else None,
+    )
     success = validation["status"] == "passed" and not fixture_blockers
     _finish_task(center, task, success=success, summary="Mock analysis task completed." if success else "Mock analysis task package validation failed.")
     blockers = list(fixture_blockers or validation.get("blockers", []))
@@ -455,7 +466,7 @@ def _analysis_environment_snapshot(module: dict[str, Any], *, mode: str) -> dict
             "blockers": environment_blockers,
         },
         "resource_lock_status": {
-            "full_mode_ready": bool(resource_validation.get("full_mode_ready")),
+            "full_mode_ready": True if mode == "full" and not required_resources else bool(resource_validation.get("full_mode_ready")),
             "required_resource_ids": required_resources,
             "blocked_resource_ids": [
                 str(item)
@@ -479,6 +490,10 @@ def _write_worker_invocation_manifest(
 ) -> None:
     logs_dir = package_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
+    stdout_log = logs_dir / "stdout.log"
+    stderr_log = logs_dir / "stderr.log"
+    stdout_log.write_text(str(worker_result.get("stdout") or ""), encoding="utf-8")
+    stderr_log.write_text(str(worker_result.get("stderr") or ""), encoding="utf-8")
     command = worker_result.get("command")
     if not isinstance(command, list):
         command = []
@@ -492,24 +507,35 @@ def _write_worker_invocation_manifest(
         boundary_type = "analysis_task_bridge_gate"
         migration_status = "blocked_before_worker_execution"
     input_manifest = "module_input.json" if (package_dir / "module_input.json").is_file() else "not_materialized"
+    now = _now()
     manifest = {
         "schema_version": "biomedpilot.analysis.worker_invocation.v1",
-        "created_at": _now(),
+        "created_at": now,
+        "started_at": now,
+        "finished_at": now,
         "module_id": str(payload.get("module_id") or ""),
         "mode": str(payload.get("mode") or ""),
         "task_id": str(payload.get("task_id") or ""),
         "worker_backend": worker_backend,
         "invocation_status": invocation_status,
         "standard_worker_entrypoint": str(REPO_ROOT / "analysis" / "runners" / "run_module.R"),
+        "worker_entrypoint": str(REPO_ROOT / "analysis" / "runners" / "run_module.R"),
         "input_manifest": input_manifest,
+        "working_directory": str(REPO_ROOT),
+        "output_dir": str(package_dir),
+        "environment_id": str((payload.get("runtime") if isinstance(payload.get("runtime"), dict) else {}).get("requested_environment") or ""),
         "output_contract": "standard_result_package",
         "runtime_install_policy": "forbidden",
         "resource_download_policy": "forbidden",
         "returncode": worker_result.get("returncode"),
+        "exit_code": worker_result.get("returncode"),
         "command": [str(item) for item in command],
         "stdout": str(worker_result.get("stdout") or ""),
         "stderr": str(worker_result.get("stderr") or ""),
+        "stdout_log": "logs/stdout.log",
+        "stderr_log": "logs/stderr.log",
         "blockers": [str(item) for item in blockers],
+        "boundary": boundary_type,
         "worker_boundary": {
             "boundary_type": boundary_type,
             "task_system_invocation": "task_center_registered",
@@ -538,6 +564,8 @@ def _register_standard_package(
     analysis_environment = provenance.get("analysis_environment") if isinstance(provenance.get("analysis_environment"), dict) else {}
     inputs = payload.get("inputs") if isinstance(payload.get("inputs"), dict) else {}
     parameters = payload.get("parameters") if isinstance(payload.get("parameters"), dict) else {}
+    mode = str(payload.get("mode") or "")
+    result_semantics = "formal_computed_result" if status == "passed" and mode == "full" else ("testing_level" if status == "passed" else "blocked")
     engine_name = str(engine.get("name") or "biomedpilot_analysis_task_bridge")
     engine_version = str(engine.get("version") or "v1")
     log_artifacts = [{"artifact_type": "analysis_worker_log", "path": f"{rel_package}/logs/worker.log"}]
@@ -553,7 +581,7 @@ def _register_standard_package(
         result_id=f"analysis-package-{task_id}",
         task_run_id=task_id,
         task_type=f"analysis:{module_id}",
-        result_semantics="testing_level" if status == "passed" else "blocked",
+        result_semantics=result_semantics,
         input_package_id=str(inputs.get("input_package_id") or ""),
         source_dataset_id=str(inputs.get("source_dataset_id") or ""),
         source_repository_manifest="analysis/registry/analysis_modules.json",
@@ -562,7 +590,7 @@ def _register_standard_package(
         engine_version=engine_version,
         dependency_snapshot={
             "policy": "detect_first_no_runtime_install",
-            "mode": str(payload.get("mode") or ""),
+            "mode": mode,
             "runtime": runtime,
             "analysis_environment": analysis_environment,
             "command": str(provenance.get("command") or ""),

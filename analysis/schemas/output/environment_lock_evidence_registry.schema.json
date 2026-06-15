@@ -44,7 +44,22 @@
         "required": ["environment_id", "evidence_path"],
         "properties": {
           "environment_id": {"type": "string", "minLength": 1},
-          "evidence_path": {"type": "string", "minLength": 1}
+          "evidence_path": {"type": "string", "minLength": 1},
+          "external_evidence_path": {"type": "string", "minLength": 1},
+          "evidence_source": {"enum": ["docker_hub", "internal_registry", "local_image_tar"]},
+          "source_digest": {"type": "string"},
+          "source_attestation_path": {"type": "string"},
+          "image_tar_path": {"type": "string"},
+          "image_tar_hash": {"type": "string"},
+          "lock_profile": {"type": "string"},
+          "lock_profile_version": {"type": "string"},
+          "renv_lock_package_count": {"type": "integer"},
+          "required_package_set": {"type": "array"},
+          "missing_required_packages": {"type": "array"},
+          "renv_bootstrap_version": {"type": "string"},
+          "renv_bootstrap_source": {"type": "string"},
+          "validation_status": {"type": "string"},
+          "notes": {"type": "string"}
         },
         "additionalProperties": true
       }
