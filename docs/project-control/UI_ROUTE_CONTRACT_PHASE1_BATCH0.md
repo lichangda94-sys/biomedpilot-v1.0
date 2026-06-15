@@ -1,8 +1,8 @@
 # UI Route Contract Phase 1 Batch 0 Report
 
-- created_at: `2026-06-02T14:25:47.644080+00:00`
+- created_at: `2026-06-15T08:39:57.489534+00:00`
 - branch: `integration/release-bio-c1-ui-shell`
-- head: `f650bfde88b33af780c547bb1b98f41341d05232`
+- head: `d958eba0f38528079d3e304ee19e6182527188e1`
 - scope: Shell freeze route and live-click audit for Welcome, Home, Sidebar, and Centers.
 
 ## Summary
@@ -35,7 +35,7 @@
 | SHELL-SIDEBAR-TEST_FEEDBACK | Shell | Sidebar | `appSidebarAuxButton` | `navigates_to_shell_route_test_feedback` | navigates to test_feedback | `connected` | expected=test_feedback; observed=test_feedback |
 | SHELL-SIDEBAR-ABOUT | Shell | Sidebar | `appSidebarAuxButton` | `navigates_to_shell_route_about` | navigates to about | `connected` | expected=about; observed=about |
 | SHELL-CENTERS-REFRESHPROJECTS | Centers | Centers | `centersRefreshProjectsButton` | `calls_project_center_recent_projects` | calls ProjectCenter recent projects | `connected` | artifact_or_service_verified |
-| SHELL-CENTERS-CREATEPROJECTRECORD | Centers | Centers | `centersCreateProjectRecordButton` | `calls_project_center_create_project_and_writes_projects_index` | writes ProjectCenter index | `connected` | artifact_or_service_verified |
+| SHELL-CENTERS-CREATEPROJECTRECORD | Centers | Centers | `centersCreateProjectRecordButton` | `calls_project_center_create_bio_project_and_writes_projects_index` | writes ProjectCenter index | `connected` | artifact_or_service_verified |
 | SHELL-CENTERS-REFRESHDATA | Centers | Centers | `centersRefreshDataButton` | `calls_data_center_list_assets` | calls DataCenter list assets | `connected` | artifact_or_service_verified |
 | SHELL-CENTERS-EXPORTDATAINDEX | Centers | Centers | `centersExportDataIndexButton` | `writes_data_center_index_summary_artifact` | writes data center index summary artifact | `connected` | artifact_or_service_verified |
 | SHELL-CENTERS-REFRESHTASKS | Centers | Centers | `centersRefreshTasksButton` | `calls_task_center_list_tasks` | calls TaskCenter list tasks | `connected` | artifact_or_service_verified |
